@@ -1,23 +1,29 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { API_BASE_URL } from '../api/client';
+import { useI18n, useT } from '../i18n/I18nProvider';
+import { languageMeta } from '../i18n/dictionary';
+import type { Language } from '../i18n/dictionary';
 
-const navItems = [
-  ['/', 'Dashboard'],
-  ['/events', 'Event Journal'],
-  ['/incidents', 'Incidents'],
-  ['/health', 'Health'],
-  ['/connectors', 'Connectors'],
-  ['/execution/steps', 'Execution Steps'],
-  ['/workflows', 'Workflows'],
-  ['/mappings', 'Mappings'],
-  ['/polling', 'Polling Jobs'],
-  ['/onec-scenarios', '1C Scenarios'],
-  ['/notifications', 'Notifications'],
-  ['/maintenance', 'Maintenance'],
-  ['/retention', 'Retention'],
+const navItems: Array<[string, string]> = [
+  ['/', 'nav.dashboard'],
+  ['/events', 'nav.events'],
+  ['/incidents', 'nav.incidents'],
+  ['/health', 'nav.health'],
+  ['/connectors', 'nav.connectors'],
+  ['/execution/steps', 'nav.executionSteps'],
+  ['/workflows', 'nav.workflows'],
+  ['/mappings', 'nav.mappings'],
+  ['/polling', 'nav.polling'],
+  ['/onec-scenarios', 'nav.onecScenarios'],
+  ['/notifications', 'nav.notifications'],
+  ['/maintenance', 'nav.maintenance'],
+  ['/retention', 'nav.retention'],
 ];
 
+const languages: Language[] = ['ru', 'en', 'zh'];
+
 export function Layout() {
+  const t = useT();
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -25,25 +31,100 @@ export function Layout() {
           <div className="brand-sigil">OMH</div>
           <div>
             <div className="brand-title">Open Manufacturing Hub</div>
-            <div className="brand-subtitle">Operations control plane</div>
+            <div className="brand-subtitle">{t('app.brandSubtitle')}</div>
           </div>
         </div>
-        <nav className="main-nav">
-          {navItems.map(([to, label]) => (
+        <nav className="main-nav" aria-label={t('nav.primary')}>
+          {navItems.map(([to, labelKey]) => (
             <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               <span className="nav-dot" />
-              {label}
+              {t(labelKey)}
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-footer">
-          <span className="microcopy">API endpoint</span>
+          <span className="microcopy">{t('app.apiEndpoint')}</span>
           <strong className="api-endpoint">{API_BASE_URL}</strong>
         </div>
       </aside>
       <main className="content-shell">
-        <Outlet />
+        <TopBar />
+        <div className="page-content">
+          <Outlet />
+        </div>
       </main>
     </div>
+  );
+}
+
+function TopBar() {
+  const { language, setLanguage, t } = useI18n();
+  return (
+    <header className="topbar">
+      <div className="topbar-product">
+        <span className="topbar-kicker">OMH</span>
+        <strong>{t('topbar.product')}</strong>
+      </div>
+      <div className="language-switcher" aria-label={t('topbar.language')}>
+        <span className="microcopy">{t('topbar.language')}</span>
+        {languages.map((item) => (
+          <button
+            key={item}
+            type="button"
+            className={`flag-button ${language === item ? 'active' : ''}`}
+            onClick={() => setLanguage(item)}
+            aria-label={t(`topbar.flags.${item}`)}
+            title={languageMeta[item].nativeName}
+          >
+            <Flag language={item} />
+            <span>{languageMeta[item].shortName}</span>
+          </button>
+        ))}
+      </div>
+    </header>
+  );
+}
+
+function Flag({ language }: { language: Language }) {
+  if (language === 'ru') return <RussianFlag />;
+  if (language === 'zh') return <ChineseFlag />;
+  return <EnglishFlag />;
+}
+
+function RussianFlag() {
+  return (
+    <svg className="flag-icon" viewBox="0 0 36 24" role="img" aria-hidden="true">
+      <rect width="36" height="24" rx="3" fill="#fff" />
+      <path d="M0 8h36v8H0z" fill="#1c57a7" />
+      <path d="M0 16h36v5a3 3 0 0 1-3 3H3a3 3 0 0 1-3-3z" fill="#d52b1e" />
+      <rect width="36" height="24" rx="3" fill="none" stroke="rgba(0,0,0,.18)" />
+    </svg>
+  );
+}
+
+function EnglishFlag() {
+  return (
+    <svg className="flag-icon" viewBox="0 0 36 24" role="img" aria-hidden="true">
+      <clipPath id="flag-uk-clip"><rect width="36" height="24" rx="3" /></clipPath>
+      <g clipPath="url(#flag-uk-clip)">
+        <path fill="#012169" d="M0 0h36v24H0z" />
+        <path stroke="#fff" strokeWidth="5" d="m0 0 36 24M36 0 0 24" />
+        <path stroke="#c8102e" strokeWidth="3" d="m0 0 36 24M36 0 0 24" />
+        <path stroke="#fff" strokeWidth="8" d="M18 0v24M0 12h36" />
+        <path stroke="#c8102e" strokeWidth="5" d="M18 0v24M0 12h36" />
+      </g>
+      <rect width="36" height="24" rx="3" fill="none" stroke="rgba(0,0,0,.18)" />
+    </svg>
+  );
+}
+
+function ChineseFlag() {
+  return (
+    <svg className="flag-icon" viewBox="0 0 36 24" role="img" aria-hidden="true">
+      <rect width="36" height="24" rx="3" fill="#de2910" />
+      <path fill="#ffde00" d="m7 4 1.06 3.18h3.35L8.7 9.15l1.03 3.22L7 10.38l-2.73 1.99L5.3 9.15 2.59 7.18h3.35z" />
+      <path fill="#ffde00" d="m15.7 3.8.34 1.03h1.08l-.87.64.33 1.04-.88-.64-.88.64.34-1.04-.88-.64h1.08zm4 3 .34 1.03h1.08l-.87.64.33 1.04-.88-.64-.88.64.34-1.04-.88-.64h1.08zm-.2 5 .34 1.03h1.08l-.87.64.33 1.04-.88-.64-.88.64.34-1.04-.88-.64h1.08zm-4-1.1.34 1.03h1.08l-.87.64.33 1.04-.88-.64-.88.64.34-1.04-.88-.64h1.08z" />
+      <rect width="36" height="24" rx="3" fill="none" stroke="rgba(0,0,0,.18)" />
+    </svg>
   );
 }

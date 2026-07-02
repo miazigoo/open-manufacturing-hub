@@ -7,10 +7,12 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
+import { useT } from '../i18n/I18nProvider';
 
 const defaultItems = [{ sku: 'ABC123', qty: 5 }];
 
 export function OneCScenariosPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const presets = useQuery({ queryKey: ['onec-scenarios'], queryFn: onecScenariosApi.presets });
   const [form, setForm] = useState({ order_id: '1532', shipment_id: 'WMS-SHIP-1532', status: 'shipped', warehouse_id: 'MAIN', items: asJson(defaultItems) });
@@ -48,42 +50,42 @@ export function OneCScenariosPage() {
     }
   }
 
-  if (presets.isLoading) return <LoadingState label="Loading 1C scenarios" />;
+  if (presets.isLoading) return <LoadingState label={t('onec.loading')} />;
   if (presets.error) return <ErrorState error={presets.error} />;
 
   return (
     <div className="page-stack onec-scenario-page">
       <section className="page-header onec-hero">
-        <span className="eyebrow">1C Scenario Builder</span>
-        <h1>Bidirectional 1C integration, visible end to end.</h1>
-        <p>Install forward OData polling and reverse HTTP service updates. Every request, response, business error and replay stays in the event timeline.</p>
-        <div className="hero-meta"><Link className="primary-link" to="/polling">Open Polling Jobs</Link><Link className="ghost-link" to="/mappings">Review Mappings</Link><Link className="ghost-link" to="/incidents">Incidents</Link></div>
+        <span className="eyebrow">{t('onec.eyebrow')}</span>
+        <h1>{t('onec.title')}</h1>
+        <p>{t('onec.subtitle')}</p>
+        <div className="hero-meta"><Link className="primary-link" to="/polling">{t('onec.openPolling')}</Link><Link className="ghost-link" to="/mappings">{t('onec.reviewMappings')}</Link><Link className="ghost-link" to="/incidents">{t('nav.incidents')}</Link></div>
       </section>
 
       <section className="scenario-grid scenario-grid-wide">
         <div className="scenario-list">
-          {forwardPreset ? <ScenarioCard preset={forwardPreset} orbit={['1C', 'OMH', 'WMS']} actionLabel="Install Demo" pending={installForward.isPending} onInstall={() => installForward.mutate()} /> : null}
-          {reversePreset ? <ScenarioCard preset={reversePreset} orbit={['WMS', 'OMH', '1C']} actionLabel="Install Bidirectional Demo" pending={installBidirectional.isPending} onInstall={() => installBidirectional.mutate()} /> : null}
-          {!forwardPreset && !reversePreset && <EmptyState title="No scenario presets" detail="Backend did not return 1C scenario presets." />}
+          {forwardPreset ? <ScenarioCard preset={forwardPreset} orbit={['1C', 'OMH', 'WMS']} actionLabel={t('onec.installDemo')} pending={installForward.isPending} onInstall={() => installForward.mutate()} /> : null}
+          {reversePreset ? <ScenarioCard preset={reversePreset} orbit={['WMS', 'OMH', '1C']} actionLabel={t('onec.installBidirectional')} pending={installBidirectional.isPending} onInstall={() => installBidirectional.mutate()} /> : null}
+          {!forwardPreset && !reversePreset && <EmptyState title={t('onec.noPresets')} detail={t('onec.noPresetsDetail')} />}
         </div>
 
         <aside className="panel scenario-sidecar">
-          <h2>Test Shipment Fact</h2>
-          <p>Use order `1532` for success, `404` for business error, and `500` for technical 1C failure.</p>
+          <h2>{t('onec.testFact')}</h2>
+          <p>{t('onec.testHint')}</p>
           <form className="stack-form" onSubmit={submitTest}>
             <div className="metadata-grid compact-grid no-margin">
-              <label className="field-label">Order ID<input value={form.order_id} onChange={(event) => setForm({ ...form, order_id: event.target.value, shipment_id: `WMS-SHIP-${event.target.value}` })} /></label>
-              <label className="field-label">Shipment ID<input value={form.shipment_id} onChange={(event) => setForm({ ...form, shipment_id: event.target.value })} /></label>
-              <label className="field-label">Status<input value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} /></label>
+              <label className="field-label">{t('onec.orderId')}<input value={form.order_id} onChange={(event) => setForm({ ...form, order_id: event.target.value, shipment_id: `WMS-SHIP-${event.target.value}` })} /></label>
+              <label className="field-label">{t('onec.shipmentId')}<input value={form.shipment_id} onChange={(event) => setForm({ ...form, shipment_id: event.target.value })} /></label>
+              <label className="field-label">{t('common.status')}<input value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} /></label>
             </div>
-            <label className="field-label">Warehouse ID<input value={form.warehouse_id} onChange={(event) => setForm({ ...form, warehouse_id: event.target.value })} /></label>
-            <label className="field-label">Items JSON<textarea value={form.items} onChange={(event) => setForm({ ...form, items: event.target.value })} spellCheck={false} /></label>
+            <label className="field-label">{t('onec.warehouseId')}<input value={form.warehouse_id} onChange={(event) => setForm({ ...form, warehouse_id: event.target.value })} /></label>
+            <label className="field-label">{t('onec.itemsJson')}<textarea value={form.items} onChange={(event) => setForm({ ...form, items: event.target.value })} spellCheck={false} /></label>
             {formError && <div className="error-state compact">{formError}</div>}
             {testShipmentFact.error instanceof Error && <div className="error-state compact">{testShipmentFact.error.message}</div>}
-            <button className="primary-button" disabled={testShipmentFact.isPending}>Test Shipment Fact</button>
+            <button className="primary-button" disabled={testShipmentFact.isPending}>{t('onec.testFact')}</button>
           </form>
-          {testShipmentFact.data && <div className="success-note">Created event: {testShipmentFact.data.event_id} <Link className="primary-link" to={`/events/${testShipmentFact.data.event_id}`}>Open Timeline</Link></div>}
-          <JsonBlock title="Latest install / test result" value={testShipmentFact.data ?? installBidirectional.data ?? installForward.data ?? { hint: 'Install a scenario or run a test.' }} searchable={false} />
+          {testShipmentFact.data && <div className="success-note">{t('onec.createdEvent', { id: testShipmentFact.data.event_id })} <Link className="primary-link" to={`/events/${testShipmentFact.data.event_id}`}>{t('onec.openTimeline')}</Link></div>}
+          <JsonBlock title={t('onec.latestResult')} value={testShipmentFact.data ?? installBidirectional.data ?? installForward.data ?? { hint: t('onec.resultHint') }} searchable={false} />
         </aside>
       </section>
     </div>
@@ -91,6 +93,7 @@ export function OneCScenariosPage() {
 }
 
 function ScenarioCard({ preset, orbit, actionLabel, pending, onInstall }: { preset: OneCScenarioPreset; orbit: string[]; actionLabel: string; pending: boolean; onInstall: () => void }) {
+  const t = useT();
   return (
     <article className="scenario-card" key={preset.key}>
       <div className="scenario-orbit">{orbit.map((label) => <span key={label}>{label}</span>)}</div>
@@ -99,15 +102,15 @@ function ScenarioCard({ preset, orbit, actionLabel, pending, onInstall }: { pres
         <h2>{preset.name}</h2>
         <p>{preset.description}</p>
         <div className="metadata-grid compact-grid">
-          <span>Event<strong>{preset.event_type}</strong></span>
-          <span>Entity<strong>{preset.entity_type}</strong></span>
-          <span>Mappings<strong>{preset.mappings.length}</strong></span>
+          <span>{t('events.eventType')}<strong>{preset.event_type}</strong></span>
+          <span>{t('common.entity')}<strong>{preset.entity_type}</strong></span>
+          <span>{t('nav.mappings')}<strong>{preset.mappings.length}</strong></span>
         </div>
         <div className="workflow-steps">{preset.mappings.map((mapping) => <span key={mapping}>{mapping}</span>)}</div>
         <div className="action-row">
           <button className="primary-button" onClick={onInstall} disabled={pending}>{actionLabel}</button>
-          <Link className="ghost-button" to="/connectors">Connectors</Link>
-          <Link className="ghost-button" to="/workflows">Workflows</Link>
+          <Link className="ghost-button" to="/connectors">{t('nav.connectors')}</Link>
+          <Link className="ghost-button" to="/workflows">{t('nav.workflows')}</Link>
         </div>
       </div>
     </article>

@@ -1,4 +1,5 @@
 import { ArtifactDiff } from '../api/client';
+import { useT } from '../i18n/I18nProvider';
 import { EmptyState } from './EmptyState';
 
 function lineValue(value: unknown) {
@@ -6,7 +7,8 @@ function lineValue(value: unknown) {
 }
 
 export function DiffViewer({ diff }: { diff: ArtifactDiff | null }) {
-  if (!diff) return <EmptyState title="No diff selected" detail="Choose two artifacts to compare their top-level JSON fields." />;
+  const t = useT();
+  if (!diff) return <EmptyState title={t('diff.noDiff')} detail={t('diff.noDiffDetail')} />;
 
   const lines = [
     ...Object.entries(diff.removed).map(([key, value]) => ({ tone: 'removed', text: `- ${key}: ${lineValue(value)}` })),
@@ -17,11 +19,11 @@ export function DiffViewer({ diff }: { diff: ArtifactDiff | null }) {
     ]),
   ];
 
-  if (lines.length === 0) return <EmptyState title="No JSON changes" detail="Artifacts have identical top-level content." />;
+  if (lines.length === 0) return <EmptyState title={t('diff.noChanges')} detail={t('diff.noChangesDetail')} />;
 
   return (
     <section className="diff-panel">
-      <div className="panel-toolbar"><h3>JSON Diff</h3></div>
+      <div className="panel-toolbar"><h3>{t('diff.title')}</h3></div>
       <pre className="diff-block">
         {lines.map((line, index) => <span key={`${line.text}-${index}`} className={line.tone}>{line.text}\n</span>)}
       </pre>

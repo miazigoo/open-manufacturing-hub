@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, EventCreatePayload } from '../api/events';
 import { asJson } from '../api/client';
+import { useT } from '../i18n/I18nProvider';
 
 const successPreset: EventCreatePayload = {
   correlation_id: 'corr_success_demo',
@@ -34,6 +35,7 @@ function toForm(payload: EventCreatePayload) {
 }
 
 export function EventCreatePanel() {
+  const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(toForm(failurePreset));
@@ -65,7 +67,7 @@ export function EventCreatePanel() {
         payload: JSON.parse(form.payload) as Record<string, unknown>,
       });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Invalid JSON payload');
+      setError(caught instanceof Error ? caught.message : t('eventCreate.invalidJson'));
     }
   }
 
@@ -73,24 +75,24 @@ export function EventCreatePanel() {
     <section className="panel create-event-panel">
       <div className="panel-toolbar">
         <div>
-          <span className="eyebrow">Create event</span>
-          <h2>Inject a traceable integration event</h2>
+          <span className="eyebrow">{t('eventCreate.eyebrow')}</span>
+          <h2>{t('eventCreate.title')}</h2>
         </div>
         <div className="toolbar-actions">
-          <button className="ghost-button" type="button" onClick={() => applyPreset('failure')}>Failure preset</button>
-          <button className="ghost-button" type="button" onClick={() => applyPreset('success')}>Success preset</button>
+          <button className="ghost-button" type="button" onClick={() => applyPreset('failure')}>{t('eventCreate.failurePreset')}</button>
+          <button className="ghost-button" type="button" onClick={() => applyPreset('success')}>{t('eventCreate.successPreset')}</button>
         </div>
       </div>
       <form className="create-event-grid" onSubmit={submit}>
-        <label className="field-label">Event type<input value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} /></label>
-        <label className="field-label">Entity ID<input value={form.entity_id} onChange={(event) => setForm({ ...form, entity_id: event.target.value })} /></label>
-        <label className="field-label">Source<input value={form.source_system} onChange={(event) => setForm({ ...form, source_system: event.target.value })} /></label>
-        <label className="field-label">Target<input value={form.target_system} onChange={(event) => setForm({ ...form, target_system: event.target.value })} /></label>
-        <label className="field-label wide-field">Correlation ID<input value={form.correlation_id} onChange={(event) => setForm({ ...form, correlation_id: event.target.value })} /></label>
-        <label className="field-label wide-field">Payload JSON<textarea value={form.payload} onChange={(event) => setForm({ ...form, payload: event.target.value })} spellCheck={false} /></label>
+        <label className="field-label">{t('events.eventType')}<input value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} /></label>
+        <label className="field-label">{t('eventCreate.entityId')}<input value={form.entity_id} onChange={(event) => setForm({ ...form, entity_id: event.target.value })} /></label>
+        <label className="field-label">{t('common.source')}<input value={form.source_system} onChange={(event) => setForm({ ...form, source_system: event.target.value })} /></label>
+        <label className="field-label">{t('common.target')}<input value={form.target_system} onChange={(event) => setForm({ ...form, target_system: event.target.value })} /></label>
+        <label className="field-label wide-field">{t('events.correlationId')}<input value={form.correlation_id} onChange={(event) => setForm({ ...form, correlation_id: event.target.value })} /></label>
+        <label className="field-label wide-field">{t('eventCreate.payloadJson')}<textarea value={form.payload} onChange={(event) => setForm({ ...form, payload: event.target.value })} spellCheck={false} /></label>
         {error && <div className="error-state compact wide-field">{error}</div>}
         {mutation.error instanceof Error && <div className="error-state compact wide-field">{mutation.error.message}</div>}
-        <button className="primary-button wide-field" disabled={mutation.isPending}>Create and open timeline</button>
+        <button className="primary-button wide-field" disabled={mutation.isPending}>{t('eventCreate.submit')}</button>
       </form>
     </section>
   );

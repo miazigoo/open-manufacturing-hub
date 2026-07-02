@@ -7,6 +7,7 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { useT } from '../i18n/I18nProvider';
 import { formatDateTime } from '../utils';
 
 const defaultConfigs: Record<string, Record<string, unknown>> = {
@@ -26,6 +27,7 @@ const defaultConfigs: Record<string, Record<string, unknown>> = {
 };
 
 export function ConnectorsPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const types = useQuery({ queryKey: ['connector-types'], queryFn: connectorsApi.types });
   const connectors = useQuery({ queryKey: ['connectors'], queryFn: connectorsApi.list });
@@ -35,13 +37,13 @@ export function ConnectorsPage() {
 
   const typeById = useMemo(() => new Map((types.data ?? []).map((type) => [type.connector_type, type])), [types.data]);
 
-  const create = useMutation({ mutationFn: connectorsApi.create, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['connectors'] }); setResult('Connector created'); } });
+  const create = useMutation({ mutationFn: connectorsApi.create, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['connectors'] }); setResult(t('connectors.created')); } });
   const remove = useMutation({ mutationFn: connectorsApi.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectors'] }) });
   const enable = useMutation({ mutationFn: connectorsApi.enable, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectors'] }) });
   const disable = useMutation({ mutationFn: connectorsApi.disable, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectors'] }) });
   const health = useMutation({ mutationFn: connectorsApi.healthcheck, onSuccess: (data) => { queryClient.invalidateQueries({ queryKey: ['connectors'] }); setResult(`Health: ${data.status} · ${data.message}`); } });
-  const validate = useMutation({ mutationFn: connectorsApi.testConfig, onSuccess: (data) => setResult(data.valid ? 'Config valid' : `Config invalid: ${data.errors.join(', ')}`) });
-  const generate = useMutation({ mutationFn: connectorsApi.generateMockErpEvents, onSuccess: (data) => { queryClient.invalidateQueries({ queryKey: ['events'] }); setResult(`Generated ${data.created.length} events`); } });
+  const validate = useMutation({ mutationFn: connectorsApi.testConfig, onSuccess: (data) => setResult(data.valid ? t('connectors.valid') : t('connectors.invalid', { errors: data.errors.join(', ') })) });
+  const generate = useMutation({ mutationFn: connectorsApi.generateMockErpEvents, onSuccess: (data) => { queryClient.invalidateQueries({ queryKey: ['events'] }); setResult(t('connectors.generated', { count: data.created.length })); } });
 
   function selectType(connectorType: string) {
     const metadata = typeById.get(connectorType);
@@ -73,49 +75,49 @@ export function ConnectorsPage() {
   }
 
   const error = types.error ?? connectors.error;
-  if (types.isLoading || connectors.isLoading) return <LoadingState label="Loading connectors" />;
+  if (types.isLoading || connectors.isLoading) return <LoadingState label={t('connectors.loading')} />;
   if (error) return <ErrorState error={error} />;
 
   return (
     <div className="page-stack two-column-page">
       <section className="panel form-panel">
-        <span className="eyebrow">Connector SDK</span>
-        <h1>Register external systems through stable contracts.</h1>
+        <span className="eyebrow">{t('connectors.eyebrow')}</span>
+        <h1>{t('connectors.title')}</h1>
         <form className="stack-form" onSubmit={submit}>
-          <label className="field-label">Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-          <label className="field-label">Connector type<select value={form.connector_type} onChange={(event) => selectType(event.target.value)}>{(types.data ?? []).map((type) => <option key={type.connector_type} value={type.connector_type}>{type.display_name}</option>)}</select></label>
-          <label className="field-label">Direction<select value={form.direction} onChange={(event) => setForm({ ...form, direction: event.target.value as ConnectorDirection })}><option value="source">source</option><option value="target">target</option><option value="bidirectional">bidirectional</option></select></label>
-          <label className="field-label">Config JSON<textarea value={form.config_json} onChange={(event) => setForm({ ...form, config_json: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('connectors.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+          <label className="field-label">{t('connectors.type')}<select value={form.connector_type} onChange={(event) => selectType(event.target.value)}>{(types.data ?? []).map((type) => <option key={type.connector_type} value={type.connector_type}>{type.display_name}</option>)}</select></label>
+          <label className="field-label">{t('connectors.direction')}<select value={form.direction} onChange={(event) => setForm({ ...form, direction: event.target.value as ConnectorDirection })}><option value="source">source</option><option value="target">target</option><option value="bidirectional">bidirectional</option></select></label>
+          <label className="field-label">{t('connectors.configJson')}<textarea value={form.config_json} onChange={(event) => setForm({ ...form, config_json: event.target.value })} spellCheck={false} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           {create.error instanceof Error && <div className="error-state compact">{create.error.message}</div>}
           {result && <div className="success-note">{result}</div>}
-          <button className="primary-button" disabled={create.isPending}>Create connector</button>
+          <button className="primary-button" disabled={create.isPending}>{t('connectors.create')}</button>
         </form>
       </section>
 
       <section className="panel">
-        <div className="panel-toolbar"><h2>Connector instances</h2><span className="microcopy">{connectors.data?.length ?? 0} configured</span></div>
+        <div className="panel-toolbar"><h2>{t('connectors.instances')}</h2><span className="microcopy">{t('connectors.configured', { count: connectors.data?.length ?? 0 })}</span></div>
         {connectors.data?.length ? connectors.data.map((connector) => (
           <article className="connector-card" key={connector.id}>
             <div className="connector-card-top">
               <div><h3>{connector.name}</h3><p>{connector.connector_type} · {connector.direction}</p></div>
-              <div className="badge-row"><StatusBadge status={connector.enabled ? 'ok' : 'unknown'} label={connector.enabled ? 'enabled' : 'disabled'} /><StatusBadge status={connector.last_health_status ?? connector.status} /></div>
+              <div className="badge-row"><StatusBadge status={connector.enabled ? 'ok' : 'unknown'} label={connector.enabled ? t('connectors.enabled') : t('connectors.disabled')} /><StatusBadge status={connector.last_health_status ?? connector.status} /></div>
             </div>
             <div className="metadata-grid compact-grid">
-              <span>Last health<strong>{connector.last_health_status ?? 'unknown'}</strong></span>
-              <span>Message<strong>{connector.last_health_message ?? '—'}</strong></span>
-              <span>Checked<strong>{formatDateTime(connector.last_health_at)}</strong></span>
+              <span>{t('connectors.lastHealth')}<strong>{connector.last_health_status ?? t('common.unknown')}</strong></span>
+              <span>{t('connectors.message')}<strong>{connector.last_health_message ?? '—'}</strong></span>
+              <span>{t('connectors.checked')}<strong>{formatDateTime(connector.last_health_at)}</strong></span>
             </div>
-            <JsonBlock value={connector.config_json} title="Config" searchable={false} />
+            <JsonBlock value={connector.config_json} title={t('connectors.config')} searchable={false} />
             <div className="action-row">
-              <button className="ghost-button" onClick={() => health.mutate(connector.id)}>Healthcheck</button>
-              <button className="ghost-button" onClick={() => validate.mutate(connector.id)}>Test config</button>
-              {connector.connector_type === 'mock_erp' && <button className="ghost-button" onClick={() => generate.mutate(connector.id)}>Generate events</button>}
-              <button className="ghost-button" onClick={() => connector.enabled ? disable.mutate(connector.id) : enable.mutate(connector.id)}>{connector.enabled ? 'Disable' : 'Enable'}</button>
-              <button className="ghost-button danger" onClick={() => remove.mutate(connector.id)}>Delete</button>
+              <button className="ghost-button" onClick={() => health.mutate(connector.id)}>{t('connectors.healthcheck')}</button>
+              <button className="ghost-button" onClick={() => validate.mutate(connector.id)}>{t('connectors.testConfig')}</button>
+              {connector.connector_type === 'mock_erp' && <button className="ghost-button" onClick={() => generate.mutate(connector.id)}>{t('connectors.generateEvents')}</button>}
+              <button className="ghost-button" onClick={() => connector.enabled ? disable.mutate(connector.id) : enable.mutate(connector.id)}>{connector.enabled ? t('connectors.disable') : t('connectors.enable')}</button>
+              <button className="ghost-button danger" onClick={() => remove.mutate(connector.id)}>{t('connectors.delete')}</button>
             </div>
           </article>
-        )) : <EmptyState title="No connector instances" detail="Create Mock WMS first so pipeline send_to_target can call a connector." />}
+        )) : <EmptyState title={t('connectors.noInstances')} detail={t('connectors.noInstancesDetail')} />}
       </section>
     </div>
   );

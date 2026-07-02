@@ -6,10 +6,12 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { useT } from '../i18n/I18nProvider';
 
 const triggerTypes: TriggerType[] = ['event_failed', 'incident_created', 'incident_updated', 'health_down', 'queue_threshold', 'daily_report'];
 
 export function NotificationRulesPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const rules = useQuery({ queryKey: ['notification-rules'], queryFn: notificationsApi.rules });
   const deliveries = useQuery({ queryKey: ['notification-deliveries'], queryFn: notificationsApi.deliveries });
@@ -39,37 +41,37 @@ export function NotificationRulesPage() {
   }
 
   const error = rules.error ?? deliveries.error;
-  if (rules.isLoading || deliveries.isLoading) return <LoadingState label="Loading notification rules" />;
+  if (rules.isLoading || deliveries.isLoading) return <LoadingState label={t('notifications.loading')} />;
   if (error) return <ErrorState error={error} />;
 
   return (
     <div className="page-stack two-column-page">
       <section className="panel form-panel">
-        <div className="panel-toolbar"><div><span className="eyebrow">Notifications</span><h1>Create alert rule</h1></div></div>
+        <div className="panel-toolbar"><div><span className="eyebrow">{t('notifications.eyebrow')}</span><h1>{t('notifications.title')}</h1></div></div>
         <form onSubmit={submit} className="stack-form">
-          <label className="field-label">Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
-          <label className="field-label">Trigger<select value={form.trigger_type} onChange={(event) => setForm({ ...form, trigger_type: event.target.value as TriggerType })}>{triggerTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-          <label className="field-label">Cooldown seconds<input type="number" value={form.cooldown_seconds} onChange={(event) => setForm({ ...form, cooldown_seconds: Number(event.target.value) })} /></label>
-          <label className="field-label">Filters JSON<textarea value={form.filters} onChange={(event) => setForm({ ...form, filters: event.target.value })} spellCheck={false} /></label>
-          <label className="field-label">Channels JSON<textarea value={form.channels} onChange={(event) => setForm({ ...form, channels: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('connectors.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
+          <label className="field-label">{t('notifications.trigger')}<select value={form.trigger_type} onChange={(event) => setForm({ ...form, trigger_type: event.target.value as TriggerType })}>{triggerTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
+          <label className="field-label">{t('notifications.cooldown')}<input type="number" value={form.cooldown_seconds} onChange={(event) => setForm({ ...form, cooldown_seconds: Number(event.target.value) })} /></label>
+          <label className="field-label">{t('notifications.filtersJson')}<textarea value={form.filters} onChange={(event) => setForm({ ...form, filters: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('notifications.channelsJson')}<textarea value={form.channels} onChange={(event) => setForm({ ...form, channels: event.target.value })} spellCheck={false} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
-          <button className="primary-button" type="submit" disabled={createRule.isPending}>Create rule</button>
+          <button className="primary-button" type="submit" disabled={createRule.isPending}>{t('notifications.create')}</button>
         </form>
       </section>
       <section className="panel">
-        <div className="panel-toolbar"><h2>Rules</h2></div>
+        <div className="panel-toolbar"><h2>{t('notifications.rules')}</h2></div>
         {rules.data?.length ? rules.data.map((rule) => (
           <article className="rule-card" key={rule.id}>
             <div><h3>{rule.name}</h3><span className="microcopy">{rule.trigger_type} · cooldown {rule.cooldown_seconds}s</span></div>
-            <StatusBadge status={rule.enabled ? 'ok' : 'unknown'} label={rule.enabled ? 'enabled' : 'disabled'} />
+            <StatusBadge status={rule.enabled ? 'ok' : 'unknown'} label={rule.enabled ? t('connectors.enabled') : t('connectors.disabled')} />
             <JsonBlock value={{ filters: rule.filters_json, channels: rule.channels_json }} searchable={false} />
-            <div className="action-row"><button className="ghost-button" onClick={() => testRule.mutate(rule.id)}>Test</button><button className="ghost-button danger" onClick={() => deleteRule.mutate(rule.id)}>Delete</button></div>
+            <div className="action-row"><button className="ghost-button" onClick={() => testRule.mutate(rule.id)}>{t('notifications.test')}</button><button className="ghost-button danger" onClick={() => deleteRule.mutate(rule.id)}>{t('connectors.delete')}</button></div>
           </article>
-        )) : <EmptyState title="No notification rules configured" detail="Create a rule to turn incidents and health events into delivery logs." />}
+        )) : <EmptyState title={t('notifications.noRules')} detail={t('notifications.noRulesDetail')} />}
       </section>
       <section className="panel full-span">
-        <div className="panel-toolbar"><h2>Delivery log</h2></div>
-        {deliveries.data?.length ? <div className="component-list">{deliveries.data.map((delivery) => <div key={delivery.id}><strong>{delivery.target_channel}</strong><span>{delivery.target_address}</span><StatusBadge status={delivery.status} /></div>)}</div> : <EmptyState title="No deliveries yet" detail="Test a rule or trigger an incident to create delivery entries." />}
+        <div className="panel-toolbar"><h2>{t('notifications.deliveryLog')}</h2></div>
+        {deliveries.data?.length ? <div className="component-list">{deliveries.data.map((delivery) => <div key={delivery.id}><strong>{delivery.target_channel}</strong><span>{delivery.target_address}</span><StatusBadge status={delivery.status} /></div>)}</div> : <EmptyState title={t('notifications.noDeliveries')} detail={t('notifications.noDeliveriesDetail')} />}
       </section>
     </div>
   );

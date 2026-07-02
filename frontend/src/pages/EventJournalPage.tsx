@@ -8,11 +8,13 @@ import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
 import { EventCreatePanel } from '../components/EventCreatePanel';
+import { useT } from '../i18n/I18nProvider';
 import { formatDateTime } from '../utils';
 
 const statuses: Array<EventStatus | 'all'> = ['all', 'new', 'processing', 'success', 'failed', 'retry_waiting', 'cancelled', 'expired'];
 
 export function EventJournalPage() {
+  const t = useT();
   const [status, setStatus] = useState<EventStatus | 'all'>('all');
   const [eventType, setEventType] = useState('');
   const [source, setSource] = useState('');
@@ -32,29 +34,29 @@ export function EventJournalPage() {
 
   return (
     <div className="page-stack">
-      <header className="page-header"><span className="eyebrow">Event Journal</span><h1>Every integration event, searchable and replayable.</h1></header>
+      <header className="page-header"><span className="eyebrow">{t('events.eyebrow')}</span><h1>{t('events.title')}</h1></header>
       <EventCreatePanel />
       <section className="filter-bar">
-        <select value={status} onChange={(event) => setStatus(event.target.value as EventStatus | 'all')}>{statuses.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-        <input value={eventType} onChange={(event) => setEventType(event.target.value)} placeholder="Event type" />
-        <input value={source} onChange={(event) => setSource(event.target.value)} placeholder="Source system" />
-        <input value={target} onChange={(event) => setTarget(event.target.value)} placeholder="Target system" />
+        <select value={status} onChange={(event) => setStatus(event.target.value as EventStatus | 'all')}>{statuses.map((item) => <option key={item} value={item}>{item === 'all' ? t('common.all') : t(`status.${item}`)}</option>)}</select>
+        <input value={eventType} onChange={(event) => setEventType(event.target.value)} placeholder={t('events.eventType')} />
+        <input value={source} onChange={(event) => setSource(event.target.value)} placeholder={t('events.sourceSystem')} />
+        <input value={target} onChange={(event) => setTarget(event.target.value)} placeholder={t('events.targetSystem')} />
       </section>
       <section className="table-panel">
-        {rows.length === 0 ? <EmptyState title="No events yet" detail="POST /api/events to create the first observable integration event." /> : (
+        {rows.length === 0 ? <EmptyState title={t('events.noEvents')} detail={t('events.noEventsDetail')} /> : (
           <table>
-            <thead><tr><th>Created</th><th>Status</th><th>Event Type</th><th>Entity</th><th>Source</th><th>Target</th><th>Correlation ID</th><th>Actions</th></tr></thead>
+            <thead><tr><th>{t('common.created')}</th><th>{t('common.status')}</th><th>{t('events.eventType')}</th><th>{t('common.entity')}</th><th>{t('common.source')}</th><th>{t('common.target')}</th><th>{t('events.correlationId')}</th><th>{t('common.actions')}</th></tr></thead>
             <tbody>
               {rows.map((event) => (
                 <tr key={event.id}>
                   <td className="muted">{formatDateTime(event.created_at)}</td>
                   <td><StatusBadge status={event.status} /></td>
                   <td><strong>{event.event_type}</strong></td>
-                  <td>{event.entity_type ?? 'Entity'} #{event.entity_id ?? 'unknown'}</td>
+                  <td>{event.entity_type ?? t('common.entity')} #{event.entity_id ?? t('common.unknown')}</td>
                   <td>{event.source_system}</td>
                   <td>{event.target_system ?? '—'}</td>
                   <td className="mono">{event.correlation_id ?? '—'}</td>
-                  <td><Link className="primary-link" to={`/events/${event.id}`}>Open</Link></td>
+                  <td><Link className="primary-link" to={`/events/${event.id}`}>{t('common.open')}</Link></td>
                 </tr>
               ))}
             </tbody>

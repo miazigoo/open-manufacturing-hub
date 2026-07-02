@@ -1,8 +1,11 @@
-export function LoadingState({ label = 'Loading operational data' }: { label?: string }) {
+import { useT } from '../i18n/I18nProvider';
+
+export function LoadingState({ label }: { label?: string }) {
+  const t = useT();
   return (
     <div className="loading-state">
       <span className="loader-line" />
-      <span>{label}</span>
+      <span>{label ?? t('common.loading')}</span>
     </div>
   );
 }

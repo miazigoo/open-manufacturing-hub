@@ -8,6 +8,7 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { useT } from '../i18n/I18nProvider';
 import { formatDateTime } from '../utils';
 
 const defaultSteps = [
@@ -25,6 +26,7 @@ const defaultValidation = { required_fields: ['id', 'warehouse.id', 'lines'] };
 const defaultPayload = { order_id: '1001', warehouse_id: 'MAIN', items: [{ sku: 'ABC123', qty: 5 }] };
 
 export function WorkflowsPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const workflows = useQuery({ queryKey: ['workflows'], queryFn: workflowsApi.list });
   const mappings = useQuery({ queryKey: ['mappings'], queryFn: mappingsApi.list });
@@ -34,7 +36,7 @@ export function WorkflowsPage() {
   const [dryRun, setDryRun] = useState<unknown>(null);
 
   const versions = useMemo(() => (mappings.data ?? []).flatMap((mapping) => mapping.versions.map((version) => ({ ...version, label: `${mapping.name} v${version.version}` }))), [mappings.data]);
-  const create = useMutation({ mutationFn: workflowsApi.create, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['workflows'] }); setMessage('Workflow created'); } });
+  const create = useMutation({ mutationFn: workflowsApi.create, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['workflows'] }); setMessage(t('workflows.created')); } });
   const enable = useMutation({ mutationFn: workflowsApi.enable, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflows'] }) });
   const disable = useMutation({ mutationFn: workflowsApi.disable, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflows'] }) });
   const remove = useMutation({ mutationFn: workflowsApi.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workflows'] }) });
@@ -70,55 +72,55 @@ export function WorkflowsPage() {
   }
 
   const error = workflows.error ?? mappings.error;
-  if (workflows.isLoading || mappings.isLoading) return <LoadingState label="Loading workflows" />;
+  if (workflows.isLoading || mappings.isLoading) return <LoadingState label={t('workflows.loading')} />;
   if (error) return <ErrorState error={error} />;
 
   return (
     <div className="page-stack two-column-page workflow-page">
       <section className="panel form-panel">
-        <span className="eyebrow">Workflow Engine</span>
-        <h1>Route events through explicit steps and mapping versions.</h1>
+        <span className="eyebrow">{t('workflows.eyebrow')}</span>
+        <h1>{t('workflows.title')}</h1>
         <form className="stack-form" onSubmit={submit}>
-          <label className="field-label">Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-          <label className="field-label">Event type<input value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} /></label>
+          <label className="field-label">{t('workflows.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+          <label className="field-label">{t('workflows.eventType')}<input value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} /></label>
           <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">Source<input value={form.source_system} onChange={(event) => setForm({ ...form, source_system: event.target.value })} /></label>
-            <label className="field-label">Target<input value={form.target_system} onChange={(event) => setForm({ ...form, target_system: event.target.value })} /></label>
-            <label className="field-label">Entity<input value={form.entity_type} onChange={(event) => setForm({ ...form, entity_type: event.target.value })} /></label>
+            <label className="field-label">{t('workflows.sourceSystem')}<input value={form.source_system} onChange={(event) => setForm({ ...form, source_system: event.target.value })} /></label>
+            <label className="field-label">{t('workflows.targetSystem')}<input value={form.target_system} onChange={(event) => setForm({ ...form, target_system: event.target.value })} /></label>
+            <label className="field-label">{t('workflows.entityType')}<input value={form.entity_type} onChange={(event) => setForm({ ...form, entity_type: event.target.value })} /></label>
           </div>
-          <label className="field-label">Source mapping version<select value={form.source_mapping_version_id} onChange={(event) => setForm({ ...form, source_mapping_version_id: event.target.value })}><option value="">none</option>{versions.map((version) => <option key={version.id} value={version.id}>{version.label}</option>)}</select></label>
-          <label className="field-label">Target mapping version<select value={form.target_mapping_version_id} onChange={(event) => setForm({ ...form, target_mapping_version_id: event.target.value })}><option value="">none</option>{versions.map((version) => <option key={version.id} value={version.id}>{version.label}</option>)}</select></label>
-          <label className="field-label">Steps JSON<textarea value={form.steps_json} onChange={(event) => setForm({ ...form, steps_json: event.target.value })} spellCheck={false} /></label>
-          <label className="field-label">Validation JSON<textarea value={form.validation_json} onChange={(event) => setForm({ ...form, validation_json: event.target.value })} spellCheck={false} /></label>
-          <label className="field-label">Dry-run payload<textarea value={form.dry_run_payload} onChange={(event) => setForm({ ...form, dry_run_payload: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('workflows.sourceMapping')}<select value={form.source_mapping_version_id} onChange={(event) => setForm({ ...form, source_mapping_version_id: event.target.value })}><option value="">{t('common.none')}</option>{versions.map((version) => <option key={version.id} value={version.id}>{version.label}</option>)}</select></label>
+          <label className="field-label">{t('workflows.targetMapping')}<select value={form.target_mapping_version_id} onChange={(event) => setForm({ ...form, target_mapping_version_id: event.target.value })}><option value="">{t('common.none')}</option>{versions.map((version) => <option key={version.id} value={version.id}>{version.label}</option>)}</select></label>
+          <label className="field-label">{t('workflows.stepsJson')}<textarea value={form.steps_json} onChange={(event) => setForm({ ...form, steps_json: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('workflows.validationJson')}<textarea value={form.validation_json} onChange={(event) => setForm({ ...form, validation_json: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('workflows.dryRunPayload')}<textarea value={form.dry_run_payload} onChange={(event) => setForm({ ...form, dry_run_payload: event.target.value })} spellCheck={false} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           {message && <div className="success-note">{message}</div>}
-          <button className="primary-button" disabled={create.isPending}>Create workflow</button>
+          <button className="primary-button" disabled={create.isPending}>{t('workflows.create')}</button>
         </form>
       </section>
       <section className="panel">
-        <div className="panel-toolbar"><h2>Workflow routes</h2><span className="microcopy">{workflows.data?.length ?? 0} configured</span></div>
+        <div className="panel-toolbar"><h2>{t('workflows.routes')}</h2><span className="microcopy">{t('connectors.configured', { count: workflows.data?.length ?? 0 })}</span></div>
         {workflows.data?.length ? workflows.data.map((workflow) => (
           <article className="workflow-card" key={workflow.id}>
             <div className="workflow-card-top">
               <div><h3>{workflow.name}</h3><p>{workflow.source_system ?? '*'} to {workflow.target_system ?? '*'} · {workflow.event_type ?? '*'} · v{workflow.version}</p></div>
-              <StatusBadge status={workflow.enabled ? 'ok' : 'unknown'} label={workflow.enabled ? 'enabled' : 'disabled'} />
+              <StatusBadge status={workflow.enabled ? 'ok' : 'unknown'} label={workflow.enabled ? t('connectors.enabled') : t('connectors.disabled')} />
             </div>
             <div className="workflow-steps">{workflow.steps_json.map((step, index) => { const config = typeof step === 'string' ? { name: step } : step; const name = String(config.name ?? 'unknown'); const condition = config.on ? ` · ${String(config.on)}` : ''; return <span key={`${name}-${index}`}>{name}{condition}</span>; })}</div>
             <div className="metadata-grid compact-grid">
-              <span>Source mapping<strong>{workflow.source_mapping_version ? `v${workflow.source_mapping_version.version}` : 'legacy'}</strong></span>
-              <span>Target mapping<strong>{workflow.target_mapping_version ? `v${workflow.target_mapping_version.version}` : 'legacy'}</strong></span>
-              <span>Updated<strong>{formatDateTime(workflow.updated_at)}</strong></span>
+              <span>{t('workflows.sourceMapping')}<strong>{workflow.source_mapping_version ? `v${workflow.source_mapping_version.version}` : t('timeline.legacyPipeline')}</strong></span>
+              <span>{t('workflows.targetMapping')}<strong>{workflow.target_mapping_version ? `v${workflow.target_mapping_version.version}` : t('timeline.legacyPipeline')}</strong></span>
+              <span>{t('common.updated')}<strong>{formatDateTime(workflow.updated_at)}</strong></span>
             </div>
             <div className="action-row">
-              <button className="ghost-button" onClick={() => runDryRun(workflow.id)}>Dry-run</button>
-              <button className="ghost-button" onClick={() => workflow.enabled ? disable.mutate(workflow.id) : enable.mutate(workflow.id)}>{workflow.enabled ? 'Disable' : 'Enable'}</button>
-              <button className="ghost-button danger" onClick={() => remove.mutate(workflow.id)}>Delete</button>
+              <button className="ghost-button" onClick={() => runDryRun(workflow.id)}>{t('workflows.dryRun')}</button>
+              <button className="ghost-button" onClick={() => workflow.enabled ? disable.mutate(workflow.id) : enable.mutate(workflow.id)}>{workflow.enabled ? t('connectors.disable') : t('connectors.enable')}</button>
+              <button className="ghost-button danger" onClick={() => remove.mutate(workflow.id)}>{t('connectors.delete')}</button>
             </div>
           </article>
-        )) : <EmptyState title="No workflows" detail="Create mappings first, then bind them into a workflow route." />}
+        )) : <EmptyState title={t('workflows.noWorkflows')} detail={t('workflows.noWorkflowsDetail')} />}
       </section>
-      <section className="panel full-span"><JsonBlock title="Last dry-run" value={(dryRun as Record<string, unknown> | null) ?? { hint: 'Run a workflow dry-run to inspect the generated run and artifacts.' }} searchable={false} /></section>
+      <section className="panel full-span"><JsonBlock title={t('workflows.lastDryRun')} value={(dryRun as Record<string, unknown> | null) ?? { hint: t('workflows.lastDryRunHint') }} searchable={false} /></section>
     </div>
   );
 }

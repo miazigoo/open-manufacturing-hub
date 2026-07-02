@@ -1,3 +1,5 @@
+import { useT } from '../i18n/I18nProvider';
+
 interface StatusBadgeProps {
   status: string;
   label?: string;
@@ -30,6 +32,9 @@ const toneMap: Record<string, string> = {
 };
 
 export function StatusBadge({ status, label, compact }: StatusBadgeProps) {
+  const t = useT();
   const tone = toneMap[status] ?? 'muted';
-  return <span className={`status-badge ${tone} ${compact ? 'compact' : ''}`}>{label ?? status.replaceAll('_', ' ')}</span>;
+  const fallback = status.replaceAll('_', ' ');
+  const statusLabel = t(`status.${status}`);
+  return <span className={`status-badge ${tone} ${compact ? 'compact' : ''}`}>{label ?? (statusLabel === `status.${status}` ? fallback : statusLabel)}</span>;
 }

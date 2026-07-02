@@ -1,6 +1,7 @@
 import { Artifact } from '../api/client';
 import { JsonBlock } from './JsonBlock';
 import { formatDateTime } from '../utils';
+import { useT } from '../i18n/I18nProvider';
 
 interface ArtifactViewerProps {
   artifact: Artifact | null;
@@ -9,29 +10,30 @@ interface ArtifactViewerProps {
 }
 
 export function ArtifactViewer({ artifact, onDiff, onEdit }: ArtifactViewerProps) {
+  const t = useT();
   if (!artifact) {
-    return <div className="artifact-placeholder">Select an artifact to inspect payload, hash and replay options.</div>;
+    return <div className="artifact-placeholder">{t('artifact.placeholder')}</div>;
   }
 
   return (
     <div className="artifact-viewer">
       <div className="artifact-head">
         <div>
-          <span className="eyebrow">Artifact</span>
+          <span className="eyebrow">{t('artifact.eyebrow')}</span>
           <h2>{artifact.name}</h2>
         </div>
         <div className="toolbar-actions">
-          {onDiff && <button className="ghost-button" onClick={() => onDiff(artifact)}>Diff</button>}
-          {onEdit && <button className="primary-button" onClick={() => onEdit(artifact)}>Edit & Replay</button>}
+          {onDiff && <button className="ghost-button" onClick={() => onDiff(artifact)}>{t('artifact.diff')}</button>}
+          {onEdit && <button className="primary-button" onClick={() => onEdit(artifact)}>{t('artifact.editReplay')}</button>}
         </div>
       </div>
       <div className="metadata-grid">
-        <span>Type<strong>{artifact.artifact_type}</strong></span>
-        <span>Size<strong>{artifact.size_bytes.toLocaleString()} bytes</strong></span>
-        <span>Hash<strong>{artifact.content_hash.slice(0, 14)}</strong></span>
-        <span>Created<strong>{formatDateTime(artifact.created_at)}</strong></span>
+        <span>{t('common.type')}<strong>{artifact.artifact_type}</strong></span>
+        <span>{t('common.size')}<strong>{t('common.bytes', { count: artifact.size_bytes.toLocaleString() })}</strong></span>
+        <span>{t('common.hash')}<strong>{artifact.content_hash.slice(0, 14)}</strong></span>
+        <span>{t('common.created')}<strong>{formatDateTime(artifact.created_at)}</strong></span>
       </div>
-      <JsonBlock value={artifact.content_json} title="Payload" />
+      <JsonBlock value={artifact.content_json} title={t('common.payload')} />
     </div>
   );
 }

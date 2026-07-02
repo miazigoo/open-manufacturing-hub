@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Artifact, EventRun, EventStep, asJson } from '../api/client';
 import { replayApi } from '../api/replay';
+import { useT } from '../i18n/I18nProvider';
 
 interface ReplayActionsProps {
   eventId: string;
@@ -11,6 +12,7 @@ interface ReplayActionsProps {
 }
 
 export function ReplayActions({ eventId, selectedRun, selectedStep, selectedArtifact }: ReplayActionsProps) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [editorOpen, setEditorOpen] = useState(false);
   const [jsonDraft, setJsonDraft] = useState('');
@@ -22,18 +24,18 @@ export function ReplayActions({ eventId, selectedRun, selectedStep, selectedArti
     queryClient.invalidateQueries({ queryKey: ['events'] });
   }
 
-  const fullReplay = useMutation({ mutationFn: () => replayApi.full(eventId), onSuccess: () => { setMessage('Full replay created'); refresh(); } });
-  const dryRun = useMutation({ mutationFn: () => replayApi.dryRun(eventId), onSuccess: () => { setMessage('Dry run completed'); refresh(); } });
+  const fullReplay = useMutation({ mutationFn: () => replayApi.full(eventId), onSuccess: () => { setMessage(t('replay.fullCreated')); refresh(); } });
+  const dryRun = useMutation({ mutationFn: () => replayApi.dryRun(eventId), onSuccess: () => { setMessage(t('replay.dryRunCompleted')); refresh(); } });
   const fromStep = useMutation({
     mutationFn: () => replayApi.fromStep(selectedRun?.id ?? '', selectedStep?.step_name ?? ''),
-    onSuccess: () => { setMessage(`Replay from ${selectedStep?.step_name} created`); refresh(); },
+    onSuccess: () => { setMessage(t('replay.fromStepCreated', { step: selectedStep?.step_name ?? '' })); refresh(); },
   });
   const editReplay = useMutation({
     mutationFn: () => {
-      if (!selectedArtifact) throw new Error('Select artifact first');
+      if (!selectedArtifact) throw new Error(t('replay.selectArtifact'));
       return replayApi.editReplay(selectedArtifact.id, JSON.parse(jsonDraft) as Record<string, unknown>, startStep);
     },
-    onSuccess: () => { setMessage('Edited replay created'); setEditorOpen(false); refresh(); },
+    onSuccess: () => { setMessage(t('replay.editedCreated')); setEditorOpen(false); refresh(); },
   });
 
   function openEditor() {
@@ -45,14 +47,14 @@ export function ReplayActions({ eventId, selectedRun, selectedStep, selectedArti
   return (
     <section className="action-panel">
       <div>
-        <span className="eyebrow">Replay controls</span>
-        <h3>Operate this event safely</h3>
+        <span className="eyebrow">{t('replay.eyebrow')}</span>
+        <h3>{t('replay.title')}</h3>
       </div>
       <div className="action-row">
-        <button className="primary-button" onClick={() => fullReplay.mutate()} disabled={fullReplay.isPending}>Replay</button>
-        <button className="ghost-button" onClick={() => fromStep.mutate()} disabled={!selectedRun || !selectedStep || fromStep.isPending}>Replay from step</button>
-        <button className="ghost-button" onClick={openEditor} disabled={!selectedArtifact}>Edit & Replay</button>
-        <button className="ghost-button" onClick={() => dryRun.mutate()} disabled={dryRun.isPending}>Dry Run</button>
+        <button className="primary-button" onClick={() => fullReplay.mutate()} disabled={fullReplay.isPending}>{t('replay.replay')}</button>
+        <button className="ghost-button" onClick={() => fromStep.mutate()} disabled={!selectedRun || !selectedStep || fromStep.isPending}>{t('replay.fromStep')}</button>
+        <button className="ghost-button" onClick={openEditor} disabled={!selectedArtifact}>{t('replay.edit')}</button>
+        <button className="ghost-button" onClick={() => dryRun.mutate()} disabled={dryRun.isPending}>{t('replay.dryRun')}</button>
       </div>
       {message && <div className="success-note">{message}</div>}
       {[fullReplay, dryRun, fromStep, editReplay].find((mutation) => mutation.isError)?.error instanceof Error && (
@@ -61,12 +63,12 @@ export function ReplayActions({ eventId, selectedRun, selectedStep, selectedArti
       {editorOpen && selectedArtifact && (
         <div className="editor-drawer">
           <div className="panel-toolbar">
-            <div><h3>Edit artifact JSON</h3><span className="microcopy">{selectedArtifact.name}</span></div>
-            <button className="ghost-button" onClick={() => setEditorOpen(false)}>Close</button>
+            <div><h3>{t('replay.editJson')}</h3><span className="microcopy">{selectedArtifact.name}</span></div>
+            <button className="ghost-button" onClick={() => setEditorOpen(false)}>{t('replay.close')}</button>
           </div>
-          <label className="field-label">Start from step<input value={startStep} onChange={(event) => setStartStep(event.target.value)} /></label>
+          <label className="field-label">{t('replay.startFromStep')}<input value={startStep} onChange={(event) => setStartStep(event.target.value)} /></label>
           <textarea value={jsonDraft} onChange={(event) => setJsonDraft(event.target.value)} spellCheck={false} />
-          <button className="primary-button" onClick={() => editReplay.mutate()} disabled={editReplay.isPending}>Submit edited replay</button>
+          <button className="primary-button" onClick={() => editReplay.mutate()} disabled={editReplay.isPending}>{t('replay.submitEdited')}</button>
         </div>
       )}
     </section>

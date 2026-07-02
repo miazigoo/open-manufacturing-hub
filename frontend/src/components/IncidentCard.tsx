@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Incident } from '../api/incidents';
+import { useT } from '../i18n/I18nProvider';
 import { StatusBadge } from './StatusBadge';
 
 export function IncidentCard({ incident, onAction }: { incident: Incident; onAction?: (action: 'acknowledge' | 'resolve' | 'ignore') => void }) {
+  const t = useT();
   return (
     <article className="incident-card">
       <div className="incident-stripe" />
@@ -11,13 +13,13 @@ export function IncidentCard({ incident, onAction }: { incident: Incident; onAct
           <Link to={`/incidents/${incident.id}`}><h3>{incident.title}</h3></Link>
           <div className="badge-row"><StatusBadge status={incident.status} /><StatusBadge status={incident.severity} /></div>
         </div>
-        <p>{incident.target_system ?? 'Unknown target'} · {incident.failed_step ?? 'unknown step'} · {incident.error_code ?? 'UNKNOWN'}</p>
+        <p>{incident.target_system ?? t('incidents.unknownTarget')} · {incident.failed_step ?? t('incidents.unknownStep')} · {incident.error_code ?? 'UNKNOWN'}</p>
         <div className="metadata-grid compact-grid">
-          <span>Affected<strong>{incident.affected_events_count}</strong></span>
-          <span>First seen<strong>{new Date(incident.first_seen_at).toLocaleString()}</strong></span>
-          <span>Last seen<strong>{new Date(incident.last_seen_at).toLocaleString()}</strong></span>
+          <span>{t('incidents.affected')}<strong>{incident.affected_events_count}</strong></span>
+          <span>{t('incidents.firstSeen')}<strong>{new Date(incident.first_seen_at).toLocaleString()}</strong></span>
+          <span>{t('incidents.lastSeen')}<strong>{new Date(incident.last_seen_at).toLocaleString()}</strong></span>
         </div>
-        {onAction && <div className="action-row"><button className="ghost-button" onClick={() => onAction('acknowledge')}>Acknowledge</button><button className="ghost-button" onClick={() => onAction('resolve')}>Resolve</button><button className="ghost-button" onClick={() => onAction('ignore')}>Ignore</button></div>}
+        {onAction && <div className="action-row"><button className="ghost-button" onClick={() => onAction('acknowledge')}>{t('incidents.acknowledge')}</button><button className="ghost-button" onClick={() => onAction('resolve')}>{t('incidents.resolve')}</button><button className="ghost-button" onClick={() => onAction('ignore')}>{t('incidents.ignore')}</button></div>}
       </div>
     </article>
   );

@@ -1,8 +1,11 @@
+import { useT } from '../i18n/I18nProvider';
+
 export function ErrorState({ error }: { error: unknown }) {
-  const message = error instanceof Error ? error.message : 'Unknown error';
+  const t = useT();
+  const message = error instanceof Error ? error.message : t('common.unknownError');
   return (
     <div className="error-state">
-      <strong>Request failed</strong>
+      <strong>{t('common.requestFailed')}</strong>
       <span>{message}</span>
     </div>
   );

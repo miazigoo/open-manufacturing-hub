@@ -6,6 +6,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
+import { useT } from '../i18n/I18nProvider';
 import { formatDateTime } from '../utils';
 
 const defaultRules = [
@@ -19,6 +20,7 @@ const defaultTargetSchema = { id: 'string', warehouse: { id: 'string' }, lines: 
 const defaultSample = { order_id: '1532', warehouse_id: 'MAIN', items: [{ sku: 'ABC123', qty: 5 }] };
 
 export function MappingEditorPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const mappings = useQuery({ queryKey: ['mappings'], queryFn: mappingsApi.list });
   const presets = useQuery({ queryKey: ['mapping-presets'], queryFn: mappingsApi.presets });
@@ -39,14 +41,14 @@ export function MappingEditorPage() {
   const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
   const [diff, setDiff] = useState<unknown>(null);
 
-  const create = useMutation({ mutationFn: mappingsApi.create, onSuccess: (mapping) => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setSelectedId(mapping.id); setMessage('Mapping created'); } });
-  const createVersion = useMutation({ mutationFn: (payload: { id: string; rules: Array<Record<string, unknown>>; sourceSchema: Record<string, unknown>; targetSchema: Record<string, unknown> }) => mappingsApi.createVersion(payload.id, { rules_json: payload.rules, source_schema_json: payload.sourceSchema, target_schema_json: payload.targetSchema, notes: 'Created from editor' }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setMessage('New immutable version created'); } });
-  const clone = useMutation({ mutationFn: (payload: { id: string; version: number }) => mappingsApi.cloneVersion(payload.id, payload.version), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setMessage('Version cloned'); } });
-  const validate = useMutation({ mutationFn: (payload: { rules: Array<Record<string, unknown>>; sample: Record<string, unknown> }) => mappingsApi.validate(payload.rules, payload.sample), onSuccess: (data) => { setPreview(data.preview); setMessage(data.valid ? 'Mapping valid' : `Invalid: ${data.errors.join(', ')}`); } });
+  const create = useMutation({ mutationFn: mappingsApi.create, onSuccess: (mapping) => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setSelectedId(mapping.id); setMessage(t('mappings.created')); } });
+  const createVersion = useMutation({ mutationFn: (payload: { id: string; rules: Array<Record<string, unknown>>; sourceSchema: Record<string, unknown>; targetSchema: Record<string, unknown> }) => mappingsApi.createVersion(payload.id, { rules_json: payload.rules, source_schema_json: payload.sourceSchema, target_schema_json: payload.targetSchema, notes: 'Created from editor' }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setMessage(t('mappings.versionCreated')); } });
+  const clone = useMutation({ mutationFn: (payload: { id: string; version: number }) => mappingsApi.cloneVersion(payload.id, payload.version), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setMessage(t('mappings.cloned')); } });
+  const validate = useMutation({ mutationFn: (payload: { rules: Array<Record<string, unknown>>; sample: Record<string, unknown> }) => mappingsApi.validate(payload.rules, payload.sample), onSuccess: (data) => { setPreview(data.preview); setMessage(data.valid ? t('mappings.valid') : t('mappings.invalid', { errors: data.errors.join(', ') })); } });
   const execute = useMutation({ mutationFn: (payload: { id: string; version: number; sample: Record<string, unknown> }) => mappingsApi.execute(payload.id, payload.version, payload.sample), onSuccess: (data) => setPreview(data.output) });
   const compare = useMutation({ mutationFn: (payload: { id: string; left: number; right: number }) => mappingsApi.compare(payload.id, payload.left, payload.right), onSuccess: setDiff });
   const remove = useMutation({ mutationFn: mappingsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setSelectedId(null); } });
-  const installPresets = useMutation({ mutationFn: mappingsApi.installPresets, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setMessage('Mapping presets installed'); } });
+  const installPresets = useMutation({ mutationFn: mappingsApi.installPresets, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setMessage(t('mappings.installed')); } });
 
   function parsed() {
     return {
@@ -79,51 +81,51 @@ export function MappingEditorPage() {
   }
 
   const error = mappings.error ?? presets.error;
-  if (mappings.isLoading || presets.isLoading) return <LoadingState label="Loading mappings" />;
+  if (mappings.isLoading || presets.isLoading) return <LoadingState label={t('mappings.loading')} />;
   if (error) return <ErrorState error={error} />;
 
   return (
     <div className="page-stack mapping-page">
       <section className="page-header mapping-hero">
-        <span className="eyebrow">Mapping Engine</span>
-        <h1>Versioned transformations without connector lock-in.</h1>
-        <p>Define ERP to canonical and canonical to target mappings. Versions are immutable, so every run can be traced back to the exact rules used.</p>
-        <div className="hero-meta"><button className="primary-button" onClick={() => installPresets.mutate()} disabled={installPresets.isPending}>Install presets</button><span>{presets.data?.length ?? 0} packaged mappings available</span></div>
+        <span className="eyebrow">{t('mappings.eyebrow')}</span>
+        <h1>{t('mappings.title')}</h1>
+        <p>{t('mappings.subtitle')}</p>
+        <div className="hero-meta"><button className="primary-button" onClick={() => installPresets.mutate()} disabled={installPresets.isPending}>{t('mappings.installPresets')}</button><span>{t('mappings.presetsAvailable', { count: presets.data?.length ?? 0 })}</span></div>
       </section>
       <section className="mapping-editor-grid">
         <aside className="panel mapping-list-panel">
-          <div className="panel-toolbar"><h2>Mappings</h2><span className="microcopy">{mappings.data?.length ?? 0} definitions</span></div>
+          <div className="panel-toolbar"><h2>{t('nav.mappings')}</h2><span className="microcopy">{t('mappings.definitions', { count: mappings.data?.length ?? 0 })}</span></div>
           {mappings.data?.length ? mappings.data.map((mapping) => (
             <button key={mapping.id} className={`mapping-list-item ${selected?.id === mapping.id ? 'active' : ''}`} onClick={() => setSelectedId(mapping.id)}>
-              <strong>{mapping.name}</strong><span>{mapping.source_entity ?? 'source'} to {mapping.target_entity ?? 'target'} · v{mapping.versions.at(-1)?.version ?? 0}</span>
+              <strong>{mapping.name}</strong><span>{mapping.source_entity ?? t('common.source')} → {mapping.target_entity ?? t('common.target')} · v{mapping.versions.at(-1)?.version ?? 0}</span>
             </button>
-          )) : <EmptyState title="No mappings" detail="Create the first ERP to canonical mapping." />}
+          )) : <EmptyState title={t('mappings.noMappings')} detail={t('mappings.noMappingsDetail')} />}
         </aside>
         <form className="panel mapping-editor-panel" onSubmit={submit}>
-          <div className="panel-toolbar"><h2>Mapping Editor</h2><div className="action-row"><button type="button" className="ghost-button" onClick={validateCurrent}>Validate</button><button type="button" className="ghost-button" disabled={!selected} onClick={versionCurrent}>Create version</button><button className="primary-button">Create mapping</button></div></div>
+          <div className="panel-toolbar"><h2>{t('mappings.editor')}</h2><div className="action-row"><button type="button" className="ghost-button" onClick={validateCurrent}>{t('mappings.validate')}</button><button type="button" className="ghost-button" disabled={!selected} onClick={versionCurrent}>{t('mappings.createVersion')}</button><button className="primary-button">{t('mappings.createMapping')}</button></div></div>
           <div className="mapping-triptych">
-            <label className="field-label">Source schema<textarea value={form.source_schema_json} onChange={(event) => setForm({ ...form, source_schema_json: event.target.value })} spellCheck={false} /></label>
-            <label className="field-label">Rules JSON<textarea value={form.rules_json} onChange={(event) => setForm({ ...form, rules_json: event.target.value })} spellCheck={false} /></label>
-            <label className="field-label">Target schema<textarea value={form.target_schema_json} onChange={(event) => setForm({ ...form, target_schema_json: event.target.value })} spellCheck={false} /></label>
+            <label className="field-label">{t('mappings.sourceSchema')}<textarea value={form.source_schema_json} onChange={(event) => setForm({ ...form, source_schema_json: event.target.value })} spellCheck={false} /></label>
+            <label className="field-label">{t('mappings.rulesJson')}<textarea value={form.rules_json} onChange={(event) => setForm({ ...form, rules_json: event.target.value })} spellCheck={false} /></label>
+            <label className="field-label">{t('mappings.targetSchema')}<textarea value={form.target_schema_json} onChange={(event) => setForm({ ...form, target_schema_json: event.target.value })} spellCheck={false} /></label>
           </div>
           <div className="metadata-grid compact-grid">
-            <label className="field-label">Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-            <label className="field-label">Source entity<input value={form.source_entity} onChange={(event) => setForm({ ...form, source_entity: event.target.value })} /></label>
-            <label className="field-label">Target entity<input value={form.target_entity} onChange={(event) => setForm({ ...form, target_entity: event.target.value })} /></label>
+            <label className="field-label">{t('connectors.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+            <label className="field-label">{t('mappings.sourceEntity')}<input value={form.source_entity} onChange={(event) => setForm({ ...form, source_entity: event.target.value })} /></label>
+            <label className="field-label">{t('mappings.targetEntity')}<input value={form.target_entity} onChange={(event) => setForm({ ...form, target_entity: event.target.value })} /></label>
           </div>
-          <label className="field-label">Sample payload<textarea value={form.sample_payload} onChange={(event) => setForm({ ...form, sample_payload: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('mappings.samplePayload')}<textarea value={form.sample_payload} onChange={(event) => setForm({ ...form, sample_payload: event.target.value })} spellCheck={false} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           {message && <div className="success-note">{message}</div>}
         </form>
       </section>
       <section className="mapping-bottom-grid">
         <div className="panel">
-          <div className="panel-toolbar"><h2>Selected mapping</h2>{selected && <button className="ghost-button danger" onClick={() => remove.mutate(selected.id)}>Delete</button>}</div>
-          {selected ? <div className="version-strip">{selected.versions.map((version) => <button key={version.id} className="version-chip" onClick={() => setForm({ ...form, rules_json: asJson(version.rules_json), source_schema_json: asJson(version.source_schema_json), target_schema_json: asJson(version.target_schema_json) })}>{selected.name} v{version.version}<span>{formatDateTime(version.created_at)}</span></button>)}</div> : <EmptyState title="No mapping selected" detail="Pick a mapping to inspect versions." />}
-          {selected && latestVersion && <div className="action-row"><button className="ghost-button" onClick={() => clone.mutate({ id: selected.id, version: latestVersion.version })}>Clone latest</button>{selected.versions.length > 1 && <button className="ghost-button" onClick={() => compare.mutate({ id: selected.id, left: selected.versions[0].version, right: latestVersion.version })}>Compare first/latest</button>}<button className="ghost-button" onClick={() => { try { execute.mutate({ id: selected.id, version: latestVersion.version, sample: parsed().sample }); } catch (error) { setFormError(error instanceof Error ? error.message : 'Invalid JSON'); } }}>Execute latest</button></div>}
+          <div className="panel-toolbar"><h2>{t('mappings.selected')}</h2>{selected && <button className="ghost-button danger" onClick={() => remove.mutate(selected.id)}>{t('connectors.delete')}</button>}</div>
+          {selected ? <div className="version-strip">{selected.versions.map((version) => <button key={version.id} className="version-chip" onClick={() => setForm({ ...form, rules_json: asJson(version.rules_json), source_schema_json: asJson(version.source_schema_json), target_schema_json: asJson(version.target_schema_json) })}>{selected.name} v{version.version}<span>{formatDateTime(version.created_at)}</span></button>)}</div> : <EmptyState title={t('mappings.noSelected')} detail={t('mappings.noSelectedDetail')} />}
+          {selected && latestVersion && <div className="action-row"><button className="ghost-button" onClick={() => clone.mutate({ id: selected.id, version: latestVersion.version })}>{t('mappings.cloneLatest')}</button>{selected.versions.length > 1 && <button className="ghost-button" onClick={() => compare.mutate({ id: selected.id, left: selected.versions[0].version, right: latestVersion.version })}>{t('mappings.compare')}</button>}<button className="ghost-button" onClick={() => { try { execute.mutate({ id: selected.id, version: latestVersion.version, sample: parsed().sample }); } catch (error) { setFormError(error instanceof Error ? error.message : 'Invalid JSON'); } }}>{t('mappings.executeLatest')}</button></div>}
         </div>
-        <div className="panel"><JsonBlock title="Preview" value={preview ?? { hint: 'Validate or execute a mapping to see output.' }} searchable={false} /></div>
-        <div className="panel"><JsonBlock title="Version diff" value={(diff as Record<string, unknown> | null) ?? { hint: 'Compare first and latest versions.' }} searchable={false} /></div>
+        <div className="panel"><JsonBlock title={t('mappings.preview')} value={preview ?? { hint: t('mappings.previewHint') }} searchable={false} /></div>
+        <div className="panel"><JsonBlock title={t('mappings.versionDiff')} value={(diff as Record<string, unknown> | null) ?? { hint: t('mappings.diffHint') }} searchable={false} /></div>
       </section>
     </div>
   );

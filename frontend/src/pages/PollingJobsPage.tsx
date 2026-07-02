@@ -8,11 +8,13 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { useT } from '../i18n/I18nProvider';
 import { formatDateTime, formatDuration } from '../utils';
 
 const defaultQuery = { '$select': 'Ref_Key,Number,Date,Партнер_Key,Склад_Key,Комментарий,Товары', '$orderby': 'Date asc' };
 
 export function PollingJobsPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const jobs = useQuery({ queryKey: ['polling-jobs'], queryFn: pollingApi.list });
   const connectors = useQuery({ queryKey: ['connectors'], queryFn: connectorsApi.list });
@@ -42,11 +44,11 @@ export function PollingJobsPage() {
     queryClient.invalidateQueries({ queryKey: ['polling-job-runs'] });
     queryClient.invalidateQueries({ queryKey: ['events'] });
   };
-  const create = useMutation({ mutationFn: pollingApi.create, onSuccess: (job) => { refresh(); setSelectedId(job.id); setMessage('Polling job created'); } });
+  const create = useMutation({ mutationFn: pollingApi.create, onSuccess: (job) => { refresh(); setSelectedId(job.id); setMessage(t('polling.created')); } });
   const remove = useMutation({ mutationFn: pollingApi.delete, onSuccess: () => { refresh(); setSelectedId(null); } });
   const enable = useMutation({ mutationFn: pollingApi.enable, onSuccess: refresh });
   const disable = useMutation({ mutationFn: pollingApi.disable, onSuccess: refresh });
-  const runOnce = useMutation({ mutationFn: pollingApi.runOnce, onSuccess: (run) => { refresh(); setMessage(`Run finished: ${run.events_created} created, ${run.items_skipped} skipped`); } });
+  const runOnce = useMutation({ mutationFn: pollingApi.runOnce, onSuccess: (run) => { refresh(); setMessage(t('polling.runFinished', { created: run.events_created, skipped: run.items_skipped })); } });
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -54,7 +56,7 @@ export function PollingJobsPage() {
     setMessage(null);
     try {
       const sourceId = form.source_connector_id || onecConnectors[0]?.id;
-      if (!sourceId) throw new Error('Create or install a 1C connector first');
+      if (!sourceId) throw new Error(t('polling.createFirst'));
       const payload: PollingJobPayload = {
         ...form,
         source_connector_id: sourceId,
@@ -67,75 +69,75 @@ export function PollingJobsPage() {
   }
 
   const error = jobs.error ?? connectors.error;
-  if (jobs.isLoading || connectors.isLoading) return <LoadingState label="Loading polling jobs" />;
+  if (jobs.isLoading || connectors.isLoading) return <LoadingState label={t('polling.loading')} />;
   if (error) return <ErrorState error={error} />;
 
   return (
     <div className="page-stack polling-page">
       <section className="page-header polling-hero">
-        <span className="eyebrow">1C OData Polling</span>
-        <h1>Controlled intake for systems that cannot push events.</h1>
-        <p>Run jobs manually for verification, track idempotency, and inspect every OData request before scheduling it in production.</p>
+        <span className="eyebrow">{t('polling.eyebrow')}</span>
+        <h1>{t('polling.title')}</h1>
+        <p>{t('polling.subtitle')}</p>
       </section>
 
       <section className="two-column-page page-stack">
         <form className="panel stack-form" onSubmit={submit}>
-          <div className="panel-toolbar"><h2>Create polling job</h2><span className="microcopy">run-once first</span></div>
-          <label className="field-label">Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-          <label className="field-label">1C connector<select value={form.source_connector_id} onChange={(event) => setForm({ ...form, source_connector_id: event.target.value })}><option value="">Auto-select 1C connector</option>{onecConnectors.map((connector) => <option key={connector.id} value={connector.id}>{connector.name}</option>)}</select></label>
+          <div className="panel-toolbar"><h2>{t('polling.createJob')}</h2><span className="microcopy">{t('polling.runOnceFirst')}</span></div>
+          <label className="field-label">{t('connectors.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+          <label className="field-label">{t('polling.onecConnector')}<select value={form.source_connector_id} onChange={(event) => setForm({ ...form, source_connector_id: event.target.value })}><option value="">{t('polling.autoSelect')}</option>{onecConnectors.map((connector) => <option key={connector.id} value={connector.id}>{connector.name}</option>)}</select></label>
           <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">Resource<input value={form.resource} onChange={(event) => setForm({ ...form, resource: event.target.value })} /></label>
-            <label className="field-label">Target<input value={form.target_system} onChange={(event) => setForm({ ...form, target_system: event.target.value })} /></label>
-            <label className="field-label">Interval, sec<input type="number" value={form.interval_seconds} onChange={(event) => setForm({ ...form, interval_seconds: Number(event.target.value) })} /></label>
+            <label className="field-label">{t('polling.resource')}<input value={form.resource} onChange={(event) => setForm({ ...form, resource: event.target.value })} /></label>
+            <label className="field-label">{t('common.target')}<input value={form.target_system} onChange={(event) => setForm({ ...form, target_system: event.target.value })} /></label>
+            <label className="field-label">{t('polling.interval')}<input type="number" value={form.interval_seconds} onChange={(event) => setForm({ ...form, interval_seconds: Number(event.target.value) })} /></label>
           </div>
           <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">Event<input value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} /></label>
-            <label className="field-label">Entity<input value={form.entity_type} onChange={(event) => setForm({ ...form, entity_type: event.target.value })} /></label>
-            <label className="field-label">Cursor<select value={form.cursor_type} onChange={(event) => setForm({ ...form, cursor_type: event.target.value as PollingCursorType })}><option value="none">none</option><option value="updated_at">updated_at</option><option value="skip">skip</option><option value="custom">custom</option></select></label>
+            <label className="field-label">{t('polling.event')}<input value={form.event_type} onChange={(event) => setForm({ ...form, event_type: event.target.value })} /></label>
+            <label className="field-label">{t('polling.entity')}<input value={form.entity_type} onChange={(event) => setForm({ ...form, entity_type: event.target.value })} /></label>
+            <label className="field-label">{t('polling.cursor')}<select value={form.cursor_type} onChange={(event) => setForm({ ...form, cursor_type: event.target.value as PollingCursorType })}><option value="none">none</option><option value="updated_at">updated_at</option><option value="skip">skip</option><option value="custom">custom</option></select></label>
           </div>
           <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">Entity ID field<input value={form.entity_id_field} onChange={(event) => setForm({ ...form, entity_id_field: event.target.value })} /></label>
-            <label className="field-label">Correlation field<input value={form.correlation_id_field} onChange={(event) => setForm({ ...form, correlation_id_field: event.target.value })} /></label>
-            <label className="field-label">Updated field<input value={form.updated_at_field} onChange={(event) => setForm({ ...form, updated_at_field: event.target.value })} /></label>
+            <label className="field-label">{t('polling.entityIdField')}<input value={form.entity_id_field} onChange={(event) => setForm({ ...form, entity_id_field: event.target.value })} /></label>
+            <label className="field-label">{t('polling.correlationField')}<input value={form.correlation_id_field} onChange={(event) => setForm({ ...form, correlation_id_field: event.target.value })} /></label>
+            <label className="field-label">{t('polling.updatedField')}<input value={form.updated_at_field} onChange={(event) => setForm({ ...form, updated_at_field: event.target.value })} /></label>
           </div>
-          <label className="field-label">OData query<textarea value={form.query_json} onChange={(event) => setForm({ ...form, query_json: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('polling.odataQuery')}<textarea value={form.query_json} onChange={(event) => setForm({ ...form, query_json: event.target.value })} spellCheck={false} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           {create.error instanceof Error && <div className="error-state compact">{create.error.message}</div>}
           {message && <div className="success-note">{message}</div>}
-          <button className="primary-button" disabled={create.isPending}>Create job</button>
+          <button className="primary-button" disabled={create.isPending}>{t('polling.createJob')}</button>
         </form>
 
         <section className="panel">
-          <div className="panel-toolbar"><h2>Polling jobs</h2><span className="microcopy">{jobs.data?.length ?? 0} configured</span></div>
+          <div className="panel-toolbar"><h2>{t('polling.jobs')}</h2><span className="microcopy">{t('connectors.configured', { count: jobs.data?.length ?? 0 })}</span></div>
           {jobs.data?.length ? jobs.data.map((job) => (
             <article className={`polling-card ${selected?.id === job.id ? 'active' : ''}`} key={job.id} onClick={() => setSelectedId(job.id)}>
               <div className="connector-card-top">
-                <div><h3>{job.name}</h3><p>{job.resource} to {job.target_system ?? 'unassigned'} · every {job.interval_seconds}s</p></div>
+                <div><h3>{job.name}</h3><p>{job.resource} → {job.target_system ?? t('common.unassigned')} · {t('polling.everySeconds', { count: job.interval_seconds })}</p></div>
                 <StatusBadge status={job.status} />
               </div>
               <div className="metadata-grid compact-grid">
-                <span>Last run<strong>{formatDateTime(job.last_run_at)}</strong></span>
-                <span>Next run<strong>{formatDateTime(job.next_run_at)}</strong></span>
-                <span>Cursor<strong>{job.cursor_value ?? 'empty'}</strong></span>
+                <span>{t('polling.lastRun')}<strong>{formatDateTime(job.last_run_at)}</strong></span>
+                <span>{t('polling.nextRun')}<strong>{formatDateTime(job.next_run_at)}</strong></span>
+                <span>{t('polling.cursor')}<strong>{job.cursor_value ?? t('common.empty')}</strong></span>
               </div>
               {job.last_error && <div className="error-state compact">{job.last_error}</div>}
               <div className="action-row" onClick={(event) => event.stopPropagation()}>
-                <button className="ghost-button" onClick={() => runOnce.mutate(job.id)} disabled={runOnce.isPending}>Run once</button>
-                <button className="ghost-button" onClick={() => job.enabled ? disable.mutate(job.id) : enable.mutate(job.id)}>{job.enabled ? 'Disable' : 'Enable'}</button>
-                <button className="ghost-button danger" onClick={() => remove.mutate(job.id)}>Delete</button>
+                <button className="ghost-button" onClick={() => runOnce.mutate(job.id)} disabled={runOnce.isPending}>{t('polling.runOnce')}</button>
+                <button className="ghost-button" onClick={() => job.enabled ? disable.mutate(job.id) : enable.mutate(job.id)}>{job.enabled ? t('connectors.disable') : t('connectors.enable')}</button>
+                <button className="ghost-button danger" onClick={() => remove.mutate(job.id)}>{t('connectors.delete')}</button>
               </div>
             </article>
-          )) : <EmptyState title="No polling jobs" detail="Install the 1C demo scenario or create a job manually." />}
+          )) : <EmptyState title={t('polling.noJobs')} detail={t('polling.noJobsDetail')} />}
         </section>
       </section>
 
       <section className="mapping-bottom-grid">
-        <div className="panel"><JsonBlock title="Selected job query" value={selected?.query_json ?? { hint: 'Select a polling job.' }} searchable={false} /></div>
+        <div className="panel"><JsonBlock title={t('polling.selectedQuery')} value={selected?.query_json ?? { hint: t('polling.selectJob') }} searchable={false} /></div>
         <div className="panel">
-          <div className="panel-toolbar"><h2>Recent runs</h2><span className="microcopy">{runs.data?.length ?? 0} records</span></div>
-          {runs.data?.length ? <div className="run-list compact-run-list">{runs.data.slice(0, 8).map((run) => <div className="run-card" key={run.id}><div className="run-header"><strong>{formatDateTime(run.started_at)}</strong><StatusBadge status={run.status} compact /></div><span className="muted">{run.events_created} created · {run.items_skipped} skipped · {formatDuration(run.started_at, run.finished_at)}</span>{run.error_message && <small className="error-text">{run.error_message}</small>}</div>)}</div> : <EmptyState title="No runs yet" detail="Run the selected job once to create a job-run log." />}
+          <div className="panel-toolbar"><h2>{t('polling.recentRuns')}</h2><span className="microcopy">{t('polling.records', { count: runs.data?.length ?? 0 })}</span></div>
+          {runs.data?.length ? <div className="run-list compact-run-list">{runs.data.slice(0, 8).map((run) => <div className="run-card" key={run.id}><div className="run-header"><strong>{formatDateTime(run.started_at)}</strong><StatusBadge status={run.status} compact /></div><span className="muted">{t('polling.runSummary', { created: run.events_created, skipped: run.items_skipped, duration: formatDuration(run.started_at, run.finished_at) })}</span>{run.error_message && <small className="error-text">{run.error_message}</small>}</div>)}</div> : <EmptyState title={t('polling.noRuns')} detail={t('polling.noRunsDetail')} />}
         </div>
-        <div className="panel"><JsonBlock title="Latest run details" value={runs.data?.[0]?.details_json ?? { hint: 'Run details will appear here.' }} searchable={false} /></div>
+        <div className="panel"><JsonBlock title={t('polling.latestDetails')} value={runs.data?.[0]?.details_json ?? { hint: t('polling.detailsHint') }} searchable={false} /></div>
       </section>
     </div>
   );
