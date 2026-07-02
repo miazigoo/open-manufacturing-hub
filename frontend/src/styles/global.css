@@ -235,3 +235,10 @@ th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spa
   .scenario-grid, .scenario-card { grid-template-columns: 1fr; }
   .scenario-orbit { min-height: 220px; border-right: 0; border-bottom: 1px solid var(--line); }
 }
+.scenario-grid-wide { grid-template-columns: minmax(0, 1fr) minmax(360px, .55fr); }
+.scenario-list { display: grid; gap: 18px; }
+.scenario-sidecar textarea { min-height: 120px; }
+.scenario-sidecar .success-note { display: grid; gap: 8px; }
+@media (max-width: 1180px) {
+  .scenario-grid-wide { grid-template-columns: 1fr; }
+}

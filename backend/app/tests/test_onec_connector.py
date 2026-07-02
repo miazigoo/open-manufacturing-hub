@@ -79,7 +79,7 @@ async def test_onec_send_and_dry_run_map_http_errors(monkeypatch):
     async def fake_request(self, method, url, *, params=None, json_payload=None):
         assert method == "POST"
         assert url.endswith("/shipment-orders")
-        assert json_payload == {"document": {"external_id": "SO-1"}}
+        assert json_payload["payload"]["document"] == {"external_id": "SO-1"}
         return httpx.Response(500, json={"error": "failed"}), {"method": method, "url": url, "body": json_payload}, None, None
 
     monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
@@ -99,3 +99,30 @@ async def test_onec_send_and_dry_run_map_http_errors(monkeypatch):
     dry = await connector.dry_run_send(ONEC_CONFIG, {"_omh": {"method": "POST", "path": "/shipment-orders"}, "document": {}}, ConnectorContext(dry_run=True))
     assert dry.success is True
     assert dry.response_payload["dry_run"] is True
+
+
+async def test_onec_business_response_handling(monkeypatch):
+    connector = OneCConnector()
+
+    async def success_response(self, method, url, *, params=None, json_payload=None):
+        return httpx.Response(200, json={"success": True, "external_document_id": "1C-SHIP-1532"}), {"method": method, "url": url, "body": json_payload}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", success_response)
+    ok = await connector.send(ONEC_CONFIG, {"_omh": {"operation": "update_shipment_status"}, "payload": {"external_order_id": "1532"}}, ConnectorContext())
+    assert ok.success is True
+
+    async def business_error(self, method, url, *, params=None, json_payload=None):
+        return httpx.Response(200, json={"success": False, "error_code": "ORDER_NOT_FOUND", "error_message": "Order was not found"}), {"method": method, "url": url, "body": json_payload}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", business_error)
+    failed = await connector.send(ONEC_CONFIG, {"_omh": {"operation": "update_shipment_status"}, "payload": {"external_order_id": "404"}}, ConnectorContext())
+    assert failed.success is False
+    assert failed.error_code == "ORDER_NOT_FOUND"
+
+    async def invalid_json(self, method, url, *, params=None, json_payload=None):
+        return httpx.Response(200, text="not json"), {"method": method, "url": url, "body": json_payload}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", invalid_json)
+    invalid = await connector.send(ONEC_CONFIG, {"_omh": {"operation": "update_shipment_status"}, "payload": {"external_order_id": "1532"}}, ConnectorContext())
+    assert invalid.success is False
+    assert invalid.error_code == "ONEC_RESPONSE_INVALID"

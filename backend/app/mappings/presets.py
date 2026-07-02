@@ -41,4 +41,26 @@ CANONICAL_SALES_ORDER_TO_MOCK_WMS = {
     "target_schema_json": {"_omh": {}, "document": {"items": []}},
 }
 
-MAPPING_PRESETS = [ONEC_SALES_ORDER_TO_CANONICAL, CANONICAL_SALES_ORDER_TO_MOCK_WMS]
+MOCK_WMS_SHIPMENT_FACT_TO_ONEC = {
+    "name": "mock_wms_shipment_fact_to_onec_shipment_fact",
+    "description": "Mock WMS ShipmentFact to 1C HTTP service shipment fact envelope",
+    "source_entity": "mock_wms.ShipmentFact",
+    "target_entity": "1c.ShipmentFact",
+    "rules_json": [
+        {"constant": "update_shipment_status", "target": "_omh.operation"},
+        {"constant": "ShipmentFactCreated", "target": "omh.event_type"},
+        {"constant": "ShipmentFact", "target": "omh.entity_type"},
+        {"source": "order_id", "target": "payload.external_order_id"},
+        {"source": "shipment_id", "target": "payload.shipment_id"},
+        {"source": "status", "target": "payload.status"},
+        {"source": "warehouse_id", "target": "payload.warehouse_id"},
+        {"source": "items", "target": "payload.items", "type": "array", "items": [
+            {"source": "sku", "target": "sku"},
+            {"source": "qty", "target": "quantity"},
+        ]},
+    ],
+    "source_schema_json": {"shipment_id": "string", "order_id": "string", "items": []},
+    "target_schema_json": {"_omh": {}, "omh": {}, "payload": {"items": []}},
+}
+
+MAPPING_PRESETS = [ONEC_SALES_ORDER_TO_CANONICAL, CANONICAL_SALES_ORDER_TO_MOCK_WMS, MOCK_WMS_SHIPMENT_FACT_TO_ONEC]

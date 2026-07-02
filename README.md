@@ -19,6 +19,7 @@ Open Manufacturing Hub is an open source integration runtime for ERP, WMS, MES a
 - **Mapping**: immutable versioned JSON transformation between source, canonical and target shapes.
 - **Workflow**: configurable event route that binds steps, validation rules and mapping versions.
 - **Execution Engine**: generic runtime that executes registered steps and records artifacts, retries and failure handlers.
+- **1C HTTP Service**: configurable bidirectional target contract for sending WMS facts/statuses back to 1C without COM or direct SQL.
 
 ## Quick Start
 
@@ -111,5 +112,6 @@ After `make demo-seed`, the UI should show:
 - `Mock WMS` maintenance window.
 - connector instances: Mock ERP / Mock WMS / REST Demo Target / Webhook Demo Source.
 - workflow and mapping pages with demo ERP to canonical and canonical to WMS versions.
+- 1C scenarios page with forward `1C ERP -> OMH -> WMS` and reverse `WMS -> OMH -> 1C ERP` demos.
 - execution steps page with registered runtime steps.
 - retention preview with expired artifacts/events and pinned skipped.

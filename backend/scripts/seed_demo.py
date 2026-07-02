@@ -19,7 +19,7 @@ from app.health.service import get_or_create_site
 from app.maintenance.models import MaintenanceWindow
 from app.mappings.models import MappingDefinition, MappingVersion
 from app.notifications.models import NotificationDelivery, NotificationRule
-from app.onec_scenarios.service import install_sales_order_demo
+from app.onec_scenarios.service import install_bidirectional_demo, install_sales_order_demo
 from app.workflows.models import Workflow
 
 
@@ -449,6 +449,7 @@ async def seed_demo(session: AsyncSession) -> dict[str, Any]:
     await ensure_demo_connectors(session)
     await ensure_demo_workflows(session)
     onec_scenario = await install_sales_order_demo(session)
+    bidirectional_scenario = await install_bidirectional_demo(session)
     await ensure_event(session, correlation_id="demo_success_1001", entity_id="1001", warehouse_id="MAIN")
     await ensure_event(session, correlation_id="demo_failed_1532", entity_id="1532", warehouse_id="005")
     for index in range(1533, 1537):
@@ -466,6 +467,7 @@ async def seed_demo(session: AsyncSession) -> dict[str, Any]:
         "notification_rule": "Critical WMS errors",
         "maintenance": "Mock WMS",
         "onec_scenario": onec_scenario["scenario"],
+        "onec_bidirectional_scenario": bidirectional_scenario["scenario"],
     }
 
 

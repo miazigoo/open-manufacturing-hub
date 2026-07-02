@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 from app.connectors.builtin.onec import errors
 from app.connectors.builtin.onec.client import OneCHTTPClient, join_url
-from app.connectors.builtin.onec.http_service import call_http_service
+from app.connectors.builtin.onec.http_service import call_http_service, resolve_operation
 from app.connectors.builtin.onec.odata import read_odata as onec_read_odata
 from app.connectors.builtin.onec.schemas import OneCReadResult
 from app.core.enums import ConnectorDirection, HealthStatus
@@ -90,15 +90,16 @@ class OneCConnector:
         validation = await self.validate_config(config)
         if not validation.valid:
             return ConnectorSendResult(False, error_code=errors.ONEC_CONFIG_INVALID, error_message="; ".join(validation.errors))
-        success, status_code, request_payload, response_payload, error_code, error_message = await call_http_service(config, payload)
+        success, status_code, request_payload, response_payload, error_code, error_message = await call_http_service(config, payload, context)
         return ConnectorSendResult(success=success, status_code=status_code, request_payload=request_payload, response_payload=response_payload, error_code=error_code, error_message=error_message)
 
     async def dry_run_send(self, config: dict[str, Any], payload: dict, context: ConnectorContext) -> ConnectorSendResult:
-        operation_meta = payload.get("_omh") or {}
-        method = str(operation_meta.get("method") or "POST").upper()
-        path = str(operation_meta.get("path") or "/")
+        operation, method, path, error = resolve_operation(config, payload)
         url = join_url(str(config.get("http_service_base_url") or "http://1c-service"), path)
-        request_payload = {"method": method, "url": url, "body": {key: value for key, value in payload.items() if key != "_omh"}, "operation": operation_meta.get("operation")}
+        body = {key: value for key, value in payload.items() if key != "_omh"}
+        request_payload = {"method": method, "url": url, "body": body, "operation": operation}
+        if error:
+            return ConnectorSendResult(False, request_payload=request_payload, error_code=error["error_code"], error_message=error["error_message"])
         return ConnectorSendResult(success=True, status_code=200, request_payload=request_payload, response_payload={"dry_run": True, "would_call": {"method": method, "url": url}})
 
     async def receive(self, config: dict, context: ConnectorContext) -> list[ConnectorReceivedEvent]:

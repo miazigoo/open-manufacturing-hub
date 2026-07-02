@@ -11,4 +11,14 @@ SALES_ORDER_DEMO = {
     ],
 }
 
-ONEC_SCENARIO_PRESETS = [SALES_ORDER_DEMO]
+BIDIRECTIONAL_SHIPMENT_FACT_DEMO = {
+    "key": "mock_wms_shipment_fact_to_onec",
+    "name": "WMS ShipmentFact to 1C ERP",
+    "description": "Receive WMS shipment facts and update 1C through the OMH HTTP service contract.",
+    "source_resource": "Mock WMS ShipmentFact",
+    "event_type": "ShipmentFactCreated",
+    "entity_type": "ShipmentFact",
+    "mappings": ["mock_wms_shipment_fact_to_onec_shipment_fact"],
+}
+
+ONEC_SCENARIO_PRESETS = [SALES_ORDER_DEMO, BIDIRECTIONAL_SHIPMENT_FACT_DEMO]

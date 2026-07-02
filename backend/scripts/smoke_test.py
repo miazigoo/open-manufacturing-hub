@@ -46,6 +46,8 @@ def main() -> int:
         ("workflows", "/api/workflows"),
         ("polling jobs", "/api/polling/jobs"),
         ("1c scenarios", "/api/onec-scenarios/presets"),
+        ("1c http template", "/api/onec-templates/http-service"),
+        ("mock 1c health", "/api/mock-onec/hs/omh/health"),
         ("maintenance", "/api/maintenance"),
         ("retention", "/api/retention/preview"),
     ]
