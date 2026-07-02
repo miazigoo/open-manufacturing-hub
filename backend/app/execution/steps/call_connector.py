@@ -26,7 +26,12 @@ class CallConnectorStep:
             source_system=context.source_system,
             target_system=context.target_system,
             dry_run=context.dry_run,
-            metadata={"step_name": self.name},
+            metadata={
+                "step_name": self.name,
+                "event_type": context.event.event_type,
+                "entity_type": context.event.entity_type,
+                "entity_id": context.event.entity_id,
+            },
         )
         try:
             result = await manager.send_to_target(context.target_system, payload, connector_context)

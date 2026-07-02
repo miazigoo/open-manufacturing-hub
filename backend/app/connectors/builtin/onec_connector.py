@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 from app.connectors.builtin.onec import errors
 from app.connectors.builtin.onec.client import OneCHTTPClient, join_url
-from app.connectors.builtin.onec.http_service import call_http_service, resolve_operation
+from app.connectors.builtin.onec.http_service import call_http_service, resolve_operation, standard_envelope
 from app.connectors.builtin.onec.odata import read_odata as onec_read_odata
 from app.connectors.builtin.onec.schemas import OneCReadResult
 from app.core.enums import ConnectorDirection, HealthStatus
@@ -70,7 +70,7 @@ class OneCConnector:
                 return ConnectorHealthResult(status=HealthStatus.DOWN, message=f"1C OData returned {response.status_code}", details=details)
             details["odata"] = "ok"
         if config.get("http_service_base_url") and (config.get("http_services") or {}).get("enabled", True):
-            url = join_url(str(config["http_service_base_url"]))
+            url = join_url(str(config["http_service_base_url"]), _http_health_path(config))
             response, _, error_code, error_message = await client.request("GET", url)
             if error_code:
                 return ConnectorHealthResult(status=HealthStatus.DOWN, message=error_message or "1C HTTP service healthcheck failed", details={"error_code": error_code})
@@ -78,7 +78,7 @@ class OneCConnector:
             details["http_service_status_code"] = response.status_code
             if response.status_code == 401:
                 return ConnectorHealthResult(status=HealthStatus.DOWN, message="1C returned 401 Unauthorized", details={"status_code": 401, "error_code": errors.ONEC_AUTH_FAILED})
-            if response.status_code >= 500:
+            if response.status_code >= 400:
                 return ConnectorHealthResult(status=HealthStatus.DOWN, message=f"1C HTTP service returned {response.status_code}", details=details)
             details["http_service"] = "ok"
         return ConnectorHealthResult(status=HealthStatus.OK, message="1C service is reachable", details=details)
@@ -96,7 +96,7 @@ class OneCConnector:
     async def dry_run_send(self, config: dict[str, Any], payload: dict, context: ConnectorContext) -> ConnectorSendResult:
         operation, method, path, error = resolve_operation(config, payload)
         url = join_url(str(config.get("http_service_base_url") or "http://1c-service"), path)
-        body = {key: value for key, value in payload.items() if key != "_omh"}
+        body = standard_envelope(payload, context)
         request_payload = {"method": method, "url": url, "body": body, "operation": operation}
         if error:
             return ConnectorSendResult(False, request_payload=request_payload, error_code=error["error_code"], error_message=error["error_message"])
@@ -112,3 +112,11 @@ def _positive_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _http_health_path(config: dict[str, Any]) -> str:
+    services = (config.get("http_services") or {}).get("services") or []
+    for service in services:
+        if service.get("name") == "health" and service.get("path"):
+            return str(service["path"])
+    return str((config.get("http_services") or {}).get("health_path") or "/health")

@@ -99,6 +99,27 @@ async def test_onec_send_and_dry_run_map_http_errors(monkeypatch):
     dry = await connector.dry_run_send(ONEC_CONFIG, {"_omh": {"method": "POST", "path": "/shipment-orders"}, "document": {}}, ConnectorContext(dry_run=True))
     assert dry.success is True
     assert dry.response_payload["dry_run"] is True
+    assert dry.request_payload["body"]["payload"] == {"document": {}}
+
+
+async def test_onec_healthcheck_uses_configured_http_health_path(monkeypatch):
+    connector = OneCConnector()
+    calls = []
+
+    async def fake_request(self, method, url, *, params=None, json_payload=None):
+        calls.append(url)
+        return httpx.Response(200, json={"success": True, "status": "ok"}), {"url": url}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
+    result = await connector.healthcheck(
+        {
+            "http_service_base_url": "https://onec.example.local/hs/omh",
+            "auth": {"type": "none"},
+            "http_services": {"enabled": True, "services": [{"name": "health", "method": "GET", "path": "/health"}]},
+        }
+    )
+    assert result.status == "ok"
+    assert calls == ["https://onec.example.local/hs/omh/health"]
 
 
 async def test_onec_business_response_handling(monkeypatch):

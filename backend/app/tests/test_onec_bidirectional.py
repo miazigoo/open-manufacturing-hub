@@ -75,6 +75,8 @@ async def test_bidirectional_workflow_success_and_incidents(monkeypatch, client)
     call_step = next(step for step in success_timeline["runs"][0]["steps"] if step["step_name"] == "call_connector")
     outgoing = next(artifact for artifact in call_step["artifacts"] if artifact["artifact_type"] == "outgoing_request")
     assert outgoing["content_json"]["body"]["payload"]["external_order_id"] == "1532"
+    assert outgoing["content_json"]["body"]["omh"]["event_type"] == "ShipmentFactCreated"
+    assert outgoing["content_json"]["body"]["omh"]["entity_id"] == "WMS-SHIP-1532"
 
     business = await client.post("/api/onec-scenarios/test-shipment-fact", json=shipment_fact("404"))
     business_event_id = business.json()["event_id"]

@@ -31,7 +31,7 @@ def resolve_operation(config: dict[str, Any], payload: dict[str, Any]) -> tuple[
 
 async def call_http_service(config: dict[str, Any], payload: dict[str, Any], context: ConnectorContext | None = None) -> tuple[bool, int | None, dict[str, Any], dict[str, Any] | None, str | None, str | None]:
     operation, method, path, error = resolve_operation(config, payload)
-    body = _standard_envelope(payload, context)
+    body = standard_envelope(payload, context)
     base_url = str(config.get("http_service_base_url") or "")
     url = join_url(base_url, path)
     if error:
@@ -62,7 +62,7 @@ async def call_http_service(config: dict[str, Any], payload: dict[str, Any], con
     return True, response.status_code, request_payload, response_payload, None, None
 
 
-def _standard_envelope(payload: dict[str, Any], context: ConnectorContext | None) -> dict[str, Any]:
+def standard_envelope(payload: dict[str, Any], context: ConnectorContext | None) -> dict[str, Any]:
     body = {key: value for key, value in payload.items() if key != "_omh"}
     envelope = body if isinstance(body.get("payload"), dict) else {"payload": body}
     omh = dict(envelope.get("omh") or {})
@@ -79,6 +79,9 @@ def _standard_envelope(payload: dict[str, Any], context: ConnectorContext | None
             omh.setdefault("source_system", context.source_system)
         if context.target_system is not None:
             omh.setdefault("target_system", context.target_system)
+        for key in ("event_type", "entity_type", "entity_id"):
+            if context.metadata.get(key) is not None:
+                omh.setdefault(key, context.metadata[key])
     omh.setdefault("sent_at", datetime.now(timezone.utc).isoformat())
     envelope["omh"] = omh
     return envelope
