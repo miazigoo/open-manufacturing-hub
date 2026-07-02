@@ -34,6 +34,20 @@ async def create_mapping(request: MappingCreate, session: AsyncSession = Depends
     return mapping
 
 
+@router.get("/api/mappings/presets")
+async def mapping_presets():
+    from app.mappings.presets import MAPPING_PRESETS
+
+    return MAPPING_PRESETS
+
+
+@router.post("/api/mappings/presets/install", response_model=list[MappingRead])
+async def install_mapping_presets(session: AsyncSession = Depends(get_session)):
+    installed = await service.install_all_presets(session)
+    await session.commit()
+    return installed
+
+
 @router.get("/api/mappings/{mapping_id}", response_model=MappingRead)
 async def get_mapping(mapping_id: UUID, session: AsyncSession = Depends(get_session)):
     return await service.get_mapping_or_404(session, mapping_id)

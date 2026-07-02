@@ -1,0 +1,101 @@
+import httpx
+
+from app.connectors.builtin.onec.client import OneCHTTPClient
+from app.connectors.builtin.onec_connector import OneCConnector
+from app.connectors.registry import registry
+from app.sdk.types import ConnectorContext
+
+
+ONEC_CONFIG = {
+    "base_url": "https://onec.example.local/odata/standard.odata",
+    "http_service_base_url": "https://onec.example.local/hs/omh",
+    "auth": {"type": "basic", "username": "api", "password": "secret"},
+    "timeout_seconds": 10,
+    "verify_ssl": True,
+    "odata": {"enabled": True, "default_page_size": 1, "max_pages": 3},
+    "http_services": {"enabled": True},
+}
+
+
+async def test_onec_connector_registered_and_validates_config():
+    assert registry.get("onec").display_name == "1C Connector"
+    connector = OneCConnector()
+    valid = await connector.validate_config(ONEC_CONFIG)
+    assert valid.valid is True
+    assert valid.warnings
+
+    missing_url = await connector.validate_config({"auth": {"type": "none"}})
+    assert missing_url.valid is False
+    assert "base_url or http_service_base_url is required" in missing_url.errors
+
+    invalid_auth = await connector.validate_config({"base_url": "https://onec.example.local", "auth": {"type": "oauth"}})
+    assert invalid_auth.valid is False
+    assert "auth.type must be none or basic" in invalid_auth.errors
+
+    invalid_paging = await connector.validate_config({"base_url": "https://onec.example.local", "odata": {"default_page_size": "bad"}})
+    assert invalid_paging.valid is False
+    assert "odata.default_page_size must be positive" in invalid_paging.errors
+
+
+async def test_onec_config_is_masked_in_connector_api(client):
+    response = await client.post(
+        "/api/connectors",
+        json={"name": "1C ERP", "connector_type": "onec", "direction": "bidirectional", "config_json": ONEC_CONFIG},
+    )
+    assert response.status_code == 200
+    connector = response.json()
+    assert connector["config_json"]["auth"]["password"] == "***"
+
+
+async def test_onec_odata_read_paginates_and_manual_endpoint(monkeypatch, client):
+    calls = []
+
+    async def fake_request(self, method, url, *, params=None, json_payload=None):
+        calls.append({"method": method, "url": url, "params": params, "json_payload": json_payload})
+        if len(calls) == 1:
+            return httpx.Response(200, json={"value": [{"Ref_Key": "A", "Number": "SO-1"}], "@odata.nextLink": "https://onec.example.local/odata/standard.odata/Document_ЗаказКлиента?$skip=1"}), {"url": url, "params": params}, None, None
+        if len(calls) == 2:
+            return httpx.Response(200, json={"value": [{"Ref_Key": "B", "Number": "SO-2"}]}), {"url": url, "params": params}, None, None
+        return httpx.Response(200, json={"value": []}), {"url": url, "params": params}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
+    created = await client.post(
+        "/api/connectors",
+        json={"name": "1C ERP", "connector_type": "onec", "direction": "bidirectional", "config_json": ONEC_CONFIG},
+    )
+    connector = created.json()
+    response = await client.post(f"/api/connectors/{connector['id']}/onec/odata/read", json={"resource": "Document_ЗаказКлиента", "query": {"$top": 1}})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 2
+    assert [item["Ref_Key"] for item in body["items"]] == ["A", "B"]
+    assert calls[0]["params"]["$top"] == 1
+    assert calls[1]["params"] is None
+
+
+async def test_onec_send_and_dry_run_map_http_errors(monkeypatch):
+    connector = OneCConnector()
+
+    async def fake_request(self, method, url, *, params=None, json_payload=None):
+        assert method == "POST"
+        assert url.endswith("/shipment-orders")
+        assert json_payload == {"document": {"external_id": "SO-1"}}
+        return httpx.Response(500, json={"error": "failed"}), {"method": method, "url": url, "body": json_payload}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
+    result = await connector.send(
+        ONEC_CONFIG,
+        {"_omh": {"method": "POST", "path": "/shipment-orders"}, "document": {"external_id": "SO-1"}},
+        ConnectorContext(),
+    )
+    assert result.success is False
+    assert result.status_code == 500
+    assert result.error_code == "ONEC_HTTP_SERVICE_ERROR"
+
+    async def must_not_call(*args, **kwargs):
+        raise AssertionError("dry-run must not call 1C")
+
+    monkeypatch.setattr(OneCHTTPClient, "request", must_not_call)
+    dry = await connector.dry_run_send(ONEC_CONFIG, {"_omh": {"method": "POST", "path": "/shipment-orders"}, "document": {}}, ConnectorContext(dry_run=True))
+    assert dry.success is True
+    assert dry.response_payload["dry_run"] is True

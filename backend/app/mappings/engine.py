@@ -15,6 +15,7 @@ class MappingEngine:
         warnings: list[str] = []
         targets: set[str] = set()
         for index, rule in enumerate(rules):
+            rule = normalize_rule(rule)
             prefix = f"rule[{index}]"
             target = rule.get("target")
             if not isinstance(target, str) or not target:
@@ -44,7 +45,8 @@ class MappingEngine:
 
     def apply(self, payload: dict[str, Any], rules: list[dict[str, Any]]) -> dict[str, Any]:
         output: dict[str, Any] = {}
-        for rule in rules:
+        for raw_rule in rules:
+            rule = normalize_rule(raw_rule)
             target = rule["target"]
             if rule.get("type") == "array":
                 source_value = self._value_for_rule(payload, rule)
@@ -152,3 +154,14 @@ def resolve_token(token: str, payload: dict[str, Any]) -> Any:
     if (token.startswith("'") and token.endswith("'")) or (token.startswith('"') and token.endswith('"')):
         return token[1:-1]
     return get_path(payload, token)
+
+
+def normalize_rule(rule: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(rule)
+    if "source" not in normalized and "from" in normalized:
+        normalized["source"] = normalized["from"]
+    if "target" not in normalized and "to" in normalized:
+        normalized["target"] = normalized["to"]
+    if "items" not in normalized and "item_rules" in normalized:
+        normalized["items"] = normalized["item_rules"]
+    return normalized

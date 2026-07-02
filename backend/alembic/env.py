@@ -15,6 +15,7 @@ from app.maintenance.models import MaintenanceWindow  # noqa: F401
 from app.incidents.models import Incident, IncidentEvent  # noqa: F401
 from app.health.models import AgentHeartbeat, HealthCheck, Site  # noqa: F401
 from app.mappings.models import MappingDefinition, MappingVersion  # noqa: F401
+from app.polling.models import PollingJob, PollingJobRun, SourceEventCursor  # noqa: F401
 from app.workflows.models import Workflow  # noqa: F401
 
 config = context.config

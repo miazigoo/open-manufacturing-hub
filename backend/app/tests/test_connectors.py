@@ -7,7 +7,7 @@ from app.sdk.types import ConnectorContext
 
 async def test_builtin_connectors_are_registered():
     types = {item.connector_type for item in registry.list()}
-    assert {"rest", "webhook", "mock_erp", "mock_wms"}.issubset(types)
+    assert {"rest", "webhook", "mock_erp", "mock_wms", "onec"}.issubset(types)
     try:
         registry.get("missing")
     except ConnectorNotFoundError:

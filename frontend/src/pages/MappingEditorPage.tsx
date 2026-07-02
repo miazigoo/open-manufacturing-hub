@@ -21,6 +21,7 @@ const defaultSample = { order_id: '1532', warehouse_id: 'MAIN', items: [{ sku: '
 export function MappingEditorPage() {
   const queryClient = useQueryClient();
   const mappings = useQuery({ queryKey: ['mappings'], queryFn: mappingsApi.list });
+  const presets = useQuery({ queryKey: ['mapping-presets'], queryFn: mappingsApi.presets });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(() => (mappings.data ?? []).find((mapping) => mapping.id === selectedId) ?? mappings.data?.[0], [mappings.data, selectedId]);
   const latestVersion = selected?.versions.at(-1);
@@ -45,6 +46,7 @@ export function MappingEditorPage() {
   const execute = useMutation({ mutationFn: (payload: { id: string; version: number; sample: Record<string, unknown> }) => mappingsApi.execute(payload.id, payload.version, payload.sample), onSuccess: (data) => setPreview(data.output) });
   const compare = useMutation({ mutationFn: (payload: { id: string; left: number; right: number }) => mappingsApi.compare(payload.id, payload.left, payload.right), onSuccess: setDiff });
   const remove = useMutation({ mutationFn: mappingsApi.delete, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setSelectedId(null); } });
+  const installPresets = useMutation({ mutationFn: mappingsApi.installPresets, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setMessage('Mapping presets installed'); } });
 
   function parsed() {
     return {
@@ -76,8 +78,8 @@ export function MappingEditorPage() {
     try { const data = parsed(); createVersion.mutate({ id: selected.id, rules: data.rules, sourceSchema: data.sourceSchema, targetSchema: data.targetSchema }); } catch (error) { setFormError(error instanceof Error ? error.message : 'Invalid JSON'); }
   }
 
-  const error = mappings.error;
-  if (mappings.isLoading) return <LoadingState label="Loading mappings" />;
+  const error = mappings.error ?? presets.error;
+  if (mappings.isLoading || presets.isLoading) return <LoadingState label="Loading mappings" />;
   if (error) return <ErrorState error={error} />;
 
   return (
@@ -86,6 +88,7 @@ export function MappingEditorPage() {
         <span className="eyebrow">Mapping Engine</span>
         <h1>Versioned transformations without connector lock-in.</h1>
         <p>Define ERP to canonical and canonical to target mappings. Versions are immutable, so every run can be traced back to the exact rules used.</p>
+        <div className="hero-meta"><button className="primary-button" onClick={() => installPresets.mutate()} disabled={installPresets.isPending}>Install presets</button><span>{presets.data?.length ?? 0} packaged mappings available</span></div>
       </section>
       <section className="mapping-editor-grid">
         <aside className="panel mapping-list-panel">

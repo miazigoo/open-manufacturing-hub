@@ -50,8 +50,18 @@ export interface MappingDiff {
   changed: Array<Record<string, unknown>>;
 }
 
+export interface MappingPreset {
+  name: string;
+  description?: string;
+  source_entity?: string;
+  target_entity?: string;
+  rules_json: Array<Record<string, unknown>>;
+}
+
 export const mappingsApi = {
   list: () => request<MappingDefinition[]>('/api/mappings'),
+  presets: () => request<MappingPreset[]>('/api/mappings/presets'),
+  installPresets: () => request<MappingDefinition[]>('/api/mappings/presets/install', { method: 'POST' }),
   create: (payload: MappingPayload) => request<MappingDefinition>('/api/mappings', { method: 'POST', body: JSON.stringify(payload) }),
   delete: (id: string) => request<void>(`/api/mappings/${id}`, { method: 'DELETE' }),
   createVersion: (id: string, payload: MappingVersionPayload) => request<MappingVersion>(`/api/mappings/${id}/versions`, { method: 'POST', body: JSON.stringify(payload) }),

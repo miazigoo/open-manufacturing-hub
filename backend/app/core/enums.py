@@ -108,3 +108,18 @@ class ConnectorInstanceStatus(StrEnum):
     MAINTENANCE = "maintenance"
     ERROR = "error"
     UNKNOWN = "unknown"
+
+
+class PollingJobStatus(StrEnum):
+    IDLE = "idle"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+    DISABLED = "disabled"
+
+
+class PollingCursorType(StrEnum):
+    NONE = "none"
+    UPDATED_AT = "updated_at"
+    SKIP = "skip"
+    CUSTOM = "custom"

@@ -29,10 +29,11 @@ registry = ConnectorRegistry()
 def register_builtin_connectors() -> None:
     from app.connectors.builtin.mock_erp_connector import MockERPConnector
     from app.connectors.builtin.mock_wms_connector import MockWMSConnector
+    from app.connectors.builtin.onec_connector import OneCConnector
     from app.connectors.builtin.rest_connector import RESTConnector
     from app.connectors.builtin.webhook_connector import WebhookConnector
 
-    for connector in [RESTConnector(), WebhookConnector(), MockERPConnector(), MockWMSConnector()]:
+    for connector in [RESTConnector(), WebhookConnector(), MockERPConnector(), MockWMSConnector(), OneCConnector()]:
         registry.register(connector)
 
 

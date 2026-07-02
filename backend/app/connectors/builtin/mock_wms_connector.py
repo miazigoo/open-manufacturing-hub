@@ -21,7 +21,8 @@ class MockWMSConnector:
         return ConnectorHealthResult(status=HealthStatus.OK, message="Mock WMS accepts requests", details={"mode": "mock"})
 
     async def send(self, config: dict, payload: dict, context: ConnectorContext) -> ConnectorSendResult:
-        warehouse_id = str(payload.get("warehouse_id") or payload.get("body", {}).get("warehouse_id") or "")
+        document = payload.get("document") if isinstance(payload.get("document"), dict) else {}
+        warehouse_id = str(payload.get("warehouse_id") or document.get("warehouse_id") or payload.get("body", {}).get("warehouse_id") or "")
         fail_ids = {str(value) for value in config.get("fail_warehouse_ids", ["005"])}
         if warehouse_id in fail_ids:
             return ConnectorSendResult(
@@ -31,7 +32,7 @@ class MockWMSConnector:
                 request_payload={"connector": "mock_wms", "payload": payload},
                 response_payload={"message": f"Warehouse {warehouse_id} not found"},
             )
-        order_id = payload.get("target_order_id") or payload.get("order_id") or "unknown"
+        order_id = payload.get("target_order_id") or payload.get("order_id") or document.get("external_id") or "unknown"
         return ConnectorSendResult(
             success=True,
             status_code=200,

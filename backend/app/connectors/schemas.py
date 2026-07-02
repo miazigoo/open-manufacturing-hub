@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
 
 from app.core.enums import ConnectorDirection, ConnectorInstanceStatus, HealthStatus
 
@@ -45,6 +45,10 @@ class ConnectorInstanceRead(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    @field_serializer("config_json")
+    def serialize_config_json(self, value: dict[str, Any]):
+        return _mask_secrets(value)
+
 
 class ConnectorConfigValidationRead(BaseModel):
     valid: bool
@@ -62,3 +66,22 @@ class ConnectorHealthRead(BaseModel):
 class WebhookEventResponse(BaseModel):
     event_id: UUID
     status: str
+
+
+class OneCODataReadRequest(BaseModel):
+    resource: str
+    query: dict[str, Any] | None = None
+
+
+class OneCHTTPServiceTestRequest(BaseModel):
+    method: str = "POST"
+    path: str
+    payload: dict[str, Any] = {}
+
+
+def _mask_secrets(value):
+    if isinstance(value, dict):
+        return {key: ("***" if key.lower() in {"password", "secret", "token"} else _mask_secrets(item)) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_mask_secrets(item) for item in value]
+    return value

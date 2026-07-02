@@ -14,6 +14,15 @@ const defaultConfigs: Record<string, Record<string, unknown>> = {
   mock_erp: { source_system: 'Mock ERP', target_system: 'Mock WMS' },
   rest: { method: 'POST', url: 'https://example.com/api/orders', headers: {}, timeout_seconds: 10 },
   webhook: { default_source_system: 'External Webhook', default_target_system: 'Mock WMS' },
+  onec: {
+    base_url: 'https://onec.example.local/odata/standard.odata',
+    http_service_base_url: 'https://onec.example.local/hs/omh',
+    auth: { type: 'none' },
+    timeout_seconds: 10,
+    verify_ssl: true,
+    odata: { enabled: true, default_page_size: 100, max_pages: 10 },
+    http_services: { enabled: true, services: [{ name: 'echo', method: 'POST', path: '/echo' }] },
+  },
 };
 
 export function ConnectorsPage() {

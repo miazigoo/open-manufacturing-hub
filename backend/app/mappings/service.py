@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import BadRequestError, NotFoundError
 from app.mappings.engine import MappingEngine
 from app.mappings.models import MappingDefinition, MappingVersion
+from app.mappings.presets import MAPPING_PRESETS
 from app.mappings.schemas import MappingCloneRequest, MappingCreate, MappingPatch, MappingVersionCreate
 
 engine = MappingEngine()
@@ -43,6 +44,17 @@ async def get_version_by_id_or_404(session: AsyncSession, version_id: UUID) -> M
     if version is None:
         raise NotFoundError("Mapping version not found")
     return version
+
+
+async def get_latest_version_by_mapping_name(session: AsyncSession, name: str) -> MappingVersion | None:
+    result = await session.execute(
+        select(MappingVersion)
+        .join(MappingDefinition, MappingDefinition.id == MappingVersion.mapping_id)
+        .where(MappingDefinition.name == name)
+        .order_by(MappingVersion.version.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def create_mapping(session: AsyncSession, request: MappingCreate) -> MappingDefinition:
@@ -141,3 +153,34 @@ def _stable_rule_key(rule: dict) -> str:
     if isinstance(rule.get("target"), str):
         return rule["target"]
     return json.dumps(rule, sort_keys=True, separators=(",", ":"))
+
+
+async def install_preset(session: AsyncSession, preset_name: str) -> MappingDefinition:
+    preset = next((item for item in MAPPING_PRESETS if item["name"] == preset_name), None)
+    if preset is None:
+        raise NotFoundError("Mapping preset not found")
+    existing = (await session.execute(select(MappingDefinition).where(MappingDefinition.name == preset["name"]))).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    return await create_mapping(
+        session,
+        MappingCreate(
+            name=preset["name"],
+            description=preset.get("description"),
+            source_entity=preset.get("source_entity"),
+            target_entity=preset.get("target_entity"),
+            initial_version=MappingVersionCreate(
+                rules_json=preset["rules_json"],
+                source_schema_json=preset.get("source_schema_json", {}),
+                target_schema_json=preset.get("target_schema_json", {}),
+                notes="Installed preset",
+            ),
+        ),
+    )
+
+
+async def install_all_presets(session: AsyncSession) -> list[MappingDefinition]:
+    installed = [] 
+    for preset in MAPPING_PRESETS:
+        installed.append(await install_preset(session, preset["name"]))
+    return installed

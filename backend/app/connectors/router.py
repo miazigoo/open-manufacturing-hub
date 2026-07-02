@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors import repository, service
 from app.connectors.registry import registry
-from app.connectors.schemas import ConnectorConfigValidationRead, ConnectorHealthRead, ConnectorInstanceCreate, ConnectorInstancePatch, ConnectorInstanceRead, ConnectorTypeRead, WebhookEventResponse
+from app.connectors.schemas import ConnectorConfigValidationRead, ConnectorHealthRead, ConnectorInstanceCreate, ConnectorInstancePatch, ConnectorInstanceRead, ConnectorTypeRead, OneCHTTPServiceTestRequest, OneCODataReadRequest, WebhookEventResponse
 from app.core.database import get_session
 from app.core.errors import BadRequestError, NotFoundError
 from app.events.schemas import EventCreate
@@ -112,6 +112,33 @@ async def generate_mock_erp_events(connector_id: UUID, session: AsyncSession = D
         events.append({"event_id": event.id, "status": event.status})
     await session.commit()
     return {"created": events}
+
+
+@router.post("/api/connectors/{connector_id}/onec/odata/read")
+async def read_onec_odata(connector_id: UUID, request: OneCODataReadRequest, session: AsyncSession = Depends(get_session)):
+    instance = await repository.get_instance(session, connector_id)
+    if instance is None:
+        raise NotFoundError("Connector instance not found")
+    if instance.connector_type != "onec":
+        raise BadRequestError("Connector is not onec")
+    connector = registry.get(instance.connector_type)
+    result = await connector.read_odata(instance.config_json, request.resource, request.query, ConnectorContext(metadata={"source": "manual"}))
+    if not result.success:
+        raise BadRequestError(result.error_message or result.error_code or "1C OData read failed")
+    return {"items": result.items, "count": result.count, "request": result.request_payload, "response": result.response_payload}
+
+
+@router.post("/api/connectors/{connector_id}/onec/http-service/test")
+async def test_onec_http_service(connector_id: UUID, request: OneCHTTPServiceTestRequest, session: AsyncSession = Depends(get_session)):
+    instance = await repository.get_instance(session, connector_id)
+    if instance is None:
+        raise NotFoundError("Connector instance not found")
+    if instance.connector_type != "onec":
+        raise BadRequestError("Connector is not onec")
+    connector = registry.get(instance.connector_type)
+    payload = {"_omh": {"operation": "manual_test", "method": request.method, "path": request.path}, **request.payload}
+    result = await connector.send(instance.config_json, payload, ConnectorContext(metadata={"source": "manual"}))
+    return {"success": result.success, "status_code": result.status_code, "request": result.request_payload, "response": result.response_payload, "error_code": result.error_code, "error_message": result.error_message}
 
 
 @router.post("/api/webhooks/{connector_name}", response_model=WebhookEventResponse)

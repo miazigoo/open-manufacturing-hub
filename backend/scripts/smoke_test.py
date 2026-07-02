@@ -42,7 +42,10 @@ def main() -> int:
         ("connectors", "/api/connectors"),
         ("execution steps", "/api/execution/steps"),
         ("mappings", "/api/mappings"),
+        ("mapping presets", "/api/mappings/presets"),
         ("workflows", "/api/workflows"),
+        ("polling jobs", "/api/polling/jobs"),
+        ("1c scenarios", "/api/onec-scenarios/presets"),
         ("maintenance", "/api/maintenance"),
         ("retention", "/api/retention/preview"),
     ]
