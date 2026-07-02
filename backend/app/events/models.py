@@ -93,6 +93,8 @@ class EventStep(TimestampMixin, Base):
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(255), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    step_config_json: Mapped[dict] = mapped_column(JSON_TYPE, default=dict, nullable=False)
+    condition: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     run: Mapped[EventRun] = relationship(back_populates="steps")
     artifacts: Mapped[list[Artifact]] = relationship(back_populates="step", lazy="selectin")

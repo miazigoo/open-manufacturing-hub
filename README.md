@@ -18,6 +18,7 @@ Open Manufacturing Hub is an open source integration runtime for ERP, WMS, MES a
 - **Connector**: a source/target plugin instance such as Mock ERP, Mock WMS, REST or Webhook.
 - **Mapping**: immutable versioned JSON transformation between source, canonical and target shapes.
 - **Workflow**: configurable event route that binds steps, validation rules and mapping versions.
+- **Execution Engine**: generic runtime that executes registered steps and records artifacts, retries and failure handlers.
 
 ## Quick Start
 
@@ -88,6 +89,7 @@ OK incidents
 OK notifications
 OK connector types
 OK connectors
+OK execution steps
 OK mappings
 OK workflows
 OK maintenance
@@ -103,10 +105,11 @@ After `make demo-seed`, the UI should show:
 - `SalesOrderCreated #1001` success event.
 - `SalesOrderCreated #1532` failed event.
 - an edit & replay example with failed run and successful `edit_replay` run.
-- grouped `WAREHOUSE_NOT_FOUND at send_to_target` incident.
+- grouped `WAREHOUSE_NOT_FOUND at call_connector` incident.
 - `Main Warehouse` health with internet down, WMS warning, ERP ok and queue size 342.
 - `Critical WMS errors` notification rule.
 - `Mock WMS` maintenance window.
 - connector instances: Mock ERP / Mock WMS / REST Demo Target / Webhook Demo Source.
 - workflow and mapping pages with demo ERP to canonical and canonical to WMS versions.
+- execution steps page with registered runtime steps.
 - retention preview with expired artifacts/events and pinned skipped.

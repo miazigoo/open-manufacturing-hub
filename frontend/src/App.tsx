@@ -4,6 +4,7 @@ import { ConnectorsPage } from './pages/ConnectorsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EventJournalPage } from './pages/EventJournalPage';
 import { EventTimelinePage } from './pages/EventTimelinePage';
+import { ExecutionStepsPage } from './pages/ExecutionStepsPage';
 import { HealthPage } from './pages/HealthPage';
 import { IncidentDetailsPage } from './pages/IncidentDetailsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
@@ -24,6 +25,7 @@ export function App() {
         <Route path="incidents/:incidentId" element={<IncidentDetailsPage />} />
         <Route path="health" element={<HealthPage />} />
         <Route path="connectors" element={<ConnectorsPage />} />
+        <Route path="execution/steps" element={<ExecutionStepsPage />} />
         <Route path="workflows" element={<WorkflowsPage />} />
         <Route path="mappings" element={<MappingEditorPage />} />
         <Route path="notifications" element={<NotificationRulesPage />} />

@@ -118,7 +118,7 @@ async def test_workflow_selection_runs_mapping_versions_and_dry_run(client, succ
     assert run["workflow_name"] == "Sales orders ERP to WMS"
     assert run["mapping_versions_json"]["source"]["version"] == 1
     assert run["mapping_versions_json"]["target"]["version"] == 1
-    map_step = next(step for step in run["steps"] if step["step_name"] == "map_to_target")
+    map_step = next(step for step in run["steps"] if step["step_name"] == "map_payload")
     mapped_artifact = next(artifact for artifact in map_step["artifacts"] if artifact["artifact_type"] == "mapped_payload")
     assert mapped_artifact["content_json"]["external_ref"] == "SO-1532"
 

@@ -5,15 +5,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.artifacts.models import Artifact
-from app.artifacts.service import create_artifact, get_artifact_or_404
-from app.core.enums import ArtifactType, EventStatus, RunMode, RunStatus
+from app.artifacts.service import get_artifact_or_404
+from app.core.enums import ArtifactType, EventStatus, RunMode
 from app.core.errors import BadRequestError, NotFoundError
 from app.events.models import EventRun, IntegrationEvent
-from app.events.repository import get_event, get_event_with_timeline, latest_run, list_events, next_run_number
+from app.events.repository import get_event, get_event_with_timeline, list_events
 from app.events.schemas import EventCreate
-from app.pipeline.context import PipelineContext
-from app.pipeline.steps import STEP_NAMES
-from app.pipeline.engine import PipelineEngine
+from app.execution.engine import ExecutionEngine
+from app.execution.exceptions import StepNotFoundError
+from app.execution.registry import registry as step_registry
 
 
 async def create_event(session: AsyncSession, request: EventCreate) -> IntegrationEvent:
@@ -28,12 +28,7 @@ async def create_event(session: AsyncSession, request: EventCreate) -> Integrati
     )
     session.add(event)
     await session.flush()
-
-    run = EventRun(event_id=event.id, run_number=1, mode=RunMode.NORMAL, status=RunStatus.CREATED)
-    session.add(run)
-    await session.flush()
-
-    await PipelineEngine(session).run(event, run, PipelineContext(payload=request.payload, mode=RunMode.NORMAL))
+    await ExecutionEngine(session).execute_event(event.id, mode=RunMode.NORMAL, initial_payload=request.payload)
     await session.refresh(event)
     return event
 
@@ -68,19 +63,8 @@ async def set_pinned(session: AsyncSession, event_id: UUID, pinned: bool) -> Int
 
 async def replay_event(session: AsyncSession, event_id: UUID, mode: RunMode = RunMode.REPLAY, start_from_step: str | None = None) -> EventRun:
     _validate_start_step(start_from_step)
-    event = await get_event_or_404(session, event_id)
-    parent = await latest_run(session, event_id)
-    payload = await _payload_for_event(session, event_id)
-    run = EventRun(
-        event_id=event.id,
-        run_number=await next_run_number(session, event.id),
-        mode=mode,
-        status=RunStatus.CREATED,
-        parent_run_id=parent.id if parent else None,
-    )
-    session.add(run)
-    await session.flush()
-    return await PipelineEngine(session).run(event, run, PipelineContext(payload=payload, mode=mode, start_from_step=start_from_step))
+    await get_event_or_404(session, event_id)
+    return await ExecutionEngine(session).execute_event(event_id, mode=mode, start_from_step=start_from_step)
 
 
 async def replay_from_run_step(session: AsyncSession, run_id: UUID, step_name: str) -> EventRun:
@@ -99,28 +83,12 @@ async def edit_replay_artifact(
 ) -> EventRun:
     _validate_start_step(start_from_step)
     source_artifact = await get_artifact_or_404(session, artifact_id)
-    event = await get_event_or_404(session, source_artifact.event_id)
-    parent = await latest_run(session, event.id)
-    run = EventRun(
-        event_id=event.id,
-        run_number=await next_run_number(session, event.id),
+    await get_event_or_404(session, source_artifact.event_id)
+    return await ExecutionEngine(session).execute_event(
+        source_artifact.event_id,
         mode=RunMode.EDIT_REPLAY,
-        status=RunStatus.CREATED,
-        parent_run_id=parent.id if parent else None,
-    )
-    session.add(run)
-    await session.flush()
-    await create_artifact(
-        session,
-        event_id=event.id,
-        run_id=run.id,
-        step_id=None,
-        artifact_type=source_artifact.artifact_type,
-        name=f"edited_{source_artifact.name}",
-        content=edited_content,
-    )
-    return await PipelineEngine(session).run(
-        event, run, PipelineContext(payload=edited_content, mode=RunMode.EDIT_REPLAY, start_from_step=start_from_step)
+        start_from_step=start_from_step,
+        edited_artifact=edited_content,
     )
 
 
@@ -138,5 +106,9 @@ async def _payload_for_event(session: AsyncSession, event_id: UUID) -> dict[str,
 
 
 def _validate_start_step(step_name: str | None) -> None:
-    if step_name is not None and step_name not in STEP_NAMES:
-        raise BadRequestError(f"Unknown step: {step_name}")
+    if step_name is None:
+        return
+    try:
+        step_registry.get(step_name)
+    except StepNotFoundError as exc:
+        raise BadRequestError(f"Unknown step: {step_name}") from exc

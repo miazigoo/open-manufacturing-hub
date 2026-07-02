@@ -5,13 +5,13 @@ export interface WorkflowDefinition {
   id: string;
   name: string;
   description: string | null;
-  event_type: string;
+  event_type: string | null;
   source_system: string | null;
   target_system: string | null;
   entity_type: string | null;
   version: number;
   enabled: boolean;
-  steps_json: string[];
+  steps_json: Array<string | Record<string, unknown>>;
   validation_json: Record<string, unknown>;
   source_mapping_version_id: string | null;
   target_mapping_version_id: string | null;
@@ -24,13 +24,13 @@ export interface WorkflowDefinition {
 export interface WorkflowPayload {
   name: string;
   description?: string | null;
-  event_type: string;
+  event_type?: string | null;
   source_system?: string | null;
   target_system?: string | null;
   entity_type?: string | null;
   version?: number;
   enabled?: boolean;
-  steps_json?: string[];
+  steps_json?: Array<string | Record<string, unknown>>;
   validation_json?: Record<string, unknown>;
   source_mapping_version_id?: string | null;
   target_mapping_version_id?: string | null;
@@ -52,4 +52,6 @@ export const workflowsApi = {
   disable: (id: string) => request<WorkflowDefinition>(`/api/workflows/${id}/disable`, { method: 'POST' }),
   dryRun: (id: string, payload: Record<string, unknown>, source_system?: string | null, target_system?: string | null, entity_type?: string | null) =>
     request<WorkflowDryRunResponse>(`/api/workflows/${id}/dry-run`, { method: 'POST', body: JSON.stringify({ payload, source_system, target_system, entity_type }) }),
+  test: (id: string, payload: Record<string, unknown>, source_system?: string | null, target_system?: string | null, entity_type?: string | null) =>
+    request<WorkflowDryRunResponse>(`/api/workflows/${id}/test`, { method: 'POST', body: JSON.stringify({ payload, source_system, target_system, entity_type }) }),
 };

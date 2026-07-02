@@ -16,10 +16,11 @@ async def test_event_creation_creates_run_steps_and_artifacts(client, success_pa
     assert run["status"] == RunStatus.SUCCESS
     assert [step["step_name"] for step in run["steps"]] == [
         "receive",
+        "maintenance_guard",
         "normalize",
         "validate",
-        "map_to_target",
-        "send_to_target",
+        "map_payload",
+        "call_connector",
         "handle_response",
     ]
     assert sum(len(step["artifacts"]) for step in run["steps"]) > 0
@@ -34,8 +35,8 @@ async def test_failed_pipeline_marks_send_step_failed_and_saves_error_artifact(c
     timeline = (await client.get(f"/api/events/{event['id']}/timeline")).json()
     run = timeline["runs"][0]
     assert run["status"] == RunStatus.FAILED
-    failed_step = run["steps"][-1]
-    assert failed_step["step_name"] == "send_to_target"
+    failed_step = next(step for step in run["steps"] if step["status"] == StepStatus.FAILED)
+    assert failed_step["step_name"] == "call_connector"
     assert failed_step["status"] == StepStatus.FAILED
     assert failed_step["error_code"] == "WAREHOUSE_NOT_FOUND"
     assert any(a["artifact_type"] == ArtifactType.ERROR_DETAILS for a in failed_step["artifacts"])

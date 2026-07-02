@@ -7,6 +7,7 @@ const navItems = [
   ['/incidents', 'Incidents'],
   ['/health', 'Health'],
   ['/connectors', 'Connectors'],
+  ['/execution/steps', 'Execution Steps'],
   ['/workflows', 'Workflows'],
   ['/mappings', 'Mapping Editor'],
   ['/notifications', 'Notifications'],

@@ -46,7 +46,7 @@ async def test_unexpected_pipeline_exception_is_persisted_as_failed_event(client
     assert event["status"] == "failed"
 
     timeline = (await client.get(f"/api/events/{event['id']}/timeline")).json()
-    failed_step = timeline["runs"][0]["steps"][-1]
-    assert failed_step["step_name"] == "map_to_target"
+    failed_step = next(step for step in timeline["runs"][0]["steps"] if step["status"] == "failed")
+    assert failed_step["step_name"] == "map_payload"
     assert failed_step["error_code"] == "UNEXPECTED_PIPELINE_ERROR"
     assert any(artifact["name"] == "unexpected_error_details.json" for artifact in failed_step["artifacts"])

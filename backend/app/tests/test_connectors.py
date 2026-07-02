@@ -90,8 +90,8 @@ async def test_pipeline_missing_connector_fails_with_clear_error(client, success
     event = response.json()
     assert event["status"] == "failed"
     timeline = (await client.get(f"/api/events/{event['id']}/timeline")).json()
-    failed_step = timeline["runs"][0]["steps"][-1]
-    assert failed_step["step_name"] == "send_to_target"
+    failed_step = next(step for step in timeline["runs"][0]["steps"] if step["status"] == "failed")
+    assert failed_step["step_name"] == "call_connector"
     assert failed_step["error_code"] == "CONNECTOR_NOT_FOUND"
 
 
@@ -106,7 +106,7 @@ async def test_connector_instance_maintenance_skips_send_without_incident(client
     event = response.json()
     assert event["status"] == "retry_waiting"
     timeline = (await client.get(f"/api/events/{event['id']}/timeline")).json()
-    send_step = next(step for step in timeline["runs"][0]["steps"] if step["step_name"] == "send_to_target")
-    assert send_step["status"] == "skipped"
-    assert any(artifact["artifact_type"] == "maintenance" for artifact in send_step["artifacts"])
+    guard_step = next(step for step in timeline["runs"][0]["steps"] if step["step_name"] == "maintenance_guard")
+    assert guard_step["status"] == "skipped"
+    assert any(artifact["artifact_type"] == "maintenance" for artifact in guard_step["artifacts"])
     assert (await client.get("/api/incidents")).json() == []

@@ -40,6 +40,8 @@ class EventStepRead(BaseModel):
     status: StepStatus
     error_code: str | None
     error_message: str | None
+    step_config_json: dict[str, Any]
+    condition: str | None
     artifacts: list[ArtifactRead] = []
 
     model_config = ConfigDict(from_attributes=True)

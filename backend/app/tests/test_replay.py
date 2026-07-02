@@ -46,7 +46,7 @@ async def test_dry_run_saves_dry_run_request_without_external_send(client, faile
 
     timeline = (await client.get(f"/api/events/{event['id']}/timeline")).json()
     dry_run = timeline["runs"][-1]
-    send_step = next(step for step in dry_run["steps"] if step["step_name"] == "send_to_target")
+    send_step = next(step for step in dry_run["steps"] if step["step_name"] == "call_connector")
     artifact_types = {artifact["artifact_type"] for artifact in send_step["artifacts"]}
     assert ArtifactType.DRY_RUN_REQUEST in artifact_types
     assert ArtifactType.OUTGOING_REQUEST not in artifact_types

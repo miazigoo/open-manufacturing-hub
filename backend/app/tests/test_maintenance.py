@@ -18,7 +18,7 @@ async def test_active_maintenance_prevents_send_and_incident(client, failed_payl
     assert event["status"] == "retry_waiting"
 
     timeline = (await client.get(f"/api/events/{event['id']}/timeline")).json()
-    send_step = next(step for step in timeline["runs"][0]["steps"] if step["step_name"] == "send_to_target")
-    assert send_step["status"] == "skipped"
-    assert any(artifact["artifact_type"] == "maintenance" for artifact in send_step["artifacts"])
+    guard_step = next(step for step in timeline["runs"][0]["steps"] if step["step_name"] == "maintenance_guard")
+    assert guard_step["status"] == "skipped"
+    assert any(artifact["artifact_type"] == "maintenance" for artifact in guard_step["artifacts"])
     assert (await client.get("/api/incidents")).json() == []

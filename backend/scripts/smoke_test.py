@@ -40,6 +40,7 @@ def main() -> int:
         ("notifications", "/api/notifications/rules"),
         ("connector types", "/api/connectors/types"),
         ("connectors", "/api/connectors"),
+        ("execution steps", "/api/execution/steps"),
         ("mappings", "/api/mappings"),
         ("workflows", "/api/workflows"),
         ("maintenance", "/api/maintenance"),

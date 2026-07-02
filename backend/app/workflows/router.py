@@ -61,3 +61,10 @@ async def dry_run_workflow(workflow_id: UUID, request: WorkflowDryRunRequest, se
     workflow, run = await service.dry_run_workflow(session, workflow_id, request)
     await session.commit()
     return {"workflow_id": workflow.id, "workflow_name": workflow.name, "status": run.status, "run": run}
+
+
+@router.post("/api/workflows/{workflow_id}/test", response_model=WorkflowDryRunRead)
+async def test_workflow(workflow_id: UUID, request: WorkflowDryRunRequest, session: AsyncSession = Depends(get_session)):
+    workflow, run = await service.dry_run_workflow(session, workflow_id, request)
+    await session.commit()
+    return {"workflow_id": workflow.id, "workflow_name": workflow.name, "status": run.status, "run": run}

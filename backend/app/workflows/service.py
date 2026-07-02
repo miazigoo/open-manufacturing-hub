@@ -2,20 +2,19 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.enums import RunMode
 from app.core.errors import BadRequestError, NotFoundError
 from app.events.models import EventRun, EventStep, IntegrationEvent
-from app.events.repository import next_run_number
+from app.execution.registry import registry as step_registry
+from app.execution.workflow import normalize_step_configs
 from app.mappings.service import get_version_by_id_or_404
-from app.pipeline.context import PipelineContext
 from app.workflows.models import Workflow
 from app.workflows.schemas import DEFAULT_WORKFLOW_STEPS, WorkflowCreate, WorkflowDryRunRequest, WorkflowPatch
 
-ALLOWED_STEPS = {"receive", "normalize", "map_to_canonical", "validate", "map_to_target", "send_to_target", "handle_response"}
 CANONICAL_ENTITIES = {
     "Product",
     "Customer",
@@ -56,8 +55,9 @@ async def get_workflow_or_404(session: AsyncSession, workflow_id: UUID) -> Workf
 
 
 async def create_workflow(session: AsyncSession, request: WorkflowCreate) -> Workflow:
-    await _validate_workflow_payload(session, request.model_dump())
-    workflow = Workflow(**request.model_dump())
+    data = request.model_dump()
+    await _validate_workflow_payload(session, data)
+    workflow = Workflow(**data)
     session.add(workflow)
     await session.flush()
     await session.refresh(workflow, ["source_mapping_version", "target_mapping_version"])
@@ -72,6 +72,7 @@ async def patch_workflow(session: AsyncSession, workflow_id: UUID, request: Work
         "validation_json": workflow.validation_json,
         "source_mapping_version_id": workflow.source_mapping_version_id,
         "target_mapping_version_id": workflow.target_mapping_version_id,
+        "entity_type": workflow.entity_type,
         **data,
     }
     await _validate_workflow_payload(session, merged)
@@ -106,7 +107,7 @@ async def select_workflow(
     result = await session.execute(
         select(Workflow)
         .options(selectinload(Workflow.source_mapping_version), selectinload(Workflow.target_mapping_version))
-        .where(Workflow.enabled.is_(True), Workflow.event_type == event_type)
+        .where(Workflow.enabled.is_(True), or_(Workflow.event_type == event_type, Workflow.event_type.is_(None)))
     )
     candidates = list(result.scalars().unique())
     candidates = [
@@ -118,7 +119,7 @@ async def select_workflow(
     ]
     if not candidates:
         return None
-    candidates.sort(key=lambda workflow: _score(workflow, source_system, target_system, entity_type), reverse=True)
+    candidates.sort(key=lambda workflow: _score(workflow, event_type, source_system, target_system, entity_type), reverse=True)
     return candidates[0]
 
 
@@ -130,27 +131,40 @@ async def dry_run_workflow(session: AsyncSession, workflow_id: UUID, request: Wo
         correlation_id=None,
         source_system=request.source_system or workflow.source_system or "Workflow Test",
         target_system=request.target_system or workflow.target_system,
-        event_type=workflow.event_type,
+        event_type=workflow.event_type or "WorkflowTest",
         entity_type=request.entity_type or workflow.entity_type,
         entity_id=None,
     )
     session.add(event)
     await session.flush()
-    run = EventRun(event_id=event.id, run_number=await next_run_number(session, event.id), mode=RunMode.DRY_RUN)
-    session.add(run)
-    await session.flush()
-    from app.pipeline.engine import PipelineEngine
+    from app.execution.engine import ExecutionEngine
 
-    await PipelineEngine(session).run(event, run, PipelineContext(payload=request.payload, mode=RunMode.DRY_RUN, workflow_id=workflow.id))
+    run = await ExecutionEngine(session).execute_event(
+        event.id,
+        mode=RunMode.DRY_RUN,
+        dry_run=True,
+        initial_payload=request.payload,
+        workflow_id=workflow.id,
+    )
     loaded_run = await _load_run(session, run.id)
     return workflow, loaded_run
 
 
 async def _validate_workflow_payload(session: AsyncSession, data: dict) -> None:
-    steps = data.get("steps_json") or DEFAULT_WORKFLOW_STEPS
-    unknown = [step for step in steps if step not in ALLOWED_STEPS]
-    if unknown:
-        raise BadRequestError(f"Unknown workflow steps: {', '.join(unknown)}")
+    try:
+        steps = normalize_step_configs(data.get("steps_json") or DEFAULT_WORKFLOW_STEPS)
+    except ValueError as exc:
+        raise BadRequestError(str(exc)) from exc
+    for step in steps:
+        try:
+            step_registry.get(step["name"])
+        except Exception as exc:
+            raise BadRequestError(f"Unknown workflow step: {step['name']}") from exc
+        condition = step.get("on", "always")
+        if condition not in {"always", "on_success", "failure", "on_failure", "on_dry_run"}:
+            raise BadRequestError(f"Unsupported workflow condition: {condition}")
+        if condition == "on_failure":
+            step["on"] = "failure"
     entity_type = data.get("entity_type")
     if entity_type is not None and entity_type not in CANONICAL_ENTITIES:
         raise BadRequestError(f"Unsupported canonical entity: {entity_type}")
@@ -164,9 +178,10 @@ def _matches(configured: str | None, actual: str | None) -> bool:
     return configured is None or configured == actual
 
 
-def _score(workflow: Workflow, source_system: str | None, target_system: str | None, entity_type: str | None) -> int:
+def _score(workflow: Workflow, event_type: str, source_system: str | None, target_system: str | None, entity_type: str | None) -> int:
     return sum(
         [
+            8 if workflow.event_type == event_type else 0,
             4 if workflow.source_system == source_system and source_system is not None else 0,
             4 if workflow.target_system == target_system and target_system is not None else 0,
             2 if workflow.entity_type == entity_type and entity_type is not None else 0,
