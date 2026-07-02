@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi, EventCreatePayload } from '../api/events';
 import { asJson } from '../api/client';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 const successPreset: EventCreatePayload = {
   correlation_id: 'corr_success_demo',

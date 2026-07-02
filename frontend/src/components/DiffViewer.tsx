@@ -1,5 +1,5 @@
 import { ArtifactDiff } from '../api/client';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 import { EmptyState } from './EmptyState';
 
 function lineValue(value: unknown) {

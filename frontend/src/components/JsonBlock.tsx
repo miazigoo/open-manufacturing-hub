@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { asJson } from '../api/client';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 interface JsonBlockProps {
   value: unknown;

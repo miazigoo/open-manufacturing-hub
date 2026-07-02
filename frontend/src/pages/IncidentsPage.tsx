@@ -4,7 +4,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { IncidentCard } from '../components/IncidentCard';
 import { LoadingState } from '../components/LoadingState';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 export function IncidentsPage() {
   const t = useT();

@@ -6,7 +6,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 import { formatDateTime } from '../utils';
 
 const defaultRules = [

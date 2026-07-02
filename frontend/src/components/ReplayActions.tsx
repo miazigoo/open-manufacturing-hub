@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Artifact, EventRun, EventStep, asJson } from '../api/client';
 import { replayApi } from '../api/replay';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 interface ReplayActionsProps {
   eventId: string;

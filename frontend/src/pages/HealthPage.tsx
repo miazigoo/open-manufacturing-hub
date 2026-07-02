@@ -5,7 +5,7 @@ import { ErrorState } from '../components/ErrorState';
 import { HealthCard } from '../components/HealthCard';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 export function HealthPage() {
   const t = useT();

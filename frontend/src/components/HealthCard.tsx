@@ -1,5 +1,5 @@
 import { HealthSite } from '../api/health';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 import { StatusBadge } from './StatusBadge';
 
 export function HealthCard({ site }: { site: HealthSite }) {

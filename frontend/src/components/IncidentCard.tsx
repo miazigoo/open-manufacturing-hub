@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Incident } from '../api/incidents';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 import { StatusBadge } from './StatusBadge';
 
 export function IncidentCard({ incident, onAction }: { incident: Incident; onAction?: (action: 'acknowledge' | 'resolve' | 'ignore') => void }) {

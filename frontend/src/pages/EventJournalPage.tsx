@@ -8,7 +8,7 @@ import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
 import { EventCreatePanel } from '../components/EventCreatePanel';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 import { formatDateTime } from '../utils';
 
 const statuses: Array<EventStatus | 'all'> = ['all', 'new', 'processing', 'success', 'failed', 'retry_waiting', 'cancelled', 'expired'];

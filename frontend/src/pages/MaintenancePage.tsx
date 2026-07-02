@@ -5,7 +5,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 function localInputDate(offsetHours: number) {
   const date = new Date(Date.now() + offsetHours * 60 * 60 * 1000);

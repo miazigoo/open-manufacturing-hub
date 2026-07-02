@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { API_BASE_URL } from '../api/client';
-import { useI18n, useT } from '../i18n/I18nProvider';
+import { useI18n, useT } from '../i18n/useI18n';
 import { languageMeta } from '../i18n/dictionary';
 import type { Language } from '../i18n/dictionary';
 

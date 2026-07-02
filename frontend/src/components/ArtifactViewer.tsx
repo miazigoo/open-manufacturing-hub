@@ -1,7 +1,7 @@
 import { Artifact } from '../api/client';
 import { JsonBlock } from './JsonBlock';
 import { formatDateTime } from '../utils';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 interface ArtifactViewerProps {
   artifact: Artifact | null;

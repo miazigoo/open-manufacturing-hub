@@ -1,4 +1,4 @@
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 export function LoadingState({ label }: { label?: string }) {
   const t = useT();

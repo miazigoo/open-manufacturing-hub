@@ -8,7 +8,7 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 import { formatDateTime, formatDuration } from '../utils';
 
 const defaultQuery = { '$select': 'Ref_Key,Number,Date,Партнер_Key,Склад_Key,Комментарий,Товары', '$orderby': 'Date asc' };

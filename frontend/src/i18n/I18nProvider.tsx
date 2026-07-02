@@ -1,18 +1,9 @@
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { I18nContext, I18nContextValue, TranslationParams } from './context';
 import { dictionaries, languageMeta } from './dictionary';
 import type { Language } from './dictionary';
 
 const STORAGE_KEY = 'omh_language';
-
-type Params = Record<string, string | number | null | undefined>;
-
-interface I18nContextValue {
-  language: Language;
-  setLanguage: (language: Language) => void;
-  t: (key: string, params?: Params) => string;
-}
-
-const I18nContext = createContext<I18nContextValue | null>(null);
 
 function initialLanguage(): Language {
   try {
@@ -48,17 +39,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
-export function useI18n() {
-  const context = useContext(I18nContext);
-  if (!context) throw new Error('useI18n must be used inside I18nProvider');
-  return context;
-}
-
-export function useT() {
-  return useI18n().t;
-}
-
-function interpolate(template: string, params?: Params): string {
+function interpolate(template: string, params?: TranslationParams): string {
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(params[key] ?? ''));
 }

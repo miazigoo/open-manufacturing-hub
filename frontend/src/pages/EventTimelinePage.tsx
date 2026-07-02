@@ -12,7 +12,7 @@ import { LoadingState } from '../components/LoadingState';
 import { ReplayActions } from '../components/ReplayActions';
 import { StatusBadge } from '../components/StatusBadge';
 import { TimelineStep } from '../components/TimelineStep';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 import { formatDateTime, formatDuration } from '../utils';
 
 export function EventTimelinePage() {

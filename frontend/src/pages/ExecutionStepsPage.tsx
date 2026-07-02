@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { executionApi } from '../api/execution';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 export function ExecutionStepsPage() {
   const t = useT();

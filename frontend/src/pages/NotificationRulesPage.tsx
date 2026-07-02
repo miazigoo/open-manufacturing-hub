@@ -6,7 +6,7 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 const triggerTypes: TriggerType[] = ['event_failed', 'incident_created', 'incident_updated', 'health_down', 'queue_threshold', 'daily_report'];
 

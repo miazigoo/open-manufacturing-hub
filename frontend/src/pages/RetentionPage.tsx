@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { retentionApi } from '../api/retention';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
-import { useT } from '../i18n/I18nProvider';
+import { useT } from '../i18n/useI18n';
 
 export function RetentionPage() {
   const t = useT();
