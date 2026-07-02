@@ -14,7 +14,8 @@ services:
       retries: 10
 
   backend:
-    image: python:3.12-slim
+    build: ./backend
+    image: open-manufacturing-hub-backend:dev
     working_dir: /app
     volumes:
       - ./backend:/app
@@ -23,8 +24,7 @@ services:
       OMH_DATABASE_URL: postgresql+asyncpg://omh:omh@postgres:5432/omh
       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     command: >
-      sh -c "pip install -e . &&
-      i=0;
+      sh -c "i=0;
       until alembic upgrade head; do
         i=$$((i+1));
         if [ $$i -ge 30 ]; then exit 1; fi;
@@ -39,14 +39,15 @@ services:
         condition: service_healthy
 
   frontend:
-    image: node:22-alpine
+    build: ./frontend
+    image: open-manufacturing-hub-frontend:dev
     working_dir: /app
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
       VITE_API_BASE_URL: http://localhost:8000
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: npm run dev -- --host 0.0.0.0
     ports:
       - "5173:5173"
     depends_on:

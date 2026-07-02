@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: omh
       POSTGRES_USER: omh
       POSTGRES_PASSWORD: omh
-    ports:
-      - "5432:5432"
     volumes:
       - omh-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -16,13 +14,22 @@ services:
       retries: 10
 
   api:
-    image: python:3.12-slim
+    build: .
+    image: open-manufacturing-hub-backend:dev
     working_dir: /app
     volumes:
       - .:/app
     environment:
       OMH_DATABASE_URL: postgresql+asyncpg://omh:omh@postgres:5432/omh
-    command: sh -c "pip install -e . && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    command: >
+      sh -c "i=0;
+      until alembic upgrade head; do
+        i=$$((i+1));
+        if [ $$i -ge 30 ]; then exit 1; fi;
+        echo 'Waiting for database DNS/connection...';
+        sleep 2;
+      done;
+      uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
     depends_on:
@@ -31,13 +38,14 @@ services:
 
   frontend:
     build: ../frontend
+    image: open-manufacturing-hub-frontend:dev
     working_dir: /app
     volumes:
       - ../frontend:/app
       - /app/node_modules
     environment:
       VITE_API_BASE_URL: http://localhost:8000
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: npm run dev -- --host 0.0.0.0
     ports:
       - "5173:5173"
     depends_on:
