@@ -1,0 +1,19 @@
+{
+  "correlation_id": "portal-order-1001",
+  "source_system": "External Portal",
+  "target_system": "Mock WMS",
+  "event_type": "SalesOrderCreated",
+  "entity_type": "SalesOrder",
+  "entity_id": "SO-1001",
+  "payload": {
+    "order_id": "SO-1001",
+    "customer_id": "CUST-42",
+    "warehouse_id": "MAIN",
+    "priority": "normal",
+    "source_created_at": "2026-07-03T10:15:00Z",
+    "items": [
+      {"sku": "SKU-100", "qty": 2, "uom": "pcs"},
+      {"sku": "SKU-200", "qty": 1, "uom": "pcs"}
+    ]
+  }
+}

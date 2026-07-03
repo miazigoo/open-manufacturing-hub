@@ -1,0 +1,13 @@
+{
+  "name": "External Portal Webhook",
+  "connector_type": "webhook",
+  "direction": "source",
+  "enabled": true,
+  "config_json": {
+    "default_source_system": "External Portal",
+    "default_target_system": "Mock WMS",
+    "event_type_field": "event_type",
+    "entity_type_field": "entity_type",
+    "entity_id_field": "entity_id"
+  }
+}

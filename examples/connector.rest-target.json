@@ -1,0 +1,15 @@
+{
+  "name": "Partner WMS REST Target",
+  "connector_type": "rest",
+  "direction": "target",
+  "enabled": true,
+  "config_json": {
+    "url": "https://wms.example.com/api/orders",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Source-System": "open-manufacturing-hub"
+    },
+    "timeout_seconds": 10
+  }
+}

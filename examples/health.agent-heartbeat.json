@@ -1,0 +1,15 @@
+{
+  "site_name": "Main Warehouse",
+  "site_code": "MAIN",
+  "agent_name": "edge-agent-01",
+  "internet_ok": true,
+  "can_reach_hub": true,
+  "can_reach_wms": true,
+  "can_reach_erp": true,
+  "local_ip": "10.10.0.15",
+  "details_json": {
+    "version": "0.1.0",
+    "queue_depth": 0,
+    "host": "edge-agent-01"
+  }
+}

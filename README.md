@@ -45,6 +45,19 @@ If you run the backend locally instead of Docker, use:
 make seed-local
 ```
 
+## Integration Guide
+
+Use [docs/integration-guide.md](docs/integration-guide.md) as the implementation contract for external systems. It includes direct event API, webhook ingress, REST targets, 1C integration, heartbeat, correlation rules and production readiness checks.
+
+Ready-to-use request bodies are in [examples](examples):
+
+- `event.sales-order-created.json`: direct `POST /api/events` envelope.
+- `webhook.sales-order-created.json`: webhook ingress payload.
+- `connector.webhook-source.json`: source webhook connector.
+- `connector.rest-target.json`: target REST connector.
+- `connector.onec-bidirectional.json`: 1C bidirectional connector shape.
+- `health.agent-heartbeat.json`: site agent heartbeat.
+
 ## Local Development
 
 Backend:
@@ -79,6 +92,7 @@ With the backend running locally or through Docker:
 
 ```bash
 make smoke-test
+make integration-smoke
 ```
 
 Expected output includes:
@@ -98,6 +112,8 @@ OK retention
 OK create event
 OK timeline
 ```
+
+`make integration-smoke` additionally creates a temporary webhook connector, sends webhook and direct event payloads, verifies timelines, records a health heartbeat and removes the temporary connector.
 
 ## Demo Checklist
 

@@ -1,0 +1,21 @@
+{
+  "name": "1C ERP Bidirectional",
+  "connector_type": "onec",
+  "direction": "bidirectional",
+  "enabled": true,
+  "config_json": {
+    "base_url": "https://onec.example.com/odata/standard.odata/",
+    "http_service_base_url": "https://onec.example.com/hs/omh",
+    "auth": {"type": "basic", "username": "omh", "password": "change-me"},
+    "timeout_seconds": 20,
+    "verify_ssl": true,
+    "odata": {"enabled": true, "default_page_size": 100, "max_pages": 10},
+    "http_services": {
+      "enabled": true,
+      "health_path": "/health",
+      "services": [
+        {"name": "post_status", "method": "POST", "path": "/events/status"}
+      ]
+    }
+  }
+}

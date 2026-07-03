@@ -1,4 +1,4 @@
-.PHONY: install-backend install-frontend test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test docker-up docker-down
+.PHONY: install-backend install-frontend test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke docker-up docker-down
 
 install-backend:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[test]"
@@ -29,6 +29,9 @@ demo-seed:
 
 smoke-test:
 	cd backend && python3 scripts/smoke_test.py
+
+integration-smoke:
+	cd backend && python3 scripts/integration_smoke.py
 
 seed-local:
 	cd backend && python3 scripts/seed_demo.py
