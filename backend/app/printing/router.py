@@ -8,6 +8,7 @@ from app.core.errors import NotFoundError
 from app.printing import repository, service
 from app.printing.schemas import (
     ConfirmPrintedRequest,
+    OneCPrintBatchRequest,
     PrintBatchRequest,
     PrintBatchResponse,
     PrintJobCreate,
@@ -62,6 +63,13 @@ async def create_job(request: PrintJobCreate, session: AsyncSession = Depends(ge
     job = await service.create_job(session, request)
     await session.commit()
     return job
+
+
+@router.post("/api/printing/onec/send-batch", response_model=PrintBatchResponse)
+async def create_and_send_onec_batch(request: OneCPrintBatchRequest, session: AsyncSession = Depends(get_session)):
+    result = await service.create_and_send_onec_batch(session, request)
+    await session.commit()
+    return result
 
 
 @router.get("/api/printing/jobs/{job_id}", response_model=PrintJobRead)

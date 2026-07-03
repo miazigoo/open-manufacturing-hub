@@ -83,3 +83,33 @@ async def test_printing_job_key_is_idempotent_but_rejects_different_payload(clie
     rejected = await client.post("/api/printing/jobs", json=changed)
     assert rejected.status_code == 400
     assert "already exists with different lines" in rejected.json()["detail"]
+
+
+async def test_onec_send_batch_creates_printer_job_and_sends(client):
+    response = await client.post(
+        "/api/printing/onec/send-batch",
+        json={
+            "job_key": "onec-print-job-1",
+            "source_system": "1C ERP",
+            "source_document_id": "Order-1",
+            "source_document_name": "Заказ на эмиссию 1",
+            "printer": {"name": "Zebra Production", "host": "192.168.10.25", "port": 9100, "dpi": 600},
+            "label_settings_json": {"label_width_mm": 10, "label_height_mm": 10},
+            "dry_run": True,
+            "lines": [
+                {"sequence_no": 1, "code": "010460123456789021ABC", "zpl": "^XA\n^FO0,0\n^FDABC^FS\n^XZ"},
+                {"sequence_no": 2, "code": "010460123456789021DEF", "zpl": "^XA\n^FO0,0\n^FDDEF^FS\n^XZ"},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["processed"] == 2
+    assert data["sent"] == 2
+    assert data["dry_run"] is True
+    assert data["job"]["job_key"] == "onec-print-job-1"
+    assert data["job"]["status"] == "sent"
+
+    printers = (await client.get("/api/printing/printers")).json()
+    assert printers[0]["name"] == "Zebra Production"

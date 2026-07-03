@@ -9,16 +9,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.models import ConnectorInstance
 from app.connectors.registry import registry
-from app.core.enums import ConnectorInstanceStatus, PrintJobStatus, PrintLineStatus
+from app.core.enums import ConnectorDirection, ConnectorInstanceStatus, PrintJobStatus, PrintLineStatus
 from app.core.errors import BadRequestError, NotFoundError
 from app.printing import repository
 from app.printing.models import PrintJob, PrintJobLine, PrintJobLog, PrintPrinter
 from app.printing.schemas import (
     ConfirmPrintedRequest,
+    OneCPrintBatchRequest,
     PrintBatchLineResult,
     PrintBatchRequest,
     PrintBatchResponse,
     PrintJobCreate,
+    PrintJobLineCreate,
     PrintPrinterCreate,
     PrintPrinterPatch,
     ReturnToPrintRequest,
@@ -112,6 +114,27 @@ async def create_job(session: AsyncSession, request: PrintJobCreate) -> PrintJob
     await session.flush()
     _add_log(session, job.id, None, None, "job_created", job.status.value, f"Print job {job.job_key} created", {"total_lines": len(lines)})
     return job
+
+
+async def create_and_send_onec_batch(session: AsyncSession, request: OneCPrintBatchRequest) -> PrintBatchResponse:
+    printer = await _ensure_onec_printer(session, request)
+    job = await create_job(
+        session,
+        PrintJobCreate(
+            job_key=request.job_key,
+            printer_id=printer.id,
+            source_system=request.source_system,
+            source_document_id=request.source_document_id,
+            source_document_name=request.source_document_name,
+            label_settings_json=request.label_settings_json,
+            lines=[
+                PrintJobLineCreate(sequence_no=line.sequence_no, code=line.code, zpl=line.zpl)
+                for line in request.lines
+            ],
+        ),
+    )
+    limit = request.send_limit or len(request.lines)
+    return await send_batch(session, job.id, PrintBatchRequest(limit=limit, dry_run=request.dry_run))
 
 
 async def get_job_or_404(session: AsyncSession, job_id: UUID) -> PrintJob:
@@ -311,6 +334,58 @@ async def _get_connector_or_404(session: AsyncSession, connector_id: UUID) -> Co
     if connector is None:
         raise NotFoundError("Connector not found")
     return connector
+
+
+async def _ensure_onec_printer(session: AsyncSession, request: OneCPrintBatchRequest) -> PrintPrinter:
+    connector_name = f"1C ZPL {request.printer.name}"
+    result = await session.execute(select(ConnectorInstance).where(ConnectorInstance.name == connector_name))
+    connector = result.scalar_one_or_none()
+    config = {
+        "printer_name": request.printer.name,
+        "host": request.printer.host,
+        "port": request.printer.port,
+        "dpi": request.printer.dpi,
+        "timeout_seconds": request.printer.timeout_seconds,
+    }
+    if connector is None:
+        connector = ConnectorInstance(
+            name=connector_name,
+            connector_type="zpl_printer",
+            direction=ConnectorDirection.TARGET,
+            enabled=True,
+            config_json=config,
+            status=ConnectorInstanceStatus.ENABLED,
+        )
+        session.add(connector)
+        await session.flush()
+    else:
+        connector.connector_type = "zpl_printer"
+        connector.direction = ConnectorDirection.TARGET
+        connector.enabled = True
+        connector.status = ConnectorInstanceStatus.ENABLED
+        connector.config_json = config
+        await session.flush()
+
+    printer_name = request.printer.name
+    result = await session.execute(select(PrintPrinter).where(PrintPrinter.name == printer_name))
+    printer = result.scalar_one_or_none()
+    if printer is None:
+        printer = PrintPrinter(
+            name=printer_name,
+            connector_id=connector.id,
+            dpi=request.printer.dpi,
+            enabled=True,
+            settings_json={"source": "1C", "host": request.printer.host, "port": request.printer.port},
+        )
+        session.add(printer)
+        await session.flush()
+    else:
+        printer.connector_id = connector.id
+        printer.dpi = request.printer.dpi
+        printer.enabled = True
+        printer.settings_json = {"source": "1C", "host": request.printer.host, "port": request.printer.port}
+        await session.flush()
+    return printer
 
 
 def _validate_zpl(zpl: str, sequence_no: int) -> None:

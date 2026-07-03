@@ -134,6 +134,32 @@ class PrintBatchResponse(BaseModel):
     results: list[PrintBatchLineResult]
 
 
+class OneCPrinterPayload(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    host: str = Field(min_length=1, max_length=255)
+    port: int = Field(default=9100, gt=0, le=65535)
+    dpi: int = Field(gt=0, le=2400)
+    timeout_seconds: float = Field(default=10, gt=0, le=120)
+
+
+class OneCPrintLinePayload(BaseModel):
+    sequence_no: int = Field(gt=0)
+    code: str = Field(min_length=1)
+    zpl: str = Field(min_length=1)
+
+
+class OneCPrintBatchRequest(BaseModel):
+    job_key: str = Field(min_length=1, max_length=255)
+    source_system: str = Field(default="1C", min_length=1, max_length=255)
+    source_document_id: str | None = None
+    source_document_name: str | None = None
+    printer: OneCPrinterPayload
+    label_settings_json: dict[str, Any] = Field(default_factory=dict)
+    lines: list[OneCPrintLinePayload] = Field(min_length=1)
+    dry_run: bool = False
+    send_limit: int | None = Field(default=None, gt=0, le=1000)
+
+
 class ConfirmPrintedRequest(BaseModel):
     through_sequence_no: int | None = Field(default=None, gt=0)
     line_ids: list[UUID] | None = None
