@@ -110,6 +110,10 @@ p { color: var(--muted); line-height: 1.55; }
 .primary-button:hover, .ghost-button:hover, .primary-link:hover, .ghost-link:hover { transform: translateY(-1px); filter: brightness(1.08); }
 .ghost-button.danger { color: var(--red); }
 .ghost-link, .primary-link { color: var(--accent); border: 0; padding: 0; }
+.segmented-control { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); background: rgba(0,0,0,.2); }
+.segmented-control button { min-width: 0; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--muted); padding: 10px; font-size: 12px; overflow-wrap: anywhere; }
+.segmented-control button:last-child { border-right: 0; }
+.segmented-control button.active { background: rgba(240,179,90,.14); color: var(--ink); }
 
 .filter-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 input, select, textarea { width: 100%; border: 1px solid var(--line); background: rgba(0,0,0,.22); color: var(--ink); padding: 12px; outline: none; }
@@ -211,6 +215,19 @@ th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spa
 .connector-card { border: 1px solid var(--line); background: var(--panel); padding: 18px; display: grid; gap: 14px; margin-bottom: 14px; }
 .connector-card-top { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
 .connector-card .json-panel { box-shadow: none; background: rgba(0,0,0,.12); }
+.onec-config-editor { border: 1px solid var(--line); background: linear-gradient(135deg, rgba(143,198,180,.08), rgba(240,179,90,.055)); padding: 18px; margin-bottom: 18px; }
+.onec-config-editor p { margin-top: 8px; }
+.printing-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr) 420px; gap: 18px; align-items: start; }
+.print-job-list, .print-log-list { display: grid; gap: 10px; }
+.print-job-row { width: 100%; border: 1px solid var(--line); background: rgba(0,0,0,.18); color: var(--ink); padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; }
+.print-job-row.active { border-color: var(--accent); background: rgba(240,179,90,.1); }
+.print-job-row span { min-width: 0; display: grid; gap: 4px; }
+.print-job-row small { color: var(--muted); overflow-wrap: anywhere; }
+.print-log-row { border: 1px solid var(--line); background: rgba(0,0,0,.16); padding: 12px; display: grid; gap: 8px; }
+.print-log-row > div { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.print-log-row span { color: var(--muted); font-size: 12px; }
+.embedded-table { box-shadow: none; background: rgba(0,0,0,.12); padding: 0; overflow-x: auto; }
+.embedded-table table { min-width: 760px; }
 .mapping-hero p { max-width: 760px; margin-top: 12px; }
 .mapping-editor-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
 .mapping-list-panel { position: sticky; top: 24px; }
@@ -234,6 +251,7 @@ th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spa
 @media (max-width: 1180px) {
   .mapping-editor-grid, .mapping-bottom-grid, .mapping-triptych { grid-template-columns: minmax(0, 1fr); }
   .mapping-list-panel { position: static; }
+  .printing-layout { grid-template-columns: minmax(0, 1fr); }
 }
 .polling-hero p, .onec-hero p { max-width: 760px; margin-top: 12px; }
 .polling-card { border: 1px solid var(--line); background: var(--panel); padding: 18px; display: grid; gap: 12px; margin-bottom: 14px; transition: .16s ease; }
@@ -248,6 +266,7 @@ th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spa
 .scenario-orbit span:nth-child(1) { transform: translateY(-92px); }
 .scenario-orbit span:nth-child(2) { transform: translate(82px, 48px); color: var(--accent-2); }
 .scenario-orbit span:nth-child(3) { transform: translate(-82px, 48px); color: var(--blue); }
+.scenario-orbit span:nth-child(4) { transform: translateY(92px); color: var(--green); }
 .scenario-body, .scenario-sidecar { padding: 24px; display: grid; gap: 18px; align-content: start; }
 .scenario-body h2 { font-size: clamp(28px, 4vw, 48px); letter-spacing: -0.04em; line-height: .96; }
 .scenario-sidecar p { margin-bottom: 12px; }

@@ -1,0 +1,21 @@
+{
+  "job_key": "1c-chz-AAEA-000137-20260703",
+  "printer_id": "00000000-0000-0000-0000-000000000000",
+  "source_system": "1C ERP",
+  "source_document_id": "AAEA-000137",
+  "source_document_name": "Заказ на эмиссию кодов маркировки AAEA-000137",
+  "label_settings_json": {
+    "width_mm": 10,
+    "height_mm": 10,
+    "code_size_mm": 8,
+    "left_margin_mm": 1,
+    "top_margin_mm": 1
+  },
+  "lines": [
+    {
+      "sequence_no": 1,
+      "code": "010460000000000121SERIAL001\u001d91KEY\u001d92CRYPTO",
+      "zpl": "^XA\n^CI28\n^PW236\n^LL236\n^FO24,24\n^BXN,6,200,,,,_\n^FH\\\n^FD_1010460000000000121SERIAL001\\1D91KEY\\1D92CRYPTO^FS\n^XZ"
+    }
+  ]
+}

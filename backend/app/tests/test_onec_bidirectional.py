@@ -55,6 +55,51 @@ async def test_bidirectional_scenario_installer_is_idempotent(client):
     assert first.json()["mappings"] == ["mock_wms_shipment_fact_to_onec_shipment_fact"]
 
 
+async def test_full_erp_wms_integration_installs_standard_exchange(client):
+    first = await client.post("/api/onec-scenarios/install-erp-wms-integration")
+    second = await client.post("/api/onec-scenarios/install-erp-wms-integration")
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["workflow_id"] == second.json()["workflow_id"]
+    assert first.json()["polling_job_id"] == second.json()["polling_job_id"]
+    assert set(first.json()["mappings"]) == {
+        "onec_sales_order_to_canonical_sales_order",
+        "canonical_sales_order_to_mock_wms_shipment_order",
+        "mock_wms_shipment_fact_to_onec_shipment_fact",
+        "mock_wms_stock_balance_to_onec_stock_balance",
+        "mock_wms_inventory_result_to_onec_inventory_result",
+    }
+
+
+async def test_full_erp_wms_reverse_events(monkeypatch, client):
+    calls = []
+
+    async def fake_request(self, method, url, *, params=None, json_payload=None):
+        calls.append({"method": method, "url": url, "body": json_payload})
+        return httpx.Response(200, json={"success": True, "external_document_id": "1C-OK", "status": "accepted"}), {"method": method, "url": url, "body": json_payload}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
+    await client.post("/api/onec-scenarios/install-erp-wms-integration")
+
+    stock = await client.post(
+        "/api/onec-scenarios/test-stock-balance",
+        json={"warehouse_id": "MAIN", "occurred_at": "2026-07-03T09:00:00Z", "items": [{"sku": "ABC123", "qty": 12, "uom": "pcs"}]},
+    )
+    inventory = await client.post(
+        "/api/onec-scenarios/test-inventory-result",
+        json={"inventory_id": "INV-1001", "warehouse_id": "MAIN", "completed_at": "2026-07-03T10:00:00Z", "items": [{"sku": "ABC123", "expected_qty": 10, "actual_qty": 9, "uom": "pcs"}]},
+    )
+    assert stock.status_code == 200
+    assert inventory.status_code == 200
+
+    stock_timeline = (await client.get(f"/api/events/{stock.json()['event_id']}/timeline")).json()
+    inventory_timeline = (await client.get(f"/api/events/{inventory.json()['event_id']}/timeline")).json()
+    assert stock_timeline["event"]["status"] == "success"
+    assert inventory_timeline["event"]["status"] == "success"
+    assert any(call["url"].endswith("/stock-balances") and call["body"]["payload"]["items"][0]["quantity"] == 12 for call in calls)
+    assert any(call["url"].endswith("/inventory-results") and call["body"]["payload"]["items"][0]["actual_quantity"] == 9 for call in calls)
+
+
 async def test_bidirectional_workflow_success_and_incidents(monkeypatch, client):
     async def fake_request(self, method, url, *, params=None, json_payload=None):
         order_id = json_payload["payload"]["external_order_id"]

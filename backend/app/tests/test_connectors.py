@@ -1,5 +1,6 @@
 from app.connectors.builtin.mock_wms_connector import MockWMSConnector
 from app.connectors.builtin.rest_connector import RESTConnector
+from app.connectors.builtin.zpl_printer_connector import ZPLPrinterConnector
 from app.connectors.registry import registry
 from app.sdk.exceptions import ConnectorNotFoundError
 from app.sdk.types import ConnectorContext
@@ -7,7 +8,7 @@ from app.sdk.types import ConnectorContext
 
 async def test_builtin_connectors_are_registered():
     types = {item.connector_type for item in registry.list()}
-    assert {"rest", "webhook", "mock_erp", "mock_wms", "onec"}.issubset(types)
+    assert {"rest", "webhook", "mock_erp", "mock_wms", "onec", "zpl_printer"}.issubset(types)
     try:
         registry.get("missing")
     except ConnectorNotFoundError:
@@ -59,6 +60,42 @@ async def test_rest_connector_dry_run_and_invalid_url_validation():
     dry = await connector.dry_run_send({"method": "POST", "url": "https://example.com/orders"}, {"order_id": "1"}, ConnectorContext(dry_run=True))
     assert dry.success is True
     assert dry.request_payload["url"] == "https://example.com/orders"
+
+
+async def test_zpl_printer_connector_dry_run():
+    connector = ZPLPrinterConnector()
+    config = {"host": "127.0.0.1", "port": 9100, "dpi": 600, "printer_name": "Zebra 600"}
+    payload = {"job_id": "job-1", "line_id": "line-1", "zpl": "^XA\n^FO0,0\n^FDTEST^FS\n^XZ"}
+
+    result = await connector.dry_run_send(config, payload, ConnectorContext(correlation_id="corr-1", dry_run=True))
+
+    assert result.success is True
+    assert result.response_payload["dry_run"] is True
+    assert result.response_payload["status"] == "would_send_to_printer"
+    assert result.request_payload["printer_name"] == "Zebra 600"
+    assert result.request_payload["job_id"] == "job-1"
+    assert result.request_payload["line_id"] == "line-1"
+    assert result.request_payload["dpi"] == 600
+    assert result.request_payload["bytes_count"] > 0
+
+
+async def test_zpl_printer_connector_rejects_invalid_config_and_payload():
+    connector = ZPLPrinterConnector()
+
+    hostname_config = await connector.validate_config({"host": "zebra-line-1.local", "port": 9100})
+    assert hostname_config.valid is True
+
+    invalid_config = await connector.validate_config({"host": "-bad-host", "port": 9100})
+    assert invalid_config.valid is False
+    assert "host must be a valid IP address or DNS hostname" in invalid_config.errors
+
+    result = await connector.dry_run_send(
+        {"host": "127.0.0.1", "port": 9100},
+        {"zpl": "not zpl"},
+        ConnectorContext(dry_run=True),
+    )
+    assert result.success is False
+    assert result.error_code == "ZPL_REQUIRED"
 
 
 async def test_webhook_connector_endpoint_creates_event(client):

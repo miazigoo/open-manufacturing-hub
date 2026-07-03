@@ -14,6 +14,7 @@ const navItems: Array<[string, string]> = [
   ['/workflows', 'nav.workflows'],
   ['/mappings', 'nav.mappings'],
   ['/polling', 'nav.polling'],
+  ['/printing', 'nav.printing'],
   ['/onec-scenarios', 'nav.onecScenarios'],
   ['/notifications', 'nav.notifications'],
   ['/maintenance', 'nav.maintenance'],

@@ -13,6 +13,7 @@ import { MappingEditorPage } from './pages/MappingEditorPage';
 import { NotificationRulesPage } from './pages/NotificationRulesPage';
 import { OneCScenariosPage } from './pages/OneCScenariosPage';
 import { PollingJobsPage } from './pages/PollingJobsPage';
+import { PrintingPage } from './pages/PrintingPage';
 import { RetentionPage } from './pages/RetentionPage';
 import { WorkflowsPage } from './pages/WorkflowsPage';
 
@@ -31,6 +32,7 @@ export function App() {
         <Route path="workflows" element={<WorkflowsPage />} />
         <Route path="mappings" element={<MappingEditorPage />} />
         <Route path="polling" element={<PollingJobsPage />} />
+        <Route path="printing" element={<PrintingPage />} />
         <Route path="onec-scenarios" element={<OneCScenariosPage />} />
         <Route path="notifications" element={<NotificationRulesPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />

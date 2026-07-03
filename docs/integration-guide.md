@@ -106,6 +106,107 @@ Minimum config fields:
 - `headers`: optional object with static headers.
 - `timeout_seconds`: positive number.
 
+## ZPL Printer Connector
+
+Use a ZPL printer connector when OMH must send a ready ZPL document to a Zebra-compatible printer over RAW TCP, usually port `9100`.
+
+Create a printer connector once:
+
+```bash
+curl -sS "$API/api/connectors" \
+  -H 'Content-Type: application/json' \
+  -d @examples/connector.zpl-printer.json | jq
+```
+
+Minimum config fields:
+
+- `host`: printer IP address or DNS hostname.
+- `port`: printer RAW TCP port, usually `9100`.
+- `dpi`: printer resolution. Store it on the printer connector, not in every print request.
+- `timeout_seconds`: positive TCP timeout.
+
+Workflow payload must contain ready ZPL:
+
+```json
+{
+  "job_id": "chz-job-1001",
+  "line_id": "1",
+  "zpl": "^XA\n^FO0,0\n^FDTEST^FS\n^XZ"
+}
+```
+
+The connector records request metadata as artifacts: printer host, port, DPI, job id, line id, byte count and ZPL SHA-256. It does not yet prove that a physical label was printed; RAW TCP success only means that data was accepted by the printer port. For Chestny Znak production printing, add a print-job module on top of this connector to track `reserved`, `sent_to_printer`, `printed`, `error` and `return_to_print` states per code.
+
+## Print Jobs
+
+Use the printing API when labels must be printed in controlled batches and resumed after printer, ribbon or label roll failures. This API is the production layer above the low-level `zpl_printer` connector.
+
+Create a printer record that points to a `zpl_printer` connector:
+
+```bash
+CONNECTOR_ID=<id of CHZ Zebra connector>
+curl -sS "$API/api/printing/printers" \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"name\":\"CHZ Zebra 600\",
+    \"connector_id\":\"$CONNECTOR_ID\",
+    \"dpi\":600
+  }" | jq
+```
+
+Create a print job with one line per marking code:
+
+```bash
+curl -sS "$API/api/printing/jobs" \
+  -H 'Content-Type: application/json' \
+  -d @examples/printing.chz-job.json | jq
+```
+
+Send a safe dry-run batch:
+
+```bash
+JOB_ID=<print job id>
+curl -sS "$API/api/printing/jobs/$JOB_ID/send-batch" \
+  -H 'Content-Type: application/json' \
+  -d '{"limit":100,"dry_run":true}' | jq
+```
+
+Send a real batch:
+
+```bash
+curl -sS "$API/api/printing/jobs/$JOB_ID/send-batch" \
+  -H 'Content-Type: application/json' \
+  -d '{"limit":100,"dry_run":false}' | jq
+```
+
+Confirm physical printing only after the operator, scanner or printer-status process has verified it:
+
+```bash
+curl -sS "$API/api/printing/jobs/$JOB_ID/confirm-printed" \
+  -H 'Content-Type: application/json' \
+  -d '{"through_sequence_no":100}' | jq
+```
+
+Return labels to print after a damaged label, ribbon issue or operator rollback:
+
+```bash
+curl -sS "$API/api/printing/jobs/$JOB_ID/return-to-print" \
+  -H 'Content-Type: application/json' \
+  -d '{"from_sequence_no":95,"reason":"label roll jam"}' | jq
+```
+
+Line statuses:
+
+- `new`: code has not been sent yet.
+- `reserved`: line is currently selected for sending.
+- `test_mode`: dry-run send completed, no physical print.
+- `sent_to_printer`: ZPL was accepted by the printer TCP port.
+- `printed`: physical print was confirmed.
+- `error`: sending failed.
+- `return_to_print`: operator returned the line to the queue.
+
+For Chestny Znak, do not treat `sent_to_printer` as final proof. Use `printed` only after confirmation.
+
 ## 1C Integration
 
 Install the built-in 1C scenarios and mapping presets before wiring a real 1C environment:

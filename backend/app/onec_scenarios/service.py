@@ -17,8 +17,17 @@ from app.onec_scenarios.bidirectional_presets import (
     BIDIRECTIONAL_TARGET_SYSTEM,
     BIDIRECTIONAL_WORKFLOW_NAME,
     BIDIRECTIONAL_WORKFLOW_STEPS,
+    INVENTORY_RESULT_ENTITY_TYPE,
+    INVENTORY_RESULT_EVENT_TYPE,
+    INVENTORY_RESULT_MAPPING_NAME,
+    INVENTORY_RESULT_WORKFLOW_NAME,
+    STOCK_BALANCE_ENTITY_TYPE,
+    STOCK_BALANCE_EVENT_TYPE,
+    STOCK_BALANCE_MAPPING_NAME,
+    STOCK_BALANCE_WORKFLOW_NAME,
+    reverse_workflow_steps,
 )
-from app.onec_scenarios.presets import BIDIRECTIONAL_SHIPMENT_FACT_DEMO, SALES_ORDER_DEMO
+from app.onec_scenarios.presets import BIDIRECTIONAL_SHIPMENT_FACT_DEMO, FULL_ERP_WMS_INTEGRATION, SALES_ORDER_DEMO
 from app.polling.models import PollingJob
 from app.workflows.models import Workflow
 
@@ -127,17 +136,68 @@ async def install_bidirectional_demo(session: AsyncSession) -> dict[str, Any]:
     }
 
 
+async def install_erp_wms_integration(session: AsyncSession) -> dict[str, Any]:
+    sales_order = await install_sales_order_demo(session)
+    reverse = await install_bidirectional_demo(session)
+    stock_mapping = await install_preset(session, STOCK_BALANCE_MAPPING_NAME)
+    inventory_mapping = await install_preset(session, INVENTORY_RESULT_MAPPING_NAME)
+    stock_workflow = await _ensure_reverse_workflow(
+        session,
+        name=STOCK_BALANCE_WORKFLOW_NAME,
+        description="Bidirectional ERP/WMS: WMS stock balance snapshots update 1C through HTTP service.",
+        event_type=STOCK_BALANCE_EVENT_TYPE,
+        entity_type=STOCK_BALANCE_ENTITY_TYPE,
+        mapping_name=STOCK_BALANCE_MAPPING_NAME,
+    )
+    inventory_workflow = await _ensure_reverse_workflow(
+        session,
+        name=INVENTORY_RESULT_WORKFLOW_NAME,
+        description="Bidirectional ERP/WMS: WMS inventory results are sent to 1C through HTTP service.",
+        event_type=INVENTORY_RESULT_EVENT_TYPE,
+        entity_type=INVENTORY_RESULT_ENTITY_TYPE,
+        mapping_name=INVENTORY_RESULT_MAPPING_NAME,
+    )
+    mappings = list(dict.fromkeys([*sales_order["mappings"], *reverse["mappings"], stock_mapping.name, inventory_mapping.name]))
+    return {
+        "scenario": FULL_ERP_WMS_INTEGRATION["key"],
+        "source_connector_id": sales_order["source_connector_id"],
+        "target_connector_id": reverse["target_connector_id"],
+        "workflow_id": sales_order["workflow_id"],
+        "polling_job_id": sales_order["polling_job_id"],
+        "mappings": mappings,
+        "notes": [
+            "Installed ERP -> WMS polling workflow and WMS -> ERP HTTP service workflows.",
+            f"Reverse workflow ids: shipment={reverse['workflow_id']}, stock={stock_workflow.id}, inventory={inventory_workflow.id}.",
+            "Replace demo URLs and mock connector config with real 1C ERP/WMS endpoints before production traffic.",
+        ],
+    }
+
+
 async def create_shipment_fact_test_event(session: AsyncSession, payload: dict[str, Any]) -> dict[str, Any]:
     await install_bidirectional_demo(session)
+    return await _create_reverse_test_event(session, payload, BIDIRECTIONAL_EVENT_TYPE, BIDIRECTIONAL_ENTITY_TYPE)
+
+
+async def create_stock_balance_test_event(session: AsyncSession, payload: dict[str, Any]) -> dict[str, Any]:
+    await install_erp_wms_integration(session)
+    return await _create_reverse_test_event(session, payload, STOCK_BALANCE_EVENT_TYPE, STOCK_BALANCE_ENTITY_TYPE)
+
+
+async def create_inventory_result_test_event(session: AsyncSession, payload: dict[str, Any]) -> dict[str, Any]:
+    await install_erp_wms_integration(session)
+    return await _create_reverse_test_event(session, payload, INVENTORY_RESULT_EVENT_TYPE, INVENTORY_RESULT_ENTITY_TYPE)
+
+
+async def _create_reverse_test_event(session: AsyncSession, payload: dict[str, Any], event_type: str, entity_type: str) -> dict[str, Any]:
     event = await create_event(
         session,
         EventCreate(
-            correlation_id=str(payload.get("shipment_id") or payload.get("order_id") or "shipment-fact-test"),
+            correlation_id=str(payload.get("shipment_id") or payload.get("inventory_id") or payload.get("warehouse_id") or payload.get("order_id") or event_type),
             source_system=BIDIRECTIONAL_SOURCE_SYSTEM,
             target_system=BIDIRECTIONAL_TARGET_SYSTEM,
-            event_type=BIDIRECTIONAL_EVENT_TYPE,
-            entity_type=BIDIRECTIONAL_ENTITY_TYPE,
-            entity_id=str(payload.get("shipment_id") or payload.get("order_id") or "unknown"),
+            event_type=event_type,
+            entity_type=entity_type,
+            entity_id=str(payload.get("shipment_id") or payload.get("inventory_id") or payload.get("warehouse_id") or payload.get("order_id") or "unknown"),
             payload=payload,
         ),
     )
@@ -208,6 +268,23 @@ async def _ensure_bidirectional_workflow(session: AsyncSession) -> Workflow:
         "target_mapping_version_id": None,
     }
     return await _ensure_workflow(session, BIDIRECTIONAL_WORKFLOW_NAME, payload)
+
+
+async def _ensure_reverse_workflow(session: AsyncSession, *, name: str, description: str, event_type: str, entity_type: str, mapping_name: str) -> Workflow:
+    payload = {
+        "description": description,
+        "event_type": event_type,
+        "source_system": BIDIRECTIONAL_SOURCE_SYSTEM,
+        "target_system": BIDIRECTIONAL_TARGET_SYSTEM,
+        "entity_type": entity_type,
+        "version": 1,
+        "enabled": True,
+        "steps_json": reverse_workflow_steps(mapping_name),
+        "validation_json": {},
+        "source_mapping_version_id": None,
+        "target_mapping_version_id": None,
+    }
+    return await _ensure_workflow(session, name, payload)
 
 
 async def _ensure_workflow(session: AsyncSession, name: str, payload: dict[str, Any]) -> Workflow:

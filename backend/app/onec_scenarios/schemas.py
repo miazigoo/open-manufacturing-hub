@@ -34,6 +34,19 @@ class ShipmentFactTestRequest(BaseModel):
     items: list[dict[str, Any]] = Field(default_factory=lambda: [{"sku": "ABC123", "qty": 5}])
 
 
+class StockBalanceTestRequest(BaseModel):
+    warehouse_id: str = "MAIN"
+    occurred_at: str = "2026-07-03T09:00:00Z"
+    items: list[dict[str, Any]] = Field(default_factory=lambda: [{"sku": "ABC123", "qty": 12, "uom": "pcs", "batch": "B-001"}])
+
+
+class InventoryResultTestRequest(BaseModel):
+    inventory_id: str = "INV-1001"
+    warehouse_id: str = "MAIN"
+    completed_at: str = "2026-07-03T10:00:00Z"
+    items: list[dict[str, Any]] = Field(default_factory=lambda: [{"sku": "ABC123", "expected_qty": 10, "actual_qty": 9, "uom": "pcs"}])
+
+
 class ShipmentFactTestRead(BaseModel):
     event_id: UUID
     status: str

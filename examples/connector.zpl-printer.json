@@ -1,0 +1,14 @@
+{
+  "name": "CHZ Zebra 600",
+  "connector_type": "zpl_printer",
+  "direction": "target",
+  "enabled": true,
+  "config_json": {
+    "printer_name": "CHZ Zebra 600",
+    "host": "172.16.3.245",
+    "port": 9100,
+    "dpi": 600,
+    "timeout_seconds": 5,
+    "status_mode": "tcp_connect"
+  }
+}

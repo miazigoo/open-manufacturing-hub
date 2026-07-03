@@ -18,6 +18,7 @@ from app.notifications.router import router as notifications_router
 from app.onec_scenarios.router import router as onec_scenarios_router
 from app.onec_templates.router import router as onec_templates_router
 from app.polling.router import router as polling_router
+from app.printing.router import router as printing_router
 from app.retention.router import router as retention_router
 from app.replay.router import router as replay_router
 from app.workflows.router import router as workflows_router
@@ -57,6 +58,7 @@ app.include_router(notifications_router)
 app.include_router(maintenance_router)
 app.include_router(retention_router)
 app.include_router(polling_router)
+app.include_router(printing_router)
 app.include_router(onec_scenarios_router)
 app.include_router(onec_templates_router)
 app.include_router(mock_onec_router)

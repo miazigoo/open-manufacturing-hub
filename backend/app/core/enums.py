@@ -123,3 +123,26 @@ class PollingCursorType(StrEnum):
     UPDATED_AT = "updated_at"
     SKIP = "skip"
     CUSTOM = "custom"
+
+
+class PrintJobStatus(StrEnum):
+    DRAFT = "draft"
+    READY = "ready"
+    PRINTING = "printing"
+    PARTIALLY_SENT = "partially_sent"
+    SENT = "sent"
+    PARTIALLY_PRINTED = "partially_printed"
+    PRINTED = "printed"
+    ERROR = "error"
+    CANCELLED = "cancelled"
+
+
+class PrintLineStatus(StrEnum):
+    NEW = "new"
+    RESERVED = "reserved"
+    TEST_MODE = "test_mode"
+    SENT_TO_PRINTER = "sent_to_printer"
+    PRINTED = "printed"
+    ERROR = "error"
+    RETURN_TO_PRINT = "return_to_print"
+    CANCELLED = "cancelled"

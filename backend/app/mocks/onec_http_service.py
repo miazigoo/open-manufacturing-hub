@@ -31,6 +31,13 @@ async def mock_onec_stock_balances(body: dict[str, Any]):
     return {"success": True, "external_document_id": "1C-STOCK-BALANCE", "status": "accepted", "message": "Stock balance accepted", "echo": body.get("payload", {})}
 
 
+@router.post("/api/mock-onec/hs/omh/inventory-results")
+async def mock_onec_inventory_results(body: dict[str, Any]):
+    payload = body.get("payload") if isinstance(body.get("payload"), dict) else {}
+    inventory_id = payload.get("inventory_id") or "UNKNOWN"
+    return {"success": True, "external_document_id": f"1C-INV-{inventory_id}", "status": "accepted", "message": "Inventory result accepted", "echo": payload}
+
+
 def _external_order_id(body: dict[str, Any]) -> str | None:
     payload = body.get("payload") if isinstance(body.get("payload"), dict) else body
     value = payload.get("external_order_id") if isinstance(payload, dict) else None

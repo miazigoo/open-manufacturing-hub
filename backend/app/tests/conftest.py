@@ -15,6 +15,7 @@ from app.maintenance.models import MaintenanceWindow  # noqa: F401
 from app.mappings.models import MappingDefinition, MappingVersion  # noqa: F401
 from app.notifications.models import NotificationDelivery, NotificationRule  # noqa: F401
 from app.polling.models import PollingJob, PollingJobRun, SourceEventCursor  # noqa: F401
+from app.printing.models import PrintJob, PrintJobLine, PrintJobLog, PrintPrinter  # noqa: F401
 from app.workflows.models import Workflow  # noqa: F401
 from app.main import app
 

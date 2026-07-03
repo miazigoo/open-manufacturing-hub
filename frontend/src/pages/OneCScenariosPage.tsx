@@ -2,7 +2,7 @@ import { FormEvent, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
-import { onecScenariosApi, OneCScenarioPreset, ShipmentFactTestPayload } from '../api/onecScenarios';
+import { InventoryResultTestPayload, onecScenariosApi, OneCScenarioPreset, ShipmentFactTestPayload, StockBalanceTestPayload } from '../api/onecScenarios';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -10,12 +10,18 @@ import { LoadingState } from '../components/LoadingState';
 import { useT } from '../i18n/useI18n';
 
 const defaultItems = [{ sku: 'ABC123', qty: 5 }];
+const defaultStockItems = [{ sku: 'ABC123', qty: 12, uom: 'pcs', batch: 'B-001' }];
+const defaultInventoryItems = [{ sku: 'ABC123', expected_qty: 10, actual_qty: 9, uom: 'pcs' }];
+type TestKind = 'shipment' | 'stock' | 'inventory';
 
 export function OneCScenariosPage() {
   const t = useT();
   const queryClient = useQueryClient();
   const presets = useQuery({ queryKey: ['onec-scenarios'], queryFn: onecScenariosApi.presets });
   const [form, setForm] = useState({ order_id: '1532', shipment_id: 'WMS-SHIP-1532', status: 'shipped', warehouse_id: 'MAIN', items: asJson(defaultItems) });
+  const [stockForm, setStockForm] = useState({ warehouse_id: 'MAIN', occurred_at: '2026-07-03T09:00:00Z', items: asJson(defaultStockItems) });
+  const [inventoryForm, setInventoryForm] = useState({ inventory_id: 'INV-1001', warehouse_id: 'MAIN', completed_at: '2026-07-03T10:00:00Z', items: asJson(defaultInventoryItems) });
+  const [testKind, setTestKind] = useState<TestKind>('shipment');
   const [formError, setFormError] = useState<string | null>(null);
 
   const refresh = () => {
@@ -28,15 +34,41 @@ export function OneCScenariosPage() {
   };
   const installForward = useMutation({ mutationFn: onecScenariosApi.installSalesOrderDemo, onSuccess: refresh });
   const installBidirectional = useMutation({ mutationFn: onecScenariosApi.installBidirectionalDemo, onSuccess: refresh });
+  const installFull = useMutation({ mutationFn: onecScenariosApi.installErpWmsIntegration, onSuccess: refresh });
   const testShipmentFact = useMutation({ mutationFn: onecScenariosApi.testShipmentFact, onSuccess: refresh });
+  const testStockBalance = useMutation({ mutationFn: onecScenariosApi.testStockBalance, onSuccess: refresh });
+  const testInventoryResult = useMutation({ mutationFn: onecScenariosApi.testInventoryResult, onSuccess: refresh });
 
   const forwardPreset = useMemo(() => presets.data?.find((preset) => preset.key === 'onec_sales_order_to_mock_wms'), [presets.data]);
   const reversePreset = useMemo(() => presets.data?.find((preset) => preset.key === 'mock_wms_shipment_fact_to_onec'), [presets.data]);
+  const fullPreset = useMemo(() => presets.data?.find((preset) => preset.key === 'onec_erp_wms_full'), [presets.data]);
+  const latestTestResult = testInventoryResult.data ?? testStockBalance.data ?? testShipmentFact.data;
+  const latestResult = latestTestResult ?? installFull.data ?? installBidirectional.data ?? installForward.data;
+  const testing = testShipmentFact.isPending || testStockBalance.isPending || testInventoryResult.isPending;
 
   function submitTest(event: FormEvent) {
     event.preventDefault();
     setFormError(null);
     try {
+      if (testKind === 'stock') {
+        const payload: StockBalanceTestPayload = {
+          warehouse_id: stockForm.warehouse_id,
+          occurred_at: stockForm.occurred_at,
+          items: JSON.parse(stockForm.items) as Array<Record<string, unknown>>,
+        };
+        testStockBalance.mutate(payload);
+        return;
+      }
+      if (testKind === 'inventory') {
+        const payload: InventoryResultTestPayload = {
+          inventory_id: inventoryForm.inventory_id,
+          warehouse_id: inventoryForm.warehouse_id,
+          completed_at: inventoryForm.completed_at,
+          items: JSON.parse(inventoryForm.items) as Array<Record<string, unknown>>,
+        };
+        testInventoryResult.mutate(payload);
+        return;
+      }
       const payload: ShipmentFactTestPayload = {
         order_id: form.order_id,
         shipment_id: form.shipment_id,
@@ -66,26 +98,51 @@ export function OneCScenariosPage() {
         <div className="scenario-list">
           {forwardPreset ? <ScenarioCard preset={forwardPreset} orbit={['1C', 'OMH', 'WMS']} actionLabel={t('onec.installDemo')} pending={installForward.isPending} onInstall={() => installForward.mutate()} /> : null}
           {reversePreset ? <ScenarioCard preset={reversePreset} orbit={['WMS', 'OMH', '1C']} actionLabel={t('onec.installBidirectional')} pending={installBidirectional.isPending} onInstall={() => installBidirectional.mutate()} /> : null}
-          {!forwardPreset && !reversePreset && <EmptyState title={t('onec.noPresets')} detail={t('onec.noPresetsDetail')} />}
+          {fullPreset ? <ScenarioCard preset={fullPreset} orbit={['ERP', 'OMH', 'WMS', 'ERP']} actionLabel={t('onec.installFull')} pending={installFull.isPending} onInstall={() => installFull.mutate()} /> : null}
+          {!forwardPreset && !reversePreset && !fullPreset && <EmptyState title={t('onec.noPresets')} detail={t('onec.noPresetsDetail')} />}
         </div>
 
         <aside className="panel scenario-sidecar">
-          <h2>{t('onec.testFact')}</h2>
+          <h2>{t('onec.testExchange')}</h2>
           <p>{t('onec.testHint')}</p>
           <form className="stack-form" onSubmit={submitTest}>
-            <div className="metadata-grid compact-grid no-margin">
-              <label className="field-label">{t('onec.orderId')}<input value={form.order_id} onChange={(event) => setForm({ ...form, order_id: event.target.value, shipment_id: `WMS-SHIP-${event.target.value}` })} /></label>
-              <label className="field-label">{t('onec.shipmentId')}<input value={form.shipment_id} onChange={(event) => setForm({ ...form, shipment_id: event.target.value })} /></label>
-              <label className="field-label">{t('common.status')}<input value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} /></label>
+            <div className="segmented-control">
+              <button type="button" className={testKind === 'shipment' ? 'active' : ''} onClick={() => setTestKind('shipment')}>{t('onec.shipmentFact')}</button>
+              <button type="button" className={testKind === 'stock' ? 'active' : ''} onClick={() => setTestKind('stock')}>{t('onec.stockBalance')}</button>
+              <button type="button" className={testKind === 'inventory' ? 'active' : ''} onClick={() => setTestKind('inventory')}>{t('onec.inventoryResult')}</button>
             </div>
-            <label className="field-label">{t('onec.warehouseId')}<input value={form.warehouse_id} onChange={(event) => setForm({ ...form, warehouse_id: event.target.value })} /></label>
-            <label className="field-label">{t('onec.itemsJson')}<textarea value={form.items} onChange={(event) => setForm({ ...form, items: event.target.value })} spellCheck={false} /></label>
+            {testKind === 'shipment' && <>
+              <div className="metadata-grid compact-grid no-margin">
+                <label className="field-label">{t('onec.orderId')}<input value={form.order_id} onChange={(event) => setForm({ ...form, order_id: event.target.value, shipment_id: `WMS-SHIP-${event.target.value}` })} /></label>
+                <label className="field-label">{t('onec.shipmentId')}<input value={form.shipment_id} onChange={(event) => setForm({ ...form, shipment_id: event.target.value })} /></label>
+                <label className="field-label">{t('common.status')}<input value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} /></label>
+              </div>
+              <label className="field-label">{t('onec.warehouseId')}<input value={form.warehouse_id} onChange={(event) => setForm({ ...form, warehouse_id: event.target.value })} /></label>
+              <label className="field-label">{t('onec.itemsJson')}<textarea value={form.items} onChange={(event) => setForm({ ...form, items: event.target.value })} spellCheck={false} /></label>
+            </>}
+            {testKind === 'stock' && <>
+              <div className="metadata-grid compact-grid no-margin">
+                <label className="field-label">{t('onec.warehouseId')}<input value={stockForm.warehouse_id} onChange={(event) => setStockForm({ ...stockForm, warehouse_id: event.target.value })} /></label>
+                <label className="field-label">{t('onec.occurredAt')}<input value={stockForm.occurred_at} onChange={(event) => setStockForm({ ...stockForm, occurred_at: event.target.value })} /></label>
+              </div>
+              <label className="field-label">{t('onec.itemsJson')}<textarea value={stockForm.items} onChange={(event) => setStockForm({ ...stockForm, items: event.target.value })} spellCheck={false} /></label>
+            </>}
+            {testKind === 'inventory' && <>
+              <div className="metadata-grid compact-grid no-margin">
+                <label className="field-label">{t('onec.inventoryId')}<input value={inventoryForm.inventory_id} onChange={(event) => setInventoryForm({ ...inventoryForm, inventory_id: event.target.value })} /></label>
+                <label className="field-label">{t('onec.warehouseId')}<input value={inventoryForm.warehouse_id} onChange={(event) => setInventoryForm({ ...inventoryForm, warehouse_id: event.target.value })} /></label>
+                <label className="field-label">{t('onec.completedAt')}<input value={inventoryForm.completed_at} onChange={(event) => setInventoryForm({ ...inventoryForm, completed_at: event.target.value })} /></label>
+              </div>
+              <label className="field-label">{t('onec.itemsJson')}<textarea value={inventoryForm.items} onChange={(event) => setInventoryForm({ ...inventoryForm, items: event.target.value })} spellCheck={false} /></label>
+            </>}
             {formError && <div className="error-state compact">{formError}</div>}
             {testShipmentFact.error instanceof Error && <div className="error-state compact">{testShipmentFact.error.message}</div>}
-            <button className="primary-button" disabled={testShipmentFact.isPending}>{t('onec.testFact')}</button>
+            {testStockBalance.error instanceof Error && <div className="error-state compact">{testStockBalance.error.message}</div>}
+            {testInventoryResult.error instanceof Error && <div className="error-state compact">{testInventoryResult.error.message}</div>}
+            <button className="primary-button" disabled={testing}>{t('onec.runTest')}</button>
           </form>
-          {testShipmentFact.data && <div className="success-note">{t('onec.createdEvent', { id: testShipmentFact.data.event_id })} <Link className="primary-link" to={`/events/${testShipmentFact.data.event_id}`}>{t('onec.openTimeline')}</Link></div>}
-          <JsonBlock title={t('onec.latestResult')} value={testShipmentFact.data ?? installBidirectional.data ?? installForward.data ?? { hint: t('onec.resultHint') }} searchable={false} />
+          {latestTestResult && <div className="success-note">{t('onec.createdEvent', { id: latestTestResult.event_id })} <Link className="primary-link" to={`/events/${latestTestResult.event_id}`}>{t('onec.openTimeline')}</Link></div>}
+          <JsonBlock title={t('onec.latestResult')} value={latestResult ?? { hint: t('onec.resultHint') }} searchable={false} />
         </aside>
       </section>
     </div>

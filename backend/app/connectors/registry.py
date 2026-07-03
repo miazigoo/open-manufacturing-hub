@@ -32,8 +32,9 @@ def register_builtin_connectors() -> None:
     from app.connectors.builtin.onec_connector import OneCConnector
     from app.connectors.builtin.rest_connector import RESTConnector
     from app.connectors.builtin.webhook_connector import WebhookConnector
+    from app.connectors.builtin.zpl_printer_connector import ZPLPrinterConnector
 
-    for connector in [RESTConnector(), WebhookConnector(), MockERPConnector(), MockWMSConnector(), OneCConnector()]:
+    for connector in [RESTConnector(), WebhookConnector(), MockERPConnector(), MockWMSConnector(), OneCConnector(), ZPLPrinterConnector()]:
         registry.register(connector)
 
 
