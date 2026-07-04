@@ -1,0 +1,4 @@
+from app.cli.production import main
+
+if __name__ == "__main__":
+    main()

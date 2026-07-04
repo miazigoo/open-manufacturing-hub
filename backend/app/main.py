@@ -49,6 +49,7 @@ from app.workflows.router import router as workflows_router
 from app.xml_tools.router import router as xml_tools_router
 from app.packages.service import startup_package_check
 from app.packages_auth.router import router as auth_router
+from app.production.router import router as production_router
 
 
 @asynccontextmanager
@@ -113,6 +114,7 @@ app.include_router(test_console_router)
 app.include_router(ui_router)
 app.include_router(notifications_router)
 app.include_router(auth_router)
+app.include_router(production_router)
 app.include_router(packages_router)
 app.include_router(plugin_store_router)
 app.include_router(maintenance_router)

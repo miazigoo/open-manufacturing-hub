@@ -73,6 +73,7 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
             ("Workflows", "/workflows", None, True),
             ("Execution Steps", "/execution/steps", None, True),
             ("Maintenance", "/maintenance", None, True),
+            ("Production", "/production", None, True),
             ("Retention", "/retention", None, True),
             ("Notifications", "/notifications", None, True),
         ]),

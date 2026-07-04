@@ -26,6 +26,7 @@ from app.events.models import IntegrationEvent
 from app.events.service import replay_event
 from app.execution.engine import ExecutionEngine
 from app.notifications.service import trigger_notifications
+from app.production.update_safety import is_enabled as update_mode_enabled
 
 CANONICAL_OBJECTS = [
     "Customer", "Supplier", "Product", "Warehouse", "Location", "SalesOrder", "PurchaseOrder", "Shipment", "ShipmentFact", "StockBalance", "InventoryResult", "PrintJob",
@@ -272,6 +273,8 @@ async def unlock_queue(session: AsyncSession, queue_id: UUID) -> IntegrationQueu
 
 
 async def eligible_queue_item(session: AsyncSession, worker: str = "worker") -> IntegrationQueueMessage | None:
+    if await update_mode_enabled(session):
+        return None
     now = utcnow()
     result = await session.execute(
         select(IntegrationQueueMessage)

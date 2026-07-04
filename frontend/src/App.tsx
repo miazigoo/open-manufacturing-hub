@@ -56,6 +56,7 @@ const OneCCockpitWizardPage = lazy(() => import('./features/cockpit/OneCCockpitW
 const UsersPage = lazy(() => import('./features/auth/UsersPage').then((m) => ({ default: m.UsersPage })));
 const ChangePasswordPage = lazy(() => import('./features/auth/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })));
 const AuthSettingsPage = lazy(() => import('./features/auth/AuthSettingsPage').then((m) => ({ default: m.AuthSettingsPage })));
+const ProductionPage = lazy(() => import('./pages/ProductionPage').then((m) => ({ default: m.ProductionPage })));
 
 function onec(element: React.ReactNode) {
   return <PackageGate packageId="omh-package-onec">{element}</PackageGate>;
@@ -122,6 +123,7 @@ export function App() {
           <Route path="users" element={<UsersPage />} />
           <Route path="change-password" element={<ChangePasswordPage />} />
           <Route path="auth-settings" element={<AuthSettingsPage />} />
+          <Route path="production" element={<ProductionPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

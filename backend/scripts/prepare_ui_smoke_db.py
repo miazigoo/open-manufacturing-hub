@@ -35,6 +35,7 @@ from app.packages.models import InstalledPackage  # noqa: F401
 from app.packages_auth.models import AuthRecoveryKey, AuthSession, AuthSettings, AuthUser  # noqa: F401
 from app.polling.models import PollingJob, PollingJobRun, SourceEventCursor  # noqa: F401
 from app.printing.models import PrintJob, PrintJobLine, PrintJobLog, PrintPrinter  # noqa: F401
+from app.production.models import BackupRecord, ProductionState  # noqa: F401
 from app.resolvers.models import ResolverCacheEntry, ResolverDefinitionV2  # noqa: F401
 from app.test_console.models import SavedTestCase  # noqa: F401
 from app.workflows.models import Workflow  # noqa: F401

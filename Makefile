@@ -1,4 +1,4 @@
-.PHONY: install-backend install-frontend test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke ui-smoke-live openapi-export packages-list package-install-onec package-install-printer docker-up docker-down
+.PHONY: install-backend install-frontend test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke ui-smoke-live openapi-export snapshot backup backup-config backup-db export-config pre-update-check post-update-check rollback-info restore-db packages-list package-install-onec package-install-printer docker-up docker-down
 
 install-backend:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[test]"
@@ -41,6 +41,34 @@ ui-smoke-live:
 
 openapi-export:
 	cd backend && . .venv/bin/activate && python -c "import json; from pathlib import Path; from app.main import app; target = Path('../frontend/src/api/generated/openapi.json'); target.parent.mkdir(parents=True, exist_ok=True); target.write_text(json.dumps(app.openapi(), indent=2, sort_keys=True), encoding='utf-8')"
+
+snapshot:
+	cd backend && . .venv/bin/activate && python -m app.cli.production snapshot
+
+backup: backup-config backup-db
+
+backup-config:
+	cd backend && . .venv/bin/activate && python -m app.cli.production export-config
+
+export-config: backup-config
+
+backup-db:
+	mkdir -p backups && docker compose exec -T postgres pg_dump -U omh omh > backups/omh-db-$$(date +%Y%m%d-%H%M%S).sql
+
+restore-db:
+	test -n "$(FILE)" || (echo "Usage: make restore-db FILE=backups/omh-db-YYYYMMDD-HHMMSS.sql" && exit 1)
+	docker compose stop backend frontend
+	docker compose exec -T postgres psql -U omh -d omh < "$(FILE)"
+	docker compose start backend frontend
+
+pre-update-check:
+	cd backend && . .venv/bin/activate && python -m app.cli.production pre-update-check
+
+post-update-check:
+	cd backend && . .venv/bin/activate && python -m app.cli.production post-update-check
+
+rollback-info:
+	@cat docs/production/update-rollback.md
 
 seed-local:
 	cd backend && python3 scripts/seed_demo.py

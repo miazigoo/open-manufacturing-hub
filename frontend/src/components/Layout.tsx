@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../api/client';
 import { uiApi, type UINavigationItem } from '../api/ui';
+import { ProductionBanner } from './ProductionBanner';
 import { UserMenu } from '../features/auth/UserMenu';
 import { useI18n, useT } from '../i18n/useI18n';
 import { languageMeta } from '../i18n/dictionary';
@@ -62,6 +63,7 @@ const routeKey: Record<string, string> = {
   '/workflows': 'nav.workflows',
   '/execution/steps': 'nav.executionSteps',
   '/maintenance': 'nav.maintenance',
+  '/production': 'nav.production',
   '/retention': 'nav.retention',
   '/notifications': 'nav.notifications',
   '/users': 'nav.users',
@@ -129,6 +131,7 @@ export function Layout() {
       </aside>
       <main className="content-shell">
         <TopBar />
+        <ProductionBanner />
         <div className="page-content">
           <Outlet />
         </div>

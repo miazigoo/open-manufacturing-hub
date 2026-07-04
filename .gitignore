@@ -20,6 +20,7 @@ frontend/tsconfig.tsbuildinfo
 *.sqlite
 *.sqlite3
 *.db
+backups/
 
 # OS/editor
 .DS_Store

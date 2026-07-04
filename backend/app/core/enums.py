@@ -231,3 +231,15 @@ class IntegrationPackageStatus(StrEnum):
     FAILED = "failed"
     UPGRADE_AVAILABLE = "upgrade_available"
     INCOMPATIBLE = "incompatible"
+
+
+class BackupType(StrEnum):
+    CONFIG_EXPORT = "config_export"
+    DATABASE_DUMP = "database_dump"
+    SYSTEM_SNAPSHOT = "system_snapshot"
+
+
+class BackupStatus(StrEnum):
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
