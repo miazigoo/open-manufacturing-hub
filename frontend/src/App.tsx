@@ -59,6 +59,7 @@ const ChangePasswordPage = lazy(() => import('./features/auth/ChangePasswordPage
 const AuthSettingsPage = lazy(() => import('./features/auth/AuthSettingsPage').then((m) => ({ default: m.AuthSettingsPage })));
 const ProductionPage = lazy(() => import('./pages/ProductionPage').then((m) => ({ default: m.ProductionPage })));
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })));
+const DocumentationPage = lazy(() => import('./pages/DocumentationPage').then((m) => ({ default: m.DocumentationPage })));
 
 function onec(element: React.ReactNode) {
   return <PackageGate packageId="omh-package-onec">{element}</PackageGate>;
@@ -74,6 +75,11 @@ export function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="docs" element={<DocumentationPage />} />
+          <Route path="docs/search" element={<DocumentationPage />} />
+          <Route path="docs/:packageId" element={<DocumentationPage />} />
+          <Route path="docs/:packageId/:sectionId" element={<DocumentationPage />} />
+          <Route path="docs/:packageId/:sectionId/:pageId" element={<DocumentationPage />} />
           <Route path="events" element={<EventJournalPage />} />
           <Route path="events/:eventId" element={<EventTimelinePage />} />
           <Route path="incidents" element={<IncidentsPage />} />

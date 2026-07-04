@@ -15,6 +15,7 @@ const uiModes: UIMode[] = ['simple', 'advanced', 'developer'];
 const uiModeStorageKey = 'omh.ui.mode.v1';
 
 const fallbackNavigation: UINavigationItem[] = [
+  { group: 'Operate', title: 'Documentation', route: '/docs', package_id: null, enabled: true, advanced: false },
   { group: 'Operate', title: 'Dashboard', route: '/', package_id: null, enabled: true, advanced: false },
   { group: 'Operate', title: 'Transaction Monitor', route: '/runtime/monitor', package_id: null, enabled: true, advanced: false },
   { group: 'Operate', title: 'Audit Log', route: '/audit', package_id: null, enabled: true, advanced: false },
@@ -38,6 +39,7 @@ const groupKey: Record<string, string> = {
 };
 
 const routeKey: Record<string, string> = {
+  '/docs': 'nav.documentation',
   '/': 'nav.dashboard',
   '/runtime/monitor': 'nav.transactionMonitor',
   '/runtime/queue': 'nav.integrationQueue',
@@ -80,7 +82,7 @@ const routeKey: Record<string, string> = {
 
 const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Settings', 'Advanced', 'Developer'];
 const modeRank: Record<UIMode, number> = { simple: 0, advanced: 1, developer: 2 };
-const simpleRoutes = new Set(['/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/test-console', '/packages', '/plugin-store']);
+const simpleRoutes = new Set(['/docs', '/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/test-console', '/packages', '/plugin-store']);
 const developerRoutes = new Set(['/workflows', '/execution/steps']);
 
 export function Layout() {

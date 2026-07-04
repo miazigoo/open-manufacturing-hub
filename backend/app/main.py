@@ -15,6 +15,7 @@ from app.core.config import get_settings
 from app.connectors.router import router as connectors_router
 from app.core.errors import BadRequestError, NotFoundError
 from app.demo.router import router as demo_router
+from app.docs_portal.router import router as docs_portal_router
 from app.events.router import router as events_router
 from app.enterprise_runtime.router import dlq_router, queue_router, router as enterprise_runtime_router
 from app.execution.router import router as execution_router
@@ -129,6 +130,7 @@ app.include_router(scenario_library_router)
 app.include_router(odata_explorer_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(xml_tools_router)
 app.include_router(test_console_router)
+app.include_router(docs_portal_router)
 app.include_router(ui_router)
 app.include_router(notifications_router)
 app.include_router(auth_router)

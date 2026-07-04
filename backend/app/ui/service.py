@@ -37,6 +37,7 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
     package_items = await package_navigation(session)
     groups = [
         ("Operate", [
+            ("Documentation", "/docs", None, False),
             ("Dashboard", "/", None, False),
             ("Transaction Monitor", "/runtime/monitor", None, False),
             ("Integration Queue", "/runtime/queue", None, False),

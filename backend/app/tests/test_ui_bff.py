@@ -49,3 +49,12 @@ async def test_ui_package_disabled_reflected_in_navigation_and_options(client):
     cockpit = next(item for item in navigation.json() if item["route"] == "/onec-cockpit")
     assert cockpit["installed"] is True
     assert cockpit["enabled"] is False
+
+
+async def test_documentation_is_first_navigation_item(client):
+    navigation = await client.get("/api/ui/navigation")
+    assert navigation.status_code == 200
+    first = navigation.json()[0]
+    assert first["title"] == "Documentation"
+    assert first["route"] == "/docs"
+    assert first["enabled"] is True

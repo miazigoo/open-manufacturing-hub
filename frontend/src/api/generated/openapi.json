@@ -2462,6 +2462,252 @@
         "title": "DesignerCreated",
         "type": "object"
       },
+      "DocsIndexRead": {
+        "properties": {
+          "fallback_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Language"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "packages": {
+            "items": {
+              "$ref": "#/components/schemas/DocsPackageRead"
+            },
+            "title": "Packages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "language"
+        ],
+        "title": "DocsIndexRead",
+        "type": "object"
+      },
+      "DocsPackageRead": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/DocsSectionRead"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "route"
+        ],
+        "title": "DocsPackageRead",
+        "type": "object"
+      },
+      "DocsPageRead": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "markdown": {
+            "title": "Markdown",
+            "type": "string"
+          },
+          "package_id": {
+            "title": "Package Id",
+            "type": "string"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "section_id": {
+            "title": "Section Id",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "translation_status": {
+            "default": "complete",
+            "title": "Translation Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "package_id",
+          "section_id",
+          "slug",
+          "title",
+          "description",
+          "route",
+          "updated_at",
+          "markdown"
+        ],
+        "title": "DocsPageRead",
+        "type": "object"
+      },
+      "DocsPageSummary": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "package_id": {
+            "title": "Package Id",
+            "type": "string"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "section_id": {
+            "title": "Section Id",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "package_id",
+          "section_id",
+          "slug",
+          "title",
+          "description",
+          "route",
+          "updated_at"
+        ],
+        "title": "DocsPageSummary",
+        "type": "object"
+      },
+      "DocsPdfExportStatus": {
+        "properties": {
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "package_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Id"
+          },
+          "planned": {
+            "default": true,
+            "title": "Planned",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "error",
+          "message",
+          "language"
+        ],
+        "title": "DocsPdfExportStatus",
+        "type": "object"
+      },
+      "DocsSectionRead": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "package_id": {
+            "title": "Package Id",
+            "type": "string"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/DocsPageSummary"
+            },
+            "title": "Pages",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "package_id",
+          "title",
+          "description"
+        ],
+        "title": "DocsSectionRead",
+        "type": "object"
+      },
       "DoctorResponse": {
         "properties": {
           "app_env": {
@@ -19186,6 +19432,215 @@
         "summary": "Dlq Retry Alias",
         "tags": [
           "dlq"
+        ]
+      }
+    },
+    "/api/docs/export-pdf": {
+      "get": {
+        "operationId": "docs_export_pdf_api_docs_export_pdf_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "ru",
+              "maxLength": 8,
+              "minLength": 2,
+              "title": "Lang",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "package",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Package"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocsPdfExportStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docs Export Pdf",
+        "tags": [
+          "docs"
+        ]
+      }
+    },
+    "/api/docs/index": {
+      "get": {
+        "operationId": "docs_index_api_docs_index_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "ru",
+              "maxLength": 8,
+              "minLength": 2,
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocsIndexRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docs Index",
+        "tags": [
+          "docs"
+        ]
+      }
+    },
+    "/api/docs/packages": {
+      "get": {
+        "operationId": "docs_packages_api_docs_packages_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "ru",
+              "maxLength": 8,
+              "minLength": 2,
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DocsPackageRead"
+                  },
+                  "title": "Response Docs Packages Api Docs Packages Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docs Packages",
+        "tags": [
+          "docs"
+        ]
+      }
+    },
+    "/api/docs/pages/{page_id}": {
+      "get": {
+        "operationId": "docs_page_api_docs_pages__page_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "page_id",
+            "required": true,
+            "schema": {
+              "title": "Page Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "ru",
+              "maxLength": 8,
+              "minLength": 2,
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocsPageRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Docs Page",
+        "tags": [
+          "docs"
         ]
       }
     },
