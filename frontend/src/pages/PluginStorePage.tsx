@@ -14,7 +14,16 @@ export function PluginStorePage() {
   const [query, setQuery] = useState('');
   const catalog = useQuery({ queryKey: ['plugin-store-catalog'], queryFn: pluginStoreApi.catalog });
   const categories = useQuery({ queryKey: ['plugin-store-categories'], queryFn: pluginStoreApi.categories });
-  const install = useMutation({ mutationFn: (packageId: string) => packagesApi.install(packageId, false), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['plugin-store-catalog'] }); queryClient.invalidateQueries({ queryKey: ['packages-installed'] }); queryClient.invalidateQueries({ queryKey: ['packages-available'] }); queryClient.invalidateQueries({ queryKey: ['packages-navigation'] }); } });
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['plugin-store-catalog'] });
+    queryClient.invalidateQueries({ queryKey: ['packages-installed'] });
+    queryClient.invalidateQueries({ queryKey: ['packages-available'] });
+    queryClient.invalidateQueries({ queryKey: ['packages-navigation'] });
+    queryClient.invalidateQueries({ queryKey: ['ui-navigation'] });
+  };
+  const install = useMutation({ mutationFn: (packageId: string) => packagesApi.install(packageId, false), onSuccess: refresh });
+  const enable = useMutation({ mutationFn: (packageId: string) => packagesApi.enable(packageId), onSuccess: refresh });
+  const disable = useMutation({ mutationFn: (packageId: string) => packagesApi.disable(packageId), onSuccess: refresh });
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return (catalog.data ?? []).filter((item) => {
@@ -43,13 +52,13 @@ export function PluginStorePage() {
         <div className="segmented-control package-category-control"><button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All</button>{categories.data?.map((category) => <button key={category.category} className={filter === category.category ? 'active' : ''} onClick={() => setFilter(category.category)}>{category.category} ({category.count})</button>)}</div>
       </section>
 
-      {filtered.length ? <section className="plugin-card-grid">{filtered.map((item) => <PluginCard key={item.package_id} item={item} installing={install.isPending} onInstall={() => install.mutate(item.package_id)} />)}</section> : <EmptyState title="No packages match filters" detail="Clear search or select another category." />}
-      {install.error instanceof Error && <div className="error-state compact">{install.error.message}</div>}
+      {filtered.length ? <section className="plugin-card-grid">{filtered.map((item) => <PluginCard key={item.package_id} item={item} busy={install.isPending || enable.isPending || disable.isPending} onInstall={() => install.mutate(item.package_id)} onEnable={() => enable.mutate(item.package_id)} onDisable={() => disable.mutate(item.package_id)} />)}</section> : <EmptyState title="No packages match filters" detail="Clear search or select another category." />}
+      {[install.error, enable.error, disable.error].find(Boolean) instanceof Error && <div className="error-state compact">{(([install.error, enable.error, disable.error].find(Boolean)) as Error).message}</div>}
     </div>
   );
 }
 
-function PluginCard({ item, installing, onInstall }: { item: PluginStoreItem; installing: boolean; onInstall: () => void }) {
+function PluginCard({ item, busy, onInstall, onEnable, onDisable }: { item: PluginStoreItem; busy: boolean; onInstall: () => void; onEnable: () => void; onDisable: () => void }) {
   const status = item.installed ? item.status : item.status || 'available';
   const canInstall = !item.installed && Boolean(item.installable);
   return (
@@ -69,9 +78,11 @@ function PluginCard({ item, installing, onInstall }: { item: PluginStoreItem; in
       <CapabilityStrip values={item.planned_capabilities ?? []} fallback="No capabilities published yet" />
       {item.reason_unavailable && <div className="empty-state compact package-reason">{item.reason_unavailable}</div>}
       <div className="action-row wrap-actions">
-        <Link className="primary-link" to={`/packages/${item.package_id}`}>Details</Link>
-        {item.installed && <StatusBadge status={item.enabled ? 'enabled' : 'disabled'} compact />}
-        {canInstall && <button className="primary-button" onClick={onInstall} disabled={installing}>Install</button>}
+        <Link className="primary-link" to={`/packages/${item.package_id}`}>{item.installed && item.enabled ? 'Open' : 'Details'}</Link>
+        {item.installed && item.enabled && <button className="ghost-button" onClick={onDisable} disabled={busy}>Disable</button>}
+        {item.installed && !item.enabled && <button className="primary-button" onClick={onEnable} disabled={busy}>Enable</button>}
+        {item.installed && <Link className="primary-link" to={`/packages/${item.package_id}`}>Docs</Link>}
+        {canInstall && <button className="primary-button" onClick={onInstall} disabled={busy}>Install</button>}
         {!item.installed && !item.installable && <button className="ghost-button" type="button" disabled>{actionLabel(item.status)}</button>}
       </div>
     </article>

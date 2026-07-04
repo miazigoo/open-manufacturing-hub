@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     )
     app_name: str = "Open Manufacturing Hub"
     app_env: str = Field(default="development", validation_alias=AliasChoices("APP_ENV", "OMH_APP_ENV"))
+    auto_install_packages: str = Field(default="", validation_alias=AliasChoices("OMH_AUTO_INSTALL_PACKAGES", "AUTO_INSTALL_PACKAGES"))
     allow_demo_seed_in_production: bool = Field(default=False, validation_alias=AliasChoices("ALLOW_DEMO_SEED_IN_PRODUCTION", "OMH_ALLOW_DEMO_SEED_IN_PRODUCTION"))
     notification_webhook_timeout_seconds: float = 3.0
     notification_webhook_retries: int = 2

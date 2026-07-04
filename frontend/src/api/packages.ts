@@ -28,6 +28,8 @@ export interface PackageManifest {
 
 export interface PackageAvailable {
   manifest: PackageManifest;
+  registered: boolean;
+  available: boolean;
   installed: boolean;
   enabled: boolean;
   status: string | null;
@@ -59,6 +61,8 @@ export interface PluginStoreItem {
   name: string;
   version: string;
   official: boolean;
+  registered: boolean;
+  available: boolean;
   installed: boolean;
   enabled: boolean;
   category: string;

@@ -86,9 +86,11 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
     for group, items in groups:
         for title, route, package_id, advanced in items:
             enabled = True
-            if package_id and package_id in installed_package_ids:
-                enabled = bool(enabled_by_package.get(package_id, True))
-            result.append({"group": group, "title": title, "route": route, "package_id": package_id, "enabled": enabled, "advanced": advanced})
+            installed = False
+            if package_id:
+                installed = package_id in installed_package_ids
+                enabled = installed and bool(enabled_by_package.get(package_id, False))
+            result.append({"group": group, "title": title, "route": route, "package_id": package_id, "enabled": enabled, "installed": installed, "advanced": advanced})
     return result
 
 

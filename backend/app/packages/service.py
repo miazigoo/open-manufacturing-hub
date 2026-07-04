@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import IntegrationPackageStatus
 from app.core.errors import NotFoundError
+from app.core.config import get_settings
 from app.packages.compatibility import core_version, validate_compatibility
 from app.packages.errors import PackageNotInstallableError
 from app.packages.installer import PackageInstaller, install_demo_data_for_package, validate_dependencies
@@ -77,7 +78,7 @@ async def package_navigation(session: AsyncSession) -> list[dict[str, Any]]:
         package = installed.get(manifest.package_id)
         enabled = bool(package and package.enabled and package.status == IntegrationPackageStatus.ENABLED)
         for item in manifest.frontend.navigation:
-            items.append({"package_id": manifest.package_id, "group": item.group, "title": item.title, "route": item.route, "enabled": enabled})
+            items.append({"package_id": manifest.package_id, "group": item.group, "title": item.title, "route": item.route, "enabled": enabled, "installed": package is not None})
     return sorted(items, key=lambda item: (item["group"], item["title"]))
 
 
@@ -191,6 +192,8 @@ async def _package_available_item(session: AsyncSession, manifest: PackageManife
         dependency_warnings.append(manifest.reason_unavailable)
     return {
         "manifest": manifest,
+        "registered": True,
+        "available": manifest.installable and manifest.status == "available",
         "installed": package is not None,
         "enabled": bool(package and package.enabled),
         "status": package.status.value if package else manifest.status,
@@ -302,6 +305,7 @@ def route_inventory(routes: list[Any]) -> list[dict[str, Any]]:
 
 
 async def startup_package_check(session: AsyncSession) -> None:
+    await _auto_install_configured_packages(session)
     try:
         packages = await repository.list_installed(session)
     except Exception as exc:  # pragma: no cover - defensive startup guard
@@ -330,6 +334,23 @@ async def startup_package_check(session: AsyncSession) -> None:
             logger.warning("Integration package %s failed startup validation: %s", package.package_id, exc)
     await sync_all_installed_capabilities(session)
     await session.flush()
+
+
+async def _auto_install_configured_packages(session: AsyncSession) -> None:
+    settings = get_settings()
+    package_ids = [item.strip() for item in settings.auto_install_packages.split(",") if item.strip()]
+    if not package_ids:
+        return
+    installed = {item.package_id for item in await repository.list_installed(session)}
+    installer = PackageInstaller()
+    for package_id in package_ids:
+        if package_id in installed:
+            continue
+        try:
+            await installer.install_package(session, package_id, install_demo_data=False)
+            logger.info("Auto-installed configured package %s", package_id)
+        except Exception as exc:  # pragma: no cover - startup diagnostic
+            logger.warning("Auto-install package %s failed: %s", package_id, exc)
 
 
 def _load_doc_ref(ref: str | None) -> str | None:
@@ -376,6 +397,8 @@ def _route_package(path: str) -> tuple[str | None, str | None]:
         return "omh-package-onec", path.split("/")[2]
     if path.startswith("/api/printing"):
         return "omh-package-printer", "printing"
+    if path.startswith("/api/secrets"):
+        return "omh-package-secrets", "secrets"
     return None, None
 
 
@@ -390,6 +413,7 @@ def _fallback_route_inventory(existing: list[dict[str, Any]]) -> list[dict[str, 
         ("/api/printing/*", "omh-package-printer", "printing"),
         ("/api/packages/onec/*", "omh-package-onec", "packages_onec"),
         ("/api/packages/printer/*", "omh-package-printer", "packages_printer"),
+        ("/api/secrets/*", "omh-package-secrets", "secrets"),
     ]
     core_patterns = [
         "/api/bus/in/{slug}",

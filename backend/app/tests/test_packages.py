@@ -1,4 +1,7 @@
 import pytest
+from pathlib import Path
+import subprocess
+import sys
 from pydantic import ValidationError
 
 from app.connectors.registry import registry as connector_registry
@@ -28,7 +31,14 @@ async def test_package_installer_lifecycle_navigation_and_plugin_store(client):
     available = await client.get("/api/packages/available")
     assert available.status_code == 200, available.text
     assert {item["manifest"]["package_id"] for item in available.json()} >= {"omh-package-onec", "omh-package-printer", "omh-package-auth", "omh-package-secrets", "omh-package-sap"}
+    onec_available = next(item for item in available.json() if item["manifest"]["package_id"] == "omh-package-onec")
+    assert onec_available["registered"] is True
+    assert onec_available["available"] is True
+    assert onec_available["installed"] is False
+    assert onec_available["enabled"] is False
     sap_available = next(item for item in available.json() if item["manifest"]["package_id"] == "omh-package-sap")
+    assert sap_available["registered"] is True
+    assert sap_available["available"] is False
     assert sap_available["status"] == "coming_soon"
     assert sap_available["manifest"]["installable"] is False
     assert "SAP OData connector" in sap_available["manifest"]["planned_capabilities"]
@@ -36,8 +46,12 @@ async def test_package_installer_lifecycle_navigation_and_plugin_store(client):
     store = await client.get("/api/plugin-store/catalog")
     assert store.status_code == 200, store.text
     onec_store = next(item for item in store.json() if item["package_id"] == "omh-package-onec")
+    assert onec_store["registered"] is True
+    assert onec_store["available"] is True
     assert onec_store["installed"] is False
     sap_store = next(item for item in store.json() if item["package_id"] == "omh-package-sap")
+    assert sap_store["registered"] is True
+    assert sap_store["available"] is False
     assert sap_store["status"] == "coming_soon"
     assert sap_store["installable"] is False
 
@@ -88,6 +102,28 @@ async def test_package_installer_lifecycle_navigation_and_plugin_store(client):
     onec_after = next(item for item in store_after.json() if item["package_id"] == "omh-package-onec")
     assert onec_after["installed"] is True
     assert onec_after["enabled"] is True
+    assert onec_after["status"] == "installed"
+
+
+async def test_registered_package_routes_are_hidden_until_installed_in_ui_navigation(client):
+    navigation = await client.get("/api/ui/navigation")
+    assert navigation.status_code == 200, navigation.text
+    onec_cockpit = next(item for item in navigation.json() if item["route"] == "/onec-cockpit")
+    assert onec_cockpit["installed"] is False
+    assert onec_cockpit["enabled"] is False
+
+    installed = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert installed.status_code == 200, installed.text
+    navigation_after_install = await client.get("/api/ui/navigation")
+    onec_cockpit_after_install = next(item for item in navigation_after_install.json() if item["route"] == "/onec-cockpit")
+    assert onec_cockpit_after_install["installed"] is True
+    assert onec_cockpit_after_install["enabled"] is True
+
+
+def test_official_package_check_script_passes():
+    root = Path(__file__).resolve().parents[2]
+    result = subprocess.run([sys.executable, str(root / "scripts" / "check_official_packages.py")], cwd=root, text=True, capture_output=True, check=False)
+    assert result.returncode == 0, result.stderr + result.stdout
 
 
 async def test_printer_package_install_and_demo_data(client):

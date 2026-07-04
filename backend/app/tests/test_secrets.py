@@ -1,10 +1,18 @@
 import json
 from uuid import UUID
 
+import pytest
+
 from app.core.config import get_settings
 from app.core.database import async_session
 from app.secrets import crypto
 from app.secrets.models import Secret
+
+
+@pytest.fixture(autouse=True)
+async def install_secrets_package(client):
+    response = await client.post('/api/packages/omh-package-secrets/install', json={'install_demo_data': False})
+    assert response.status_code == 200, response.text
 
 
 async def test_secret_crud_encrypts_value_and_audit_redacts_plaintext(client):

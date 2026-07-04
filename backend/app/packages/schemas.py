@@ -27,6 +27,8 @@ class InstalledPackageRead(BaseModel):
 
 class PackageAvailableRead(BaseModel):
     manifest: PackageManifest
+    registered: bool = True
+    available: bool = True
     installed: bool = False
     enabled: bool = False
     status: str | None = None
@@ -52,6 +54,7 @@ class PackageNavigationRead(BaseModel):
     title: str
     route: str
     enabled: bool = True
+    installed: bool = False
 
 
 class PackageDocsRead(BaseModel):

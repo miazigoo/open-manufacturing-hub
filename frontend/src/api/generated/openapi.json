@@ -9710,6 +9710,11 @@
       },
       "PackageAvailableRead": {
         "properties": {
+          "available": {
+            "default": true,
+            "title": "Available",
+            "type": "boolean"
+          },
           "compatibility_errors": {
             "items": {
               "type": "string"
@@ -9748,6 +9753,11 @@
           },
           "manifest": {
             "$ref": "#/components/schemas/PackageManifest"
+          },
+          "registered": {
+            "default": true,
+            "title": "Registered",
+            "type": "boolean"
           },
           "status": {
             "anyOf": [
@@ -10337,6 +10347,11 @@
             "title": "Group",
             "type": "string"
           },
+          "installed": {
+            "default": false,
+            "title": "Installed",
+            "type": "boolean"
+          },
           "package_id": {
             "title": "Package Id",
             "type": "string"
@@ -10512,6 +10527,11 @@
       },
       "PluginStoreItem": {
         "properties": {
+          "available": {
+            "default": true,
+            "title": "Available",
+            "type": "boolean"
+          },
           "category": {
             "title": "Category",
             "type": "string"
@@ -10587,6 +10607,11 @@
               }
             ],
             "title": "Reason Unavailable"
+          },
+          "registered": {
+            "default": true,
+            "title": "Registered",
+            "type": "boolean"
           },
           "replacement_package_id": {
             "anyOf": [
@@ -15579,6 +15604,11 @@
           "group": {
             "title": "Group",
             "type": "string"
+          },
+          "installed": {
+            "default": false,
+            "title": "Installed",
+            "type": "boolean"
           },
           "package_id": {
             "anyOf": [

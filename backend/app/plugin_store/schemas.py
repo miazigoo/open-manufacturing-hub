@@ -8,6 +8,8 @@ class PluginStoreItem(BaseModel):
     name: str
     version: str
     official: bool = False
+    registered: bool = True
+    available: bool = True
     installed: bool = False
     enabled: bool = False
     category: str

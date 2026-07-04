@@ -70,4 +70,5 @@ class UINavigationItem(BaseModel):
     route: str
     package_id: str | None = None
     enabled: bool = True
+    installed: bool = False
     advanced: bool = False

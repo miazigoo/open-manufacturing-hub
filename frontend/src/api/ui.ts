@@ -2,7 +2,7 @@ import { request } from './client';
 
 export interface UIOption { id: string; label: string; type: string | null; meta: Record<string, unknown> }
 export interface UIPackageState { package_id: string; installed: boolean; enabled: boolean; status: string | null; action_label: string }
-export interface UINavigationItem { group: string; title: string; route: string; package_id: string | null; enabled: boolean; advanced: boolean }
+export interface UINavigationItem { group: string; title: string; route: string; package_id: string | null; enabled: boolean; installed?: boolean; advanced: boolean }
 export interface UICockpitSummary {
   package_state: UIPackageState;
   metrics: Record<string, number>;

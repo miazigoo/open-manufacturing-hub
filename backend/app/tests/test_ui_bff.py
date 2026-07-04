@@ -47,4 +47,5 @@ async def test_ui_package_disabled_reflected_in_navigation_and_options(client):
     navigation = await client.get("/api/ui/navigation")
     assert navigation.status_code == 200
     cockpit = next(item for item in navigation.json() if item["route"] == "/onec-cockpit")
+    assert cockpit["installed"] is True
     assert cockpit["enabled"] is False

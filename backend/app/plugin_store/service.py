@@ -13,9 +13,12 @@ async def catalog(session: AsyncSession) -> list[dict[str, Any]]:
     installed = {item.package_id: item for item in await repository.list_installed(session)}
     result: list[dict[str, Any]] = []
     for item in load_catalog():
-        package = installed.get(str(item["package_id"]))
-        status = package.status.value if package else str(item.get("status") or "available")
-        result.append({**item, "status": status, "installable": bool(item.get("installable", True)), "installed": package is not None, "enabled": bool(package and package.enabled)})
+        package_id = str(item["package_id"])
+        package = installed.get(package_id)
+        manifest_status = str(item.get("status") or "available")
+        installable = bool(item.get("installable", True))
+        status = "installed" if package and package.enabled else "disabled" if package else manifest_status
+        result.append({**item, "registered": True, "available": installable and manifest_status == "available", "status": status, "installable": installable, "installed": package is not None, "enabled": bool(package and package.enabled)})
     return result
 
 
