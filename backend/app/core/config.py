@@ -20,6 +20,10 @@ class Settings(BaseSettings):
         default="http://localhost:5173,http://127.0.0.1:5173",
         validation_alias=AliasChoices("CORS_ORIGINS", "OMH_CORS_ALLOW_ORIGINS"),
     )
+    cors_allow_origin_regex: str | None = Field(
+        default=r"^https?://(localhost|127\.0\.0\.1):\d+$",
+        validation_alias=AliasChoices("CORS_ALLOW_ORIGIN_REGEX", "OMH_CORS_ALLOW_ORIGIN_REGEX"),
+    )
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="OMH_", extra="ignore")
 

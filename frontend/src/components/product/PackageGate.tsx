@@ -21,12 +21,24 @@ export function PackageGate({ packageId, children }: PackageGateProps) {
   if (!details.data) return <ErrorState error={new Error(`Package ${packageId} not found`)} />;
   if (details.data.installed && details.data.enabled) return <>{children}</>;
 
+  const action = details.data.installed
+    ? <button className="primary-button" onClick={() => enable.mutate()} disabled={enable.isPending}>Enable package</button>
+    : <button className="primary-button" onClick={() => install.mutate()} disabled={install.isPending}>Install package</button>;
+
   return (
-    <SectionCard eyebrow="Package Gate" title={details.data.manifest.name} description={details.data.manifest.description} actions={details.data.installed ? <button className="primary-button" onClick={() => enable.mutate()} disabled={enable.isPending}>Enable package</button> : <button className="primary-button" onClick={() => install.mutate()} disabled={install.isPending}>Install package</button>}>
-      <div className="package-gate-panel">
-        <p>This page needs the package to be installed and enabled. The gate prevents half-working screens and stale routes.</p>
-        {(install.error || enable.error) && <div className="error-state compact">{((install.error ?? enable.error) as Error).message}</div>}
-      </div>
-    </SectionCard>
+    <div className="page-stack package-gate-page">
+      <section className="page-header enterprise-hero">
+        <span className="eyebrow">Package Gate</span>
+        <h1>{details.data.manifest.name}</h1>
+        <p>{details.data.manifest.description}</p>
+        <div className="hero-meta">{action}</div>
+      </section>
+      <SectionCard title="Activation required" description="Install and enable the package to open this workspace.">
+        <div className="package-gate-panel">
+          <p>This page needs the package to be installed and enabled. The gate prevents half-working screens and stale routes.</p>
+          {(install.error || enable.error) && <div className="error-state compact">{((install.error ?? enable.error) as Error).message}</div>}
+        </div>
+      </SectionCard>
+    </div>
   );
 }

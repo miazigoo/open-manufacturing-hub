@@ -22,10 +22,11 @@ export function ResolversPage() {
   const objects = useQuery({ queryKey: ['business-objects'], queryFn: businessObjectsApi.list });
   const [objectFilter, setObjectFilter] = useState('');
   const install = useMutation({ mutationFn: resolversApi.installPresets, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['resolvers-v2'] }) });
+  const rows = useMemo(() => (resolvers.data ?? []).filter((item) => !objectFilter || item.object_type === objectFilter), [objectFilter, resolvers.data]);
+  const metrics = useMemo(() => ({ enabled: rows.filter((item) => item.enabled).length, cached: rows.filter((item) => item.cache_enabled).length, strategies: new Set(rows.map((item) => item.strategy)).size }), [rows]);
   if (resolvers.isLoading || objects.isLoading) return <LoadingState label="Loading resolvers" />;
   if (resolvers.error) return <ErrorState error={resolvers.error} />;
-  const rows = (resolvers.data ?? []).filter((item) => !objectFilter || item.object_type === objectFilter);
-  const metrics = useMemo(() => ({ enabled: rows.filter((item) => item.enabled).length, cached: rows.filter((item) => item.cache_enabled).length, strategies: new Set(rows.map((item) => item.strategy)).size }), [rows]);
+  if (objects.error) return <ErrorState error={objects.error} />;
   return (
     <div className="page-stack enterprise-runtime-page">
       <section className="page-header enterprise-hero">
