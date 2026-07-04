@@ -8,12 +8,117 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 
+const jsonSample = asJson({ warehouse_id: 'MAIN', target_order_id: 'SO-1001', items: [] });
+const xmlSample = '<Документ><Номер>UPD-1001</Номер><ИНН>1234567890</ИНН></Документ>';
+const rawSample = 'free-form integration message';
+
+function sampleForMode(mode: string) {
+  if (mode === 'xml') return xmlSample;
+  if (mode === 'raw_text') return rawSample;
+  return jsonSample;
+}
+
+function normalizeTimelineUrl(url: string) {
+  if (url.startsWith('/events/')) return url;
+  if (/^[a-f0-9-]{20,}$/i.test(url)) return `/events/${url}`;
+  return url;
+}
+
 export function TestConsolePage() {
   const endpoints = useQuery({ queryKey: ['bus-endpoints'], queryFn: integrationBusApi.endpoints });
-  const [form, setForm] = useState({ endpoint_id: '', input_mode: 'json', headers_json: '{}', body: asJson({ warehouse_id: 'MAIN', target_order_id: 'SO-1001', items: [] }) });
-  const send = useMutation({ mutationFn: (dry_run: boolean) => testConsoleApi.send({ endpoint_id: form.endpoint_id, input_mode: form.input_mode, headers_json: JSON.parse(form.headers_json) as Record<string, string>, body_text: form.body, body_json: form.input_mode === 'json' ? JSON.parse(form.body) as Record<string, unknown> : null, dry_run }) });
+  const [form, setForm] = useState({ endpoint_id: '', input_mode: 'json', headers_json: '{}', body: jsonSample });
+  const [formError, setFormError] = useState<string | null>(null);
+  const send = useMutation({
+    mutationFn: (payload: { dry_run: boolean; headers: Record<string, string>; bodyJson: Record<string, unknown> | null }) =>
+      testConsoleApi.send({
+        endpoint_id: form.endpoint_id,
+        input_mode: form.input_mode,
+        headers_json: payload.headers,
+        body_text: form.body,
+        body_json: payload.bodyJson,
+        dry_run: payload.dry_run,
+      }),
+  });
+
   if (endpoints.isLoading) return <LoadingState label="Loading test console" />;
   if (endpoints.error) return <ErrorState error={endpoints.error} />;
-  function submit(event: FormEvent) { event.preventDefault(); send.mutate(false); }
-  return <div className="page-stack two-column-page"><form className="panel form-panel stack-form" onSubmit={submit}><span className="eyebrow">Test Console</span><h1>Send integration requests</h1><label className="field-label">Endpoint<select value={form.endpoint_id} onChange={(event) => { const endpoint = endpoints.data?.find((item) => item.id === event.target.value); setForm({ ...form, endpoint_id: event.target.value, input_mode: endpoint?.input_mode ?? form.input_mode }); }}><option value="">Select endpoint</option>{(endpoints.data ?? []).map((endpoint) => <option key={endpoint.id} value={endpoint.id}>{endpoint.name} · /api/bus/in/{endpoint.slug}</option>)}</select></label><label className="field-label">Input mode<select value={form.input_mode} onChange={(event) => setForm({ ...form, input_mode: event.target.value })}><option value="json">json</option><option value="xml">xml</option><option value="raw_text">raw_text</option></select></label><label className="field-label">Headers JSON<textarea value={form.headers_json} onChange={(event) => setForm({ ...form, headers_json: event.target.value })} /></label><label className="field-label">Body<textarea value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label><div className="action-row"><button className="primary-button" disabled={!form.endpoint_id || send.isPending}>Send</button><button type="button" className="ghost-button" disabled={!form.endpoint_id || send.isPending} onClick={() => send.mutate(true)}>Dry Run</button></div></form><section className="page-stack">{send.data?.timeline_url && <Link className="primary-link" to={send.data.timeline_url}>Open Last Timeline</Link>}{send.data?.external_error && <JsonBlock title="External Error" value={send.data.external_error} searchable={false} />}<JsonBlock title="Response" value={send.data ?? {}} searchable /></section></div>;
+
+  function parsePayload(dryRun: boolean) {
+    setFormError(null);
+    let headers: Record<string, string>;
+    let bodyJson: Record<string, unknown> | null = null;
+    try {
+      headers = JSON.parse(form.headers_json || '{}') as Record<string, string>;
+    } catch {
+      setFormError('Headers JSON is invalid. Fix the object before sending the request.');
+      return null;
+    }
+    if (form.input_mode === 'json') {
+      try {
+        bodyJson = JSON.parse(form.body || '{}') as Record<string, unknown>;
+      } catch {
+        setFormError('Body JSON is invalid. Switch to XML/raw_text or fix the JSON payload.');
+        return null;
+      }
+    }
+    return { dry_run: dryRun, headers, bodyJson };
+  }
+
+  function run(dryRun: boolean) {
+    const payload = parsePayload(dryRun);
+    if (payload) send.mutate(payload);
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    run(false);
+  }
+
+  const timelineUrl = send.data?.timeline_url ? normalizeTimelineUrl(send.data.timeline_url) : null;
+
+  return (
+    <div className="page-stack two-column-page">
+      <form className="panel form-panel stack-form" onSubmit={submit}>
+        <span className="eyebrow">Test Console</span>
+        <h1>Send integration requests</h1>
+        <label className="field-label">
+          Endpoint
+          <select
+            value={form.endpoint_id}
+            onChange={(event) => {
+              const endpoint = endpoints.data?.find((item) => item.id === event.target.value);
+              const nextMode = endpoint?.input_mode ?? form.input_mode;
+              setForm({ ...form, endpoint_id: event.target.value, input_mode: nextMode, body: sampleForMode(nextMode) });
+            }}
+          >
+            <option value="">Select endpoint</option>
+            {(endpoints.data ?? []).map((endpoint) => (
+              <option key={endpoint.id} value={endpoint.id}>{endpoint.name} · /api/bus/in/{endpoint.slug}</option>
+            ))}
+          </select>
+        </label>
+        <label className="field-label">
+          Input mode
+          <select value={form.input_mode} onChange={(event) => setForm({ ...form, input_mode: event.target.value, body: sampleForMode(event.target.value) })}>
+            <option value="json">json</option>
+            <option value="xml">xml</option>
+            <option value="raw_text">raw_text</option>
+          </select>
+        </label>
+        <label className="field-label">Headers JSON<textarea value={form.headers_json} onChange={(event) => setForm({ ...form, headers_json: event.target.value })} /></label>
+        <label className="field-label">Body<textarea value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label>
+        {formError && <div className="error-state compact">{formError}</div>}
+        {send.error instanceof Error && <div className="error-state compact">{send.error.message}</div>}
+        <div className="action-row">
+          <button className="primary-button" disabled={!form.endpoint_id || send.isPending}>Send</button>
+          <button type="button" className="ghost-button" disabled={!form.endpoint_id || send.isPending} onClick={() => run(true)}>Dry Run</button>
+        </div>
+      </form>
+      <section className="page-stack">
+        {timelineUrl && <Link className="primary-link" to={timelineUrl}>Open Last Timeline</Link>}
+        {send.data?.external_error && <JsonBlock title="External Error" value={send.data.external_error} searchable={false} />}
+        <JsonBlock title="Response" value={send.data ?? { hint: 'Send or dry-run a request to inspect the response.' }} searchable />
+      </section>
+    </div>
+  );
 }

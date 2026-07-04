@@ -4,30 +4,53 @@ import { useI18n, useT } from '../i18n/useI18n';
 import { languageMeta } from '../i18n/dictionary';
 import type { Language } from '../i18n/dictionary';
 
-const navItems: Array<[string, string]> = [
-  ['/', 'nav.dashboard'],
-  ['/events', 'nav.events'],
-  ['/incidents', 'nav.incidents'],
-  ['/health', 'nav.health'],
-  ['/connectors', 'nav.connectors'],
-  ['/integration-bus', 'nav.integrationBus'],
-  ['/integration-designer', 'nav.integrationDesigner'],
-  ['/scenario-library', 'nav.scenarioLibrary'],
-  ['/odata-explorer', 'nav.odataExplorer'],
-  ['/xml-tools', 'nav.xmlTools'],
-  ['/test-console', 'nav.testConsole'],
-  ['/test-cases', 'nav.savedTestCases'],
-  ['/onec-quick-setup', 'nav.onecQuickSetup'],
-  ['/execution/steps', 'nav.executionSteps'],
-  ['/workflows', 'nav.workflows'],
-  ['/mappings', 'nav.mappings'],
-  ['/polling', 'nav.polling'],
-  ['/printing', 'nav.printing'],
-  ['/onec-scenarios', 'nav.onecScenarios'],
-  ['/onec-workbench', 'nav.onecWorkbench'],
-  ['/notifications', 'nav.notifications'],
-  ['/maintenance', 'nav.maintenance'],
-  ['/retention', 'nav.retention'],
+interface NavItem { to: string; labelKey: string }
+interface NavSection { titleKey: string; items: NavItem[] }
+
+const navSections: NavSection[] = [
+  {
+    titleKey: 'nav.sectionOperate',
+    items: [
+      { to: '/', labelKey: 'nav.dashboard' },
+      { to: '/events', labelKey: 'nav.events' },
+      { to: '/incidents', labelKey: 'nav.incidents' },
+      { to: '/health', labelKey: 'nav.health' },
+    ],
+  },
+  {
+    titleKey: 'nav.sectionBuild',
+    items: [
+      { to: '/connectors', labelKey: 'nav.connectors' },
+      { to: '/integration-bus', labelKey: 'nav.integrationBus' },
+      { to: '/workflows', labelKey: 'nav.workflows' },
+      { to: '/mappings', labelKey: 'nav.mappings' },
+      { to: '/execution/steps', labelKey: 'nav.executionSteps' },
+    ],
+  },
+  {
+    titleKey: 'nav.sectionOneCTools',
+    items: [
+      { to: '/integration-designer', labelKey: 'nav.integrationDesigner' },
+      { to: '/scenario-library', labelKey: 'nav.scenarioLibrary' },
+      { to: '/odata-explorer', labelKey: 'nav.odataExplorer' },
+      { to: '/xml-tools', labelKey: 'nav.xmlTools' },
+      { to: '/test-console', labelKey: 'nav.testConsole' },
+      { to: '/test-cases', labelKey: 'nav.savedTestCases' },
+      { to: '/onec-quick-setup', labelKey: 'nav.onecQuickSetup' },
+      { to: '/onec-scenarios', labelKey: 'nav.onecScenarios' },
+      { to: '/onec-workbench', labelKey: 'nav.onecWorkbench' },
+    ],
+  },
+  {
+    titleKey: 'nav.sectionProduction',
+    items: [
+      { to: '/polling', labelKey: 'nav.polling' },
+      { to: '/printing', labelKey: 'nav.printing' },
+      { to: '/notifications', labelKey: 'nav.notifications' },
+      { to: '/maintenance', labelKey: 'nav.maintenance' },
+      { to: '/retention', labelKey: 'nav.retention' },
+    ],
+  },
 ];
 
 const languages: Language[] = ['ru', 'en', 'zh'];
@@ -45,11 +68,16 @@ export function Layout() {
           </div>
         </div>
         <nav className="main-nav" aria-label={t('nav.primary')}>
-          {navItems.map(([to, labelKey]) => (
-            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              <span className="nav-dot" />
-              {t(labelKey)}
-            </NavLink>
+          {navSections.map((section) => (
+            <section className="nav-section" key={section.titleKey}>
+              <span className="nav-section-title">{t(section.titleKey)}</span>
+              {section.items.map((item) => (
+                <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                  <span className="nav-dot" />
+                  {t(item.labelKey)}
+                </NavLink>
+              ))}
+            </section>
           ))}
         </nav>
         <div className="sidebar-footer">
