@@ -554,3 +554,12 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .check-row-card span { color: var(--muted); overflow-wrap: anywhere; }
 .production-page input[type="file"], .production-page select { width: 100%; }
 @media (max-width: 1180px) { .production-grid, .production-metrics { grid-template-columns: minmax(0, 1fr); } }
+
+.secrets-page .form-panel textarea { min-height: 110px; }
+.secret-card { background: linear-gradient(135deg, rgba(143,198,180,.08), rgba(255,255,255,.02)); }
+.secret-reference { display: block; border: 1px solid var(--line); background: rgba(0,0,0,.22); color: var(--accent-2); padding: 12px; overflow-wrap: anywhere; }
+.compact-rotate-form { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.secret-config-panel { border: 1px solid var(--line); background: rgba(0,0,0,.12); padding: 12px; display: grid; gap: 10px; }
+.compact-toolbar { margin-bottom: 0; }
+.secret-warning-list { display: grid; gap: 8px; }
+.secret-warning-list .success-note, .secret-warning-list .error-state { padding: 10px; }

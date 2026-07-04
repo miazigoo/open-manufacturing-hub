@@ -13786,6 +13786,408 @@
         "title": "ScenarioRead",
         "type": "object"
       },
+      "SecretConfigValidationRequest": {
+        "properties": {
+          "config": {
+            "additionalProperties": true,
+            "title": "Config",
+            "type": "object"
+          }
+        },
+        "required": [
+          "config"
+        ],
+        "title": "SecretConfigValidationRequest",
+        "type": "object"
+      },
+      "SecretConfigValidationResponse": {
+        "properties": {
+          "raw_secret_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Raw Secret Warnings",
+            "type": "array"
+          },
+          "references": {
+            "items": {
+              "$ref": "#/components/schemas/SecretReferenceStatus"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "references",
+          "raw_secret_warnings"
+        ],
+        "title": "SecretConfigValidationResponse",
+        "type": "object"
+      },
+      "SecretCreate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Name",
+            "type": "string"
+          },
+          "secret_type": {
+            "$ref": "#/components/schemas/SecretType",
+            "default": "generic"
+          },
+          "value": {
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "SecretCreate",
+        "type": "object"
+      },
+      "SecretPatch": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "secret_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecretType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "SecretPatch",
+        "type": "object"
+      },
+      "SecretRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reference": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Reference",
+            "type": "object"
+          },
+          "rotated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotated At"
+          },
+          "secret_type": {
+            "$ref": "#/components/schemas/SecretType"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "value_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Preview"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "secret_type",
+          "value_preview",
+          "enabled",
+          "reference",
+          "created_at",
+          "updated_at",
+          "last_used_at",
+          "rotated_at",
+          "created_by",
+          "updated_by"
+        ],
+        "title": "SecretRead",
+        "type": "object"
+      },
+      "SecretReferenceStatus": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "missing",
+              "disabled",
+              "invalid"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "value_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Preview"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "path"
+        ],
+        "title": "SecretReferenceStatus",
+        "type": "object"
+      },
+      "SecretReferenceTestRequest": {
+        "properties": {
+          "reference": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "SecretReferenceTestRequest",
+        "type": "object"
+      },
+      "SecretReferenceTestResponse": {
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "missing",
+              "disabled",
+              "invalid"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          },
+          "value_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Preview"
+          }
+        },
+        "required": [
+          "valid",
+          "status"
+        ],
+        "title": "SecretReferenceTestResponse",
+        "type": "object"
+      },
+      "SecretRotateRequest": {
+        "properties": {
+          "value": {
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "SecretRotateRequest",
+        "type": "object"
+      },
+      "SecretType": {
+        "enum": [
+          "password",
+          "api_token",
+          "bearer_token",
+          "basic_auth_password",
+          "static_token",
+          "webhook_secret",
+          "private_key",
+          "generic"
+        ],
+        "title": "SecretType",
+        "type": "string"
+      },
       "ShipmentFactTestRead": {
         "properties": {
           "event_id": {
@@ -27182,6 +27584,419 @@
         "summary": "Preview Scenario",
         "tags": [
           "scenario-library"
+        ]
+      }
+    },
+    "/api/secrets": {
+      "get": {
+        "operationId": "list_secrets_api_secrets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SecretRead"
+                  },
+                  "title": "Response List Secrets Api Secrets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Secrets",
+        "tags": [
+          "secrets"
+        ]
+      },
+      "post": {
+        "operationId": "create_secret_api_secrets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Secret",
+        "tags": [
+          "secrets"
+        ]
+      }
+    },
+    "/api/secrets/test-reference": {
+      "post": {
+        "operationId": "test_reference_api_secrets_test_reference_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretReferenceTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretReferenceTestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Reference",
+        "tags": [
+          "secrets"
+        ]
+      }
+    },
+    "/api/secrets/validate-config": {
+      "post": {
+        "operationId": "validate_config_api_secrets_validate_config_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretConfigValidationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretConfigValidationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Config",
+        "tags": [
+          "secrets"
+        ]
+      }
+    },
+    "/api/secrets/{secret_id}": {
+      "delete": {
+        "operationId": "delete_secret_api_secrets__secret_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "secret_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Secret Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Secret",
+        "tags": [
+          "secrets"
+        ]
+      },
+      "get": {
+        "operationId": "get_secret_api_secrets__secret_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "secret_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Secret Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Secret",
+        "tags": [
+          "secrets"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_secret_api_secrets__secret_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "secret_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Secret Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Secret",
+        "tags": [
+          "secrets"
+        ]
+      }
+    },
+    "/api/secrets/{secret_id}/disable": {
+      "post": {
+        "operationId": "disable_secret_api_secrets__secret_id__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "secret_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Secret Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disable Secret",
+        "tags": [
+          "secrets"
+        ]
+      }
+    },
+    "/api/secrets/{secret_id}/enable": {
+      "post": {
+        "operationId": "enable_secret_api_secrets__secret_id__enable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "secret_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Secret Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Enable Secret",
+        "tags": [
+          "secrets"
+        ]
+      }
+    },
+    "/api/secrets/{secret_id}/rotate": {
+      "post": {
+        "operationId": "rotate_secret_api_secrets__secret_id__rotate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "secret_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Secret Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretRotateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rotate Secret",
+        "tags": [
+          "secrets"
         ]
       }
     },

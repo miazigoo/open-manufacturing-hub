@@ -11,6 +11,7 @@ from app.execution.result import ArtifactCreate, StepResult
 from app.mappings.engine import get_path
 from app.onec_workbench.lookup import extract_fields, render_filter_template
 from app.integration_bus import repository as bus_repository
+from app.secrets.service import SecretResolver
 
 
 class ODataLookupStep:
@@ -47,7 +48,8 @@ class ODataLookupStep:
         inputs = {name: get_path(context.variables, path) for name, path in (config.get("input") or {}).items()}
         query = params
         query["$filter"] = render_filter_template(filter_template, inputs)
-        result = await read_odata(connector.config_json, resource, query)
+        connector_config = await SecretResolver(context.session).resolve_config(connector.config_json)
+        result = await read_odata(connector_config, resource, query)
         artifacts = [ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "odata_lookup_request.json", result.request_payload or {"query": query})]
         if result.response_payload is not None:
             artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "odata_lookup_response.json", result.response_payload))

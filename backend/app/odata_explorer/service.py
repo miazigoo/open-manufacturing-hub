@@ -9,15 +9,17 @@ from app.connectors.models import ConnectorInstance
 from app.core.errors import BadRequestError, NotFoundError
 from app.integration_bus.models import ODataLookupTemplate
 from app.odata_explorer.schemas import ODataLookupCreateRequest, ODataQueryRequest
+from app.secrets.service import SecretResolver
 
 DEFAULT_RESOURCES = ["Catalog_Контрагенты", "Catalog_Номенклатура", "Document_ЗаказКлиента", "InformationRegister_ПулКодовМаркировкиСУЗ"]
 
 async def resources(session: AsyncSession, connector_id: UUID) -> dict[str, Any]:
     connector = await _onec_connector(session, connector_id)
-    base_url = str(connector.config_json.get("base_url") or "")
+    config = await SecretResolver(session).resolve_config(connector.config_json)
+    base_url = str(config.get("base_url") or "")
     if not base_url:
         return {"connector_id": connector_id, "resources": DEFAULT_RESOURCES, "metadata_preview": None, "fallback": True}
-    client = OneCHTTPClient(connector.config_json)
+    client = OneCHTTPClient(config)
     response, _, error_code, _ = await client.request("GET", join_url(base_url, "$metadata"))
     if error_code or response is None:
         return {"connector_id": connector_id, "resources": DEFAULT_RESOURCES, "metadata_preview": None, "fallback": True}
@@ -36,7 +38,8 @@ async def query(session: AsyncSession, connector_id: UUID, request: ODataQueryRe
         params["$select"] = request.select
     if request.orderby:
         params["$orderby"] = request.orderby
-    result = await read_odata(connector.config_json, request.resource, params)
+    config = await SecretResolver(session).resolve_config(connector.config_json)
+    result = await read_odata(config, request.resource, params)
     if not result.success:
         raise BadRequestError(result.error_message or result.error_code or "ODATA_QUERY_FAILED")
     return {"request_url": (result.request_payload or {}).get("url"), "request": result.request_payload or {}, "response": result.response_payload or {}, "items": result.items, "count": len(result.items), "artifact_ids": {}}

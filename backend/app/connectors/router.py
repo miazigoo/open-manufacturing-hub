@@ -11,6 +11,7 @@ from app.core.database import get_session
 from app.core.errors import BadRequestError, NotFoundError
 from app.events.schemas import EventCreate
 from app.events.service import create_event
+from app.secrets.service import SecretResolver
 from app.sdk.types import ConnectorContext
 
 router = APIRouter(tags=["connectors"])
@@ -71,7 +72,7 @@ async def test_connector_config(connector_id: UUID, session: AsyncSession = Depe
     instance = await repository.get_instance(session, connector_id)
     if instance is None:
         raise NotFoundError("Connector instance not found")
-    return await service.test_config(instance.connector_type, instance.config_json)
+    return await service.test_config(session, instance.connector_type, instance.config_json)
 
 
 @router.post("/api/connectors/{connector_id}/healthcheck", response_model=ConnectorHealthRead)
@@ -111,7 +112,8 @@ async def generate_mock_erp_events(connector_id: UUID, session: AsyncSession = D
     if instance.connector_type != "mock_erp":
         raise BadRequestError("Connector is not mock_erp")
     connector = registry.get(instance.connector_type)
-    received = await connector.receive(instance.config_json, ConnectorContext(metadata={"source": "manual"}))
+    config = await SecretResolver(session).resolve_config(instance.config_json)
+    received = await connector.receive(config, ConnectorContext(metadata={"source": "manual"}))
     events = []
     for item in received:
         event = await create_event(
@@ -139,7 +141,8 @@ async def read_onec_odata(connector_id: UUID, request: OneCODataReadRequest, ses
     if instance.connector_type != "onec":
         raise BadRequestError("Connector is not onec")
     connector = registry.get(instance.connector_type)
-    result = await connector.read_odata(instance.config_json, request.resource, request.query, ConnectorContext(metadata={"source": "manual"}))
+    config = await SecretResolver(session).resolve_config(instance.config_json)
+    result = await connector.read_odata(config, request.resource, request.query, ConnectorContext(metadata={"source": "manual"}))
     if not result.success:
         raise BadRequestError(result.error_message or result.error_code or "1C OData read failed")
     return {"items": result.items, "count": result.count, "request": result.request_payload, "response": result.response_payload}
@@ -154,7 +157,8 @@ async def test_onec_http_service(connector_id: UUID, request: OneCHTTPServiceTes
         raise BadRequestError("Connector is not onec")
     connector = registry.get(instance.connector_type)
     payload = {"_omh": {"operation": "manual_test", "method": request.method, "path": request.path}, **request.payload}
-    result = await connector.send(instance.config_json, payload, ConnectorContext(metadata={"source": "manual"}))
+    config = await SecretResolver(session).resolve_config(instance.config_json)
+    result = await connector.send(config, payload, ConnectorContext(metadata={"source": "manual"}))
     return {"success": result.success, "status_code": result.status_code, "request": result.request_payload, "response": result.response_payload, "error_code": result.error_code, "error_message": result.error_message}
 
 
@@ -166,7 +170,8 @@ async def receive_webhook(connector_name: str, body: dict, session: AsyncSession
     if instance.connector_type != "webhook":
         raise BadRequestError("Connector is not webhook")
     connector = registry.get(instance.connector_type)
-    received = await connector.receive(instance.config_json, ConnectorContext(metadata={"body": body}))
+    config = await SecretResolver(session).resolve_config(instance.config_json)
+    received = await connector.receive(config, ConnectorContext(metadata={"body": body}))
     if not received:
         raise BadRequestError("Webhook did not produce an event")
     item = received[0]

@@ -24,6 +24,7 @@ from app.integration_flows.schemas import FlowTestRequest, IntegrationFlowCreate
 from app.matchers.engine import evaluate_matcher_group
 from app.matchers.validators import validate_matcher_group
 from app.operation_templates.models import OperationTemplate
+from app.secrets.redaction import is_secret_ref
 from app.test_console.models import SavedTestCase
 from app.workflows.models import Workflow
 
@@ -436,7 +437,7 @@ def _curl_for_flow(flow: IntegrationFlow, endpoint: IntegrationEndpoint | None =
     input_mode = endpoint.input_mode if endpoint else "json"
     token = None
     if endpoint and endpoint.auth_mode == "static_token":
-        token = str((endpoint.auth_config_json or {}).get("token") or "...")
+        token = _safe_auth_token_preview(endpoint.auth_config_json or {})
     return curl_example(flow.slug, input_mode, flow.test_payload_text or flow.test_payload_json, token)
 
 
@@ -444,5 +445,12 @@ def _onec_for_flow(flow: IntegrationFlow, endpoint: IntegrationEndpoint | None =
     input_mode = endpoint.input_mode if endpoint else "json"
     token = None
     if endpoint and endpoint.auth_mode == "static_token":
-        token = str((endpoint.auth_config_json or {}).get("token") or "...")
+        token = _safe_auth_token_preview(endpoint.auth_config_json or {})
     return onec_http_example(flow.slug, input_mode, token)
+
+
+def _safe_auth_token_preview(auth_config: dict[str, Any]) -> str:
+    token = auth_config.get("token")
+    if is_secret_ref(token):
+        return f"<secret:{token['$secret']}>"
+    return "..."

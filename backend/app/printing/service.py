@@ -26,6 +26,7 @@ from app.printing.schemas import (
     ReturnToPrintRequest,
 )
 from app.sdk.types import ConnectorContext
+from app.secrets.service import SecretResolver
 
 
 GS = "\x1d"
@@ -171,6 +172,7 @@ async def send_batch(session: AsyncSession, job_id: UUID, request: PrintBatchReq
     result = await session.execute(query)
     lines = list(result.scalars().all())
     connector_impl = registry.get(connector.connector_type)
+    connector_config = await SecretResolver(session).resolve_config(connector.config_json)
     now = datetime.now(timezone.utc)
     job.status = PrintJobStatus.PRINTING
     _add_log(session, job.id, None, None, "batch_started", job.status.value, "Print batch started", {"limit": request.limit, "dry_run": request.dry_run})
@@ -192,9 +194,9 @@ async def send_batch(session: AsyncSession, job_id: UUID, request: PrintBatchReq
             metadata={"print_job_id": str(job.id), "print_line_id": str(line.id), "sequence_no": line.sequence_no},
         )
         send_result = (
-            await connector_impl.dry_run_send(connector.config_json, payload, context)
+            await connector_impl.dry_run_send(connector_config, payload, context)
             if request.dry_run
-            else await connector_impl.send(connector.config_json, payload, context)
+            else await connector_impl.send(connector_config, payload, context)
         )
         if send_result.success:
             line.status = PrintLineStatus.TEST_MODE if request.dry_run else PrintLineStatus.SENT_TO_PRINTER

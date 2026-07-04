@@ -12,6 +12,8 @@ from app.notifications import channels
 from app.notifications.models import NotificationDelivery, NotificationRule
 from app.notifications.repository import get_rule
 from app.notifications.schemas import NotificationRuleCreate, NotificationRulePatch
+from app.secrets.redaction import is_secret_ref
+from app.secrets.service import SecretResolver
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,10 @@ def _matches(filters: dict[str, Any], payload: dict[str, Any]) -> bool:
 
 
 def _channel_address(channel: dict[str, Any]) -> str:
-    return channel.get("url") or channel.get("to") or "unknown"
+    value = channel.get("url") or channel.get("to") or "unknown"
+    if is_secret_ref(value):
+        return f"secret:{value['$secret']}"
+    return str(value)
 
 
 async def trigger_notifications(session: AsyncSession, trigger_type: NotificationTriggerType, payload: dict[str, Any]) -> None:
@@ -77,14 +82,24 @@ async def deliver_for_rule(session: AsyncSession, rule: NotificationRule, payloa
         last_triggered_at = last_triggered_at.replace(tzinfo=timezone.utc)
     in_cooldown = bool(last_triggered_at and (now - last_triggered_at).total_seconds() < rule.cooldown_seconds)
     deliveries: list[NotificationDelivery] = []
-    for channel in rule.channels_json or []:
+    raw_channels = rule.channels_json or []
+    resolved_channels = await SecretResolver(session).resolve_value(raw_channels)
+    if not isinstance(resolved_channels, list):
+        resolved_channels = []
+    for index, channel in enumerate(resolved_channels):
+        raw_channel = raw_channels[index] if index < len(raw_channels) and isinstance(raw_channels[index], dict) else channel
         channel_type = channel.get("type", "unknown") if isinstance(channel, dict) else "invalid"
-        address = _channel_address(channel) if isinstance(channel, dict) else "unknown"
+        address = _channel_address(raw_channel) if isinstance(raw_channel, dict) else "unknown"
         try:
             if in_cooldown:
                 delivery = NotificationDelivery(rule_id=rule.id, trigger_type=rule.trigger_type.value, target_channel=channel_type, target_address=address, status=NotificationDeliveryStatus.SKIPPED_COOLDOWN, request_payload=payload)
             elif channel_type == "webhook":
-                ok, response, error = await channels.send_webhook(address, payload)
+                url = str(channel.get("url") or "")
+                headers = {str(key): str(value) for key, value in (channel.get("headers") or {}).items()} if isinstance(channel.get("headers"), dict) else None
+                if headers:
+                    ok, response, error = await channels.send_webhook(url, payload, headers=headers)
+                else:
+                    ok, response, error = await channels.send_webhook(url, payload)
                 delivery = NotificationDelivery(rule_id=rule.id, trigger_type=rule.trigger_type.value, target_channel=channel_type, target_address=address, status=NotificationDeliveryStatus.SENT if ok else NotificationDeliveryStatus.FAILED, request_payload=payload, response_payload=response, error_message=error, sent_at=now if ok else None)
             elif channel_type == "email_stub":
                 ok, response, error = await channels.send_email_stub(address, payload)

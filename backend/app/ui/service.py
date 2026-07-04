@@ -70,6 +70,7 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
         ]),
         ("Advanced", [
             ("Connectors", "/connectors", None, True),
+            ("Secrets", "/secrets", None, True),
             ("Integration Bus", "/integration-bus", None, True),
             ("Workflows", "/workflows", None, True),
             ("Execution Steps", "/execution/steps", None, True),

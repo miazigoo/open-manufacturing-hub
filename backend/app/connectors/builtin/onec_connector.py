@@ -68,7 +68,7 @@ class OneCConnector:
             content_type = operation_config.get("content_type", "application/json")
             if not isinstance(content_type, str) or "/" not in content_type:
                 errors_list.append(f"operations.{operation}.content_type must be a valid media type")
-        return ConnectorConfigValidationResult(valid=not errors_list, errors=errors_list, warnings=["TODO: move 1C passwords to encrypted secret storage"] if auth_type == "basic" else [])
+        return ConnectorConfigValidationResult(valid=not errors_list, errors=errors_list, warnings=["Use Secrets Store references for 1C passwords in production configs."] if auth_type == "basic" else [])
 
     async def healthcheck(self, config: dict[str, Any]) -> ConnectorHealthResult:
         validation = await self.validate_config(config)

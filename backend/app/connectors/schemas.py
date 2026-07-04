@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, field_serializer
 
 from app.core.enums import ConnectorDirection, ConnectorInstanceStatus, HealthStatus
+from app.secrets.redaction import mask_config
 
 
 class ConnectorTypeRead(BaseModel):
@@ -47,7 +48,7 @@ class ConnectorInstanceRead(BaseModel):
 
     @field_serializer("config_json")
     def serialize_config_json(self, value: dict[str, Any]):
-        return _mask_secrets(value)
+        return mask_config(value)
 
 
 class ConnectorConfigValidationRead(BaseModel):
@@ -77,11 +78,3 @@ class OneCHTTPServiceTestRequest(BaseModel):
     method: str = "POST"
     path: str
     payload: dict[str, Any] = {}
-
-
-def _mask_secrets(value):
-    if isinstance(value, dict):
-        return {key: ("***" if key.lower() in {"password", "secret", "token"} else _mask_secrets(item)) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_mask_secrets(item) for item in value]
-    return value

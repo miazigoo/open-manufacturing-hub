@@ -11,6 +11,7 @@ from app.core.errors import BadRequestError
 from app.resolvers import cache, repository
 from app.resolvers.models import ResolverDefinitionV2
 from app.resolvers.schemas import ResolverArtifact, ResolverResult
+from app.secrets.service import SecretResolver
 from app.transforms.engine import engine as transform_engine
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
@@ -89,20 +90,21 @@ class ResolverEngine:
         return self._error(resolver, "OBJECT_NOT_FOUND", f"{resolver.object_type} was not found by {resolver.resolver_code}", artifacts)
 
     async def _resolve_odata(self, resolver: ResolverDefinitionV2, input_data: dict[str, Any], context: dict[str, Any], artifacts: list[ResolverArtifact]) -> ResolverResult:
-        config = resolver.config_json or {}
+        config = await SecretResolver(self.session).resolve_config(resolver.config_json or {})
         connector = await connector_repository.get_instance(self.session, resolver.connector_id) if resolver.connector_id else None
         if connector is None:
             return self._error(resolver, "RESOLVER_CONNECTOR_NOT_FOUND", "Resolver OData connector is not configured", artifacts)
+        connector_config = await SecretResolver(self.session).resolve_config(connector.config_json)
         query = self._odata_query(config, input_data, context)
         resource = str(config.get("resource") or "")
         request_payload = {"connector_id": str(connector.id), "connector": connector.name, "resource": resource, "query": query}
         artifacts.append(_artifact("resolver_request.json", "outgoing_request", request_payload))
-        mock_items = _mock_odata_items(config, connector.config_json)
+        mock_items = _mock_odata_items(config, connector_config)
         if mock_items is not None:
             items = _filter_mock_items(mock_items, input_data, config)
             response_payload: dict[str, Any] = {"mock": True, "value": items}
         else:
-            result = await read_odata(connector.config_json, resource, query)
+            result = await read_odata(connector_config, resource, query)
             response_payload = result.response_payload or {"count": len(result.items)}
             if not result.success:
                 artifacts.append(_artifact("resolver_response.json", "incoming_response", response_payload if isinstance(response_payload, dict) else {"response": response_payload}))
@@ -116,9 +118,9 @@ class ResolverEngine:
         return ResolverResult(success=True, resolver_code=resolver.resolver_code, object_type=resolver.object_type, object_json=object_json, cache_status="disabled", source={"type": "odata", "system": connector.name, "connector_id": str(connector.id)}, artifacts=artifacts)
 
     async def _resolve_rest(self, resolver: ResolverDefinitionV2, input_data: dict[str, Any], context: dict[str, Any], artifacts: list[ResolverArtifact]) -> ResolverResult:
-        config = resolver.config_json or {}
+        config = await SecretResolver(self.session).resolve_config(resolver.config_json or {})
         connector = await connector_repository.get_instance(self.session, resolver.connector_id) if resolver.connector_id else None
-        connector_config = connector.config_json if connector is not None else {}
+        connector_config = await SecretResolver(self.session).resolve_config(connector.config_json) if connector is not None else {}
         scope = _scope(input_data, context)
         method = str(config.get("method") or "GET").upper()
         path = str(render_template(config.get("path_template") or config.get("path") or "", scope))

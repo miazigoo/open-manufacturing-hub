@@ -36,6 +36,8 @@ from app.mappings.engine import get_path
 from app.matchers.engine import evaluate_matcher_group
 from app.onec_workbench.lookup import extract_fields, render_filter_template
 from app.onec_workbench.models import IntegrationMessage
+from app.secrets import service as secrets_service
+from app.secrets.service import SecretResolver
 from app.workflows.models import Workflow
 
 XML_FULL_ARTIFACT_MAX_BYTES = 1024 * 1024
@@ -45,6 +47,7 @@ XML_MAX_BYTES = 10 * 1024 * 1024
 async def create_endpoint(session: AsyncSession, request: IntegrationEndpointCreate) -> IntegrationEndpoint:
     _validate_endpoint_modes(request.input_mode, request.response_mode, request.auth_mode)
     _validate_processing_mode(request.processing_mode)
+    await _validate_auth_config(session, request.auth_mode, request.auth_config_json)
     data = request.model_dump()
     if data.get("processing_mode") == EndpointProcessingMode.ASYNC_QUEUE and request.response_mode in {SYNC_RESPONSE, PROXY_RESPONSE}:
         data["processing_mode"] = EndpointProcessingMode.SYNC_THEN_ASYNC_FALLBACK.value
@@ -59,6 +62,7 @@ async def patch_endpoint(session: AsyncSession, endpoint_id: UUID, request: Inte
     data = request.model_dump(exclude_unset=True)
     _validate_endpoint_modes(data.get("input_mode", endpoint.input_mode), data.get("response_mode", endpoint.response_mode), data.get("auth_mode", endpoint.auth_mode))
     _validate_processing_mode(data.get("processing_mode", endpoint.processing_mode))
+    await _validate_auth_config(session, data.get("auth_mode", endpoint.auth_mode), data.get("auth_config_json", endpoint.auth_config_json))
     for key, value in data.items():
         setattr(endpoint, key, value)
     await session.flush()
@@ -124,7 +128,8 @@ async def test_lookup_template(session: AsyncSession, template_id: UUID, input_v
     template = await get_lookup_template_or_404(session, template_id)
     connector = await _ensure_onec_connector(session, template.connector_id)
     query = {"$filter": render_filter_template(template.filter_template, input_values)}
-    result = await read_odata(connector.config_json, template.resource, query)
+    connector_config = await SecretResolver(session).resolve_config(connector.config_json)
+    result = await read_odata(connector_config, template.resource, query)
     if not result.success:
         raise BadRequestError(result.error_message or result.error_code or "ODATA_LOOKUP_FAILED")
     if not result.items and template.required:
@@ -138,7 +143,7 @@ async def dispatch(session: AsyncSession, slug: str, request: Request) -> dict[s
         raise NotFoundError("Integration endpoint not found")
     if not endpoint.enabled:
         raise BadRequestError("BUS_ENDPOINT_DISABLED")
-    _check_auth(endpoint, request)
+    await _check_auth(session, endpoint, request)
 
     parsed = await _parse_request(endpoint, request)
     parsed["_headers"] = {str(key).lower(): value for key, value in request.headers.items()}
@@ -344,11 +349,23 @@ def _validate_processing_mode(processing_mode: Any) -> None:
         raise BadRequestError(f"Unsupported processing_mode: {value}")
 
 
-def _check_auth(endpoint: IntegrationEndpoint, request: Request) -> None:
+async def _validate_auth_config(session: AsyncSession, auth_mode: str, config: dict[str, Any]) -> None:
+    validation = await secrets_service.validate_config(session, config or {})
+    if not validation.valid:
+        errors = [f"{item.path}: {item.status} {item.name}" for item in validation.references if item.status != "ok"]
+        raise BadRequestError("; ".join(errors) or "SECRET_REFERENCE_INVALID")
+    if auth_mode == "static_token":
+        resolved = await SecretResolver(session).resolve_config(config or {})
+        if not str(resolved.get("token") or ""):
+            raise BadRequestError("Static token auth requires auth_config_json.token")
+
+
+async def _check_auth(session: AsyncSession, endpoint: IntegrationEndpoint, request: Request) -> None:
     if endpoint.auth_mode == "none":
         return
     if endpoint.auth_mode == "static_token":
-        expected = str((endpoint.auth_config_json or {}).get("token") or "")
+        auth_config = await SecretResolver(session).resolve_config(endpoint.auth_config_json or {})
+        expected = str(auth_config.get("token") or "")
         supplied = request.headers.get("x-omh-token") or request.headers.get("authorization", "").removeprefix("Bearer ")
         if not expected or supplied != expected:
             raise BadRequestError("BUS_AUTH_FAILED")

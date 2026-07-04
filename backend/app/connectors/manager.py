@@ -6,6 +6,7 @@ from app.connectors.registry import registry
 from app.core.enums import ConnectorInstanceStatus
 from app.sdk.exceptions import ConnectorNotFoundError
 from app.sdk.types import ConnectorContext, ConnectorSendResult
+from app.secrets.service import SecretResolver
 
 
 class ConnectorManager:
@@ -27,10 +28,11 @@ class ConnectorManager:
         if instance.status == ConnectorInstanceStatus.MAINTENANCE:
             return ConnectorSendResult(success=False, error_code="CONNECTOR_MAINTENANCE", error_message=f"Target connector {instance.name} is in maintenance")
         connector = registry.get(instance.connector_type)
+        config = await SecretResolver(self.session).resolve_config(instance.config_json)
         if context.dry_run:
-            result = await connector.dry_run_send(instance.config_json, payload, context)
+            result = await connector.dry_run_send(config, payload, context)
         else:
-            result = await connector.send(instance.config_json, payload, context)
+            result = await connector.send(config, payload, context)
         result.connector_type = instance.connector_type
         result.connector_name = instance.name
         return result

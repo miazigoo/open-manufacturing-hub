@@ -6,14 +6,14 @@ import httpx
 from app.core.config import get_settings
 
 
-async def send_webhook(url: str, payload: dict[str, Any]) -> tuple[bool, dict[str, Any] | None, str | None]:
+async def send_webhook(url: str, payload: dict[str, Any], headers: dict[str, str] | None = None) -> tuple[bool, dict[str, Any] | None, str | None]:
     settings = get_settings()
     attempts = max(1, settings.notification_webhook_retries + 1)
     last_error: str | None = None
     for attempt in range(1, attempts + 1):
         try:
             async with httpx.AsyncClient(timeout=settings.notification_webhook_timeout_seconds) as client:
-                response = await client.post(url, json=payload)
+                response = await client.post(url, json=payload, headers=headers)
             if response.status_code < 400:
                 return True, {"status_code": response.status_code, "attempts": attempt}, None
             last_error = f"HTTP {response.status_code}"

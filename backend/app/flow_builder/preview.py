@@ -12,6 +12,7 @@ from app.business_rules.engine import engine as rules_engine
 from app.transforms.engine import engine as transform_engine
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
+from app.secrets.service import SecretResolver
 
 
 async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], sample_request: dict[str, Any], *, run_real_queries: bool = False) -> dict[str, Any]:
@@ -123,7 +124,8 @@ async def _preview_odata_items(session: AsyncSession, step: dict[str, Any], quer
         return [item for item in step["mock_items"] if isinstance(item, dict)]
     connector = await connector_repository.get_by_name(session, str(step.get("connection")))
     if connector is not None:
-        mock_odata = (connector.config_json or {}).get("mock_odata") or {}
+        connector_config = await SecretResolver(session).resolve_config(connector.config_json)
+        mock_odata = (connector_config or {}).get("mock_odata") or {}
         items = mock_odata.get(step.get("resource")) if isinstance(mock_odata, dict) else None
         if isinstance(items, list):
             return [item for item in items if isinstance(item, dict)]
@@ -131,7 +133,8 @@ async def _preview_odata_items(session: AsyncSession, step: dict[str, Any], quer
         return []
     if connector is None:
         raise ValueError(f"ODATA_CONNECTION_NOT_FOUND: {step.get('connection')}")
-    result = await read_odata(connector.config_json, str(step.get("resource")), query)
+    connector_config = await SecretResolver(session).resolve_config(connector.config_json)
+    result = await read_odata(connector_config, str(step.get("resource")), query)
     if not result.success:
         raise ValueError(result.error_message or result.error_code or "ODATA_QUERY_FAILED")
     return result.items

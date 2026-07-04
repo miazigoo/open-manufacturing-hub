@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConnectorDirection, ConnectorInstance, ConnectorPayload, connectorsApi } from '../api/connectors';
 import { asJson } from '../api/client';
+import { secretsApi, type SecretConfigValidation } from '../api/secrets';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -90,6 +91,7 @@ export function ConnectorsPage() {
           <label className="field-label">{t('connectors.type')}<select value={form.connector_type} onChange={(event) => selectType(event.target.value)}>{(types.data ?? []).map((type) => <option key={type.connector_type} value={type.connector_type}>{type.display_name}</option>)}</select></label>
           <label className="field-label">{t('connectors.direction')}<select value={form.direction} onChange={(event) => setForm({ ...form, direction: event.target.value as ConnectorDirection })}><option value="source">source</option><option value="target">target</option><option value="bidirectional">bidirectional</option></select></label>
           <label className="field-label">{t('connectors.configJson')}<textarea value={form.config_json} onChange={(event) => setForm({ ...form, config_json: event.target.value })} spellCheck={false} /></label>
+          <SecretConfigWarnings configText={form.config_json} />
           {formError && <div className="error-state compact">{formError}</div>}
           {create.error instanceof Error && <div className="error-state compact">{create.error.message}</div>}
           {result && <div className="success-note">{result}</div>}
@@ -206,8 +208,9 @@ function OneCConfigEditor({ connectors, onSaved }: { connectors: ConnectorInstan
       <div className="metadata-grid compact-grid no-margin">
         <label className="field-label">{t('connectors.authType')}<select value={form.auth_type} onChange={(event) => setForm({ ...form, auth_type: event.target.value as OneCFormState['auth_type'] })}><option value="none">none</option><option value="basic">basic</option></select></label>
         <label className="field-label">{t('connectors.username')}<input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} disabled={form.auth_type === 'none'} /></label>
-        <label className="field-label">{t('connectors.password')}<input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} disabled={form.auth_type === 'none'} /></label>
+        <label className="field-label">{t('connectors.password')}<input value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} disabled={form.auth_type === 'none'} placeholder='{ \"$secret\": \"onec.erp.password\" }' /></label>
       </div>
+      <SecretConfigWarnings configObject={onecConfigPreviewFromForm(form)} />
       <div className="metadata-grid compact-grid no-margin">
         <label className="check-row"><input type="checkbox" checked={form.verify_ssl} onChange={(event) => setForm({ ...form, verify_ssl: event.target.checked })} />{t('connectors.verifySsl')}</label>
         <label className="check-row"><input type="checkbox" checked={form.odata_enabled} onChange={(event) => setForm({ ...form, odata_enabled: event.target.checked })} />{t('connectors.odataEnabled')}</label>
@@ -242,7 +245,7 @@ function onecFormFromConfig(connector?: { id: string; config_json: Record<string
     http_service_base_url: stringValue(config.http_service_base_url),
     auth_type: stringValue(auth.type) === 'basic' ? 'basic' : 'none',
     username: stringValue(auth.username),
-    password: stringValue(auth.password) === '***' ? '' : stringValue(auth.password),
+    password: secretInputValue(auth.password),
     timeout_seconds: stringValue(config.timeout_seconds || 10),
     verify_ssl: config.verify_ssl !== false,
     odata_enabled: odata.enabled !== false,
@@ -260,7 +263,7 @@ function onecConfigFromForm(form: OneCFormState): Record<string, unknown> {
   const pageSize = positiveInt(form.default_page_size, 'odata.default_page_size');
   const maxPages = positiveInt(form.max_pages, 'odata.max_pages');
   const username = form.username.trim();
-  const password = form.password;
+  const password = parseSecretInput(form.password);
   if (form.auth_type === 'basic' && (!username || !password)) throw new Error('Basic auth requires username and password');
   const auth = form.auth_type === 'basic' ? { type: 'basic', username, password } : { type: 'none' };
   return {
@@ -288,12 +291,73 @@ function onecConfigFromForm(form: OneCFormState): Record<string, unknown> {
   };
 }
 
+function onecConfigPreviewFromForm(form: OneCFormState): Record<string, unknown> {
+  const username = form.username.trim();
+  const password = parseSecretInput(form.password);
+  return {
+    base_url: form.base_url.trim(),
+    http_service_base_url: form.http_service_base_url.trim(),
+    auth: form.auth_type === 'basic' ? { type: 'basic', username, password } : { type: 'none' },
+    timeout_seconds: Number.parseInt(form.timeout_seconds, 10) || 10,
+    verify_ssl: form.verify_ssl,
+    odata: { enabled: form.odata_enabled, default_page_size: Number.parseInt(form.default_page_size, 10) || 100, max_pages: Number.parseInt(form.max_pages, 10) || 10 },
+  };
+}
+
 function objectValue(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
 function stringValue(value: unknown): string {
   return value === undefined || value === null ? '' : String(value);
+}
+
+function secretInputValue(value: unknown): string {
+  if (value && typeof value === 'object' && !Array.isArray(value) && '$secret' in value) return JSON.stringify(value);
+  const text = stringValue(value);
+  return text === '***' ? '' : text;
+}
+
+function parseSecretInput(value: string): string | { $secret: string } {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && typeof (parsed as { $secret?: unknown }).$secret === 'string') return parsed as { $secret: string };
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
+function SecretConfigWarnings({ configText, configObject }: { configText?: string; configObject?: Record<string, unknown> }) {
+  const t = useT();
+  const [error, setError] = useState<string | null>(null);
+  const validate = useMutation({
+    mutationFn: async () => {
+      setError(null);
+      if (configObject) return secretsApi.validateConfig(configObject);
+      try {
+        return await secretsApi.validateConfig(JSON.parse(configText || '{}') as Record<string, unknown>);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Invalid JSON');
+        throw caught;
+      }
+    },
+  });
+  const data = validate.data as SecretConfigValidation | undefined;
+  return (
+    <div className="secret-config-panel">
+      <div className="panel-toolbar compact-toolbar"><span className="microcopy">{t('secrets.configWarnings')}</span><button type="button" className="ghost-button" onClick={() => validate.mutate()} disabled={validate.isPending}>Check secrets</button></div>
+      {error && <div className="error-state compact">{error}</div>}
+      {validate.error instanceof Error && !error && <div className="error-state compact">{validate.error.message}</div>}
+      {data && data.references.length === 0 && data.raw_secret_warnings.length === 0 && <div className="success-note">{t('secrets.configOk')}</div>}
+      {data && data.references.length > 0 && <div className="secret-warning-list">{data.references.map((item) => <span key={`${item.path}:${item.name}`} className={item.status === 'ok' ? 'success-note' : 'error-state compact'}>{item.path}: {item.name} · {item.status}</span>)}</div>}
+      {data && data.raw_secret_warnings.length > 0 && <div className="error-state compact"><strong>{t('secrets.rawWarnings')}</strong>{data.raw_secret_warnings.map((item) => <span key={item}>{item}</span>)}</div>}
+    </div>
+  );
 }
 
 function positiveInt(value: string, field: string): number {

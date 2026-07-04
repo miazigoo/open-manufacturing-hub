@@ -18,6 +18,7 @@ from app.onec_workbench import repository
 from app.onec_workbench.models import IntegrationMessage
 from app.onec_workbench.schemas import ODataLookupTestRequest, XmlInboundJsonRequest
 from app.operation_templates.service import install_presets as install_operation_template_presets
+from app.secrets.service import SecretResolver
 from app.workflows.models import Workflow
 
 
@@ -105,7 +106,8 @@ async def test_odata_lookup(session: AsyncSession, request: ODataLookupTestReque
         raise BadRequestError("Connector must be connector_type=onec")
     query = dict(request.params)
     query["$filter"] = render_filter_template(request.filter_template, request.input)
-    result = await read_odata(connector.config_json, request.resource, query)
+    config = await SecretResolver(session).resolve_config(connector.config_json)
+    result = await read_odata(config, request.resource, query)
     if not result.success:
         raise BadRequestError(result.error_message or result.error_code or "OData lookup failed")
     item = result.items[0] if result.items else None

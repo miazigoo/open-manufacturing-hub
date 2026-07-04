@@ -10,6 +10,7 @@ from app.execution.context import PipelineContext
 from app.execution.result import ArtifactCreate, StepResult
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
 from app.sdk.types import ConnectorContext
+from app.secrets.service import SecretResolver
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
 
@@ -51,12 +52,13 @@ class FlowODataQueryStep:
             return _failed("ODATA_CONNECTION_NOT_FOUND", f"OData connection {connector_name} not found", config, "Create or select a 1C connector with OData enabled.", [request_artifact])
         if connector.connector_type != "onec":
             return _failed("ODATA_CONNECTION_NOT_FOUND", f"Connector {connector_name} is not a 1C/OData connector", config, "Select connector_type=onec.", [request_artifact])
-        mock_items = _mock_odata_items(config, connector.config_json)
+        connector_config = await SecretResolver(context.session).resolve_config(connector.config_json)
+        mock_items = _mock_odata_items(config, connector_config)
         if mock_items is not None:
             items = mock_items
             response_payload = {"mock": True, "value": items}
         else:
-            result = await read_odata(connector.config_json, resource, query)
+            result = await read_odata(connector_config, resource, query)
             response_payload = result.response_payload or {"items_count": len(result.items)}
             if not result.success:
                 return _failed(result.error_code or "ODATA_QUERY_FAILED", result.error_message or "OData query failed", config, "Check OData resource, filter, credentials and 1C availability.", [request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "odata_query_response.json", _as_dict(response_payload))])

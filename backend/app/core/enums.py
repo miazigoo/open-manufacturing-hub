@@ -81,6 +81,17 @@ class HealthStatus(StrEnum):
     MAINTENANCE = "maintenance"
 
 
+class SecretType(StrEnum):
+    PASSWORD = "password"
+    API_TOKEN = "api_token"
+    BEARER_TOKEN = "bearer_token"
+    BASIC_AUTH_PASSWORD = "basic_auth_password"
+    STATIC_TOKEN = "static_token"
+    WEBHOOK_SECRET = "webhook_secret"
+    PRIVATE_KEY = "private_key"
+    GENERIC = "generic"
+
+
 class NotificationTriggerType(StrEnum):
     EVENT_FAILED = "event_failed"
     INCIDENT_CREATED = "incident_created"

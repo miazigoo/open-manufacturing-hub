@@ -19,6 +19,7 @@ from app.mappings.engine import get_path
 from app.polling.models import PollingJob, PollingJobRun, SourceEventCursor
 from app.polling.repository import get_job
 from app.sdk.types import ConnectorContext
+from app.secrets.service import SecretResolver
 
 
 async def run_once(session: AsyncSession, job_id: UUID) -> PollingJobRun:
@@ -42,7 +43,8 @@ async def run_once(session: AsyncSession, job_id: UUID) -> PollingJobRun:
     try:
         query = _query_with_cursor(job)
         connector = registry.get(connector_instance.connector_type)
-        result = await connector.read_odata(connector_instance.config_json, job.resource, query, ConnectorContext(metadata={"polling_job_id": str(job.id)}))
+        connector_config = await SecretResolver(session).resolve_config(connector_instance.config_json)
+        result = await connector.read_odata(connector_config, job.resource, query, ConnectorContext(metadata={"polling_job_id": str(job.id)}))
         if not result.success:
             raise BadRequestError(result.error_message or result.error_code or "1C OData read failed")
         created = 0

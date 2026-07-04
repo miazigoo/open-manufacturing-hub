@@ -20,6 +20,7 @@ from app.operation_templates.models import OperationTemplate
 from app.packages.models import InstalledPackage
 from app.printing.models import PrintPrinter
 from app.resolvers.models import ResolverDefinitionV2
+from app.secrets.redaction import is_secret_ref
 from app.test_console.models import SavedTestCase
 from app.workflows.models import Workflow
 
@@ -70,7 +71,7 @@ IMPORT_KEYS: dict[str, str] = {
 
 
 def export_warning() -> str:
-    return "This export does not contain secret values. After import, you must re-enter passwords/tokens."
+    return "This export does not contain secret values. Secret references are preserved; raw passwords/tokens are masked."
 
 
 async def export_objects(session: AsyncSession, *, secrets_policy: str = "masked") -> dict[str, Any]:
@@ -172,17 +173,29 @@ def _jsonable(value: Any) -> Any:
 
 
 def _mask_secrets(value: Any, policy: str) -> Any:
+    if is_secret_ref(value):
+        return value
     if isinstance(value, dict):
         masked: dict[str, Any] = {}
         for key, item in value.items():
             if _is_secret_key(key):
-                masked[key] = "***REFERENCE_ONLY***" if policy == "references_only" else "***MASKED***"
+                masked[key] = _mask_secret_item(item, policy)
             else:
                 masked[key] = _mask_secrets(item, policy)
         return masked
     if isinstance(value, list):
         return [_mask_secrets(item, policy) for item in value]
     return value
+
+
+def _mask_secret_item(value: Any, policy: str) -> Any:
+    if is_secret_ref(value):
+        return value
+    if isinstance(value, dict):
+        return {str(key): _mask_secret_item(item, policy) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_mask_secret_item(item, policy) for item in value]
+    return "***REFERENCE_ONLY***" if policy == "references_only" else "***MASKED***"
 
 
 def _is_secret_key(key: str) -> bool:

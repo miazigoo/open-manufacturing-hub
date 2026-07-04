@@ -44,6 +44,7 @@ from app.retention.router import router as retention_router
 from app.replay.router import router as replay_router
 from app.scenario_library.router import router as scenario_library_router
 from app.resolvers.router import router as resolvers_router
+from app.secrets.router import router as secrets_router
 from app.test_console.router import router as test_console_router
 from app.transforms.router import router as transforms_router
 from app.ui.router import router as ui_router
@@ -117,6 +118,7 @@ app.include_router(test_console_router)
 app.include_router(ui_router)
 app.include_router(notifications_router)
 app.include_router(auth_router)
+app.include_router(secrets_router)
 app.include_router(production_router)
 app.include_router(audit_router)
 app.include_router(packages_router)

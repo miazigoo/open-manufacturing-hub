@@ -21,6 +21,7 @@ const fallbackNavigation: UINavigationItem[] = [
   { group: 'Data Tools', title: 'OData Explorer', route: '/odata-explorer', package_id: 'omh-package-onec', enabled: true, advanced: false },
   { group: 'Packages', title: 'Packages', route: '/packages', package_id: null, enabled: true, advanced: false },
   { group: 'Advanced', title: 'Connectors', route: '/connectors', package_id: null, enabled: true, advanced: true },
+  { group: 'Advanced', title: 'Secrets', route: '/secrets', package_id: null, enabled: true, advanced: true },
 ];
 
 const groupKey: Record<string, string> = {
@@ -61,6 +62,7 @@ const routeKey: Record<string, string> = {
   '/packages/omh-package-onec': 'nav.onecPackage',
   '/packages/omh-package-printer': 'nav.printerPackage',
   '/connectors': 'nav.connectors',
+  '/secrets': 'nav.secrets',
   '/integration-bus': 'nav.integrationBus',
   '/workflows': 'nav.workflows',
   '/execution/steps': 'nav.executionSteps',

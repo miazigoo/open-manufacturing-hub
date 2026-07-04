@@ -10,6 +10,7 @@ from app.connectors.schemas import ConnectorInstanceCreate, ConnectorInstancePat
 from app.core.enums import ConnectorInstanceStatus, HealthComponentType
 from app.core.errors import BadRequestError, NotFoundError
 from app.health.models import HealthCheck
+from app.secrets.service import SecretResolver
 from app.sdk.types import ConnectorHealthResult
 
 
@@ -18,7 +19,7 @@ async def create_instance(session: AsyncSession, request: ConnectorInstanceCreat
         connector = registry.get(request.connector_type)
     except ConnectorNotFoundError as exc:
         raise BadRequestError(str(exc)) from exc
-    validation = await connector.validate_config(request.config_json)
+    validation = await connector.validate_config(await SecretResolver(session).resolve_config(request.config_json))
     if not validation.valid:
         raise BadRequestError("; ".join(validation.errors))
     instance = ConnectorInstance(
@@ -44,7 +45,7 @@ async def patch_instance(session: AsyncSession, connector_id: UUID, request: Con
             connector = registry.get(instance.connector_type)
         except ConnectorNotFoundError as exc:
             raise BadRequestError(str(exc)) from exc
-        validation = await connector.validate_config(data["config_json"])
+        validation = await connector.validate_config(await SecretResolver(session).resolve_config(data["config_json"]))
         if not validation.valid:
             raise BadRequestError("; ".join(validation.errors))
     for key, value in data.items():
@@ -55,12 +56,12 @@ async def patch_instance(session: AsyncSession, connector_id: UUID, request: Con
     return instance
 
 
-async def test_config(connector_type: str, config: dict) -> dict:
+async def test_config(session: AsyncSession, connector_type: str, config: dict) -> dict:
     try:
         connector = registry.get(connector_type)
     except ConnectorNotFoundError as exc:
         raise BadRequestError(str(exc)) from exc
-    result = await connector.validate_config(config)
+    result = await connector.validate_config(await SecretResolver(session).resolve_config(config))
     return {"valid": result.valid, "errors": result.errors, "warnings": result.warnings}
 
 
@@ -69,7 +70,7 @@ async def healthcheck_instance(session: AsyncSession, connector_id: UUID) -> Con
     if instance is None:
         raise NotFoundError("Connector instance not found")
     connector = registry.get(instance.connector_type)
-    result = await connector.healthcheck(instance.config_json)
+    result = await connector.healthcheck(await SecretResolver(session).resolve_config(instance.config_json))
     instance.last_health_status = result.status
     instance.last_health_message = result.message
     instance.last_health_at = result.checked_at

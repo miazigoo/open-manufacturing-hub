@@ -28,6 +28,7 @@ from app.polling.models import PollingJob, PollingJobRun, SourceEventCursor  # n
 from app.printing.models import PrintJob, PrintJobLine, PrintJobLog, PrintPrinter  # noqa: F401
 from app.production.models import BackupRecord, ProductionState  # noqa: F401
 from app.resolvers.models import ResolverCacheEntry, ResolverDefinitionV2  # noqa: F401
+from app.secrets.models import Secret  # noqa: F401
 from app.test_console.models import SavedTestCase  # noqa: F401
 from app.workflows.models import Workflow  # noqa: F401
 from app.main import app
