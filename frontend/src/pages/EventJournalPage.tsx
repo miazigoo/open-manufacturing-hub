@@ -45,7 +45,7 @@ export function EventJournalPage() {
       <section className="table-panel">
         {rows.length === 0 ? <EmptyState title={t('events.noEvents')} detail={t('events.noEventsDetail')} /> : (
           <table>
-            <thead><tr><th>{t('common.created')}</th><th>{t('common.status')}</th><th>{t('events.journalTitle')}</th><th>{t('common.source')} → {t('common.target')}</th><th>{t('events.operation')}</th><th>{t('events.businessKey')}</th><th>{t('events.lastError')}</th><th>{t('common.actions')}</th></tr></thead>
+            <thead><tr><th>{t('common.created')}</th><th>{t('common.status')}</th><th>{t('events.journalTitle')}</th><th>{t('common.source')} → {t('common.target')}</th><th>{t('events.operation')}</th><th>{t('events.businessKey')}</th><th>Queue</th><th>{t('events.lastError')}</th><th>{t('common.actions')}</th></tr></thead>
             <tbody>
               {rows.map((event) => (
                 <tr key={event.id} className={event.requires_attention ? 'attention-row' : ''}>
@@ -55,6 +55,7 @@ export function EventJournalPage() {
                   <td>{event.source_display ?? event.source_system} → {event.target_display ?? event.target_system ?? '—'}</td>
                   <td>{event.operation ?? event.event_type}</td>
                   <td>{event.business_key ?? event.correlation_id ?? '—'}</td>
+                  <td>{event.queue_status ? <><StatusBadge status={event.queue_status} label={event.queue_status} compact /><small>{event.queue_attempts}/{event.queue_max_attempts} · {event.queue_next_retry_at ?? 'no retry'}</small></> : '—'}</td>
                   <td><strong>{event.last_error_code ?? '—'}</strong><small>{event.last_external_error_message ?? event.last_error_summary ?? event.hint ?? ''}</small></td>
                   <td><Link className="primary-link" to={`/events/${event.id}`}>{t('common.open')}</Link></td>
                 </tr>

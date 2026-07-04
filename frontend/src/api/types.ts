@@ -92,9 +92,22 @@ export interface EventRun {
   artifacts: Artifact[];
 }
 
+export interface EventQueueInfo {
+  id: string;
+  status: string;
+  attempts: number;
+  max_attempts: number;
+  next_retry_at: string | null;
+  locked_by: string | null;
+  locked_until: string | null;
+  last_error: string | null;
+  timeline_link: string | null;
+}
+
 export interface EventTimeline {
   event: EventSummary;
   runs: EventRun[];
+  queue_item: EventQueueInfo | null;
 }
 
 export interface ArtifactDiff {

@@ -16,6 +16,7 @@ from app.flow_builder.validator import validate_builder
 from app.integration_bus import repository as bus_repository
 from app.integration_bus import service as bus_service
 from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
+from app.core.enums import EndpointProcessingMode
 from app.integration_flows import repository
 from app.integration_flows.models import IntegrationFlow
 from app.integration_flows.presets import MARKING_POOL_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
@@ -211,6 +212,7 @@ async def _upsert_endpoint(session: AsyncSession, request: IntegrationFlowCreate
         "description": request.description,
         "input_mode": request.endpoint.input_mode,
         "response_mode": request.endpoint.response_mode,
+        "processing_mode": EndpointProcessingMode.SYNC_THEN_ASYNC_FALLBACK.value if request.endpoint.response_mode in {"sync_response", "proxy_response"} else EndpointProcessingMode.ASYNC_QUEUE.value,
         "default_source_system": request.source_type.value,
         "default_target_system": request.target_type.value,
         "default_event_type": f"Flow.{request.slug}",

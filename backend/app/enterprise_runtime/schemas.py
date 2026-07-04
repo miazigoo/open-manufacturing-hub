@@ -12,15 +12,24 @@ from app.core.enums import BusinessRuleStatus, EnterpriseQueueStatus, ODataCache
 class QueueMessageCreate(BaseModel):
     event_id: UUID | None = None
     message_id: UUID | None = None
+    run_id: UUID | None = None
+    flow_id: UUID | None = None
+    endpoint_id: UUID | None = None
+    route_id: UUID | None = None
     connector_id: UUID | None = None
     workflow_id: UUID | None = None
     business_object: str = Field(min_length=1)
+    business_key: str | None = None
     operation: str = Field(min_length=1)
+    source_system: str | None = None
+    target_system: str | None = None
+    connector_name: str | None = None
     current_step: str | None = None
-    max_attempts: int = 3
+    max_attempts: int = 10
     priority: int = 100
     worker: str | None = None
     payload_json: dict[str, Any] = Field(default_factory=dict)
+    original_payload_json: dict[str, Any] = Field(default_factory=dict)
 
 
 class QueueMessagePatch(BaseModel):
@@ -28,17 +37,42 @@ class QueueMessagePatch(BaseModel):
     current_step: str | None = None
     worker: str | None = None
     last_error: str | None = None
+    last_error_code: str | None = None
+    last_error_message: str | None = None
+    last_external_error_message: str | None = None
     next_retry_at: datetime | None = None
+    priority: int | None = None
+
+
+class QueueProcessResponse(BaseModel):
+    processed: int
+    completed: int = 0
+    retry_waiting: int = 0
+    dlq: int = 0
+    failed: int = 0
+    items: list["QueueMessageRead"] = []
+
+
+class QueueEditRetryRequest(BaseModel):
+    payload_json: dict[str, Any] = Field(default_factory=dict)
 
 
 class QueueMessageRead(BaseModel):
     id: UUID
     event_id: UUID | None
     message_id: UUID | None
+    run_id: UUID | None = None
+    flow_id: UUID | None = None
+    endpoint_id: UUID | None = None
+    route_id: UUID | None = None
     connector_id: UUID | None
     workflow_id: UUID | None
     business_object: str
+    business_key: str | None = None
     operation: str
+    source_system: str | None = None
+    target_system: str | None = None
+    connector_name: str | None = None
     current_step: str | None
     status: EnterpriseQueueStatus
     attempts: int
@@ -46,10 +80,18 @@ class QueueMessageRead(BaseModel):
     next_retry_at: datetime | None
     priority: int
     worker: str | None
+    locked_by: str | None = None
     timeline_link: str | None
     payload_json: dict[str, Any]
+    original_payload_json: dict[str, Any] = {}
     last_error: str | None
+    last_error_code: str | None = None
+    last_error_message: str | None = None
+    last_external_error_message: str | None = None
     locked_at: datetime | None
+    locked_until: datetime | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
     completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
@@ -65,10 +107,29 @@ class DLQItemRead(BaseModel):
     operation: str
     reason: str
     payload_json: dict[str, Any]
+    current_payload_json: dict[str, Any] = {}
+    last_error: str | None = None
+    attempts: int = 0
     archived: bool
     restored_at: datetime | None
     archived_at: datetime | None
     timeline_link: str | None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class QueueAttemptRead(BaseModel):
+    id: UUID
+    queue_message_id: UUID
+    run_id: UUID | None
+    attempt_no: int
+    status: str
+    started_at: datetime | None
+    finished_at: datetime | None
+    error_code: str | None
+    error_message: str | None
+    external_error_record_id: UUID | None
+    duration_ms: int | None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 

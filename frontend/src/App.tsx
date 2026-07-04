@@ -27,6 +27,7 @@ const OneCQuickSetupPage = lazy(() => import('./pages/OneCQuickSetupPage').then(
 const ExecutionStepsPage = lazy(() => import('./pages/ExecutionStepsPage').then((m) => ({ default: m.ExecutionStepsPage })));
 const EnterpriseRuntimePages = () => import('./pages/EnterpriseRuntimePages');
 const IntegrationQueuePage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.IntegrationQueuePage })));
+const QueueItemDetailsPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.QueueItemDetailsPage })));
 const DeadLetterQueuePage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.DeadLetterQueuePage })));
 const TransactionMonitorPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.TransactionMonitorPage })));
 const BusinessObjectsPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.BusinessObjectsPage })));
@@ -83,8 +84,10 @@ export function App() {
           <Route path="onec-quick-setup" element={onec(<OneCQuickSetupPage />)} />
           <Route path="execution/steps" element={<ExecutionStepsPage />} />
           <Route path="runtime/queue" element={<IntegrationQueuePage />} />
+          <Route path="runtime/queue/:queueId" element={<QueueItemDetailsPage />} />
           <Route path="runtime/dlq" element={<DeadLetterQueuePage />} />
           <Route path="runtime/monitor" element={<TransactionMonitorPage />} />
+          <Route path="transaction-monitor" element={<TransactionMonitorPage />} />
           <Route path="runtime/business-objects" element={<BusinessObjectsPage />} />
           <Route path="runtime/resolvers" element={<ResolversPage />} />
           <Route path="runtime/transforms" element={<TransformationLibraryPage />} />

@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { enterpriseRuntimeApi } from '../api/enterpriseRuntime';
@@ -79,7 +79,8 @@ export function EnterpriseRuntimePage({ view }: { view: RuntimeView }) {
 
 function QueuePanel({ onResult }: { onResult: (value: unknown) => void }) {
   const queryClient = useQueryClient();
-  const queue = useQuery({ queryKey: ['runtime-queue'], queryFn: enterpriseRuntimeApi.queue });
+  const [filters, setFilters] = useState({ status: '' as QueueStatus | '', sort: 'priority' });
+  const queue = useQuery({ queryKey: ['runtime-queue', filters], queryFn: () => enterpriseRuntimeApi.queue(filters) });
   const [form, setForm] = useState({ business_object: 'SalesOrder', operation: 'ship', priority: '50', payload_json: asJson({ order_id: 'SO-1001', warehouse_id: 'MAIN' }) });
   const [formError, setFormError] = useState<string | null>(null);
   const refresh = () => {
@@ -87,7 +88,11 @@ function QueuePanel({ onResult }: { onResult: (value: unknown) => void }) {
     queryClient.invalidateQueries({ queryKey: ['runtime-monitor'] });
   };
   const create = useMutation({ mutationFn: enterpriseRuntimeApi.createQueue, onSuccess: (data) => { onResult(data); refresh(); } });
-  const processing = useMutation({ mutationFn: enterpriseRuntimeApi.markProcessing, onSuccess: (data) => { onResult(data); refresh(); } });
+  const processOnce = useMutation({ mutationFn: enterpriseRuntimeApi.processOnce, onSuccess: (data) => { onResult(data); refresh(); queryClient.invalidateQueries({ queryKey: ['runtime-dlq'] }); } });
+  const processBatch = useMutation({ mutationFn: () => enterpriseRuntimeApi.processBatch(10), onSuccess: (data) => { onResult(data); refresh(); queryClient.invalidateQueries({ queryKey: ['runtime-dlq'] }); } });
+  const retryNow = useMutation({ mutationFn: enterpriseRuntimeApi.retryNow, onSuccess: (data) => { onResult(data); refresh(); } });
+  const cancel = useMutation({ mutationFn: enterpriseRuntimeApi.cancelQueue, onSuccess: (data) => { onResult(data); refresh(); } });
+  const unlock = useMutation({ mutationFn: enterpriseRuntimeApi.unlockQueue, onSuccess: (data) => { onResult(data); refresh(); } });
   const dlq = useMutation({ mutationFn: (id: string) => enterpriseRuntimeApi.moveToDlq(id, 'Manual operator escalation'), onSuccess: (data) => { onResult(data); refresh(); queryClient.invalidateQueries({ queryKey: ['runtime-dlq'] }); } });
 
   if (queue.isLoading) return <LoadingState label="Loading queue" />;
@@ -104,7 +109,7 @@ function QueuePanel({ onResult }: { onResult: (value: unknown) => void }) {
   }
 
   const rows = queue.data ?? [];
-  const actionError = create.error ?? processing.error ?? dlq.error;
+  const actionError = create.error ?? processOnce.error ?? processBatch.error ?? retryNow.error ?? cancel.error ?? unlock.error ?? dlq.error;
 
   return (
     <section className="runtime-grid">
@@ -121,25 +126,28 @@ function QueuePanel({ onResult }: { onResult: (value: unknown) => void }) {
       </form>
 
       <section className="table-panel runtime-table-panel">
-        <div className="panel-toolbar"><h2>Queue messages</h2><span className="microcopy">{rows.length} total</span></div>
-        {rows.length === 0 ? <EmptyState title="Queue is empty" detail="Create a message manually or send data through Integration Bus." /> : <QueueTable rows={rows} onProcessing={(id) => processing.mutate(id)} onDlq={(id) => dlq.mutate(id)} pending={processing.isPending || dlq.isPending} />}
+        <div className="panel-toolbar"><h2>Queue messages</h2><div className="toolbar-actions"><button className="primary-button" onClick={() => processOnce.mutate()} disabled={processOnce.isPending}>Process once</button><button className="ghost-button" onClick={() => processBatch.mutate()} disabled={processBatch.isPending}>Process batch</button><span className="microcopy">{rows.length} total</span></div></div>
+        <div className="filter-bar"><label className="field-label">Status<select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value as QueueStatus | '' })}><option value="">All</option><option value="waiting">waiting</option><option value="processing">processing</option><option value="retry_waiting">retry waiting</option><option value="dlq">dlq</option><option value="failed">failed</option><option value="completed">completed</option><option value="cancelled">cancelled</option></select></label><label className="field-label">Sort<select value={filters.sort} onChange={(event) => setFilters({ ...filters, sort: event.target.value })}><option value="priority">priority</option><option value="created_at">created</option><option value="next_retry_at">next retry</option><option value="attempts">attempts</option></select></label></div>
+        {rows.length === 0 ? <EmptyState title="Queue is empty" detail="Create a message manually or send data through Integration Bus." /> : <QueueTable rows={rows} onRetry={(id) => retryNow.mutate(id)} onCancel={(id) => cancel.mutate(id)} onUnlock={(id) => unlock.mutate(id)} onDlq={(id) => dlq.mutate(id)} pending={retryNow.isPending || cancel.isPending || unlock.isPending || dlq.isPending} />}
       </section>
     </section>
   );
 }
 
-function QueueTable({ rows, onProcessing, onDlq, pending }: { rows: QueueMessage[]; onProcessing: (id: string) => void; onDlq: (id: string) => void; pending: boolean }) {
+function QueueTable({ rows, onRetry, onCancel, onUnlock, onDlq, pending }: { rows: QueueMessage[]; onRetry: (id: string) => void; onCancel: (id: string) => void; onUnlock: (id: string) => void; onDlq: (id: string) => void; pending: boolean }) {
   return (
     <table>
-      <thead><tr><th>Object</th><th>Status</th><th>Attempts</th><th>Timeline</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Status</th><th>Object</th><th>Source → Target</th><th>Attempts</th><th>Next Retry</th><th>Error</th><th>Actions</th></tr></thead>
       <tbody>
         {rows.map((item) => (
           <tr key={item.id}>
-            <td><strong>{item.business_object}</strong><small>{item.operation} · priority {item.priority}</small></td>
             <td><StatusBadge status={queueTone(item.status)} label={item.status} /></td>
+            <td><strong>{item.business_object}</strong><small>{item.operation} · {item.business_key ?? item.id}</small></td>
+            <td>{item.source_system ?? '—'} → {item.target_system ?? '—'}</td>
             <td>{item.attempts}/{item.max_attempts}</td>
-            <td>{item.timeline_link ? <Link className="primary-link" to={item.timeline_link}>Timeline</Link> : '—'}</td>
-            <td><div className="action-row"><button className="ghost-button" disabled={pending} onClick={() => onProcessing(item.id)}>Processing</button><button className="ghost-button danger" disabled={pending} onClick={() => onDlq(item.id)}>Move DLQ</button></div></td>
+            <td>{item.next_retry_at ? new Date(item.next_retry_at).toLocaleString() : '—'}</td>
+            <td>{item.last_error_message ?? item.last_error ?? '—'}<small>{item.current_step ?? ''}</small></td>
+            <td><div className="action-row wrap-actions"><Link className="primary-link" to={`/runtime/queue/${item.id}`}>Details</Link>{item.timeline_link && <Link className="primary-link" to={item.timeline_link}>Timeline</Link>}<button className="ghost-button" disabled={pending} onClick={() => onRetry(item.id)}>Retry now</button><button className="ghost-button" disabled={pending} onClick={() => onUnlock(item.id)}>Unlock</button><button className="ghost-button" disabled={pending} onClick={() => onCancel(item.id)}>Cancel</button><button className="ghost-button danger" disabled={pending} onClick={() => onDlq(item.id)}>Move DLQ</button></div></td>
           </tr>
         ))}
       </tbody>
@@ -151,19 +159,20 @@ function DlqPanel({ onResult }: { onResult: (value: unknown) => void }) {
   const queryClient = useQueryClient();
   const dlq = useQuery({ queryKey: ['runtime-dlq'], queryFn: enterpriseRuntimeApi.dlq });
   const retry = useMutation({ mutationFn: enterpriseRuntimeApi.retryDlq, onSuccess: (data) => { onResult(data); queryClient.invalidateQueries({ queryKey: ['runtime-dlq'] }); queryClient.invalidateQueries({ queryKey: ['runtime-queue'] }); queryClient.invalidateQueries({ queryKey: ['runtime-monitor'] }); } });
+  const forceComplete = useMutation({ mutationFn: enterpriseRuntimeApi.forceCompleteDlq, onSuccess: (data) => { onResult(data); queryClient.invalidateQueries({ queryKey: ['runtime-dlq'] }); queryClient.invalidateQueries({ queryKey: ['runtime-queue'] }); queryClient.invalidateQueries({ queryKey: ['runtime-monitor'] }); } });
   const archive = useMutation({ mutationFn: enterpriseRuntimeApi.archiveDlq, onSuccess: (data) => { onResult(data); queryClient.invalidateQueries({ queryKey: ['runtime-dlq'] }); queryClient.invalidateQueries({ queryKey: ['runtime-monitor'] }); } });
   if (dlq.isLoading) return <LoadingState label="Loading DLQ" />;
   if (dlq.error) return <ErrorState error={dlq.error} />;
   const rows = dlq.data ?? [];
-  const actionError = retry.error ?? archive.error;
+  const actionError = retry.error ?? forceComplete.error ?? archive.error;
   return (
     <section className="table-panel runtime-table-panel">
       <div className="panel-toolbar"><h2>Dead letters</h2><span className="microcopy">{rows.length} active</span></div>
       {actionError instanceof Error && <div className="error-state compact">{actionError.message}</div>}
       {rows.length === 0 ? <EmptyState title="DLQ is empty" detail="Failed messages moved to dead letter queue will appear here with recovery actions." /> : (
         <table>
-          <thead><tr><th>Object</th><th>Reason</th><th>Timeline</th><th>Actions</th></tr></thead>
-          <tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.business_object}</strong><small>{item.operation}</small></td><td>{item.reason}</td><td>{item.timeline_link ? <Link className="primary-link" to={item.timeline_link}>Timeline</Link> : '—'}</td><td><div className="action-row"><button className="ghost-button" disabled={retry.isPending} onClick={() => retry.mutate(item.id)}>Retry / Restore</button><button className="ghost-button danger" disabled={archive.isPending} onClick={() => archive.mutate(item.id)}>Archive</button></div></td></tr>)}</tbody>
+          <thead><tr><th>Object</th><th>Reason</th><th>Attempts</th><th>Timeline</th><th>Actions</th></tr></thead>
+          <tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.business_object}</strong><small>{item.operation}</small></td><td>{item.reason}<small>{item.last_error}</small></td><td>{item.attempts}</td><td>{item.timeline_link ? <Link className="primary-link" to={item.timeline_link}>Timeline</Link> : '—'}</td><td><div className="action-row wrap-actions"><button className="ghost-button" disabled={retry.isPending} onClick={() => retry.mutate(item.id)}>Retry / Restore</button><button className="ghost-button" disabled={forceComplete.isPending} onClick={() => forceComplete.mutate(item.id)}>Force complete</button><button className="ghost-button danger" disabled={archive.isPending} onClick={() => archive.mutate(item.id)}>Archive</button></div></td></tr>)}</tbody>
         </table>
       )}
     </section>
@@ -172,10 +181,11 @@ function DlqPanel({ onResult }: { onResult: (value: unknown) => void }) {
 
 function MonitorPanel() {
   const monitor = useQuery({ queryKey: ['runtime-monitor'], queryFn: enterpriseRuntimeApi.monitor, refetchInterval: 10000 });
+  const queue = useQuery({ queryKey: ['runtime-monitor-queue'], queryFn: () => enterpriseRuntimeApi.queue({ sort: 'created_at' }), refetchInterval: 10000 });
   if (monitor.isLoading) return <LoadingState label="Loading transaction monitor" />;
   if (monitor.error) return <ErrorState error={monitor.error} />;
   const entries = Object.entries(monitor.data ?? {});
-  return <section className="metric-grid runtime-metrics">{entries.map(([key, value]) => <article className={`metric-card ${key === 'dlq' || key === 'failed' ? 'bad' : key === 'retry_waiting' ? 'warn' : 'info'}`} key={key}><span>{key}</span><strong>{value}</strong></article>)}</section>;
+  return <div className="page-stack"><section className="metric-grid runtime-metrics">{entries.map(([key, value]) => <article className={`metric-card ${key === 'dlq' || key === 'failed' ? 'bad' : key === 'retry_waiting' ? 'warn' : 'info'}`} key={key}><span>{key}</span><strong>{value}</strong></article>)}</section><section className="table-panel runtime-table-panel"><div className="panel-toolbar"><h2>Transaction monitor</h2><span className="microcopy">Queue-first runtime</span></div>{queue.data && <QueueTable rows={queue.data.slice(0, 20)} onRetry={() => undefined} onCancel={() => undefined} onUnlock={() => undefined} onDlq={() => undefined} pending={true} />}</section></div>;
 }
 
 function ObjectsPanel() {
@@ -250,3 +260,19 @@ export const BusinessObjectsPage = () => <EnterpriseRuntimePage view="objects" /
 export const ResolversPage = () => <EnterpriseRuntimePage view="resolvers" />;
 export const TransformationLibraryPage = () => <EnterpriseRuntimePage view="transforms" />;
 export const BusinessRulesPage = () => <EnterpriseRuntimePage view="rules" />;
+
+
+export function QueueItemDetailsPage() {
+  const { queueId } = useParams();
+  const item = useQuery({ queryKey: ['runtime-queue-item', queueId], queryFn: () => enterpriseRuntimeApi.queueItem(queueId!), enabled: Boolean(queueId) });
+  if (item.isLoading) return <LoadingState label="Loading queue item" />;
+  if (item.error) return <ErrorState error={item.error} />;
+  if (!item.data) return <ErrorState error={new Error('Queue item not found')} />;
+  return (
+    <div className="page-stack">
+      <section className="page-header enterprise-hero"><span className="eyebrow">Queue Item</span><h1>{item.data.business_object}</h1><p>{item.data.operation} · {item.data.business_key ?? item.data.id}</p><div className="hero-meta"><StatusBadge status={queueTone(item.data.status)} label={item.data.status} /><span className="microcopy">Attempts {item.data.attempts}/{item.data.max_attempts}</span>{item.data.timeline_link && <Link className="primary-link" to={item.data.timeline_link}>Open timeline</Link>}</div></section>
+      <section className="metadata-grid"><span>Source<strong>{item.data.source_system ?? '—'}</strong></span><span>Target<strong>{item.data.target_system ?? '—'}</strong></span><span>Next retry<strong>{item.data.next_retry_at ?? '—'}</strong></span><span>Locked by<strong>{item.data.locked_by ?? '—'}</strong></span><span>Current step<strong>{item.data.current_step ?? '—'}</strong></span><span>Last error<strong>{item.data.last_error_message ?? item.data.last_error ?? '—'}</strong></span></section>
+      <section className="flow-output-grid"><JsonBlock title="Current payload" value={item.data.payload_json} searchable /><JsonBlock title="Original payload" value={item.data.original_payload_json} searchable /></section>
+    </div>
+  );
+}

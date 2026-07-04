@@ -9,6 +9,7 @@ from app.artifacts.models import Artifact  # noqa: F401
 from app.connectors.models import ConnectorInstance  # noqa: F401
 from app.core.database import Base, async_session, engine
 from app.events.models import EventRun, EventStep, IntegrationEvent  # noqa: F401
+from app.enterprise_runtime.models import BusinessRuleDefinition, CanonicalBusinessObject, DeadLetterQueueItem, IntegrationQueueMessage, ODataCacheEntry, QueueAttempt, ResolverDefinition  # noqa: F401
 from app.external_errors.models import ExternalErrorRecord  # noqa: F401
 from app.health.models import AgentHeartbeat, HealthCheck, Site  # noqa: F401
 from app.incidents.models import Incident, IncidentEvent  # noqa: F401

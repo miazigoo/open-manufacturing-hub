@@ -11,7 +11,7 @@ from app.connectors.router import router as connectors_router
 from app.core.errors import BadRequestError, NotFoundError
 from app.demo.router import router as demo_router
 from app.events.router import router as events_router
-from app.enterprise_runtime.router import router as enterprise_runtime_router
+from app.enterprise_runtime.router import dlq_router, queue_router, router as enterprise_runtime_router
 from app.execution.router import router as execution_router
 from app.external_errors.router import router as external_errors_router
 from app.flow_builder.router import router as flow_builder_router
@@ -76,6 +76,8 @@ async def bad_request_handler(_: Request, exc: BadRequestError):
 
 app.include_router(events_router)
 app.include_router(enterprise_runtime_router)
+app.include_router(queue_router)
+app.include_router(dlq_router)
 app.include_router(demo_router)
 app.include_router(connectors_router)
 app.include_router(mappings_router)

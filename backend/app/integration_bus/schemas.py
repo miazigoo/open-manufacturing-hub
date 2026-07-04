@@ -6,9 +6,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.enums import EndpointProcessingMode
+
 INPUT_MODES = {"json", "xml", "raw_text", "multipart_file", "form"}
 RESPONSE_MODES = {"sync_response", "accepted_event", "accepted_message", "proxy_response"}
 AUTH_MODES = {"none", "static_token"}
+PROCESSING_MODES = {item.value for item in EndpointProcessingMode}
 
 
 class IntegrationEndpointCreate(BaseModel):
@@ -18,6 +21,7 @@ class IntegrationEndpointCreate(BaseModel):
     description: str | None = None
     input_mode: str = "json"
     response_mode: str = "accepted_event"
+    processing_mode: EndpointProcessingMode = EndpointProcessingMode.ASYNC_QUEUE
     default_source_system: str | None = None
     default_target_system: str | None = None
     default_event_type: str = "BusRequestReceived"
@@ -36,6 +40,7 @@ class IntegrationEndpointPatch(BaseModel):
     description: str | None = None
     input_mode: str | None = None
     response_mode: str | None = None
+    processing_mode: EndpointProcessingMode | None = None
     default_source_system: str | None = None
     default_target_system: str | None = None
     default_event_type: str | None = None
@@ -55,6 +60,7 @@ class IntegrationEndpointRead(BaseModel):
     description: str | None
     input_mode: str
     response_mode: str
+    processing_mode: EndpointProcessingMode
     default_source_system: str | None
     default_target_system: str | None
     default_event_type: str
@@ -171,6 +177,7 @@ class ODataLookupTemplateTestRequest(BaseModel):
 class BusDispatchResponse(BaseModel):
     accepted: bool = True
     event_id: UUID
+    queue_item_id: UUID | None = None
     message_id: UUID | None = None
     status: str
     timeline_url: str

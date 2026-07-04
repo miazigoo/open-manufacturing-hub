@@ -14,6 +14,7 @@ from app.events.schemas import EventCreate, EventJournalItem
 from app.execution.engine import ExecutionEngine
 from app.execution.exceptions import StepNotFoundError
 from app.execution.registry import registry as step_registry
+from app.enterprise_runtime.models import IntegrationQueueMessage
 
 
 async def create_event(session: AsyncSession, request: EventCreate) -> IntegrationEvent:
@@ -78,11 +79,16 @@ async def get_event_journal(session: AsyncSession) -> list[EventJournalItem]:
     latest_steps: dict[Any, EventStep] = {}
     for run, step in run_result.all():
         latest_steps.setdefault(run.event_id, step)
+    queue_result = await session.execute(select(IntegrationQueueMessage).where(IntegrationQueueMessage.event_id.in_(ids)).order_by(IntegrationQueueMessage.created_at.desc()))
+    latest_queue: dict[Any, IntegrationQueueMessage] = {}
+    for item in queue_result.scalars().all():
+        latest_queue.setdefault(item.event_id, item)
 
     rows: list[EventJournalItem] = []
     for event in events:
         external_error = latest_errors.get(event.id)
         step = latest_steps.get(event.id)
+        queue = latest_queue.get(event.id)
         title = external_error.human_title if external_error and external_error.human_title else _event_title(event)
         summary = external_error.human_summary if external_error and external_error.human_summary else _event_summary(event, step)
         rows.append(
@@ -110,10 +116,32 @@ async def get_event_journal(session: AsyncSession) -> list[EventJournalItem]:
                 last_error_summary=(external_error.human_summary if external_error else step.error_message if step else None),
                 last_external_error_message=external_error.external_error_message if external_error else None,
                 hint=external_error.hint if external_error else None,
-                requires_attention=event.status in {EventStatus.FAILED, EventStatus.RETRY_WAITING},
+                requires_attention=event.status in {EventStatus.FAILED, EventStatus.RETRY_WAITING} or (queue.status.value in {"retry_waiting", "dlq", "failed"} if queue else False),
+                queue_status=queue.status.value if queue else None,
+                queue_attempts=queue.attempts if queue else None,
+                queue_max_attempts=queue.max_attempts if queue else None,
+                queue_next_retry_at=queue.next_retry_at if queue else None,
             )
         )
     return rows
+
+
+async def queue_info_for_event(session: AsyncSession, event_id: UUID) -> dict[str, Any] | None:
+    result = await session.execute(select(IntegrationQueueMessage).where(IntegrationQueueMessage.event_id == event_id).order_by(IntegrationQueueMessage.created_at.desc()).limit(1))
+    item = result.scalar_one_or_none()
+    if item is None:
+        return None
+    return {
+        "id": item.id,
+        "status": item.status.value if hasattr(item.status, "value") else str(item.status),
+        "attempts": item.attempts,
+        "max_attempts": item.max_attempts,
+        "next_retry_at": item.next_retry_at,
+        "locked_by": item.locked_by,
+        "locked_until": item.locked_until,
+        "last_error": item.last_error,
+        "timeline_link": item.timeline_link,
+    }
 
 
 async def set_pinned(session: AsyncSession, event_id: UUID, pinned: bool) -> IntegrationEvent:

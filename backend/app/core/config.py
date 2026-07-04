@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     app_env: str = Field(default="development", validation_alias=AliasChoices("APP_ENV", "OMH_APP_ENV"))
     notification_webhook_timeout_seconds: float = 3.0
     notification_webhook_retries: int = 2
+    sync_processing_timeout_seconds: float = 30.0
+    queue_lock_seconds: int = 300
+    queue_worker_batch_size: int = 10
     cors_allow_origins: str = Field(
         default="http://localhost:5173,http://127.0.0.1:5173",
         validation_alias=AliasChoices("CORS_ORIGINS", "OMH_CORS_ALLOW_ORIGINS"),

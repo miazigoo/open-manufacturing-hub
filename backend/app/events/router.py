@@ -35,7 +35,8 @@ async def get_event(event_id: UUID, session: AsyncSession = Depends(get_session)
 @router.get("/{event_id}/timeline", response_model=EventTimeline)
 async def get_timeline(event_id: UUID, session: AsyncSession = Depends(get_session)):
     event = await service.get_timeline_or_404(session, event_id)
-    return {"event": event, "runs": event.runs}
+    queue_item = await service.queue_info_for_event(session, event_id)
+    return {"event": event, "runs": event.runs, "queue_item": queue_item}
 
 
 @router.post("/{event_id}/pin", response_model=EventSummary)

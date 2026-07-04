@@ -84,6 +84,21 @@ export function EventTimelinePage() {
         <button className="primary-button" onClick={() => pinMutation.mutate()}>{event.pinned ? t('timeline.unpin') : t('timeline.pin')}</button>
       </header>
 
+      {timeline.data.queue_item && (
+        <section className="panel queue-timeline-panel">
+          <div className="panel-toolbar">
+            <div><span className="eyebrow">Queue Item</span><h2>Runtime processing state</h2></div>
+            <StatusBadge status={timeline.data.queue_item.status} label={timeline.data.queue_item.status} />
+          </div>
+          <div className="metadata-grid compact-grid no-margin">
+            <span>Attempts<strong>{timeline.data.queue_item.attempts}/{timeline.data.queue_item.max_attempts}</strong></span>
+            <span>Next retry<strong>{timeline.data.queue_item.next_retry_at ?? '—'}</strong></span>
+            <span>Locked by<strong>{timeline.data.queue_item.locked_by ?? '—'}</strong></span>
+          </div>
+          {timeline.data.queue_item.last_error && <div className="error-state compact">{timeline.data.queue_item.last_error}</div>}
+        </section>
+      )}
+
       <div className="timeline-layout">
         <aside className="run-rail">
           <h2>{t('timeline.runs')}</h2>

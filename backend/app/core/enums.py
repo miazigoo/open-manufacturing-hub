@@ -87,6 +87,10 @@ class NotificationTriggerType(StrEnum):
     INCIDENT_UPDATED = "incident_updated"
     HEALTH_DOWN = "health_down"
     QUEUE_THRESHOLD = "queue_threshold"
+    QUEUE_ITEM_DLQ = "queue_item_dlq"
+    QUEUE_BACKLOG_THRESHOLD = "queue_backlog_threshold"
+    WORKER_STUCK = "worker_stuck"
+    RETRY_EXHAUSTED = "retry_exhausted"
     DAILY_REPORT = "daily_report"
 
 
@@ -173,6 +177,13 @@ class EnterpriseQueueStatus(StrEnum):
     FAILED = "failed"
     DLQ = "dlq"
     CANCELLED = "cancelled"
+    ARCHIVED = "archived"
+
+
+class EndpointProcessingMode(StrEnum):
+    ASYNC_QUEUE = "async_queue"
+    SYNC_INLINE = "sync_inline"
+    SYNC_THEN_ASYNC_FALLBACK = "sync_then_async_fallback"
 
 
 class ResolverType(StrEnum):

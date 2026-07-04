@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from typing import Any
 from uuid import UUID
@@ -11,17 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.artifacts.models import Artifact
 from app.connectors.models import ConnectorInstance
 from app.connectors.builtin.onec.odata import read_odata
-from app.core.enums import IntegrationMessageDirection, IntegrationMessageStatus, RunMode
+from app.core.config import get_settings
+from app.core.enums import EndpointProcessingMode, IntegrationMessageDirection, IntegrationMessageStatus
 from app.core.errors import BadRequestError, NotFoundError
 from app.events.models import EventRun, IntegrationEvent
-from app.execution.engine import ExecutionEngine
-from app.enterprise_runtime.service import ensure_queue_for_event
+from app.enterprise_runtime import service as runtime_service
 from app.integration_bus import repository
 from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute, ODataLookupTemplate
 from app.integration_bus.response_modes import ACCEPTED_EVENT, ACCEPTED_MESSAGE, PROXY_RESPONSE, SYNC_RESPONSE
 from app.integration_bus.schemas import (
     AUTH_MODES,
     INPUT_MODES,
+    PROCESSING_MODES,
     RESPONSE_MODES,
     IntegrationEndpointCreate,
     IntegrationEndpointPatch,
@@ -42,7 +44,11 @@ XML_MAX_BYTES = 10 * 1024 * 1024
 
 async def create_endpoint(session: AsyncSession, request: IntegrationEndpointCreate) -> IntegrationEndpoint:
     _validate_endpoint_modes(request.input_mode, request.response_mode, request.auth_mode)
-    endpoint = IntegrationEndpoint(**request.model_dump())
+    _validate_processing_mode(request.processing_mode)
+    data = request.model_dump()
+    if data.get("processing_mode") == EndpointProcessingMode.ASYNC_QUEUE and request.response_mode in {SYNC_RESPONSE, PROXY_RESPONSE}:
+        data["processing_mode"] = EndpointProcessingMode.SYNC_THEN_ASYNC_FALLBACK.value
+    endpoint = IntegrationEndpoint(**data)
     session.add(endpoint)
     await session.flush()
     return endpoint
@@ -52,6 +58,7 @@ async def patch_endpoint(session: AsyncSession, endpoint_id: UUID, request: Inte
     endpoint = await get_endpoint_or_404(session, endpoint_id)
     data = request.model_dump(exclude_unset=True)
     _validate_endpoint_modes(data.get("input_mode", endpoint.input_mode), data.get("response_mode", endpoint.response_mode), data.get("auth_mode", endpoint.auth_mode))
+    _validate_processing_mode(data.get("processing_mode", endpoint.processing_mode))
     for key, value in data.items():
         setattr(endpoint, key, value)
     await session.flush()
@@ -188,9 +195,7 @@ async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, 
     if route_trace:
         payload["_route_match_trace"] = route_trace
 
-    run = await ExecutionEngine(session).execute_event(event.id, mode=RunMode.NORMAL, initial_payload=payload, workflow_id=workflow_id)
-    await _update_message_after_run(session, message, event.status.value if hasattr(event.status, "value") else str(event.status))
-    await ensure_queue_for_event(
+    queue_item = await runtime_service.ensure_queue_for_event(
         session,
         event_id=event.id,
         message_id=message.id if message else None,
@@ -198,9 +203,35 @@ async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, 
         operation=(route.operation if route and route.operation else parsed.get("operation") or endpoint.default_event_type),
         workflow_id=workflow_id,
         payload=payload,
+        endpoint_id=endpoint.id,
+        route_id=route.id if route else None,
+        source_system=event.source_system,
+        target_system=target_system,
+        business_key=event.entity_id or event.correlation_id,
     )
-    response, external_error = await _response_context_from_run(session, run)
-    return _format_response(endpoint, event, message, route, response, external_error)
+    processing_mode = endpoint.processing_mode.value if hasattr(endpoint.processing_mode, "value") else str(endpoint.processing_mode)
+    if endpoint.response_mode in {ACCEPTED_EVENT, ACCEPTED_MESSAGE} or processing_mode == EndpointProcessingMode.ASYNC_QUEUE.value:
+        return _format_response(endpoint, event, message, route, queue_item, None, None)
+
+    runtime_service.lock_item(queue_item, "inline-dispatch")
+    try:
+        await asyncio.wait_for(runtime_service.process_locked_item(session, queue_item), timeout=get_settings().sync_processing_timeout_seconds)
+    except TimeoutError:
+        await session.flush()
+        return {
+            "success": False,
+            "accepted": True,
+            "status": "processing",
+            "queue_item_id": queue_item.id,
+            "event_id": event.id,
+            "message_id": message.id if message else None,
+            "message": "Processing continues asynchronously",
+            "timeline_url": f"/events/{event.id}",
+        }
+    await _update_message_after_run(session, message, "success" if queue_item.status.value == "completed" else "failed")
+    run = await session.get(EventRun, queue_item.run_id) if queue_item.run_id else None
+    response, external_error = await _response_context_from_run(session, run) if run else (None, None)
+    return _format_response(endpoint, event, message, route, queue_item, response, external_error)
 
 
 async def select_route(session: AsyncSession, endpoint: IntegrationEndpoint, parsed: dict[str, Any]) -> IntegrationRoute | None:
@@ -283,10 +314,10 @@ async def install_presets(session: AsyncSession) -> tuple[list[IntegrationEndpoi
         ["receive", "route_by_rule", "call_print_operation", "handle_response", "create_incident"],
     )
     endpoints = [
-        await _upsert_endpoint(session, "1C to Website API", "onec-to-site", "json", ACCEPTED_EVENT, "BusRequestReceived", json_workflow.id, "1C ERP", "Website API"),
-        await _upsert_endpoint(session, "Site Contractor Lookup", "site-contractor-lookup", "json", SYNC_RESPONSE, "ContractorLookupRequested", lookup_workflow.id, "Website", "1C ERP"),
-        await _upsert_endpoint(session, "UPD XML Raw Bridge", "upd-xml", "xml", ACCEPTED_MESSAGE, "OneCXmlReceived", xml_workflow.id, "1C UPD", "1C ERP"),
-        await _upsert_endpoint(session, "1C Print ZPL", "print-zpl", "json", ACCEPTED_EVENT, "OneCPrintRequest", print_workflow.id, "1C ERP", None),
+        await _upsert_endpoint(session, "1C to Website API", "onec-to-site", "json", ACCEPTED_EVENT, "BusRequestReceived", json_workflow.id, "1C ERP", "Website API", EndpointProcessingMode.ASYNC_QUEUE.value),
+        await _upsert_endpoint(session, "Site Contractor Lookup", "site-contractor-lookup", "json", SYNC_RESPONSE, "ContractorLookupRequested", lookup_workflow.id, "Website", "1C ERP", EndpointProcessingMode.SYNC_INLINE.value),
+        await _upsert_endpoint(session, "UPD XML Raw Bridge", "upd-xml", "xml", ACCEPTED_MESSAGE, "OneCXmlReceived", xml_workflow.id, "1C UPD", "1C ERP", EndpointProcessingMode.ASYNC_QUEUE.value),
+        await _upsert_endpoint(session, "1C Print ZPL", "print-zpl", "json", ACCEPTED_EVENT, "OneCPrintRequest", print_workflow.id, "1C ERP", None, EndpointProcessingMode.ASYNC_QUEUE.value),
     ]
     routes = [
         await _upsert_route(session, "Default 1C to Website API", "BusRequestReceived", "Website API", json_workflow.id, 50),
@@ -305,6 +336,12 @@ def _validate_endpoint_modes(input_mode: str, response_mode: str, auth_mode: str
         raise BadRequestError(f"Unsupported response_mode: {response_mode}")
     if auth_mode not in AUTH_MODES:
         raise BadRequestError(f"Unsupported auth_mode: {auth_mode}")
+
+
+def _validate_processing_mode(processing_mode: Any) -> None:
+    value = processing_mode.value if hasattr(processing_mode, "value") else str(processing_mode)
+    if value not in PROCESSING_MODES:
+        raise BadRequestError(f"Unsupported processing_mode: {value}")
 
 
 def _check_auth(endpoint: IntegrationEndpoint, request: Request) -> None:
@@ -409,10 +446,12 @@ def _format_response(
     event: IntegrationEvent,
     message: IntegrationMessage | None,
     route: IntegrationRoute | None,
+    queue_item: Any,
     response: dict[str, Any] | None,
     external_error: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    base = {"accepted": True, "event_id": event.id, "message_id": message.id if message else None, "status": event.status.value, "timeline_url": f"/events/{event.id}", "route_id": route.id if route else None}
+    queue_status = queue_item.status.value if hasattr(queue_item.status, "value") else str(queue_item.status)
+    base = {"accepted": True, "queue_item_id": queue_item.id, "event_id": event.id, "message_id": message.id if message else None, "status": queue_status, "timeline_url": f"/events/{event.id}", "route_id": route.id if route else None}
     if endpoint.response_mode == ACCEPTED_EVENT:
         return {key: value for key, value in base.items() if key != "message_id" or value is not None}
     if endpoint.response_mode == ACCEPTED_MESSAGE:
@@ -429,7 +468,9 @@ def _format_response(
         }
         return failure
     if endpoint.response_mode == PROXY_RESPONSE:
-        return response or {**base, "response": None}
+        if response:
+            return {**response, "success": queue_status == "completed", **base, "response": response}
+        return {**base, "response": None}
     if endpoint.response_mode == SYNC_RESPONSE:
         return {"success": event.status.value == "success", **base, "response": response}
     return base
@@ -525,9 +566,9 @@ async def _upsert_workflow(session: AsyncSession, name: str, description: str, e
     return workflow
 
 
-async def _upsert_endpoint(session: AsyncSession, name: str, slug: str, input_mode: str, response_mode: str, event_type: str, workflow_id: UUID, source: str | None, target: str | None) -> IntegrationEndpoint:
+async def _upsert_endpoint(session: AsyncSession, name: str, slug: str, input_mode: str, response_mode: str, event_type: str, workflow_id: UUID, source: str | None, target: str | None, processing_mode: str = "async_queue") -> IntegrationEndpoint:
     endpoint = await repository.get_endpoint_by_slug(session, slug)
-    data = {"name": name, "slug": slug, "input_mode": input_mode, "response_mode": response_mode, "default_event_type": event_type, "workflow_id": workflow_id, "default_source_system": source, "default_target_system": target, "enabled": True, "auth_mode": "none", "auth_config_json": {}}
+    data = {"name": name, "slug": slug, "input_mode": input_mode, "response_mode": response_mode, "processing_mode": processing_mode, "default_event_type": event_type, "workflow_id": workflow_id, "default_source_system": source, "default_target_system": target, "enabled": True, "auth_mode": "none", "auth_config_json": {}}
     if endpoint is None:
         endpoint = IntegrationEndpoint(**data)
         session.add(endpoint)

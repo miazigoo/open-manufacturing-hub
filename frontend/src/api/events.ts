@@ -26,6 +26,10 @@ export interface EventJournalItem extends EventSummary {
   hint: string | null;
   requires_attention: boolean;
   status: EventStatus;
+  queue_status: string | null;
+  queue_attempts: number | null;
+  queue_max_attempts: number | null;
+  queue_next_retry_at: string | null;
 }
 
 export const eventsApi = {

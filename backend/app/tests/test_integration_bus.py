@@ -153,7 +153,14 @@ async def test_bus_presets_and_print_endpoint(client):
         },
     )
     assert response.status_code == 200
-    timeline = (await client.get(f"/api/events/{response.json()['event_id']}/timeline")).json()
+    body = response.json()
+    assert body["queue_item_id"]
+    timeline = (await client.get(f"/api/events/{body['event_id']}/timeline")).json()
+    assert timeline["event"]["status"] == "new"
+    assert timeline["queue_item"]["status"] == "waiting"
+    processed = await client.post("/api/queue/process-once?worker=test-worker")
+    assert processed.status_code == 200, processed.text
+    timeline = (await client.get(f"/api/events/{body['event_id']}/timeline")).json()
     assert timeline["event"]["status"] == "success"
     assert any(step["step_name"] == "call_print_operation" for step in timeline["runs"][0]["steps"])
 

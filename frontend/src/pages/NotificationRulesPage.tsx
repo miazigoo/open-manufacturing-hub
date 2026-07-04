@@ -8,7 +8,7 @@ import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
 import { useT } from '../i18n/useI18n';
 
-const triggerTypes: TriggerType[] = ['event_failed', 'incident_created', 'incident_updated', 'health_down', 'queue_threshold', 'daily_report'];
+const triggerTypes: TriggerType[] = ['event_failed', 'incident_created', 'incident_updated', 'health_down', 'queue_threshold', 'queue_item_dlq', 'queue_backlog_threshold', 'worker_stuck', 'retry_exhausted', 'daily_report'];
 
 export function NotificationRulesPage() {
   const t = useT();

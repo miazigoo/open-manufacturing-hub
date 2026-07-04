@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
 from app.core.database import Base, TimestampMixin, new_uuid
+from app.core.enums import EndpointProcessingMode
 
 JSON_TYPE = JSONB().with_variant(JSON(), "sqlite")
 
@@ -24,6 +25,7 @@ class IntegrationEndpoint(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     input_mode: Mapped[str] = mapped_column(String(40), nullable=False)
     response_mode: Mapped[str] = mapped_column(String(40), nullable=False)
+    processing_mode: Mapped[EndpointProcessingMode] = mapped_column(String(40), default=EndpointProcessingMode.ASYNC_QUEUE.value, nullable=False)
     default_source_system: Mapped[str | None] = mapped_column(String(255), nullable=True)
     default_target_system: Mapped[str | None] = mapped_column(String(255), nullable=True)
     default_event_type: Mapped[str] = mapped_column(String(255), nullable=False)

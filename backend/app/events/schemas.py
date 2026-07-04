@@ -34,6 +34,18 @@ class EventSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class EventQueueInfo(BaseModel):
+    id: UUID
+    status: str
+    attempts: int
+    max_attempts: int
+    next_retry_at: datetime | None = None
+    locked_by: str | None = None
+    locked_until: datetime | None = None
+    last_error: str | None = None
+    timeline_link: str | None = None
+
+
 class EventStepRead(BaseModel):
     id: UUID
     step_order: int
@@ -76,6 +88,7 @@ class EventRunRead(BaseModel):
 class EventTimeline(BaseModel):
     event: EventSummary
     runs: list[EventRunRead]
+    queue_item: EventQueueInfo | None = None
 
 
 class EventJournalItem(BaseModel):
@@ -103,3 +116,7 @@ class EventJournalItem(BaseModel):
     last_external_error_message: str | None = None
     hint: str | None = None
     requires_attention: bool = False
+    queue_status: str | None = None
+    queue_attempts: int | None = None
+    queue_max_attempts: int | None = None
+    queue_next_retry_at: datetime | None = None
