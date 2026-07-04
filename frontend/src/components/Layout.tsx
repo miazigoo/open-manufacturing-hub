@@ -1,10 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../api/client';
+import { packagesApi } from '../api/packages';
 import { useI18n, useT } from '../i18n/useI18n';
 import { languageMeta } from '../i18n/dictionary';
 import type { Language } from '../i18n/dictionary';
 
-interface NavItem { to: string; labelKey: string }
+interface NavItem { to: string; labelKey: string; packageId?: string }
 interface NavSection { titleKey: string; items: NavItem[] }
 
 const navSections: NavSection[] = [
@@ -21,6 +23,8 @@ const navSections: NavSection[] = [
     titleKey: 'nav.sectionBuild',
     items: [
       { to: '/connectors', labelKey: 'nav.connectors' },
+      { to: '/packages', labelKey: 'nav.packages' },
+      { to: '/plugin-store', labelKey: 'nav.pluginStore' },
       { to: '/integration-flows', labelKey: 'nav.integrationFlows' },
       { to: '/integration-bus', labelKey: 'nav.integrationBus' },
       { to: '/runtime/monitor', labelKey: 'nav.transactionMonitor' },
@@ -34,22 +38,22 @@ const navSections: NavSection[] = [
   {
     titleKey: 'nav.sectionOneCTools',
     items: [
-      { to: '/integration-designer', labelKey: 'nav.integrationDesigner' },
+      { to: '/integration-designer', labelKey: 'nav.integrationDesigner', packageId: 'omh-package-onec' },
       { to: '/scenario-library', labelKey: 'nav.scenarioLibrary' },
-      { to: '/odata-explorer', labelKey: 'nav.odataExplorer' },
-      { to: '/xml-tools', labelKey: 'nav.xmlTools' },
+      { to: '/odata-explorer', labelKey: 'nav.odataExplorer', packageId: 'omh-package-onec' },
+      { to: '/xml-tools', labelKey: 'nav.xmlTools', packageId: 'omh-package-onec' },
       { to: '/test-console', labelKey: 'nav.testConsole' },
       { to: '/test-cases', labelKey: 'nav.savedTestCases' },
-      { to: '/onec-quick-setup', labelKey: 'nav.onecQuickSetup' },
-      { to: '/onec-scenarios', labelKey: 'nav.onecScenarios' },
-      { to: '/onec-workbench', labelKey: 'nav.onecWorkbench' },
+      { to: '/onec-quick-setup', labelKey: 'nav.onecQuickSetup', packageId: 'omh-package-onec' },
+      { to: '/onec-scenarios', labelKey: 'nav.onecScenarios', packageId: 'omh-package-onec' },
+      { to: '/onec-workbench', labelKey: 'nav.onecWorkbench', packageId: 'omh-package-onec' },
     ],
   },
   {
     titleKey: 'nav.sectionProduction',
     items: [
       { to: '/polling', labelKey: 'nav.polling' },
-      { to: '/printing', labelKey: 'nav.printing' },
+      { to: '/printing', labelKey: 'nav.printing', packageId: 'omh-package-printer' },
       { to: '/notifications', labelKey: 'nav.notifications' },
       { to: '/runtime/business-objects', labelKey: 'nav.businessObjects' },
       { to: '/runtime/resolvers', labelKey: 'nav.resolvers' },
@@ -65,6 +69,8 @@ const languages: Language[] = ['ru', 'en', 'zh'];
 
 export function Layout() {
   const t = useT();
+  const packageNav = useQuery({ queryKey: ['packages-navigation'], queryFn: packagesApi.navigation, retry: false });
+  const disabledInstalledPackages = new Set((packageNav.data ?? []).filter((item) => !item.enabled).map((item) => item.package_id));
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -79,10 +85,16 @@ export function Layout() {
           {navSections.map((section) => (
             <section className="nav-section" key={section.titleKey}>
               <span className="nav-section-title">{t(section.titleKey)}</span>
-              {section.items.map((item) => (
+              {section.items.filter((item) => !item.packageId || !disabledInstalledPackages.has(item.packageId)).map((item) => (
                 <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                   <span className="nav-dot" />
                   {t(item.labelKey)}
+                </NavLink>
+              ))}
+              {section.titleKey === 'nav.sectionOneCTools' && (packageNav.data ?? []).filter((item) => item.enabled && !section.items.some((existing) => existing.to === item.route)).map((item) => (
+                <NavLink key={`${item.package_id}:${item.route}`} to={item.route} className={({ isActive }) => `nav-link package-nav-link ${isActive ? 'active' : ''}`}>
+                  <span className="nav-dot" />
+                  {item.title}
                 </NavLink>
               ))}
             </section>

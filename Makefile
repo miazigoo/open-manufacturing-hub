@@ -1,4 +1,4 @@
-.PHONY: install-backend install-frontend test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke docker-up docker-down
+.PHONY: install-backend install-frontend test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke packages-list package-install-onec package-install-printer docker-up docker-down
 
 install-backend:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[test]"
@@ -41,3 +41,12 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+packages-list:
+	curl -s http://localhost:8000/api/packages/available | python3 -m json.tool
+
+package-install-onec:
+	curl -s -X POST http://localhost:8000/api/packages/omh-package-onec/install -H 'Content-Type: application/json' -d '{"install_demo_data": true}' | python3 -m json.tool
+
+package-install-printer:
+	curl -s -X POST http://localhost:8000/api/packages/omh-package-printer/install -H 'Content-Type: application/json' -d '{"install_demo_data": false}' | python3 -m json.tool

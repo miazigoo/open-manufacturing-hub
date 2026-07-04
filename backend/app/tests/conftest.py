@@ -19,6 +19,7 @@ from app.mappings.models import MappingDefinition, MappingVersion  # noqa: F401
 from app.notifications.models import NotificationDelivery, NotificationRule  # noqa: F401
 from app.onec_workbench.models import IntegrationMessage  # noqa: F401
 from app.operation_templates.models import OperationTemplate  # noqa: F401
+from app.packages.models import InstalledPackage  # noqa: F401
 from app.polling.models import PollingJob, PollingJobRun, SourceEventCursor  # noqa: F401
 from app.printing.models import PrintJob, PrintJobLine, PrintJobLog, PrintPrinter  # noqa: F401
 from app.test_console.models import SavedTestCase  # noqa: F401

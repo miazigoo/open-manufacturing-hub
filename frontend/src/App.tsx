@@ -24,10 +24,13 @@ import { MaintenancePage } from './pages/MaintenancePage';
 import { MappingEditorPage } from './pages/MappingEditorPage';
 import { NotificationRulesPage } from './pages/NotificationRulesPage';
 import { ODataExplorerPage } from './pages/ODataExplorerPage';
+import { PackageDetailsPage } from './pages/PackageDetailsPage';
+import { PackagesPage } from './pages/PackagesPage';
 import { OneCScenariosPage } from './pages/OneCScenariosPage';
 import { OneCWorkbenchPage } from './pages/OneCWorkbenchPage';
 import { OneCQuickSetupPage } from './pages/OneCQuickSetupPage';
 import { PipelineEditorPage } from './pages/PipelineEditorPage';
+import { PluginStorePage } from './pages/PluginStorePage';
 import { PollingJobsPage } from './pages/PollingJobsPage';
 import { PrintingPage } from './pages/PrintingPage';
 import { RetentionPage } from './pages/RetentionPage';
@@ -49,6 +52,9 @@ export function App() {
         <Route path="incidents/:incidentId" element={<IncidentDetailsPage />} />
         <Route path="health" element={<HealthPage />} />
         <Route path="connectors" element={<ConnectorsPage />} />
+        <Route path="packages" element={<PackagesPage />} />
+        <Route path="packages/:packageId" element={<PackageDetailsPage />} />
+        <Route path="plugin-store" element={<PluginStorePage />} />
         <Route path="integration-bus" element={<IntegrationBusPage />} />
         <Route path="integration-flows" element={<IntegrationFlowsPage />} />
         <Route path="integration-flows/:flowId/builder" element={<VisualFlowBuilderPage />} />

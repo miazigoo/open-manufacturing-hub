@@ -1,8 +1,11 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.artifacts.router import router as artifacts_router
+from app.core.database import async_session
 from app.core.config import get_settings
 from app.connectors.router import router as connectors_router
 from app.core.errors import BadRequestError, NotFoundError
@@ -28,6 +31,8 @@ from app.onec_scenarios.router import router as onec_scenarios_router
 from app.onec_templates.router import router as onec_templates_router
 from app.operation_templates.router import router as operation_templates_router
 from app.odata_explorer.router import router as odata_explorer_router
+from app.packages.router import router as packages_router
+from app.plugin_store.router import router as plugin_store_router
 from app.polling.router import router as polling_router
 from app.printing.router import router as printing_router
 from app.retention.router import router as retention_router
@@ -36,8 +41,18 @@ from app.scenario_library.router import router as scenario_library_router
 from app.test_console.router import router as test_console_router
 from app.workflows.router import router as workflows_router
 from app.xml_tools.router import router as xml_tools_router
+from app.packages.service import startup_package_check
 
-app = FastAPI(title="Open Manufacturing Hub")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    async with async_session() as session:
+        await startup_package_check(session)
+        await session.commit()
+    yield
+
+
+app = FastAPI(title="Open Manufacturing Hub", lifespan=lifespan)
 settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
@@ -81,6 +96,8 @@ app.include_router(odata_explorer_router)
 app.include_router(xml_tools_router)
 app.include_router(test_console_router)
 app.include_router(notifications_router)
+app.include_router(packages_router)
+app.include_router(plugin_store_router)
 app.include_router(maintenance_router)
 app.include_router(retention_router)
 app.include_router(polling_router)

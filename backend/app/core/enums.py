@@ -211,3 +211,12 @@ class IntegrationFlowTargetType(StrEnum):
     PRINTER = "printer"
     ODATA_LOOKUP = "odata_lookup"
     INTERNAL = "internal"
+
+
+class IntegrationPackageStatus(StrEnum):
+    INSTALLED = "installed"
+    ENABLED = "enabled"
+    DISABLED = "disabled"
+    FAILED = "failed"
+    UPGRADE_AVAILABLE = "upgrade_available"
+    INCOMPATIBLE = "incompatible"

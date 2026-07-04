@@ -1,0 +1,50 @@
+[
+  {
+    "package_id": "omh-package-onec",
+    "name": "1C Integration Package",
+    "version": "0.1.0",
+    "official": true,
+    "category": "ERP",
+    "description": "1C OData/XML/HTTP integration tools"
+  },
+  {
+    "package_id": "omh-package-printer",
+    "name": "Printer Integration Package",
+    "version": "0.1.0",
+    "official": true,
+    "category": "Hardware",
+    "description": "ZPL printer integration and production print operations"
+  },
+  {
+    "package_id": "omh-package-mqtt",
+    "name": "MQTT Package",
+    "version": "0.1.0",
+    "official": false,
+    "category": "Messaging",
+    "description": "MQTT integration package placeholder"
+  },
+  {
+    "package_id": "omh-package-shopify",
+    "name": "Shopify Package",
+    "version": "0.1.0",
+    "official": false,
+    "category": "Commerce",
+    "description": "Shopify order and fulfillment integration placeholder"
+  },
+  {
+    "package_id": "omh-package-odoo",
+    "name": "Odoo Package",
+    "version": "0.1.0",
+    "official": false,
+    "category": "ERP",
+    "description": "Odoo ERP integration package placeholder"
+  },
+  {
+    "package_id": "omh-package-sap",
+    "name": "SAP Package",
+    "version": "0.1.0",
+    "official": false,
+    "category": "ERP",
+    "description": "SAP integration package placeholder"
+  }
+]
