@@ -6,6 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.artifacts.models import Artifact  # noqa: F401
+from app.audit.models import AuditEvent  # noqa: F401
 from app.business_rules.models import BusinessRuleSet  # noqa: F401
 from app.connectors.models import ConnectorInstance  # noqa: F401
 from app.core.database import Base, async_session, engine

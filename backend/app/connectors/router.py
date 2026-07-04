@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import service as audit_service
 from app.connectors import repository, service
 from app.connectors.registry import registry
 from app.connectors.schemas import ConnectorConfigValidationRead, ConnectorHealthRead, ConnectorInstanceCreate, ConnectorInstancePatch, ConnectorInstanceRead, ConnectorTypeRead, OneCHTTPServiceTestRequest, OneCODataReadRequest, WebhookEventResponse
@@ -26,8 +27,9 @@ async def list_connectors(session: AsyncSession = Depends(get_session)):
 
 
 @router.post("/api/connectors", response_model=ConnectorInstanceRead)
-async def create_connector(request: ConnectorInstanceCreate, session: AsyncSession = Depends(get_session)):
-    instance = await service.create_instance(session, request)
+async def create_connector(payload: ConnectorInstanceCreate, http_request: Request, session: AsyncSession = Depends(get_session)):
+    instance = await service.create_instance(session, payload)
+    await audit_service.record_change(session, request=http_request, action="connector.created", category="connectors", object_type="connector", object_id=instance.id, object_name=instance.name, before=None, after=audit_service.snapshot_model(instance), summary=f"Connector {instance.name} created")
     await session.commit()
     return instance
 
@@ -41,17 +43,24 @@ async def get_connector(connector_id: UUID, session: AsyncSession = Depends(get_
 
 
 @router.patch("/api/connectors/{connector_id}", response_model=ConnectorInstanceRead)
-async def patch_connector(connector_id: UUID, request: ConnectorInstancePatch, session: AsyncSession = Depends(get_session)):
-    instance = await service.patch_instance(session, connector_id, request)
+async def patch_connector(connector_id: UUID, payload: ConnectorInstancePatch, http_request: Request, session: AsyncSession = Depends(get_session)):
+    existing = await repository.get_instance(session, connector_id)
+    if existing is None:
+        raise NotFoundError("Connector instance not found")
+    before = audit_service.snapshot_model(existing)
+    instance = await service.patch_instance(session, connector_id, payload)
+    await audit_service.record_change(session, request=http_request, action="connector.updated", category="connectors", object_type="connector", object_id=instance.id, object_name=instance.name, before=before, after=audit_service.snapshot_model(instance), summary=f"Connector {instance.name} updated")
     await session.commit()
     return instance
 
 
 @router.delete("/api/connectors/{connector_id}", status_code=204)
-async def delete_connector(connector_id: UUID, session: AsyncSession = Depends(get_session)):
+async def delete_connector(connector_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
     instance = await repository.get_instance(session, connector_id)
     if instance is None:
         raise NotFoundError("Connector instance not found")
+    before = audit_service.snapshot_model(instance)
+    await audit_service.record_change(session, request=http_request, action="connector.deleted", category="connectors", object_type="connector", object_id=instance.id, object_name=instance.name, before=before, after=None, summary=f"Connector {instance.name} deleted")
     await session.delete(instance)
     await session.commit()
     return Response(status_code=204)
@@ -66,22 +75,30 @@ async def test_connector_config(connector_id: UUID, session: AsyncSession = Depe
 
 
 @router.post("/api/connectors/{connector_id}/healthcheck", response_model=ConnectorHealthRead)
-async def healthcheck_connector(connector_id: UUID, session: AsyncSession = Depends(get_session)):
+async def healthcheck_connector(connector_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
     result = await service.healthcheck_instance(session, connector_id)
+    instance = await repository.get_instance(session, connector_id)
+    await audit_service.record_action(session, request=http_request, action="connector.healthcheck_run", category="connectors", object_type="connector", object_id=connector_id, object_name=instance.name if instance else None, summary=f"Connector healthcheck run: {result.status}", details={"status": result.status, "message": result.message, "details": result.details})
     await session.commit()
     return result
 
 
 @router.post("/api/connectors/{connector_id}/enable", response_model=ConnectorInstanceRead)
-async def enable_connector(connector_id: UUID, session: AsyncSession = Depends(get_session)):
+async def enable_connector(connector_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    existing = await repository.get_instance(session, connector_id)
+    before = audit_service.snapshot_model(existing) if existing else None
     instance = await service.set_enabled(session, connector_id, True)
+    await audit_service.record_change(session, request=http_request, action="connector.enabled", category="connectors", object_type="connector", object_id=instance.id, object_name=instance.name, before=before, after=audit_service.snapshot_model(instance), summary=f"Connector {instance.name} enabled")
     await session.commit()
     return instance
 
 
 @router.post("/api/connectors/{connector_id}/disable", response_model=ConnectorInstanceRead)
-async def disable_connector(connector_id: UUID, session: AsyncSession = Depends(get_session)):
+async def disable_connector(connector_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    existing = await repository.get_instance(session, connector_id)
+    before = audit_service.snapshot_model(existing) if existing else None
     instance = await service.set_enabled(session, connector_id, False)
+    await audit_service.record_change(session, request=http_request, action="connector.disabled", category="connectors", object_type="connector", object_id=instance.id, object_name=instance.name, before=before, after=audit_service.snapshot_model(instance), summary=f"Connector {instance.name} disabled")
     await session.commit()
     return instance
 

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import service as audit_service
 from app.core.database import get_session
 from app.core.enums import EnterpriseQueueStatus
 from app.enterprise_runtime import service
@@ -85,36 +86,46 @@ async def mark_processing(queue_id: UUID, worker: str = Query(default="manual"),
 
 
 @router.post("/queue/{queue_id}/dlq", response_model=DLQItemRead)
-async def move_to_dlq(queue_id: UUID, reason: str = Query(default="Manual DLQ"), session: AsyncSession = Depends(get_session)):
+async def move_to_dlq(queue_id: UUID, http_request: Request, reason: str = Query(default="Manual DLQ"), session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.move_to_dlq(session, queue_id, reason)
+    await audit_service.record_change(session, request=http_request, action="queue.moved_to_dlq", category="queue", object_type="queue_item", object_id=queue_id, object_name=item.business_object, before=before, after=audit_service.snapshot_model(item), summary=f"Queue item moved to DLQ: {item.business_object}", details={"reason": reason}, queue_item_id=queue_id, event_id=item.event_id)
     await session.commit()
     return item
 
 
 @router.post("/queue/{queue_id}/retry-now", response_model=QueueMessageRead)
-async def retry_now(queue_id: UUID, session: AsyncSession = Depends(get_session)):
+async def retry_now(queue_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.retry_now(session, queue_id)
+    await _audit_queue_change(session, http_request, "queue.retry_now", before, item, f"Queue item retry now: {item.business_object}")
     await session.commit()
     return item
 
 
 @router.post("/queue/{queue_id}/cancel", response_model=QueueMessageRead)
-async def cancel_queue(queue_id: UUID, session: AsyncSession = Depends(get_session)):
+async def cancel_queue(queue_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.cancel_queue(session, queue_id)
+    await _audit_queue_change(session, http_request, "queue.cancelled", before, item, f"Queue item cancelled: {item.business_object}")
     await session.commit()
     return item
 
 
 @router.post("/queue/{queue_id}/force-complete", response_model=QueueMessageRead)
-async def force_complete(queue_id: UUID, session: AsyncSession = Depends(get_session)):
+async def force_complete(queue_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.force_complete_queue(session, queue_id)
+    await _audit_queue_change(session, http_request, "queue.force_completed", before, item, f"Queue item force completed: {item.business_object}")
     await session.commit()
     return item
 
 
 @router.post("/queue/{queue_id}/unlock", response_model=QueueMessageRead)
-async def unlock_queue(queue_id: UUID, session: AsyncSession = Depends(get_session)):
+async def unlock_queue(queue_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.unlock_queue(session, queue_id)
+    await _audit_queue_change(session, http_request, "queue.unlocked", before, item, f"Queue item unlocked: {item.business_object}")
     await session.commit()
     return item
 
@@ -145,15 +156,19 @@ async def get_dlq(item_id: UUID, session: AsyncSession = Depends(get_session)):
 
 
 @router.post("/dlq/{item_id}/retry", response_model=QueueMessageRead)
-async def retry_dlq(item_id: UUID, session: AsyncSession = Depends(get_session)):
+async def retry_dlq(item_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_dlq_or_404(session, item_id))
     item = await service.retry_dlq(session, item_id)
+    await audit_service.record_change(session, request=http_request, action="dlq.restored", category="dlq", object_type="dlq_item", object_id=item_id, object_name=item.business_object, before=before, after=audit_service.snapshot_model(item), summary=f"DLQ item restored: {item.business_object}", queue_item_id=item.id, event_id=item.event_id)
     await session.commit()
     return item
 
 
 @router.post("/dlq/{item_id}/edit-and-retry", response_model=QueueMessageRead)
-async def edit_retry_dlq(item_id: UUID, request: QueueEditRetryRequest, session: AsyncSession = Depends(get_session)):
-    item = await service.edit_retry_dlq(session, item_id, request.payload_json)
+async def edit_retry_dlq(item_id: UUID, payload: QueueEditRetryRequest, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_dlq_or_404(session, item_id))
+    item = await service.edit_retry_dlq(session, item_id, payload.payload_json)
+    await audit_service.record_change(session, request=http_request, action="dlq.edit_and_retry", category="dlq", object_type="dlq_item", object_id=item_id, object_name=item.business_object, before=before, after=audit_service.snapshot_model(item), summary=f"DLQ item edited and retried: {item.business_object}", queue_item_id=item.id, event_id=item.event_id)
     await session.commit()
     return item
 
@@ -174,8 +189,10 @@ async def force_complete_dlq(item_id: UUID, session: AsyncSession = Depends(get_
 
 
 @router.post("/dlq/{item_id}/restore", response_model=QueueMessageRead)
-async def restore_dlq(item_id: UUID, session: AsyncSession = Depends(get_session)):
+async def restore_dlq(item_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_dlq_or_404(session, item_id))
     item = await service.retry_dlq(session, item_id)
+    await audit_service.record_change(session, request=http_request, action="dlq.restored", category="dlq", object_type="dlq_item", object_id=item_id, object_name=item.business_object, before=before, after=audit_service.snapshot_model(item), summary=f"DLQ item restored: {item.business_object}", queue_item_id=item.id, event_id=item.event_id)
     await session.commit()
     return item
 
@@ -188,8 +205,10 @@ async def replay_dlq(item_id: UUID, session: AsyncSession = Depends(get_session)
 
 
 @router.post("/dlq/{item_id}/archive", response_model=DLQItemRead)
-async def archive_dlq(item_id: UUID, session: AsyncSession = Depends(get_session)):
+async def archive_dlq(item_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_dlq_or_404(session, item_id))
     item = await service.archive_dlq(session, item_id)
+    await audit_service.record_change(session, request=http_request, action="dlq.archived", category="dlq", object_type="dlq_item", object_id=item.id, object_name=item.business_object, before=before, after=audit_service.snapshot_model(item), summary=f"DLQ item archived: {item.business_object}", event_id=item.event_id)
     await session.commit()
     return item
 
@@ -292,6 +311,23 @@ def _process_response(items):
     return QueueProcessResponse(processed=len(items), items=items, **counts)
 
 
+async def _audit_queue_change(session: AsyncSession, http_request: Request, action: str, before: dict, item, summary: str):
+    await audit_service.record_change(
+        session,
+        request=http_request,
+        action=action,
+        category="queue",
+        object_type="queue_item",
+        object_id=item.id,
+        object_name=item.business_object,
+        before=before,
+        after=audit_service.snapshot_model(item),
+        summary=summary,
+        queue_item_id=item.id,
+        event_id=item.event_id,
+    )
+
+
 queue_router = APIRouter(prefix="/api/queue", tags=["queue"])
 dlq_router = APIRouter(prefix="/api/dlq", tags=["dlq"])
 
@@ -328,36 +364,46 @@ async def queue_process_batch_alias(limit: int = Query(default=10, ge=1, le=100)
 
 
 @queue_router.post("/{queue_id}/retry-now", response_model=QueueMessageRead)
-async def queue_retry_now_alias(queue_id: UUID, session: AsyncSession = Depends(get_session)):
+async def queue_retry_now_alias(queue_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.retry_now(session, queue_id)
+    await _audit_queue_change(session, http_request, "queue.retry_now", before, item, f"Queue item retry now: {item.business_object}")
     await session.commit()
     return item
 
 
 @queue_router.post("/{queue_id}/cancel", response_model=QueueMessageRead)
-async def queue_cancel_alias(queue_id: UUID, session: AsyncSession = Depends(get_session)):
+async def queue_cancel_alias(queue_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.cancel_queue(session, queue_id)
+    await _audit_queue_change(session, http_request, "queue.cancelled", before, item, f"Queue item cancelled: {item.business_object}")
     await session.commit()
     return item
 
 
 @queue_router.post("/{queue_id}/move-to-dlq", response_model=DLQItemRead)
-async def queue_move_dlq_alias(queue_id: UUID, reason: str = Query(default="Manual DLQ"), session: AsyncSession = Depends(get_session)):
+async def queue_move_dlq_alias(queue_id: UUID, http_request: Request, reason: str = Query(default="Manual DLQ"), session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.move_to_dlq(session, queue_id, reason)
+    await audit_service.record_change(session, request=http_request, action="queue.moved_to_dlq", category="queue", object_type="queue_item", object_id=queue_id, object_name=item.business_object, before=before, after=audit_service.snapshot_model(item), summary=f"Queue item moved to DLQ: {item.business_object}", details={"reason": reason}, queue_item_id=queue_id, event_id=item.event_id)
     await session.commit()
     return item
 
 
 @queue_router.post("/{queue_id}/force-complete", response_model=QueueMessageRead)
-async def queue_force_complete_alias(queue_id: UUID, session: AsyncSession = Depends(get_session)):
+async def queue_force_complete_alias(queue_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.force_complete_queue(session, queue_id)
+    await _audit_queue_change(session, http_request, "queue.force_completed", before, item, f"Queue item force completed: {item.business_object}")
     await session.commit()
     return item
 
 
 @queue_router.post("/{queue_id}/unlock", response_model=QueueMessageRead)
-async def queue_unlock_alias(queue_id: UUID, session: AsyncSession = Depends(get_session)):
+async def queue_unlock_alias(queue_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_queue_or_404(session, queue_id))
     item = await service.unlock_queue(session, queue_id)
+    await _audit_queue_change(session, http_request, "queue.unlocked", before, item, f"Queue item unlocked: {item.business_object}")
     await session.commit()
     return item
 
@@ -373,22 +419,28 @@ async def dlq_get_alias(item_id: UUID, session: AsyncSession = Depends(get_sessi
 
 
 @dlq_router.post("/{item_id}/retry", response_model=QueueMessageRead)
-async def dlq_retry_alias(item_id: UUID, session: AsyncSession = Depends(get_session)):
+async def dlq_retry_alias(item_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_dlq_or_404(session, item_id))
     item = await service.retry_dlq(session, item_id)
+    await audit_service.record_change(session, request=http_request, action="dlq.restored", category="dlq", object_type="dlq_item", object_id=item_id, object_name=item.business_object, before=before, after=audit_service.snapshot_model(item), summary=f"DLQ item restored: {item.business_object}", queue_item_id=item.id, event_id=item.event_id)
     await session.commit()
     return item
 
 
 @dlq_router.post("/{item_id}/edit-and-retry", response_model=QueueMessageRead)
-async def dlq_edit_retry_alias(item_id: UUID, request: QueueEditRetryRequest, session: AsyncSession = Depends(get_session)):
-    item = await service.edit_retry_dlq(session, item_id, request.payload_json)
+async def dlq_edit_retry_alias(item_id: UUID, payload: QueueEditRetryRequest, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_dlq_or_404(session, item_id))
+    item = await service.edit_retry_dlq(session, item_id, payload.payload_json)
+    await audit_service.record_change(session, request=http_request, action="dlq.edit_and_retry", category="dlq", object_type="dlq_item", object_id=item_id, object_name=item.business_object, before=before, after=audit_service.snapshot_model(item), summary=f"DLQ item edited and retried: {item.business_object}", queue_item_id=item.id, event_id=item.event_id)
     await session.commit()
     return item
 
 
 @dlq_router.post("/{item_id}/archive", response_model=DLQItemRead)
-async def dlq_archive_alias(item_id: UUID, session: AsyncSession = Depends(get_session)):
+async def dlq_archive_alias(item_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    before = audit_service.snapshot_model(await service.get_dlq_or_404(session, item_id))
     item = await service.archive_dlq(session, item_id)
+    await audit_service.record_change(session, request=http_request, action="dlq.archived", category="dlq", object_type="dlq_item", object_id=item.id, object_name=item.business_object, before=before, after=audit_service.snapshot_model(item), summary=f"DLQ item archived: {item.business_object}", event_id=item.event_id)
     await session.commit()
     return item
 

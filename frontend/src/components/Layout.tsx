@@ -14,6 +14,7 @@ const languages: Language[] = ['ru', 'en', 'zh'];
 const fallbackNavigation: UINavigationItem[] = [
   { group: 'Operate', title: 'Dashboard', route: '/', package_id: null, enabled: true, advanced: false },
   { group: 'Operate', title: 'Transaction Monitor', route: '/runtime/monitor', package_id: null, enabled: true, advanced: false },
+  { group: 'Operate', title: 'Audit Log', route: '/audit', package_id: null, enabled: true, advanced: false },
   { group: 'Operate', title: 'Event Journal', route: '/events', package_id: null, enabled: true, advanced: false },
   { group: 'Build', title: '1C Integration Cockpit', route: '/onec-cockpit', package_id: 'omh-package-onec', enabled: true, advanced: false },
   { group: 'Build', title: 'Integration Flows', route: '/integration-flows', package_id: null, enabled: true, advanced: false },
@@ -36,6 +37,7 @@ const routeKey: Record<string, string> = {
   '/runtime/monitor': 'nav.transactionMonitor',
   '/runtime/queue': 'nav.integrationQueue',
   '/runtime/dlq': 'nav.deadLetterQueue',
+  '/audit': 'nav.auditLog',
   '/events': 'nav.events',
   '/incidents': 'nav.incidents',
   '/health': 'nav.health',

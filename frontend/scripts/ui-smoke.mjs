@@ -211,7 +211,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
   });
 
   const routes = [
-    '/', '/events', '/health', '/connectors', '/packages', '/plugin-store', '/scenario-library',
+    '/', '/events', '/audit', '/health', '/connectors', '/packages', '/plugin-store', '/scenario-library',
     '/integration-bus', '/integration-flows', flowId ? `/integration-flows/${flowId}/builder` : null,
     '/business-objects', '/resolvers', resolverId ? `/resolvers/${resolverId}` : null, '/resolvers/cache',
     '/transforms', '/business-rules', ruleId ? `/business-rules/${ruleId}` : null,

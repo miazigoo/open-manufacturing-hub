@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import select
 
 from app.artifacts.models import Artifact  # noqa: F401
+from app.audit.models import AuditEvent  # noqa: F401
 from app.business_rules.models import BusinessRuleSet  # noqa: F401
 from app.connectors.models import ConnectorInstance
 from app.core.database import Base, async_session, engine

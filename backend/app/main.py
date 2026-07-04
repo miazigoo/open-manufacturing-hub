@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.artifacts.router import router as artifacts_router
+from app.audit.middleware import request_id_middleware
+from app.audit.router import router as audit_router
 from app.business_rules.router import router as business_rules_router
 from app.business_objects.router import router as business_objects_router
 from app.core.database import async_session
@@ -61,6 +63,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Open Manufacturing Hub", lifespan=lifespan)
+app.middleware("http")(request_id_middleware)
 app.middleware("http")(optional_auth_guard)
 settings = get_settings()
 app.add_middleware(
@@ -115,6 +118,7 @@ app.include_router(ui_router)
 app.include_router(notifications_router)
 app.include_router(auth_router)
 app.include_router(production_router)
+app.include_router(audit_router)
 app.include_router(packages_router)
 app.include_router(plugin_store_router)
 app.include_router(maintenance_router)

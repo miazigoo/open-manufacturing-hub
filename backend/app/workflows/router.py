@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import service as audit_service
 from app.core.database import get_session
 from app.workflows import service
 from app.workflows.schemas import WorkflowCreate, WorkflowDryRunRead, WorkflowDryRunRequest, WorkflowPatch, WorkflowRead, WorkflowValidationRead
@@ -16,8 +17,9 @@ async def list_workflows(session: AsyncSession = Depends(get_session)):
 
 
 @router.post("/api/workflows", response_model=WorkflowRead)
-async def create_workflow(request: WorkflowCreate, session: AsyncSession = Depends(get_session)):
-    workflow = await service.create_workflow(session, request)
+async def create_workflow(payload: WorkflowCreate, http_request: Request, session: AsyncSession = Depends(get_session)):
+    workflow = await service.create_workflow(session, payload)
+    await audit_service.record_change(session, request=http_request, action="workflow.created", category="workflows", object_type="workflow", object_id=workflow.id, object_name=workflow.name, before=None, after=audit_service.snapshot_model(workflow), summary=f"Workflow {workflow.name} created")
     await session.commit()
     return workflow
 
@@ -28,30 +30,41 @@ async def get_workflow(workflow_id: UUID, session: AsyncSession = Depends(get_se
 
 
 @router.patch("/api/workflows/{workflow_id}", response_model=WorkflowRead)
-async def patch_workflow(workflow_id: UUID, request: WorkflowPatch, session: AsyncSession = Depends(get_session)):
-    workflow = await service.patch_workflow(session, workflow_id, request)
+async def patch_workflow(workflow_id: UUID, payload: WorkflowPatch, http_request: Request, session: AsyncSession = Depends(get_session)):
+    existing = await service.get_workflow_or_404(session, workflow_id)
+    before = audit_service.snapshot_model(existing)
+    workflow = await service.patch_workflow(session, workflow_id, payload)
+    await audit_service.record_change(session, request=http_request, action="workflow.updated", category="workflows", object_type="workflow", object_id=workflow.id, object_name=workflow.name, before=before, after=audit_service.snapshot_model(workflow), summary=f"Workflow {workflow.name} updated")
     await session.commit()
     return workflow
 
 
 @router.delete("/api/workflows/{workflow_id}", status_code=204)
-async def delete_workflow(workflow_id: UUID, session: AsyncSession = Depends(get_session)):
+async def delete_workflow(workflow_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
     workflow = await service.get_workflow_or_404(session, workflow_id)
+    before = audit_service.snapshot_model(workflow)
+    await audit_service.record_change(session, request=http_request, action="workflow.deleted", category="workflows", object_type="workflow", object_id=workflow.id, object_name=workflow.name, before=before, after=None, summary=f"Workflow {workflow.name} deleted")
     await session.delete(workflow)
     await session.commit()
     return Response(status_code=204)
 
 
 @router.post("/api/workflows/{workflow_id}/enable", response_model=WorkflowRead)
-async def enable_workflow(workflow_id: UUID, session: AsyncSession = Depends(get_session)):
+async def enable_workflow(workflow_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    existing = await service.get_workflow_or_404(session, workflow_id)
+    before = audit_service.snapshot_model(existing)
     workflow = await service.set_enabled(session, workflow_id, True)
+    await audit_service.record_change(session, request=http_request, action="workflow.enabled", category="workflows", object_type="workflow", object_id=workflow.id, object_name=workflow.name, before=before, after=audit_service.snapshot_model(workflow), summary=f"Workflow {workflow.name} enabled")
     await session.commit()
     return workflow
 
 
 @router.post("/api/workflows/{workflow_id}/disable", response_model=WorkflowRead)
-async def disable_workflow(workflow_id: UUID, session: AsyncSession = Depends(get_session)):
+async def disable_workflow(workflow_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    existing = await service.get_workflow_or_404(session, workflow_id)
+    before = audit_service.snapshot_model(existing)
     workflow = await service.set_enabled(session, workflow_id, False)
+    await audit_service.record_change(session, request=http_request, action="workflow.disabled", category="workflows", object_type="workflow", object_id=workflow.id, object_name=workflow.name, before=before, after=audit_service.snapshot_model(workflow), summary=f"Workflow {workflow.name} disabled")
     await session.commit()
     return workflow
 

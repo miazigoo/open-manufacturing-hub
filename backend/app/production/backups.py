@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import os
 from pathlib import Path
+import tempfile
 from uuid import UUID
 
 from sqlalchemy import select
@@ -70,5 +72,11 @@ async def recent_success_exists(session: AsyncSession, hours: int = 24) -> bool:
 
 
 def ensure_export_dir() -> Path:
-    EXPORT_DIR.mkdir(parents=True, exist_ok=True)
-    return EXPORT_DIR
+    for candidate in (EXPORT_DIR, Path(tempfile.gettempdir()) / "open-manufacturing-hub" / "backups" / "exports"):
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            if os.access(candidate, os.W_OK):
+                return candidate
+        except OSError:
+            continue
+    raise PermissionError("No writable export directory available")

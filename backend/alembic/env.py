@@ -6,6 +6,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.artifacts.models import Artifact  # noqa: F401
+from app.audit.models import AuditEvent  # noqa: F401
 from app.connectors.models import ConnectorInstance  # noqa: F401
 from app.core.config import get_settings
 from app.core.database import Base

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     sync_processing_timeout_seconds: float = 30.0
     queue_lock_seconds: int = 300
     queue_worker_batch_size: int = 10
+    audit_retention_days: int = Field(default=180, validation_alias=AliasChoices("AUDIT_RETENTION_DAYS", "OMH_AUDIT_RETENTION_DAYS"))
     cors_allow_origins: str = Field(
         default="http://localhost:5173,http://127.0.0.1:5173",
         validation_alias=AliasChoices("CORS_ORIGINS", "OMH_CORS_ALLOW_ORIGINS"),

@@ -233,6 +233,22 @@ class IntegrationPackageStatus(StrEnum):
     INCOMPATIBLE = "incompatible"
 
 
+class AuditActorType(StrEnum):
+    USER = "user"
+    SYSTEM = "system"
+    WORKER = "worker"
+    INTEGRATION_ENDPOINT = "integration_endpoint"
+    PACKAGE = "package"
+    UNKNOWN = "unknown"
+
+
+class AuditSeverity(StrEnum):
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    CRITICAL = "critical"
+
+
 class BackupType(StrEnum):
     CONFIG_EXPORT = "config_export"
     DATABASE_DUMP = "database_dump"

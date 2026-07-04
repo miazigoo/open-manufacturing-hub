@@ -466,6 +466,32 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
   .cockpit-health-list article, .cockpit-event-list article { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Audit log */
+.audit-hero { background: radial-gradient(circle at 90% 10%, rgba(245, 188, 83, .16), transparent 34%), linear-gradient(145deg, rgba(24, 36, 38, .96), rgba(15, 22, 24, .98)); }
+.audit-workbench { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(360px, .65fr); gap: 18px; align-items: start; }
+.audit-side-panel { display: grid; gap: 18px; min-width: 0; }
+.audit-table-panel { overflow: hidden; }
+.table-scroll { overflow-x: auto; }
+.audit-table { min-width: 980px; width: 100%; border-collapse: collapse; }
+.audit-table th, .audit-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.audit-table tbody tr { cursor: pointer; transition: background .18s ease, border-color .18s ease; }
+.audit-table tbody tr:hover, .audit-table tbody tr.selected-row { background: rgba(245, 188, 83, .08); }
+.dense-form-grid { grid-template-columns: repeat(5, minmax(150px, 1fr)); }
+.audit-details-panel { display: grid; gap: 16px; }
+.details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.detail-card { padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: rgba(0,0,0,.12); display: grid; gap: 4px; }
+.detail-card span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.detail-card strong { word-break: break-word; }
+.audit-diff-grid { display: grid; gap: 12px; }
+.compact-panel { padding: 14px; box-shadow: none; background: rgba(0,0,0,.1); }
+.audit-diff-row { display: grid; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.compact-json { max-height: 180px; overflow: auto; }
+.three-column-json { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.three-column-json .json-panel { max-height: 360px; overflow: auto; box-shadow: none; white-space: pre-wrap; }
+@media (max-width: 1180px) {
+  .dense-form-grid, .audit-workbench, .three-column-json, .details-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Optional auth package */
 .auth-shell { min-height: 100vh; display: grid; place-items: center; padding: 32px; background: radial-gradient(circle at 18% 12%, rgba(240,179,90,.22), transparent 28%), radial-gradient(circle at 82% 18%, rgba(143,198,180,.24), transparent 30%), linear-gradient(135deg, #151711, #242015 48%, #0f1715); }
 .auth-card { width: min(520px, 100%); border: 1px solid var(--line-strong); background: linear-gradient(145deg, rgba(247,239,218,.1), rgba(0,0,0,.24)); box-shadow: var(--shadow); padding: clamp(24px, 5vw, 42px); display: grid; gap: 18px; position: relative; overflow: hidden; }
