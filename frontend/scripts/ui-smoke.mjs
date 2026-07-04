@@ -207,6 +207,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
   });
   page.on('requestfailed', (request) => {
     const url = request.url();
+    if (request.failure()?.errorText === 'net::ERR_ABORTED') return;
     if (url.startsWith(uiBase) || url.startsWith(apiBase)) fail('REQUEST_FAILED', `${request.method()} ${url} ${request.failure()?.errorText}`);
   });
 

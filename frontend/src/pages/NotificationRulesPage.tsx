@@ -45,8 +45,8 @@ export function NotificationRulesPage() {
   if (error) return <ErrorState error={error} />;
 
   return (
-    <div className="page-stack two-column-page">
-      <section className="panel form-panel">
+    <div className="page-stack notification-page">
+      <section className="panel form-panel notification-create-panel">
         <div className="panel-toolbar"><div><span className="eyebrow">{t('notifications.eyebrow')}</span><h1>{t('notifications.title')}</h1></div></div>
         <form onSubmit={submit} className="stack-form">
           <label className="field-label">{t('connectors.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
@@ -58,7 +58,7 @@ export function NotificationRulesPage() {
           <button className="primary-button" type="submit" disabled={createRule.isPending}>{t('notifications.create')}</button>
         </form>
       </section>
-      <section className="panel">
+      <section className="panel notification-rules-panel">
         <div className="panel-toolbar"><h2>{t('notifications.rules')}</h2></div>
         {rules.data?.length ? rules.data.map((rule) => (
           <article className="rule-card" key={rule.id}>
@@ -69,9 +69,9 @@ export function NotificationRulesPage() {
           </article>
         )) : <EmptyState title={t('notifications.noRules')} detail={t('notifications.noRulesDetail')} />}
       </section>
-      <section className="panel full-span">
+      <section className="panel notification-delivery-panel">
         <div className="panel-toolbar"><h2>{t('notifications.deliveryLog')}</h2></div>
-        {deliveries.data?.length ? <div className="component-list">{deliveries.data.map((delivery) => <div key={delivery.id}><strong>{delivery.target_channel}</strong><span>{delivery.target_address}</span><StatusBadge status={delivery.status} /></div>)}</div> : <EmptyState title={t('notifications.noDeliveries')} detail={t('notifications.noDeliveriesDetail')} />}
+        {deliveries.data?.length ? <div className="component-list notification-delivery-list">{deliveries.data.map((delivery) => <div key={delivery.id}><strong>{delivery.target_channel}</strong><span>{delivery.target_address}</span><StatusBadge status={delivery.status} /></div>)}</div> : <EmptyState title={t('notifications.noDeliveries')} detail={t('notifications.noDeliveriesDetail')} />}
       </section>
     </div>
   );

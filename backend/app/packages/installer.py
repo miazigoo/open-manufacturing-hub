@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import IntegrationPackageStatus
 from app.core.errors import BadRequestError, NotFoundError
 from app.packages.compatibility import validate_compatibility
+from app.packages.errors import PackageNotInstallableError
 from app.packages.models import InstalledPackage
 from app.packages.registry import PackageRegistry, package_registry
 from app.packages.runtime import delete_package_capabilities, sync_package_capabilities
@@ -20,6 +21,9 @@ class PackageInstaller:
 
     async def install_package(self, session: AsyncSession, package_id: str, *, install_demo_data: bool = False) -> tuple[InstalledPackage, list[dict[str, Any]]]:
         manifest = self.registry.get(package_id)
+        if not manifest.installable:
+            message = manifest.reason_unavailable or f"{manifest.name} is {manifest.status.replace('_', ' ')} and is not installable yet."
+            raise PackageNotInstallableError(package_id, manifest.status, message)
         log = [_log("load_manifest", "ok", f"Loaded {manifest.name} {manifest.version}")]
         compatibility_errors = validate_compatibility(manifest)
         dependency_errors = await validate_dependencies(session, manifest)

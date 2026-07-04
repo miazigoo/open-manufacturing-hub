@@ -27,12 +27,28 @@ async def test_package_registry_has_builtin_boundaries():
 async def test_package_installer_lifecycle_navigation_and_plugin_store(client):
     available = await client.get("/api/packages/available")
     assert available.status_code == 200, available.text
-    assert {item["manifest"]["package_id"] for item in available.json()} >= {"omh-package-onec", "omh-package-printer"}
+    assert {item["manifest"]["package_id"] for item in available.json()} >= {"omh-package-onec", "omh-package-printer", "omh-package-auth", "omh-package-secrets", "omh-package-sap"}
+    sap_available = next(item for item in available.json() if item["manifest"]["package_id"] == "omh-package-sap")
+    assert sap_available["status"] == "coming_soon"
+    assert sap_available["manifest"]["installable"] is False
+    assert "SAP OData connector" in sap_available["manifest"]["planned_capabilities"]
 
     store = await client.get("/api/plugin-store/catalog")
     assert store.status_code == 200, store.text
     onec_store = next(item for item in store.json() if item["package_id"] == "omh-package-onec")
     assert onec_store["installed"] is False
+    sap_store = next(item for item in store.json() if item["package_id"] == "omh-package-sap")
+    assert sap_store["status"] == "coming_soon"
+    assert sap_store["installable"] is False
+
+    sap_details = await client.get("/api/packages/omh-package-sap")
+    assert sap_details.status_code == 200, sap_details.text
+    assert sap_details.json()["manifest"]["expected_version"] == "0.2.0"
+
+    blocked_install = await client.post("/api/packages/omh-package-sap/install", json={"install_demo_data": False})
+    assert blocked_install.status_code == 400
+    assert blocked_install.json()["error"] == "PACKAGE_NOT_INSTALLABLE"
+    assert blocked_install.json()["package_id"] == "omh-package-sap"
 
     installed = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": True})
     assert installed.status_code == 200, installed.text

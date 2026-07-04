@@ -11,6 +11,13 @@ export interface PackageManifest {
   core_version_max: string | null;
   category: string;
   capabilities: string[];
+  status: string;
+  installable: boolean;
+  expected_version: string | null;
+  expected_date: string | null;
+  planned_capabilities: string[];
+  replacement_package_id: string | null;
+  reason_unavailable: string | null;
   backend: Record<string, unknown>;
   frontend: { pages?: Array<{ route: string; title: string; component?: string | null }>; navigation?: Array<{ group: string; title: string; route: string }> };
   presets: Record<string, unknown>;
@@ -47,7 +54,23 @@ export interface InstalledPackage {
 }
 
 export interface PackageNavigationItem { package_id: string; group: string; title: string; route: string; enabled: boolean }
-export interface PluginStoreItem { package_id: string; name: string; version: string; official: boolean; installed: boolean; enabled: boolean; category: string; description: string }
+export interface PluginStoreItem {
+  package_id: string;
+  name: string;
+  version: string;
+  official: boolean;
+  installed: boolean;
+  enabled: boolean;
+  category: string;
+  description: string;
+  status: string;
+  installable: boolean;
+  expected_version: string | null;
+  expected_date: string | null;
+  planned_capabilities: string[];
+  replacement_package_id: string | null;
+  reason_unavailable: string | null;
+}
 export interface PluginStoreCategory { category: string; count: number }
 export interface PackageDocs { package_id: string; readme: string; quick_start: string | null }
 export interface PackageCapability { id: string | null; package_id: string; capability_type: string; capability_code: string; enabled: boolean; metadata_json: Record<string, unknown>; created_at: string; updated_at: string | null }

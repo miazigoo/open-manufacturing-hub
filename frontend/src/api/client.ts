@@ -5,10 +5,17 @@ export class ApiError extends Error {
   detail: unknown;
 
   constructor(status: number, detail: unknown) {
-    super(typeof detail === 'string' ? detail : `API request failed with ${status}`);
+    super(errorMessage(status, detail));
     this.status = status;
     this.detail = detail;
   }
+}
+
+function errorMessage(status: number, detail: unknown): string {
+  if (typeof detail === 'string') return detail;
+  if (detail && typeof detail === 'object' && 'message' in detail && typeof (detail as { message?: unknown }).message === 'string') return (detail as { message: string }).message;
+  if (detail && typeof detail === 'object' && 'error' in detail && typeof (detail as { error?: unknown }).error === 'string') return (detail as { error: string }).error;
+  return `API request failed with ${status}`;
 }
 
 export type { Artifact, ArtifactDiff, EventRun, EventStatus, EventStep, EventSummary, EventTimeline, ExternalErrorSummary, RunMode, RunStatus, StepStatus } from './types';

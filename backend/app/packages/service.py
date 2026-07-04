@@ -11,11 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import IntegrationPackageStatus
 from app.core.errors import NotFoundError
 from app.packages.compatibility import core_version, validate_compatibility
+from app.packages.errors import PackageNotInstallableError
 from app.packages.installer import PackageInstaller, install_demo_data_for_package, validate_dependencies
 from app.packages.manifest import PackageManifest
 from app.packages.registry import package_registry
 from app.packages.runtime import capability_dict, list_runtime_capabilities, manifest_capabilities, sync_all_installed_capabilities
 from app.packages import repository
+from app.plugin_store.catalog import catalog_by_package_id, load_catalog
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +25,8 @@ logger = logging.getLogger(__name__)
 async def available_packages(session: AsyncSession) -> list[dict[str, Any]]:
     installed = {item.package_id: item for item in await repository.list_installed(session)}
     items = []
-    for manifest in package_registry.list_packages():
-        package = installed.get(manifest.package_id)
-        errors = validate_compatibility(manifest)
-        dependency_errors = await validate_dependencies(session, manifest)
-        dependency_warnings = await _dependency_warnings(session, manifest)
-        items.append({"manifest": manifest, "installed": package is not None, "enabled": bool(package and package.enabled), "status": package.status if package else None, "compatible": not errors and not dependency_errors, "compatibility_errors": errors, "dependency_errors": dependency_errors, "dependency_warnings": dependency_warnings, "upgrade_available": _upgrade_available(package.version, manifest.version) if package else False})
+    for manifest in _catalog_manifests():
+        items.append(await _package_available_item(session, manifest, installed))
     return items
 
 
@@ -37,14 +35,15 @@ async def installed_packages(session: AsyncSession):
 
 
 async def package_details(session: AsyncSession, package_id: str) -> dict[str, Any]:
-    manifest = package_registry.get(package_id)
+    manifest = _manifest_for_package(package_id)
     installed = await repository.get_installed(session, package_id)
-    errors = validate_compatibility(manifest)
-    dependency_errors = await validate_dependencies(session, manifest)
-    return {"manifest": manifest, "installed": installed is not None, "enabled": bool(installed and installed.enabled), "status": installed.status if installed else None, "compatible": not errors and not dependency_errors, "compatibility_errors": errors, "dependency_errors": dependency_errors, "dependency_warnings": await _dependency_warnings(session, manifest), "upgrade_available": _upgrade_available(installed.version, manifest.version) if installed else False}
+    return await _package_available_item(session, manifest, {package_id: installed} if installed else {})
 
 
 async def install_package(session: AsyncSession, package_id: str, *, install_demo_data: bool = False):
+    manifest = _manifest_for_package(package_id)
+    if not manifest.installable:
+        raise PackageNotInstallableError(package_id, manifest.status, _not_installable_message(manifest))
     return await PackageInstaller().install_package(session, package_id, install_demo_data=install_demo_data)
 
 
@@ -83,7 +82,7 @@ async def package_navigation(session: AsyncSession) -> list[dict[str, Any]]:
 
 
 async def package_docs(session: AsyncSession, package_id: str) -> dict[str, Any]:
-    manifest = package_registry.get(package_id)
+    manifest = _manifest_for_package(package_id)
     readme = _load_doc_ref(manifest.docs.readme) or f"# {manifest.name}\n\n{manifest.description}"
     quick_start = _load_doc_ref(manifest.docs.quick_start)
     return {"package_id": package_id, "readme": readme, "quick_start": quick_start}
@@ -116,7 +115,7 @@ async def package_capabilities(session: AsyncSession, package_id: str | None = N
     if package_id:
         package = await repository.get_installed(session, package_id)
         if package is None:
-            manifest = package_registry.get(package_id)
+            manifest = _manifest_for_package(package_id)
             return [
                 {
                     "id": None,
@@ -140,11 +139,13 @@ async def package_capabilities(session: AsyncSession, package_id: str | None = N
 async def compatibility_report(session: AsyncSession) -> dict[str, Any]:
     installed = {item.package_id: item for item in await repository.list_installed(session)}
     packages: list[dict[str, Any]] = []
-    for manifest in package_registry.list_packages():
+    for manifest in _catalog_manifests():
         package = installed.get(manifest.package_id)
-        compatibility_errors = validate_compatibility(manifest)
-        dependency_errors = await validate_dependencies(session, manifest)
+        compatibility_errors = validate_compatibility(manifest) if manifest.installable else []
+        dependency_errors = await validate_dependencies(session, manifest) if manifest.installable else []
         warnings = await _dependency_warnings(session, manifest)
+        if not manifest.installable and manifest.reason_unavailable:
+            warnings.append(manifest.reason_unavailable)
         errors = compatibility_errors + dependency_errors
         packages.append(
             {
@@ -152,7 +153,7 @@ async def compatibility_report(session: AsyncSession) -> dict[str, Any]:
                 "name": manifest.name,
                 "installed": package is not None,
                 "enabled": bool(package and package.enabled),
-                "status": package.status.value if package else "available",
+                "status": package.status.value if package else manifest.status,
                 "compatible": not errors,
                 "upgrade_available": _upgrade_available(package.version, manifest.version) if package else False,
                 "errors": errors,
@@ -163,7 +164,7 @@ async def compatibility_report(session: AsyncSession) -> dict[str, Any]:
 
 
 async def check_upgrade(session: AsyncSession, package_id: str) -> dict[str, Any]:
-    manifest = package_registry.get(package_id)
+    manifest = _manifest_for_package(package_id)
     package = await repository.get_installed(session, package_id)
     return {"package_id": package_id, "installed_version": package.version if package else None, "available_version": manifest.version, "upgrade_available": _upgrade_available(package.version, manifest.version) if package else False, "status": "installed" if package else "not_installed"}
 
@@ -179,6 +180,104 @@ async def mark_upgraded(session: AsyncSession, package_id: str):
     await session.flush()
     await sync_all_installed_capabilities(session)
     return await check_upgrade(session, package_id)
+
+
+async def _package_available_item(session: AsyncSession, manifest: PackageManifest, installed: dict[str, Any]) -> dict[str, Any]:
+    package = installed.get(manifest.package_id)
+    compatibility_errors = validate_compatibility(manifest) if manifest.installable else []
+    dependency_errors = await validate_dependencies(session, manifest) if manifest.installable else []
+    dependency_warnings = await _dependency_warnings(session, manifest) if manifest.installable else []
+    if not manifest.installable and manifest.reason_unavailable:
+        dependency_warnings.append(manifest.reason_unavailable)
+    return {
+        "manifest": manifest,
+        "installed": package is not None,
+        "enabled": bool(package and package.enabled),
+        "status": package.status.value if package else manifest.status,
+        "compatible": not compatibility_errors and not dependency_errors,
+        "compatibility_errors": compatibility_errors,
+        "dependency_errors": dependency_errors,
+        "dependency_warnings": dependency_warnings,
+        "upgrade_available": _upgrade_available(package.version, manifest.version) if package else False,
+    }
+
+
+def _catalog_manifests() -> list[PackageManifest]:
+    catalog = load_catalog()
+    seen: set[str] = set()
+    manifests: list[PackageManifest] = []
+    for item in catalog:
+        package_id = str(item["package_id"])
+        seen.add(package_id)
+        try:
+            manifest = package_registry.get(package_id)
+            manifests.append(_overlay_catalog_fields(manifest, item))
+        except NotFoundError:
+            manifests.append(_manifest_from_catalog(item))
+    for manifest in package_registry.list_packages():
+        if manifest.package_id not in seen:
+            manifests.append(manifest)
+    return manifests
+
+
+def _manifest_for_package(package_id: str) -> PackageManifest:
+    catalog_item = catalog_by_package_id().get(package_id)
+    try:
+        manifest = package_registry.get(package_id)
+        return _overlay_catalog_fields(manifest, catalog_item) if catalog_item else manifest
+    except NotFoundError:
+        if catalog_item:
+            return _manifest_from_catalog(catalog_item)
+        raise
+
+
+def _overlay_catalog_fields(manifest: PackageManifest, item: dict[str, Any] | None) -> PackageManifest:
+    if not item:
+        return manifest
+    updates = {
+        "status": item.get("status", manifest.status),
+        "installable": item.get("installable", manifest.installable),
+        "expected_version": item.get("expected_version", manifest.expected_version),
+        "expected_date": item.get("expected_date", manifest.expected_date),
+        "planned_capabilities": item.get("planned_capabilities", manifest.planned_capabilities),
+        "replacement_package_id": item.get("replacement_package_id", manifest.replacement_package_id),
+        "reason_unavailable": item.get("reason_unavailable", manifest.reason_unavailable),
+    }
+    if item.get("description"):
+        updates["description"] = item["description"]
+    if item.get("category"):
+        updates["category"] = item["category"]
+    return manifest.model_copy(update=updates)
+
+
+def _manifest_from_catalog(item: dict[str, Any]) -> PackageManifest:
+    planned_capabilities = list(item.get("planned_capabilities") or [])
+    return PackageManifest(
+        package_id=str(item["package_id"]),
+        name=str(item["name"]),
+        version=str(item.get("version") or item.get("expected_version") or "0.1.0"),
+        description=str(item.get("description") or ""),
+        publisher=str(item.get("publisher") or "OMH"),
+        official=bool(item.get("official", False)),
+        category=str(item.get("category") or "integration"),
+        capabilities=list(item.get("capabilities") or planned_capabilities),
+        status=str(item.get("status") or "available"),
+        installable=bool(item.get("installable", True)),
+        expected_version=item.get("expected_version"),
+        expected_date=item.get("expected_date"),
+        planned_capabilities=planned_capabilities,
+        replacement_package_id=item.get("replacement_package_id"),
+        reason_unavailable=item.get("reason_unavailable"),
+    )
+
+
+def _not_installable_message(manifest: PackageManifest) -> str:
+    if manifest.reason_unavailable:
+        return manifest.reason_unavailable
+    status = manifest.status.replace("_", " ")
+    if manifest.expected_date:
+        return f"{manifest.name} is {status}; expected {manifest.expected_date}."
+    return f"{manifest.name} is {status} and is not installable yet."
 
 
 def route_inventory(routes: list[Any]) -> list[dict[str, Any]]:

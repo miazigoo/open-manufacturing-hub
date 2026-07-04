@@ -52,6 +52,13 @@ class PackageManifest(BaseModel):
     core_version_max: str | None = "0.2.x"
     category: str = "integration"
     capabilities: list[str] = Field(default_factory=list)
+    status: str = "available"
+    installable: bool = True
+    expected_version: str | None = None
+    expected_date: str | None = None
+    planned_capabilities: list[str] = Field(default_factory=list)
+    replacement_package_id: str | None = None
+    reason_unavailable: str | None = None
     backend: PackageBackendManifest = Field(default_factory=PackageBackendManifest)
     frontend: PackageFrontendManifest = Field(default_factory=PackageFrontendManifest)
     presets: dict[str, Any] = Field(default_factory=dict)

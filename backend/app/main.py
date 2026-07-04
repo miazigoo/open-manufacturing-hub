@@ -37,6 +37,7 @@ from app.onec_templates.router import router as onec_templates_router
 from app.operation_templates.router import router as operation_templates_router
 from app.odata_explorer.router import router as odata_explorer_router
 from app.packages.router import router as packages_router
+from app.packages.errors import PackageNotInstallableError
 from app.packages.runtime import PackageAccessError, require_package_enabled
 from app.plugin_store.router import router as plugin_store_router
 from app.polling.router import router as polling_router
@@ -93,6 +94,11 @@ async def bad_request_handler(_: Request, exc: BadRequestError):
 @app.exception_handler(PackageAccessError)
 async def package_access_handler(_: Request, exc: PackageAccessError):
     return JSONResponse(status_code=exc.status_code, content={"error": exc.error, "package_id": exc.package_id, "message": exc.message})
+
+
+@app.exception_handler(PackageNotInstallableError)
+async def package_not_installable_handler(_: Request, exc: PackageNotInstallableError):
+    return JSONResponse(status_code=400, content={"error": "PACKAGE_NOT_INSTALLABLE", "package_id": exc.package_id, "status": exc.status, "message": exc.message})
 
 
 app.include_router(events_router)

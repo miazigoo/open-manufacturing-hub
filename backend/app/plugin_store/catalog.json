@@ -5,7 +5,10 @@
     "version": "0.1.0",
     "official": true,
     "category": "ERP",
-    "description": "1C OData/XML/HTTP integration tools"
+    "description": "1C OData/XML/HTTP integration cockpit, routing tools and production presets.",
+    "status": "available",
+    "installable": true,
+    "planned_capabilities": ["OData explorer", "XML tools", "1C cockpit", "HTTP service routing", "Visual flow presets"]
   },
   {
     "package_id": "omh-package-printer",
@@ -13,7 +16,10 @@
     "version": "0.1.0",
     "official": true,
     "category": "Hardware",
-    "description": "ZPL printer integration and production print operations"
+    "description": "ZPL printer integration, print jobs and production print timeline tooling.",
+    "status": "available",
+    "installable": true,
+    "planned_capabilities": ["ZPL connector", "Print jobs", "Printer health checks", "Production print scenarios"]
   },
   {
     "package_id": "omh-package-auth",
@@ -21,38 +27,104 @@
     "version": "0.1.0",
     "official": true,
     "category": "Security",
-    "description": "Optional login, users, sessions and recovery keys for OMH"
+    "description": "Optional login, users, sessions and recovery keys for OMH.",
+    "status": "available",
+    "installable": true,
+    "planned_capabilities": ["Local users", "Session cookies", "Recovery keys", "Bootstrap registration"]
+  },
+  {
+    "package_id": "omh-package-secrets",
+    "name": "Secrets Store Package",
+    "version": "0.1.0",
+    "official": true,
+    "category": "Security",
+    "description": "Secure configuration references, masked values and rotation tooling.",
+    "status": "available",
+    "installable": true,
+    "planned_capabilities": ["Secret references", "Masked reads", "Credential rotation", "Production checks"]
   },
   {
     "package_id": "omh-package-mqtt",
     "name": "MQTT Package",
     "version": "0.1.0",
+    "expected_version": "0.2.0",
+    "expected_date": "2026-08-15",
     "official": false,
     "category": "Messaging",
-    "description": "MQTT integration package placeholder"
+    "description": "MQTT broker integration for telemetry, device events and shop-floor messages.",
+    "status": "in_development",
+    "installable": false,
+    "planned_capabilities": ["MQTT connector", "Topic subscriptions", "QoS configuration", "Telemetry event mapping"],
+    "reason_unavailable": "MQTT package is in development; install will be enabled after connector contract tests are complete."
+  },
+  {
+    "package_id": "omh-package-rabbitmq",
+    "name": "RabbitMQ Package",
+    "version": "0.1.0",
+    "expected_version": "0.2.0",
+    "expected_date": "2026-09-05",
+    "official": false,
+    "category": "Messaging",
+    "description": "AMQP queues and exchange integration for enterprise message routing.",
+    "status": "coming_soon",
+    "installable": false,
+    "planned_capabilities": ["AMQP connector", "Queue bindings", "Dead-letter exchange mapping", "Consumer health checks"],
+    "reason_unavailable": "RabbitMQ package is planned but not released yet."
   },
   {
     "package_id": "omh-package-shopify",
     "name": "Shopify Package",
     "version": "0.1.0",
+    "expected_version": "0.2.0",
+    "expected_date": "2026-09-30",
     "official": false,
     "category": "Commerce",
-    "description": "Shopify order and fulfillment integration placeholder"
+    "description": "Shopify order, fulfillment and inventory integration.",
+    "status": "coming_soon",
+    "installable": false,
+    "planned_capabilities": ["Order import", "Fulfillment updates", "Inventory sync", "Webhook verification"],
+    "reason_unavailable": "Shopify package is planned for a later marketplace release."
+  },
+  {
+    "package_id": "omh-package-woocommerce",
+    "name": "WooCommerce Package",
+    "version": "0.1.0",
+    "expected_version": "0.2.0",
+    "expected_date": "2026-10-15",
+    "official": false,
+    "category": "Commerce",
+    "description": "WooCommerce order and stock synchronization package.",
+    "status": "coming_soon",
+    "installable": false,
+    "planned_capabilities": ["Order import", "Stock sync", "Webhook routing", "Customer mapping"],
+    "reason_unavailable": "WooCommerce package is planned but not ready for installation."
   },
   {
     "package_id": "omh-package-odoo",
     "name": "Odoo Package",
     "version": "0.1.0",
+    "expected_version": "0.2.0",
+    "expected_date": "2026-09-20",
     "official": false,
     "category": "ERP",
-    "description": "Odoo ERP integration package placeholder"
+    "description": "Odoo ERP connector for products, stock moves and manufacturing orders.",
+    "status": "coming_soon",
+    "installable": false,
+    "planned_capabilities": ["Odoo JSON-RPC connector", "Product sync", "Stock moves", "Manufacturing orders"],
+    "reason_unavailable": "Odoo package is in roadmap discovery and is not installable yet."
   },
   {
     "package_id": "omh-package-sap",
     "name": "SAP Package",
     "version": "0.1.0",
+    "expected_version": "0.2.0",
+    "expected_date": "2026-10-01",
     "official": false,
     "category": "ERP",
-    "description": "SAP integration package placeholder"
+    "description": "SAP integration package for enterprise master data and production documents.",
+    "status": "coming_soon",
+    "installable": false,
+    "planned_capabilities": ["SAP OData connector", "IDoc routing", "Material master sync", "Production order exchange"],
+    "reason_unavailable": "SAP package is coming soon; installation will be enabled after adapter certification."
   }
 ]

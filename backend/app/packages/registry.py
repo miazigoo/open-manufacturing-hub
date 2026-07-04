@@ -31,10 +31,12 @@ def register_builtin_packages() -> None:
     from app.packages_onec.manifest import manifest as onec_manifest
     from app.packages_printer.manifest import manifest as printer_manifest
     from app.packages_auth.manifest import manifest as auth_manifest
+    from app.packages_secrets.manifest import manifest as secrets_manifest
 
     package_registry.register_manifest(onec_manifest)
     package_registry.register_manifest(printer_manifest)
     package_registry.register_manifest(auth_manifest)
+    package_registry.register_manifest(secrets_manifest)
 
 
 register_builtin_packages()

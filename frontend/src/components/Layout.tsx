@@ -10,6 +10,9 @@ import { languageMeta } from '../i18n/dictionary';
 import type { Language } from '../i18n/dictionary';
 
 const languages: Language[] = ['ru', 'en', 'zh'];
+type UIMode = 'simple' | 'advanced' | 'developer';
+const uiModes: UIMode[] = ['simple', 'advanced', 'developer'];
+const uiModeStorageKey = 'omh.ui.mode.v1';
 
 const fallbackNavigation: UINavigationItem[] = [
   { group: 'Operate', title: 'Dashboard', route: '/', package_id: null, enabled: true, advanced: false },
@@ -31,6 +34,7 @@ const groupKey: Record<string, string> = {
   Packages: 'nav.sectionPackages',
   Settings: 'nav.sectionSettings',
   Advanced: 'nav.sectionAdvanced',
+  Developer: 'nav.sectionDeveloper',
 };
 
 const routeKey: Record<string, string> = {
@@ -74,18 +78,28 @@ const routeKey: Record<string, string> = {
   '/auth-settings': 'nav.authSettings',
 };
 
-const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Settings', 'Advanced'];
+const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Settings', 'Advanced', 'Developer'];
+const modeRank: Record<UIMode, number> = { simple: 0, advanced: 1, developer: 2 };
+const simpleRoutes = new Set(['/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/test-console', '/packages', '/plugin-store']);
+const developerRoutes = new Set(['/workflows', '/execution/steps']);
 
 export function Layout() {
   const t = useT();
   const navigation = useQuery({ queryKey: ['ui-navigation'], queryFn: uiApi.navigation, retry: false });
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(['Operate', 'Build', 'Data Tools', 'Packages']));
+  const [uiMode, setUiMode] = useState<UIMode>(() => {
+    const saved = localStorage.getItem(uiModeStorageKey);
+    return saved === 'simple' || saved === 'advanced' || saved === 'developer' ? saved : 'advanced';
+  });
   const items = navigation.data?.length ? navigation.data : fallbackNavigation;
   const sections = useMemo(() => {
     const grouped = new Map<string, UINavigationItem[]>();
-    items.filter((item) => item.enabled).forEach((item) => grouped.set(item.group, [...(grouped.get(item.group) ?? []), item]));
+    items.filter((item) => item.enabled && modeAllows(item, uiMode)).forEach((item) => {
+      const group = developerRoutes.has(item.route) ? 'Developer' : item.group;
+      grouped.set(group, [...(grouped.get(group) ?? []), item]);
+    });
     return Array.from(grouped.entries()).sort(([left], [right]) => (groupOrder.indexOf(left) === -1 ? 99 : groupOrder.indexOf(left)) - (groupOrder.indexOf(right) === -1 ? 99 : groupOrder.indexOf(right)));
-  }, [items]);
+  }, [items, uiMode]);
 
   function toggle(group: string) {
     const next = new Set(expanded);
@@ -105,6 +119,24 @@ export function Layout() {
           </div>
         </div>
         <nav className="main-nav compact-main-nav" aria-label={t('nav.primary')}>
+          <div className="ui-mode-switch" aria-label="UI mode">
+            <span>{t('nav.uiMode')}</span>
+            <div>
+              {uiModes.map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={uiMode === mode ? 'active' : ''}
+                  onClick={() => {
+                    localStorage.setItem(uiModeStorageKey, mode);
+                    setUiMode(mode);
+                  }}
+                >
+                  {t(`nav.mode.${mode}`)}
+                </button>
+              ))}
+            </div>
+          </div>
           {sections.map(([group, groupItems]) => {
             const isExpanded = expanded.has(group);
             const titleKey = groupKey[group];
@@ -142,6 +174,12 @@ export function Layout() {
       </main>
     </div>
   );
+}
+
+function modeAllows(item: UINavigationItem, mode: UIMode) {
+  if (simpleRoutes.has(item.route)) return true;
+  const minimumMode: UIMode = developerRoutes.has(item.route) ? 'developer' : item.advanced ? 'advanced' : 'simple';
+  return modeRank[mode] >= modeRank[minimumMode];
 }
 
 function TopBar() {

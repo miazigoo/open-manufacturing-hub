@@ -6,7 +6,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.enums import IntegrationPackageStatus
 from app.packages.manifest import PackageManifest
 
 
@@ -15,7 +14,7 @@ class InstalledPackageRead(BaseModel):
     package_id: str
     name: str
     version: str
-    status: IntegrationPackageStatus
+    status: str
     official: bool
     enabled: bool
     installed_at: datetime
@@ -30,7 +29,7 @@ class PackageAvailableRead(BaseModel):
     manifest: PackageManifest
     installed: bool = False
     enabled: bool = False
-    status: IntegrationPackageStatus | None = None
+    status: str | None = None
     compatible: bool = True
     compatibility_errors: list[str] = Field(default_factory=list)
     dependency_errors: list[str] = Field(default_factory=list)

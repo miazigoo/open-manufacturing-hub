@@ -5070,7 +5070,8 @@
             "type": "string"
           },
           "status": {
-            "$ref": "#/components/schemas/IntegrationPackageStatus"
+            "title": "Status",
+            "type": "string"
           },
           "updated_at": {
             "anyOf": [
@@ -6316,18 +6317,6 @@
           "archived"
         ],
         "title": "IntegrationMessageStatus",
-        "type": "string"
-      },
-      "IntegrationPackageStatus": {
-        "enum": [
-          "installed",
-          "enabled",
-          "disabled",
-          "failed",
-          "upgrade_available",
-          "incompatible"
-        ],
-        "title": "IntegrationPackageStatus",
         "type": "string"
       },
       "IntegrationRouteCreate": {
@@ -9763,12 +9752,13 @@
           "status": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/IntegrationPackageStatus"
+                "type": "string"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Status"
           },
           "upgrade_available": {
             "default": false,
@@ -10205,6 +10195,28 @@
           "docs": {
             "$ref": "#/components/schemas/PackageDocsManifest"
           },
+          "expected_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Date"
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
+          },
           "extension_points": {
             "items": {
               "type": "string"
@@ -10214,6 +10226,11 @@
           },
           "frontend": {
             "$ref": "#/components/schemas/PackageFrontendManifest"
+          },
+          "installable": {
+            "default": true,
+            "title": "Installable",
+            "type": "boolean"
           },
           "name": {
             "title": "Name",
@@ -10228,6 +10245,13 @@
             "title": "Package Id",
             "type": "string"
           },
+          "planned_capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Planned Capabilities",
+            "type": "array"
+          },
           "presets": {
             "additionalProperties": true,
             "title": "Presets",
@@ -10236,6 +10260,33 @@
           "publisher": {
             "default": "OMH",
             "title": "Publisher",
+            "type": "string"
+          },
+          "reason_unavailable": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Unavailable"
+          },
+          "replacement_package_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement Package Id"
+          },
+          "status": {
+            "default": "available",
+            "title": "Status",
             "type": "string"
           },
           "version": {
@@ -10474,6 +10525,33 @@
             "title": "Enabled",
             "type": "boolean"
           },
+          "expected_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Date"
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
+          },
+          "installable": {
+            "default": true,
+            "title": "Installable",
+            "type": "boolean"
+          },
           "installed": {
             "default": false,
             "title": "Installed",
@@ -10490,6 +10568,40 @@
           },
           "package_id": {
             "title": "Package Id",
+            "type": "string"
+          },
+          "planned_capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Planned Capabilities",
+            "type": "array"
+          },
+          "reason_unavailable": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Unavailable"
+          },
+          "replacement_package_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement Package Id"
+          },
+          "status": {
+            "default": "available",
+            "title": "Status",
             "type": "string"
           },
           "version": {
