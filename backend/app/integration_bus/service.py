@@ -15,6 +15,7 @@ from app.core.enums import IntegrationMessageDirection, IntegrationMessageStatus
 from app.core.errors import BadRequestError, NotFoundError
 from app.events.models import EventRun, IntegrationEvent
 from app.execution.engine import ExecutionEngine
+from app.enterprise_runtime.service import ensure_queue_for_event
 from app.integration_bus import repository
 from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute, ODataLookupTemplate
 from app.integration_bus.response_modes import ACCEPTED_EVENT, ACCEPTED_MESSAGE, PROXY_RESPONSE, SYNC_RESPONSE
@@ -180,6 +181,15 @@ async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, 
 
     run = await ExecutionEngine(session).execute_event(event.id, mode=RunMode.NORMAL, initial_payload=payload, workflow_id=workflow_id)
     await _update_message_after_run(session, message, event.status.value if hasattr(event.status, "value") else str(event.status))
+    await ensure_queue_for_event(
+        session,
+        event_id=event.id,
+        message_id=message.id if message else None,
+        business_object=event.entity_type,
+        operation=(route.operation if route and route.operation else parsed.get("operation") or endpoint.default_event_type),
+        workflow_id=workflow_id,
+        payload=payload,
+    )
     response, external_error = await _response_context_from_run(session, run)
     return _format_response(endpoint, event, message, route, response, external_error)
 

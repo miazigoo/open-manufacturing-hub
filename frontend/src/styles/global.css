@@ -242,6 +242,13 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .print-log-row span { color: var(--muted); font-size: 12px; }
 .embedded-table { box-shadow: none; background: rgba(0,0,0,.12); padding: 0; overflow-x: auto; }
 .embedded-table table { min-width: 760px; }
+.enterprise-hero { background: linear-gradient(135deg, rgba(143,198,180,.12), rgba(240,179,90,.08), rgba(114,167,255,.07)); }
+.runtime-grid { display: grid; grid-template-columns: minmax(320px, .75fr) minmax(0, 1.25fr); gap: 18px; align-items: start; }
+.runtime-metrics { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.enterprise-runtime-page .card-grid .panel { min-height: 220px; }
+@media (max-width: 1180px) {
+  .runtime-grid, .runtime-metrics { grid-template-columns: minmax(0, 1fr); }
+}
 .mapping-hero p { max-width: 760px; margin-top: 12px; }
 .mapping-editor-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
 .mapping-list-panel { position: sticky; top: 24px; }

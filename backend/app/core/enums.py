@@ -163,3 +163,31 @@ class IntegrationMessageStatus(StrEnum):
     FAILED = "failed"
     RETRY_WAITING = "retry_waiting"
     ARCHIVED = "archived"
+
+
+class EnterpriseQueueStatus(StrEnum):
+    WAITING = "waiting"
+    PROCESSING = "processing"
+    RETRY_WAITING = "retry_waiting"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    DLQ = "dlq"
+    CANCELLED = "cancelled"
+
+
+class ResolverType(StrEnum):
+    ODATA = "odata"
+    REST = "rest"
+    CACHE = "cache"
+
+
+class BusinessRuleStatus(StrEnum):
+    ENABLED = "enabled"
+    DISABLED = "disabled"
+
+
+class ODataCacheStatus(StrEnum):
+    HIT = "hit"
+    MISS = "miss"
+    STALE = "stale"
+    INVALIDATED = "invalidated"

@@ -5,6 +5,15 @@ import { DashboardPage } from './pages/DashboardPage';
 import { EventJournalPage } from './pages/EventJournalPage';
 import { EventTimelinePage } from './pages/EventTimelinePage';
 import { ExecutionStepsPage } from './pages/ExecutionStepsPage';
+import {
+  BusinessObjectsPage,
+  BusinessRulesPage,
+  DeadLetterQueuePage,
+  IntegrationQueuePage,
+  ResolversPage,
+  TransactionMonitorPage,
+  TransformationLibraryPage,
+} from './pages/EnterpriseRuntimePages';
 import { HealthPage } from './pages/HealthPage';
 import { IncidentDetailsPage } from './pages/IncidentDetailsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
@@ -47,6 +56,13 @@ export function App() {
         <Route path="test-cases" element={<SavedTestCasesPage />} />
         <Route path="onec-quick-setup" element={<OneCQuickSetupPage />} />
         <Route path="execution/steps" element={<ExecutionStepsPage />} />
+        <Route path="runtime/queue" element={<IntegrationQueuePage />} />
+        <Route path="runtime/dlq" element={<DeadLetterQueuePage />} />
+        <Route path="runtime/monitor" element={<TransactionMonitorPage />} />
+        <Route path="runtime/business-objects" element={<BusinessObjectsPage />} />
+        <Route path="runtime/resolvers" element={<ResolversPage />} />
+        <Route path="runtime/transforms" element={<TransformationLibraryPage />} />
+        <Route path="runtime/business-rules" element={<BusinessRulesPage />} />
         <Route path="workflows" element={<WorkflowsPage />} />
         <Route path="pipelines/:workflowId/edit" element={<PipelineEditorPage />} />
         <Route path="mappings" element={<MappingEditorPage />} />
