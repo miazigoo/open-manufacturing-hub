@@ -12,6 +12,7 @@ import { MaintenancePage } from './pages/MaintenancePage';
 import { MappingEditorPage } from './pages/MappingEditorPage';
 import { NotificationRulesPage } from './pages/NotificationRulesPage';
 import { OneCScenariosPage } from './pages/OneCScenariosPage';
+import { OneCWorkbenchPage } from './pages/OneCWorkbenchPage';
 import { PollingJobsPage } from './pages/PollingJobsPage';
 import { PrintingPage } from './pages/PrintingPage';
 import { RetentionPage } from './pages/RetentionPage';
@@ -34,6 +35,7 @@ export function App() {
         <Route path="polling" element={<PollingJobsPage />} />
         <Route path="printing" element={<PrintingPage />} />
         <Route path="onec-scenarios" element={<OneCScenariosPage />} />
+        <Route path="onec-workbench" element={<OneCWorkbenchPage />} />
         <Route path="notifications" element={<NotificationRulesPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="retention" element={<RetentionPage />} />

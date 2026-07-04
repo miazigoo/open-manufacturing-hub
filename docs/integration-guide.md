@@ -252,6 +252,63 @@ Recommended 1C config shape:
 
 Move passwords to encrypted secret storage before production. The current connector masks secrets in API responses, but config storage is not a vault.
 
+## 1C Workbench: XML And OData
+
+Use the 1C Workbench when OMH must act as a controlled bridge between 1C systems that cannot call each other directly.
+
+Install reusable operation templates and workflow presets:
+
+```bash
+curl -sS -X POST "$API/api/operation-templates/install-presets" | jq
+curl -sS -X POST "$API/api/onec-workbench/install-xml-bridge" | jq
+curl -sS -X POST "$API/api/onec-workbench/install-inn-lookup-demo" | jq
+curl -sS -X POST "$API/api/onec-workbench/install-print-pipeline" | jq
+```
+
+Receive XML from 1C through JSON wrapper:
+
+```bash
+curl -sS "$API/api/onec/xml/inbound" \
+  -H 'Content-Type: application/json' \
+  -d @examples/onec.xml-inbound.json | jq
+```
+
+Receive raw XML body:
+
+```bash
+curl -sS "$API/api/onec/xml/inbound" \
+  -H 'Content-Type: application/xml' \
+  -H 'X-OMH-Source-System: 1C UPD' \
+  -H 'X-OMH-Target-System: 1C ERP' \
+  -H 'X-OMH-Message-Type: UPD' \
+  --data-binary @document.xml | jq
+```
+
+The endpoint stores an `IntegrationMessage`, creates a `OneCXmlReceived` event and links the message to the event timeline.
+
+Test OData enrichment:
+
+```bash
+curl -sS "$API/api/onec/lookup/test" \
+  -H 'Content-Type: application/json' \
+  -d @examples/onec.odata-lookup.json | jq
+```
+
+For XML transfer to another 1C HTTP service, configure a 1C connector operation with raw XML body mode:
+
+```json
+{
+  "operations": {
+    "receive_upd_xml": {
+      "method": "POST",
+      "path": "/xml/inbound",
+      "content_type": "application/xml",
+      "body_mode": "raw_xml"
+    }
+  }
+}
+```
+
 ## Health Heartbeat
 
 Each on-premise agent or site adapter should send a heartbeat. It creates a site if it does not exist and updates the operational dashboard.

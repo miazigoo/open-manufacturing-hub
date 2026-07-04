@@ -16,6 +16,7 @@ const navItems: Array<[string, string]> = [
   ['/polling', 'nav.polling'],
   ['/printing', 'nav.printing'],
   ['/onec-scenarios', 'nav.onecScenarios'],
+  ['/onec-workbench', 'nav.onecWorkbench'],
   ['/notifications', 'nav.notifications'],
   ['/maintenance', 'nav.maintenance'],
   ['/retention', 'nav.retention'],

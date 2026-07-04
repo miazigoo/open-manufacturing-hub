@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 from app.connectors.builtin.onec import errors
 from app.connectors.builtin.onec.client import OneCHTTPClient, join_url
-from app.connectors.builtin.onec.http_service import call_http_service, resolve_operation, standard_envelope
+from app.connectors.builtin.onec.http_service import call_http_service, request_body, resolve_operation, standard_envelope
 from app.connectors.builtin.onec.odata import read_odata as onec_read_odata
 from app.connectors.builtin.onec.schemas import OneCReadResult
 from app.core.enums import ConnectorDirection, HealthStatus
@@ -49,6 +49,25 @@ class OneCConnector:
                 errors_list.append("odata.default_page_size must be positive")
             if max_pages is None:
                 errors_list.append("odata.max_pages must be positive")
+        for operation, operation_config in (config.get("operations") or {}).items():
+            if not isinstance(operation_config, dict):
+                errors_list.append(f"operations.{operation} must be an object")
+                continue
+            operation_type = operation_config.get("type")
+            if operation_type not in {None, "http_service", "odata_lookup", "printing"}:
+                errors_list.append(f"operations.{operation}.type must be http_service, odata_lookup or printing")
+            method = str(operation_config.get("method", "POST")).upper()
+            if method not in {"GET", "POST", "PUT", "PATCH", "DELETE"}:
+                errors_list.append(f"operations.{operation}.method is not supported")
+            path = operation_config.get("path")
+            if path is not None and not str(path).startswith("/"):
+                errors_list.append(f"operations.{operation}.path must start with /")
+            body_mode = operation_config.get("body_mode", "json_envelope")
+            if body_mode not in {"json_envelope", "raw_xml", "plain_text"}:
+                errors_list.append(f"operations.{operation}.body_mode must be json_envelope, raw_xml or plain_text")
+            content_type = operation_config.get("content_type", "application/json")
+            if not isinstance(content_type, str) or "/" not in content_type:
+                errors_list.append(f"operations.{operation}.content_type must be a valid media type")
         return ConnectorConfigValidationResult(valid=not errors_list, errors=errors_list, warnings=["TODO: move 1C passwords to encrypted secret storage"] if auth_type == "basic" else [])
 
     async def healthcheck(self, config: dict[str, Any]) -> ConnectorHealthResult:
@@ -94,10 +113,14 @@ class OneCConnector:
         return ConnectorSendResult(success=success, status_code=status_code, request_payload=request_payload, response_payload=response_payload, error_code=error_code, error_message=error_message)
 
     async def dry_run_send(self, config: dict[str, Any], payload: dict, context: ConnectorContext) -> ConnectorSendResult:
-        operation, method, path, error = resolve_operation(config, payload)
+        operation, method, path, options, error = resolve_operation(config, payload)
         url = join_url(str(config.get("http_service_base_url") or "http://1c-service"), path)
-        body = standard_envelope(payload, context)
+        body, raw_content = request_body(payload, context, options)
         request_payload = {"method": method, "url": url, "body": body, "operation": operation}
+        if raw_content is not None:
+            request_payload["body"] = {"text_preview": raw_content[:2000], "size_bytes": len(raw_content.encode("utf-8"))}
+            request_payload["headers"] = {"Content-Type": str(options["content_type"])}
+            request_payload["body_mode"] = options["body_mode"]
         if error:
             return ConnectorSendResult(False, request_payload=request_payload, error_code=error["error_code"], error_message=error["error_message"])
         return ConnectorSendResult(success=True, status_code=200, request_payload=request_payload, response_payload={"dry_run": True, "would_call": {"method": method, "url": url}})

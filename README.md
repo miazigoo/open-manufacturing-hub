@@ -58,6 +58,8 @@ Ready-to-use request bodies are in [examples](examples):
 - `connector.zpl-printer.json`: Zebra-compatible RAW TCP ZPL printer connector.
 - `printing.chz-job.json`: sample Chestny Znak ZPL print job body for `POST /api/printing/jobs`.
 - `connector.onec-bidirectional.json`: 1C bidirectional connector shape.
+- `onec.xml-inbound.json`: 1C XML inbound wrapper for `POST /api/onec/xml/inbound`.
+- `onec.odata-lookup.json`: OData lookup/enrichment body for `POST /api/onec/lookup/test`.
 - `health.agent-heartbeat.json`: site agent heartbeat.
 
 ## Local Development

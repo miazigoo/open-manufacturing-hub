@@ -1,6 +1,7 @@
+import hashlib
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 router = APIRouter(tags=["mock-1c"])
@@ -36,6 +37,19 @@ async def mock_onec_inventory_results(body: dict[str, Any]):
     payload = body.get("payload") if isinstance(body.get("payload"), dict) else {}
     inventory_id = payload.get("inventory_id") or "UNKNOWN"
     return {"success": True, "external_document_id": f"1C-INV-{inventory_id}", "status": "accepted", "message": "Inventory result accepted", "echo": payload}
+
+
+@router.post("/api/mock-onec/hs/omh/xml/inbound")
+async def mock_onec_xml_inbound(request: Request):
+    xml = (await request.body()).decode("utf-8")
+    if "<Error>ORDER_NOT_FOUND</Error>" in xml:
+        return {"success": False, "error_code": "ORDER_NOT_FOUND", "error_message": "Order not found"}
+    return {
+        "success": True,
+        "status": "accepted",
+        "message": "XML accepted by mock 1C",
+        "sha256": hashlib.sha256(xml.encode("utf-8")).hexdigest(),
+    }
 
 
 def _external_order_id(body: dict[str, Any]) -> str | None:

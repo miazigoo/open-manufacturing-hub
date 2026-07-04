@@ -1,0 +1,15 @@
+{
+  "connector_name": "1C ERP",
+  "resource": "Catalog_Контрагенты",
+  "filter_template": "ИНН eq '{inn}'",
+  "input": {
+    "inn": "1234567890"
+  },
+  "params": {
+    "$top": 1
+  },
+  "extract": {
+    "contractor_uuid": "Ref_Key",
+    "contractor_name": "Description"
+  }
+}

@@ -146,3 +146,19 @@ class PrintLineStatus(StrEnum):
     ERROR = "error"
     RETURN_TO_PRINT = "return_to_print"
     CANCELLED = "cancelled"
+
+
+class IntegrationMessageDirection(StrEnum):
+    INBOUND = "inbound"
+    OUTBOUND = "outbound"
+    INTERNAL = "internal"
+
+
+class IntegrationMessageStatus(StrEnum):
+    RECEIVED = "received"
+    PARSED = "parsed"
+    ROUTED = "routed"
+    SENT = "sent"
+    FAILED = "failed"
+    RETRY_WAITING = "retry_waiting"
+    ARCHIVED = "archived"

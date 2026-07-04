@@ -8,13 +8,13 @@ from app.connectors.builtin.onec.client import OneCHTTPClient, join_url, respons
 from app.sdk.types import ConnectorContext
 
 OPERATION_PRESETS: dict[str, dict[str, str]] = {
-    "update_shipment_status": {"method": "POST", "path": "/shipment-facts"},
-    "update_stock_balance": {"method": "POST", "path": "/stock-balances"},
-    "send_inventory_result": {"method": "POST", "path": "/inventory-results"},
+    "update_shipment_status": {"method": "POST", "path": "/shipment-facts", "body_mode": "json_envelope", "content_type": "application/json"},
+    "update_stock_balance": {"method": "POST", "path": "/stock-balances", "body_mode": "json_envelope", "content_type": "application/json"},
+    "send_inventory_result": {"method": "POST", "path": "/inventory-results", "body_mode": "json_envelope", "content_type": "application/json"},
 }
 
 
-def resolve_operation(config: dict[str, Any], payload: dict[str, Any]) -> tuple[str, str, str, dict[str, Any] | None]:
+def resolve_operation(config: dict[str, Any], payload: dict[str, Any]) -> tuple[str, str, str, dict[str, Any], dict[str, Any] | None]:
     meta = payload.get("_omh") or {}
     operation = str(meta.get("operation") or "")
     configured = (config.get("operations") or {}).get(operation) if operation else None
@@ -22,23 +22,32 @@ def resolve_operation(config: dict[str, Any], payload: dict[str, Any]) -> tuple[
     fallback_path = (config.get("http_services") or {}).get("default_path") or config.get("default_http_service_path")
     method = str(meta.get("method") or (configured or {}).get("method") or (preset or {}).get("method") or "POST").upper()
     path = str(meta.get("path") or (configured or {}).get("path") or (preset or {}).get("path") or fallback_path or "")
+    options = {
+        "content_type": meta.get("content_type") or (configured or {}).get("content_type") or (preset or {}).get("content_type") or "application/json",
+        "body_mode": meta.get("body_mode") or (configured or {}).get("body_mode") or (preset or {}).get("body_mode") or "json_envelope",
+    }
     if operation and not path:
-        return operation, method, path, {"error_code": errors.ONEC_OPERATION_NOT_CONFIGURED, "error_message": f"1C operation {operation} is not configured"}
+        return operation, method, path, options, {"error_code": errors.ONEC_OPERATION_NOT_CONFIGURED, "error_message": f"1C operation {operation} is not configured"}
     if not path:
         path = "/"
-    return operation, method, path, None
+    return operation, method, path, options, None
 
 
 async def call_http_service(config: dict[str, Any], payload: dict[str, Any], context: ConnectorContext | None = None) -> tuple[bool, int | None, dict[str, Any], dict[str, Any] | None, str | None, str | None]:
-    operation, method, path, error = resolve_operation(config, payload)
-    body = standard_envelope(payload, context)
+    operation, method, path, options, error = resolve_operation(config, payload)
+    body, raw_content = request_body(payload, context, options)
     base_url = str(config.get("http_service_base_url") or "")
     url = join_url(base_url, path)
     if error:
         return False, None, {"operation": operation, "method": method, "url": url, "body": body}, None, error["error_code"], error["error_message"]
     client = OneCHTTPClient(config)
-    response, request_payload, error_code, error_message = await client.request(method, url, json_payload=body)
+    if raw_content is None:
+        response, request_payload, error_code, error_message = await client.request(method, url, json_payload=body)
+    else:
+        headers = {"Content-Type": str(options["content_type"])}
+        response, request_payload, error_code, error_message = await client.request(method, url, content=raw_content, headers=headers)
     request_payload["operation"] = operation
+    request_payload["body_mode"] = options["body_mode"]
     if error_code:
         return False, None, request_payload, None, error_code, error_message
     assert response is not None
@@ -60,6 +69,22 @@ async def call_http_service(config: dict[str, Any], payload: dict[str, Any], con
             str(data.get("error_message") or "1C business operation failed"),
         )
     return True, response.status_code, request_payload, response_payload, None, None
+
+
+def request_body(payload: dict[str, Any], context: ConnectorContext | None, options: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+    mode = str(options.get("body_mode") or "json_envelope")
+    if mode == "json_envelope":
+        return standard_envelope(payload, context), None
+    if mode == "raw_xml":
+        nested = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
+        xml = payload.get("xml") or payload.get("xml_payload") or nested.get("xml")
+        if not isinstance(xml, str) or not xml.strip():
+            return {"error": "xml payload is required for raw_xml"}, ""
+        return None, xml
+    if mode == "plain_text":
+        text = payload.get("text") or payload.get("body") or payload.get("payload")
+        return None, text if isinstance(text, str) else str(text or "")
+    return standard_envelope(payload, context), None
 
 
 def standard_envelope(payload: dict[str, Any], context: ConnectorContext | None) -> dict[str, Any]:

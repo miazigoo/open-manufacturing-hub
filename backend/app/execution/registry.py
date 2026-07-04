@@ -42,22 +42,34 @@ registry = StepRegistry()
 
 
 def register_builtin_steps() -> None:
+    from app.execution.steps.build_xml import BuildXMLStep
     from app.execution.steps.call_connector import CallConnectorStep
+    from app.execution.steps.call_print_operation import CallPrintOperationStep
     from app.execution.steps.create_incident import CreateIncidentStep
     from app.execution.steps.handle_response import HandleResponseStep
     from app.execution.steps.maintenance_guard import MaintenanceGuardStep
     from app.execution.steps.map_payload import MapPayloadStep
     from app.execution.steps.normalize import NormalizePayloadStep
+    from app.execution.steps.odata_lookup import ODataLookupStep
+    from app.execution.steps.parse_xml import ParseXMLStep
     from app.execution.steps.receive import ReceiveEventStep
+    from app.execution.steps.route_by_rule import RouteByRuleStep
+    from app.execution.steps.save_integration_message import SaveIntegrationMessageStep
     from app.execution.steps.send_notifications import SendNotificationsStep
     from app.execution.steps.validate import ValidatePayloadStep
 
     registry.register(ReceiveEventStep())
+    registry.register(SaveIntegrationMessageStep())
+    registry.register(ParseXMLStep())
+    registry.register(BuildXMLStep())
+    registry.register(ODataLookupStep())
+    registry.register(RouteByRuleStep())
     registry.register(MaintenanceGuardStep())
     registry.register(NormalizePayloadStep(), "map_to_canonical")
     registry.register(ValidatePayloadStep())
     registry.register(MapPayloadStep(), "map_to_target")
     registry.register(CallConnectorStep(), "send_to_target")
+    registry.register(CallPrintOperationStep())
     registry.register(HandleResponseStep())
     registry.register(CreateIncidentStep())
     registry.register(SendNotificationsStep())

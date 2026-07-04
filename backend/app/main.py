@@ -15,8 +15,10 @@ from app.mappings.router import router as mappings_router
 from app.maintenance.router import router as maintenance_router
 from app.mocks.onec_http_service import router as mock_onec_router
 from app.notifications.router import router as notifications_router
+from app.onec_workbench.router import router as onec_workbench_router
 from app.onec_scenarios.router import router as onec_scenarios_router
 from app.onec_templates.router import router as onec_templates_router
+from app.operation_templates.router import router as operation_templates_router
 from app.polling.router import router as polling_router
 from app.printing.router import router as printing_router
 from app.retention.router import router as retention_router
@@ -59,6 +61,8 @@ app.include_router(maintenance_router)
 app.include_router(retention_router)
 app.include_router(polling_router)
 app.include_router(printing_router)
+app.include_router(onec_workbench_router)
 app.include_router(onec_scenarios_router)
 app.include_router(onec_templates_router)
+app.include_router(operation_templates_router)
 app.include_router(mock_onec_router)

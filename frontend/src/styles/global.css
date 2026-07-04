@@ -282,3 +282,16 @@ th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spa
 @media (max-width: 1180px) {
   .scenario-grid-wide { grid-template-columns: minmax(0, 1fr); }
 }
+.workbench-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .85fr); gap: 18px; align-items: start; }
+.workbench-grid.lower { grid-template-columns: minmax(360px, .85fr) minmax(0, 1fr); }
+.workbench-grid textarea { min-height: 170px; font-family: 'JetBrains Mono', monospace; }
+.wrap-actions { flex-wrap: wrap; }
+.template-list, .message-list { display: grid; gap: 10px; margin-top: 18px; }
+.template-card, .message-card { border: 1px solid var(--line); background: rgba(0,0,0,.16); padding: 13px; display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+.template-card div, .message-card div { min-width: 0; display: grid; gap: 4px; }
+.template-card span, .message-card span, .message-card small { color: var(--muted); overflow-wrap: anywhere; }
+.success-note { border: 1px solid rgba(143,198,180,.28); background: rgba(143,198,180,.1); padding: 12px; display: grid; gap: 6px; color: var(--ink); }
+.success-note span { overflow-wrap: anywhere; color: var(--accent-2); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+@media (max-width: 1180px) {
+  .workbench-grid, .workbench-grid.lower { grid-template-columns: minmax(0, 1fr); }
+}

@@ -22,11 +22,31 @@ class OneCHTTPClient:
         self.verify = bool(config.get("verify_ssl", True))
         self.auth = auth_for(config)
 
-    async def request(self, method: str, url: str, *, params: dict | None = None, json_payload: dict | None = None) -> tuple[httpx.Response | None, dict[str, Any], str | None, str | None]:
-        request_payload = {"method": method.upper(), "url": url, "params": params or {}, "body": json_payload, "auth": mask_secrets(self.config.get("auth") or {"type": "none"})}
+    async def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: dict | None = None,
+        json_payload: dict | None = None,
+        content: str | bytes | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> tuple[httpx.Response | None, dict[str, Any], str | None, str | None]:
+        body_preview: Any = json_payload
+        if content is not None:
+            text = content.decode("utf-8", errors="replace") if isinstance(content, bytes) else content
+            body_preview = {"text_preview": text[:2000], "size_bytes": len(text.encode("utf-8"))}
+        request_payload = {
+            "method": method.upper(),
+            "url": url,
+            "params": params or {},
+            "headers": headers or {},
+            "body": body_preview,
+            "auth": mask_secrets(self.config.get("auth") or {"type": "none"}),
+        }
         try:
             async with httpx.AsyncClient(timeout=self.timeout, verify=self.verify, auth=self.auth) as client:
-                response = await client.request(method.upper(), url, params=params, json=json_payload)
+                response = await client.request(method.upper(), url, params=params, json=json_payload, content=content, headers=headers)
             return response, request_payload, None, None
         except httpx.TimeoutException:
             return None, request_payload, errors.ONEC_TIMEOUT, f"1C request timed out after {self.timeout:g} seconds"
