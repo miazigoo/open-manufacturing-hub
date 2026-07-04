@@ -1,4 +1,4 @@
-.PHONY: install-backend install-frontend test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke openapi-export packages-list package-install-onec package-install-printer docker-up docker-down
+.PHONY: install-backend install-frontend test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke openapi-export packages-list package-install-onec package-install-printer docker-up docker-down
 
 install-backend:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[test]"
@@ -32,6 +32,9 @@ smoke-test:
 
 integration-smoke:
 	cd backend && python3 scripts/integration_smoke.py
+
+ui-smoke:
+	cd frontend && npm run smoke:ui
 
 openapi-export:
 	cd backend && . .venv/bin/activate && python -c "import json; from pathlib import Path; from app.main import app; target = Path('../frontend/src/api/generated/openapi.json'); target.parent.mkdir(parents=True, exist_ok=True); target.write_text(json.dumps(app.openapi(), indent=2, sort_keys=True), encoding='utf-8')"

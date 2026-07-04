@@ -91,6 +91,7 @@ npm run dev
 ```bash
 make test-backend
 make build-frontend
+make ui-smoke
 ```
 
 ## Smoke Test
@@ -121,6 +122,14 @@ OK timeline
 ```
 
 `make integration-smoke` additionally creates a temporary webhook connector, sends webhook and direct event payloads, verifies timelines, records a health heartbeat and removes the temporary connector.
+
+For full UI regression coverage without Docker, run:
+
+```bash
+make ui-smoke
+```
+
+`make ui-smoke` prepares a temporary SQLite database, starts the backend and Vite frontend on free localhost ports, then runs Playwright through the critical routes, language switcher, transform/rule/resolver actions, visual flow preview and mobile viewport checks. Install the browser once with `cd frontend && npx playwright install chromium` if Playwright reports a missing browser.
 
 ## Demo Checklist
 

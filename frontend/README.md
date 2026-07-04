@@ -21,3 +21,18 @@ VITE_API_BASE_URL=http://localhost:8000 npm run dev
 ```bash
 npm run build
 ```
+
+## UI smoke
+
+```bash
+npm run smoke:ui
+```
+
+The smoke runner creates a temporary SQLite backend database, starts backend
+and frontend on free localhost ports, and checks the main routes, language
+switcher, transforms, business rules, resolvers, visual flow builder preview
+and mobile viewport. If Chromium is missing, install it once:
+
+```bash
+npx playwright install chromium
+```
