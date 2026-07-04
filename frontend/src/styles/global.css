@@ -245,7 +245,12 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .enterprise-hero { background: linear-gradient(135deg, rgba(143,198,180,.12), rgba(240,179,90,.08), rgba(114,167,255,.07)); }
 .runtime-grid { display: grid; grid-template-columns: minmax(320px, .75fr) minmax(0, 1.25fr); gap: 18px; align-items: start; }
 .runtime-metrics { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-.enterprise-runtime-page .card-grid .panel { min-height: 220px; }
+.runtime-control-card { background: linear-gradient(145deg, rgba(143,198,180,.09), rgba(0,0,0,.16)); }
+.runtime-table-panel { overflow-x: auto; }
+.runtime-table-panel table { min-width: 820px; }
+.runtime-card-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.runtime-card { min-height: 220px; display: grid; align-content: start; gap: 12px; }
+.runtime-card .json-panel { box-shadow: none; background: rgba(0,0,0,.14); }
 @media (max-width: 1180px) {
   .runtime-grid, .runtime-metrics { grid-template-columns: minmax(0, 1fr); }
 }
