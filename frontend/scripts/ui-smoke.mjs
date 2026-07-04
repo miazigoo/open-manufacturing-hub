@@ -50,7 +50,7 @@ async function freePort() {
 }
 
 function startProcess(label, command, args, options) {
-  const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], ...options });
+  const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', ...options });
   children.push(child);
   child.stdout.on('data', (chunk) => process.stdout.write(`[${label}] ${chunk}`));
   child.stderr.on('data', (chunk) => process.stderr.write(`[${label}] ${chunk}`));
@@ -58,6 +58,31 @@ function startProcess(label, command, args, options) {
     if (code !== 0 && signal !== 'SIGTERM') fail('PROCESS_EXIT', `${label} exited with code ${code ?? signal}`);
   });
   return child;
+}
+
+async function terminateProcess(child) {
+  if (child.killed || child.exitCode !== null) return;
+  await new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      try {
+        if (process.platform === 'win32') child.kill('SIGKILL');
+        else process.kill(-child.pid, 'SIGKILL');
+      } catch {
+        child.kill('SIGKILL');
+      }
+      resolve();
+    }, 2500);
+    child.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    try {
+      if (process.platform === 'win32') child.kill('SIGTERM');
+      else process.kill(-child.pid, 'SIGTERM');
+    } catch {
+      child.kill('SIGTERM');
+    }
+  });
 }
 
 function requestJson(url, init = {}) {
@@ -150,6 +175,19 @@ async function clickButton(page, name) {
   await page.waitForTimeout(700);
 }
 
+async function ensurePackageWorkspace(page, uiBase, route) {
+  await gotoRoute(page, uiBase, route);
+  const gateAction = page.getByRole('button', { name: /Install package|Enable package/i }).first();
+  if (await gateAction.count()) {
+    await gateAction.click({ timeout: timeoutMs });
+    await page.getByText('Activation required').waitFor({ state: 'hidden', timeout: timeoutMs }).catch(() => undefined);
+    await page.waitForTimeout(1000);
+    await assertHealthy(page, route);
+  }
+  const body = await page.locator('body').innerText({ timeout: timeoutMs });
+  if (/Activation required|This page needs the package/i.test(body)) fail('PACKAGE_GATE_STILL_ACTIVE', route);
+}
+
 async function runBrowserSmoke(apiBase, uiBase) {
   const flows = await requestJson(`${apiBase}/api/integration-flows`);
   const flowId = flows?.[0]?.id;
@@ -182,6 +220,9 @@ async function runBrowserSmoke(apiBase, uiBase) {
   ].filter(Boolean);
 
   for (const route of routes) await gotoRoute(page, uiBase, route);
+
+  await ensurePackageWorkspace(page, uiBase, '/onec-cockpit');
+  await ensurePackageWorkspace(page, uiBase, '/printing');
 
   await gotoRoute(page, uiBase, '/');
   await page.getByRole('button', { name: /English/i }).click({ timeout: timeoutMs });
@@ -229,6 +270,22 @@ async function runBrowserSmoke(apiBase, uiBase) {
 }
 
 async function main() {
+  const externalApiBase = process.env.UI_SMOKE_API_BASE_URL?.replace(/\/$/, '');
+  const externalUiBase = process.env.UI_SMOKE_BASE_URL?.replace(/\/$/, '');
+  if (externalApiBase && externalUiBase) {
+    await waitForJson(`${externalApiBase}/api/health`, 'external backend');
+    await seedApi(externalApiBase);
+    await waitForHtml(externalUiBase, 'external frontend');
+    log(`using external backend ${externalApiBase}`);
+    log(`using external frontend ${externalUiBase}`);
+    await runBrowserSmoke(externalApiBase, externalUiBase);
+    console.log('\n[ui-smoke] ROUTES');
+    console.log(routeSummaries.join('\n'));
+    if (errors.length) throw new Error(`${errors.length} UI smoke checks failed`);
+    log('UI checks passed');
+    return;
+  }
+
   tempDir = await mkdtemp(path.join(os.tmpdir(), 'omh-ui-smoke-'));
   const dbPath = path.join(tempDir, 'ui-smoke.db');
   const databaseUrl = `sqlite+aiosqlite:///${dbPath}`;
@@ -264,7 +321,7 @@ async function main() {
 async function cleanup() {
   if (browser) await browser.close().catch(() => undefined);
   for (const child of children.reverse()) {
-    if (!child.killed) child.kill('SIGTERM');
+    await terminateProcess(child);
   }
   if (tempDir && existsSync(tempDir)) await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
 }

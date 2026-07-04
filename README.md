@@ -131,6 +131,12 @@ make ui-smoke
 
 `make ui-smoke` prepares a temporary SQLite database, starts the backend and Vite frontend on free localhost ports, then runs Playwright through the critical routes, language switcher, transform/rule/resolver actions, visual flow preview and mobile viewport checks. Install the browser once with `cd frontend && npx playwright install chromium` if Playwright reports a missing browser.
 
+To test the already running Docker/dev stack exactly as a browser user sees it on `http://localhost:5173` with API `http://localhost:8000`, run:
+
+```bash
+make ui-smoke-live
+```
+
 ## Demo Checklist
 
 After `make demo-seed`, the UI should show:

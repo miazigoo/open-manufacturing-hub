@@ -36,3 +36,9 @@ and mobile viewport. If Chromium is missing, install it once:
 ```bash
 npx playwright install chromium
 ```
+
+To validate the already running Docker/dev stack in the browser-visible mode:
+
+```bash
+npm run smoke:ui:live
+```
