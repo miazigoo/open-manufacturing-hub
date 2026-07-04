@@ -16,6 +16,14 @@
     "description": "ZPL printer integration and production print operations"
   },
   {
+    "package_id": "omh-package-auth",
+    "name": "Auth Package",
+    "version": "0.1.0",
+    "official": true,
+    "category": "Security",
+    "description": "Optional login, users, sessions and recovery keys for OMH"
+  },
+  {
     "package_id": "omh-package-mqtt",
     "name": "MQTT Package",
     "version": "0.1.0",

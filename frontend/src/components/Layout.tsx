@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../api/client';
 import { uiApi, type UINavigationItem } from '../api/ui';
+import { UserMenu } from '../features/auth/UserMenu';
 import { useI18n, useT } from '../i18n/useI18n';
 import { languageMeta } from '../i18n/dictionary';
 import type { Language } from '../i18n/dictionary';
@@ -25,6 +26,7 @@ const groupKey: Record<string, string> = {
   Build: 'nav.sectionBuild',
   'Data Tools': 'nav.sectionDataTools',
   Packages: 'nav.sectionPackages',
+  Settings: 'nav.sectionSettings',
   Advanced: 'nav.sectionAdvanced',
 };
 
@@ -62,9 +64,11 @@ const routeKey: Record<string, string> = {
   '/maintenance': 'nav.maintenance',
   '/retention': 'nav.retention',
   '/notifications': 'nav.notifications',
+  '/users': 'nav.users',
+  '/auth-settings': 'nav.authSettings',
 };
 
-const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Advanced'];
+const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Settings', 'Advanced'];
 
 export function Layout() {
   const t = useT();
@@ -150,6 +154,7 @@ function TopBar() {
           </button>
         ))}
       </div>
+      <UserMenu />
     </header>
   );
 }

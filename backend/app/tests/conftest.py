@@ -22,6 +22,7 @@ from app.notifications.models import NotificationDelivery, NotificationRule  # n
 from app.onec_workbench.models import IntegrationMessage  # noqa: F401
 from app.operation_templates.models import OperationTemplate  # noqa: F401
 from app.packages.models import InstalledPackage  # noqa: F401
+from app.packages_auth.models import AuthRecoveryKey, AuthSession, AuthSettings, AuthUser  # noqa: F401
 from app.polling.models import PollingJob, PollingJobRun, SourceEventCursor  # noqa: F401
 from app.printing.models import PrintJob, PrintJobLine, PrintJobLog, PrintPrinter  # noqa: F401
 from app.resolvers.models import ResolverCacheEntry, ResolverDefinitionV2  # noqa: F401

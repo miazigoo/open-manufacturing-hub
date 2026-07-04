@@ -1,0 +1,2 @@
+README = """# OMH Auth Package\n\nOptional login, users, sessions and one-time recovery keys for Open Manufacturing Hub. It protects the UI/configuration APIs when installed and enabled, while leaving integration inbound endpoints under their own auth rules.\n"""
+QUICK_START = """# Auth Quick Start\n\n1. Install Auth Package from Plugin Store or Packages.\n2. Create the first user on the bootstrap page.\n3. Save the five recovery keys shown once.\n4. Login and create additional users from Settings / Users.\n"""

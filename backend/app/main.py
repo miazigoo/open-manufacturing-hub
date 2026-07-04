@@ -8,6 +8,7 @@ from app.artifacts.router import router as artifacts_router
 from app.business_rules.router import router as business_rules_router
 from app.business_objects.router import router as business_objects_router
 from app.core.database import async_session
+from app.core.access import optional_auth_guard
 from app.core.config import get_settings
 from app.connectors.router import router as connectors_router
 from app.core.errors import BadRequestError, NotFoundError
@@ -47,6 +48,7 @@ from app.ui.router import router as ui_router
 from app.workflows.router import router as workflows_router
 from app.xml_tools.router import router as xml_tools_router
 from app.packages.service import startup_package_check
+from app.packages_auth.router import router as auth_router
 
 
 @asynccontextmanager
@@ -58,6 +60,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Open Manufacturing Hub", lifespan=lifespan)
+app.middleware("http")(optional_auth_guard)
 settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
@@ -109,6 +112,7 @@ app.include_router(xml_tools_router)
 app.include_router(test_console_router)
 app.include_router(ui_router)
 app.include_router(notifications_router)
+app.include_router(auth_router)
 app.include_router(packages_router)
 app.include_router(plugin_store_router)
 app.include_router(maintenance_router)

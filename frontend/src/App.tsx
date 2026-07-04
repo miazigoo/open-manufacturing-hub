@@ -53,6 +53,9 @@ const MaintenancePage = lazy(() => import('./pages/MaintenancePage').then((m) =>
 const RetentionPage = lazy(() => import('./pages/RetentionPage').then((m) => ({ default: m.RetentionPage })));
 const OneCCockpitPage = lazy(() => import('./features/cockpit/OneCCockpitPage').then((m) => ({ default: m.OneCCockpitPage })));
 const OneCCockpitWizardPage = lazy(() => import('./features/cockpit/OneCCockpitWizardPage').then((m) => ({ default: m.OneCCockpitWizardPage })));
+const UsersPage = lazy(() => import('./features/auth/UsersPage').then((m) => ({ default: m.UsersPage })));
+const ChangePasswordPage = lazy(() => import('./features/auth/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })));
+const AuthSettingsPage = lazy(() => import('./features/auth/AuthSettingsPage').then((m) => ({ default: m.AuthSettingsPage })));
 
 function onec(element: React.ReactNode) {
   return <PackageGate packageId="omh-package-onec">{element}</PackageGate>;
@@ -116,6 +119,9 @@ export function App() {
           <Route path="notifications" element={<NotificationRulesPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
           <Route path="retention" element={<RetentionPage />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="change-password" element={<ChangePasswordPage />} />
+          <Route path="auth-settings" element={<AuthSettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
