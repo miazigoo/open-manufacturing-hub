@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.health import repository, service
-from app.health.schemas import AgentHeartbeatCreate, AgentHeartbeatRead, HealthCheckCreate, HealthCheckRead
+from app.health.schemas import AgentHeartbeatCreate, AgentHeartbeatHistoryItem, AgentHeartbeatRead, AgentHeartbeatSummary, HealthCheckCreate, HealthCheckRead
 
 router = APIRouter(prefix="/api/health", tags=["health"])
 
@@ -35,3 +35,13 @@ async def agent_heartbeat(request: AgentHeartbeatCreate, session: AsyncSession =
     heartbeat = await service.record_heartbeat(session, request)
     await session.commit()
     return heartbeat
+
+
+@router.get("/agents", response_model=list[AgentHeartbeatSummary])
+async def agents(session: AsyncSession = Depends(get_session)):
+    return await service.agent_summaries(session)
+
+
+@router.get("/agent-heartbeats", response_model=list[AgentHeartbeatHistoryItem])
+async def agent_heartbeats(limit: int = 100, site_code: str | None = None, session: AsyncSession = Depends(get_session)):
+    return await service.agent_history(session, limit=limit, site_code=site_code)

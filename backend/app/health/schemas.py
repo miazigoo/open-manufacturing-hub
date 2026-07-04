@@ -53,6 +53,31 @@ class AgentHeartbeatRead(BaseModel):
     can_reach_hub: bool | None
     can_reach_wms: bool | None
     can_reach_erp: bool | None
+    local_ip: str | None = None
+    details_json: dict[str, Any] | None = None
     received_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AgentHeartbeatSummary(BaseModel):
+    id: UUID
+    site_id: UUID
+    site_name: str
+    site_code: str
+    agent_name: str
+    status: HealthStatus
+    heartbeat_age_seconds: int
+    stale_after_seconds: int
+    internet: HealthStatus
+    hub: HealthStatus
+    wms: HealthStatus
+    erp: HealthStatus
+    local_ip: str | None = None
+    details_json: dict[str, Any] | None = None
+    received_at: datetime
+
+
+class AgentHeartbeatHistoryItem(AgentHeartbeatRead):
+    site_name: str
+    site_code: str
