@@ -309,6 +309,45 @@ For XML transfer to another 1C HTTP service, configure a 1C connector operation 
 }
 ```
 
+## Integration Bus
+
+Use the Integration Bus for production-facing inbound URLs that 1C, websites and internal services can call without knowing low-level workflow IDs.
+
+Install standard bus presets:
+
+```bash
+curl -sS -X POST "$API/api/integration-bus/install-presets" | jq
+```
+
+Create a named endpoint manually:
+
+```bash
+curl -sS "$API/api/integration-bus/endpoints" \
+  -H 'Content-Type: application/json' \
+  -d @examples/bus.endpoint.json | jq
+```
+
+Call a bus endpoint:
+
+```bash
+curl -sS "$API/api/bus/in/onec-to-site-custom" \
+  -H 'Content-Type: application/json' \
+  -H 'X-OMH-Token: change-me' \
+  -d @examples/bus.request.json | jq
+```
+
+Create reusable OData lookup templates:
+
+```bash
+curl -sS "$API/api/odata-lookups" \
+  -H 'Content-Type: application/json' \
+  -d @examples/odata.lookup-template.json | jq
+```
+
+Supported endpoint `input_mode` values: `json`, `xml`, `raw_text`, `multipart_file`, `form`.
+Supported `response_mode` values: `accepted_event`, `accepted_message`, `sync_response`, `proxy_response`.
+Supported auth modes in v1: `none`, `static_token`.
+
 ## Health Heartbeat
 
 Each on-premise agent or site adapter should send a heartbeat. It creates a site if it does not exist and updates the operational dashboard.

@@ -8,11 +8,13 @@ import { ExecutionStepsPage } from './pages/ExecutionStepsPage';
 import { HealthPage } from './pages/HealthPage';
 import { IncidentDetailsPage } from './pages/IncidentDetailsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
+import { IntegrationBusPage } from './pages/IntegrationBusPage';
 import { MaintenancePage } from './pages/MaintenancePage';
 import { MappingEditorPage } from './pages/MappingEditorPage';
 import { NotificationRulesPage } from './pages/NotificationRulesPage';
 import { OneCScenariosPage } from './pages/OneCScenariosPage';
 import { OneCWorkbenchPage } from './pages/OneCWorkbenchPage';
+import { OneCQuickSetupPage } from './pages/OneCQuickSetupPage';
 import { PollingJobsPage } from './pages/PollingJobsPage';
 import { PrintingPage } from './pages/PrintingPage';
 import { RetentionPage } from './pages/RetentionPage';
@@ -29,6 +31,8 @@ export function App() {
         <Route path="incidents/:incidentId" element={<IncidentDetailsPage />} />
         <Route path="health" element={<HealthPage />} />
         <Route path="connectors" element={<ConnectorsPage />} />
+        <Route path="integration-bus" element={<IntegrationBusPage />} />
+        <Route path="onec-quick-setup" element={<OneCQuickSetupPage />} />
         <Route path="execution/steps" element={<ExecutionStepsPage />} />
         <Route path="workflows" element={<WorkflowsPage />} />
         <Route path="mappings" element={<MappingEditorPage />} />

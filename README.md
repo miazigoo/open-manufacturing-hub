@@ -60,6 +60,9 @@ Ready-to-use request bodies are in [examples](examples):
 - `connector.onec-bidirectional.json`: 1C bidirectional connector shape.
 - `onec.xml-inbound.json`: 1C XML inbound wrapper for `POST /api/onec/xml/inbound`.
 - `onec.odata-lookup.json`: OData lookup/enrichment body for `POST /api/onec/lookup/test`.
+- `bus.endpoint.json`: named Integration Bus endpoint body for `POST /api/integration-bus/endpoints`.
+- `bus.request.json`: sample JSON body for `POST /api/bus/in/{slug}`.
+- `odata.lookup-template.json`: reusable OData lookup template body for `POST /api/odata-lookups`.
 - `health.agent-heartbeat.json`: site agent heartbeat.
 
 ## Local Development

@@ -295,3 +295,20 @@ th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spa
 @media (max-width: 1180px) {
   .workbench-grid, .workbench-grid.lower { grid-template-columns: minmax(0, 1fr); }
 }
+.bus-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, .85fr); gap: 18px; align-items: start; }
+.bus-grid.lower { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.bus-grid textarea { min-height: 130px; font-family: 'JetBrains Mono', monospace; }
+.bus-list { display: grid; gap: 10px; margin-top: 14px; }
+.bus-card { border: 1px solid var(--line); background: linear-gradient(135deg, rgba(143,198,180,.075), rgba(0,0,0,.14)); padding: 14px; display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; cursor: default; }
+.bus-card:hover { border-color: rgba(240,179,90,.45); }
+.bus-card div { min-width: 0; display: grid; gap: 4px; }
+.bus-card span, .bus-card small { color: var(--muted); overflow-wrap: anywhere; }
+.inline-create { grid-template-columns: 1fr 1fr 1fr auto; display: grid; gap: 10px; align-items: end; }
+.lookup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.quick-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.quick-step { min-height: 220px; align-content: start; }
+.quick-step > span { width: 46px; height: 46px; border: 1px solid var(--line-strong); display: grid; place-items: center; color: var(--accent); font-family: 'JetBrains Mono', monospace; margin-bottom: 14px; }
+.quick-step h2 { margin-bottom: 10px; }
+@media (max-width: 1180px) {
+  .bus-grid, .bus-grid.lower, .lookup-grid, .quick-steps, .inline-create { grid-template-columns: minmax(0, 1fr); }
+}

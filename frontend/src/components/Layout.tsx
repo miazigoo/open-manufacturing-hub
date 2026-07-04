@@ -10,6 +10,8 @@ const navItems: Array<[string, string]> = [
   ['/incidents', 'nav.incidents'],
   ['/health', 'nav.health'],
   ['/connectors', 'nav.connectors'],
+  ['/integration-bus', 'nav.integrationBus'],
+  ['/onec-quick-setup', 'nav.onecQuickSetup'],
   ['/execution/steps', 'nav.executionSteps'],
   ['/workflows', 'nav.workflows'],
   ['/mappings', 'nav.mappings'],

@@ -1,0 +1,12 @@
+{
+  "name": "Find contractor by INN",
+  "connector_id": "00000000-0000-0000-0000-000000000000",
+  "resource": "Catalog_Контрагенты",
+  "filter_template": "ИНН eq '{inn}'",
+  "extract_json": {
+    "contractor_uuid": "Ref_Key",
+    "contractor_name": "Description"
+  },
+  "required": true,
+  "cache_ttl_seconds": 300
+}

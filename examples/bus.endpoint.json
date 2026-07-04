@@ -1,0 +1,14 @@
+{
+  "name": "1C ERP to Website API",
+  "slug": "onec-to-site-custom",
+  "enabled": true,
+  "input_mode": "json",
+  "response_mode": "sync_response",
+  "default_source_system": "1C ERP",
+  "default_target_system": "Website API",
+  "default_event_type": "BusRequestReceived",
+  "auth_mode": "static_token",
+  "auth_config_json": {
+    "token": "change-me"
+  }
+}

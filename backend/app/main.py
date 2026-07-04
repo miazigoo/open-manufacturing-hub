@@ -11,6 +11,7 @@ from app.events.router import router as events_router
 from app.execution.router import router as execution_router
 from app.health.router import router as health_router
 from app.incidents.router import router as incidents_router
+from app.integration_bus.router import router as integration_bus_router
 from app.mappings.router import router as mappings_router
 from app.maintenance.router import router as maintenance_router
 from app.mocks.onec_http_service import router as mock_onec_router
@@ -56,6 +57,7 @@ app.include_router(artifacts_router)
 app.include_router(replay_router)
 app.include_router(health_router)
 app.include_router(incidents_router)
+app.include_router(integration_bus_router)
 app.include_router(notifications_router)
 app.include_router(maintenance_router)
 app.include_router(retention_router)

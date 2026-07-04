@@ -11,6 +11,7 @@ from app.core.database import Base, async_session, engine
 from app.events.models import EventRun, EventStep, IntegrationEvent  # noqa: F401
 from app.health.models import AgentHeartbeat, HealthCheck, Site  # noqa: F401
 from app.incidents.models import Incident, IncidentEvent  # noqa: F401
+from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute, ODataLookupTemplate  # noqa: F401
 from app.maintenance.models import MaintenanceWindow  # noqa: F401
 from app.mappings.models import MappingDefinition, MappingVersion  # noqa: F401
 from app.notifications.models import NotificationDelivery, NotificationRule  # noqa: F401
