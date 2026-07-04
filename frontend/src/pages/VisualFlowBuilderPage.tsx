@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { connectorsApi } from '../api/connectors';
 import { integrationFlowsApi } from '../api/integrationFlows';
+import { resolversApi } from '../api/resolvers';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
@@ -25,8 +26,9 @@ function defaultBuilder(slug = 'onec-pool-to-dnp'): BuilderJson {
     ],
     steps: [
       { id: 'read_inn', type: 'read_variable', name: 'Read INN', path: 'request.body.inn', save_as: 'inn' },
-      { id: 'get_contractor', type: 'odata_query', name: 'Find contractor by INN', connection: '1C ERP', resource: 'Catalog_Контрагенты', filter_builder: [{ field: 'ИНН', operator: 'eq', value: '{{inn}}' }], top: 1, save_as: 'contractor', required: true },
-      { id: 'build_payload', type: 'build_json', name: 'Build target JSON', save_as: 'target_payload', template: { pool_id: '{{request.body.pool_id}}', contractor_uuid: '{{contractor.Ref_Key}}', codes: '{{request.body.codes}}' } },
+      { id: 'resolve_customer', type: 'resolve_object', name: 'Resolve Customer', resolver: 'resolve_customer', object_type: 'Customer', input: { inn: 'request.body.inn' }, save_as: 'customer', inject: { customer_uuid: 'customer.uuid' }, required: true, use_cache: true },
+      { id: 'resolve_product', type: 'resolve_object', name: 'Resolve Product', resolver: 'resolve_product', object_type: 'Product', input: { article: 'request.body.product_code' }, save_as: 'product', inject: { product_uuid: 'product.uuid' }, required: true, use_cache: true },
+      { id: 'build_payload', type: 'build_json', name: 'Build target JSON', save_as: 'target_payload', template: { pool_id: '{{request.body.pool_id}}', customer_uuid: '{{customer.uuid}}', product_uuid: '{{product.uuid}}', codes: '{{request.body.codes}}' } },
       { id: 'send_to_target', type: 'call_endpoint', name: 'Send to endpoint', connector: 'DNP Service', method: 'POST', path: '/api/marking/pools', body: '{{target_payload}}' },
       { id: 'return_response', type: 'return_response', name: 'Return response', body: '{{response}}' },
     ],
@@ -54,6 +56,7 @@ export function VisualFlowBuilderPage() {
   const queryClient = useQueryClient();
   const flow = useQuery({ queryKey: ['integration-flow', flowId], queryFn: async () => (await integrationFlowsApi.list()).find((item) => item.id === flowId) ?? null, enabled: Boolean(flowId) });
   const connectors = useQuery({ queryKey: ['connectors'], queryFn: connectorsApi.list });
+  const resolvers = useQuery({ queryKey: ['resolvers-v2'], queryFn: () => resolversApi.list() });
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [builderText, setBuilderText] = useState<string | null>(null);
@@ -100,6 +103,8 @@ export function VisualFlowBuilderPage() {
     const id = `${type}_${builder.steps.length + 1}`;
     const base: BuilderStep = type === 'odata_query'
       ? { id, type, name: 'New OData query', connection: '1C ERP', resource: '', filter_builder: [{ field: '', operator: 'eq', value: '{{request.body.value}}' }], top: 1, save_as: 'lookup_result', required: true }
+      : type === 'resolve_object'
+        ? { id, type, name: 'Resolve Customer', resolver: 'resolve_customer', object_type: 'Customer', input: { inn: 'request.body.inn' }, save_as: 'customer', inject: { customer_uuid: 'customer.uuid' }, required: true, use_cache: true }
       : type === 'build_json'
         ? { id, type, name: 'Build JSON', save_as: 'target_payload', template: { id: '{{request.body.id}}' } }
         : type === 'call_endpoint'
@@ -122,6 +127,7 @@ export function VisualFlowBuilderPage() {
   }
 
   const connectorNames = (connectors.data ?? []).map((connector) => connector.name);
+  const resolverOptions = resolvers.data ?? [];
 
   return (
     <div className="page-stack visual-builder-page">
@@ -138,7 +144,7 @@ export function VisualFlowBuilderPage() {
           <div className="builder-step-list">
             {builder.steps.map((step, index) => <button key={step.id} className={`builder-step-card ${selectedStep?.id === step.id ? 'active' : ''}`} onClick={() => setSelectedStepId(step.id)}><span className="step-index">{String(index + 1).padStart(2, '0')}</span><strong>{step.name ?? step.id}</strong><small>{step.type} · {String(step.save_as ?? step.id)}</small></button>)}
           </div>
-          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
+          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('resolve_object')}>Resolve</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
         </aside>
 
         <main className="builder-main stack-form">
@@ -150,9 +156,10 @@ export function VisualFlowBuilderPage() {
 
           {selectedStep && <section className="panel step-editor-panel">
             <div className="panel-toolbar"><div><span className="eyebrow">Step Editor</span><h2>{selectedStep.name ?? selectedStep.id}</h2></div><div className="toolbar-actions"><button className="ghost-button" onClick={() => moveStep(selectedStep.id, -1)}>Up</button><button className="ghost-button" onClick={() => moveStep(selectedStep.id, 1)}>Down</button><button className="ghost-button" onClick={() => duplicateStep(selectedStep)}>Duplicate</button><button className="ghost-button danger" onClick={() => deleteStep(selectedStep.id)}>Delete</button></div></div>
-            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="odata_query">OData query</option><option value="build_json">Build JSON</option><option value="condition">Condition</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
+            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="odata_query">OData query</option><option value="resolve_object">Resolve Business Object</option><option value="build_json">Build JSON</option><option value="condition">Condition</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
             {selectedStep.type === 'read_variable' && <ReadVariableEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'odata_query' && <ODataStepEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
+            {selectedStep.type === 'resolve_object' && <ResolveObjectEditor step={selectedStep} update={updateStep} resolverOptions={resolverOptions} />}
             {selectedStep.type === 'build_json' && <BuildJsonEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'call_endpoint' && <CallEndpointEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
             {selectedStep.type === 'return_response' && <label className="field-label">Response body<input value={String(selectedStep.body ?? '{{response}}')} onChange={(event) => updateStep(selectedStep.id, { body: event.target.value })} /></label>}
@@ -181,6 +188,12 @@ export function VisualFlowBuilderPage() {
     const filter = firstFilter(step);
     const setFilter = (patch: Record<string, unknown>) => update(step.id, { filter_builder: [{ ...filter, ...patch }] });
     return <div className="stack-form"><div className="metadata-grid compact-grid no-margin"><label className="field-label">Connection<input list="connector-names" value={String(step.connection ?? '')} onChange={(event) => update(step.id, { connection: event.target.value })} /><datalist id="connector-names">{connectorNames.map((name) => <option key={name} value={name} />)}</datalist></label><label className="field-label">Resource<input value={String(step.resource ?? '')} onChange={(event) => update(step.id, { resource: event.target.value })} /></label><label className="field-label">Save as<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label></div><div className="metadata-grid compact-grid no-margin"><label className="field-label">Field<input value={String(filter.field ?? '')} onChange={(event) => setFilter({ field: event.target.value })} /></label><label className="field-label">Operator<select value={String(filter.operator ?? 'eq')} onChange={(event) => setFilter({ operator: event.target.value })}><option value="eq">eq</option><option value="ne">ne</option><option value="contains">contains</option><option value="startswith">startswith</option><option value="endswith">endswith</option><option value="gt">gt</option><option value="lt">lt</option><option value="ge">ge</option><option value="le">le</option></select></label><label className="field-label">Value source<input value={String(filter.value ?? '')} onChange={(event) => setFilter({ value: event.target.value })} /></label></div><div className="metadata-grid compact-grid no-margin"><label className="field-label">$select<input value={Array.isArray(step.select) ? step.select.join(',') : String(step.select ?? '')} onChange={(event) => update(step.id, { select: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} /></label><label className="field-label">$top<input value={String(step.top ?? 1)} onChange={(event) => update(step.id, { top: Number(event.target.value) || 1 })} /></label><label className="check-row"><input type="checkbox" checked={step.required !== false} onChange={(event) => update(step.id, { required: event.target.checked })} /> Required result</label></div></div>;
+  }
+
+  function ResolveObjectEditor({ step, update, resolverOptions }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; resolverOptions: Array<{ resolver_code: string; name: string; object_type: string }> }) {
+    const inputJson = asJson(step.input ?? {});
+    const injectJson = asJson(step.inject ?? {});
+    return <div className="stack-form"><div className="metadata-grid compact-grid no-margin"><label className="field-label">Resolver<input list="resolver-codes" value={String(step.resolver_code ?? step.resolver ?? '')} onChange={(event) => update(step.id, { resolver: event.target.value, resolver_code: event.target.value })} /><datalist id="resolver-codes">{resolverOptions.map((item) => <option key={item.resolver_code} value={item.resolver_code}>{item.name}</option>)}</datalist></label><label className="field-label">Object type<input value={String(step.object_type ?? resolverOptions.find((item) => item.resolver_code === step.resolver)?.object_type ?? '')} onChange={(event) => update(step.id, { object_type: event.target.value })} /></label><label className="field-label">Save as<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label></div><div className="metadata-grid compact-grid no-margin"><label className="check-row"><input type="checkbox" checked={step.required !== false} onChange={(event) => update(step.id, { required: event.target.checked })} /> Required result</label><label className="check-row"><input type="checkbox" checked={step.use_cache !== false} onChange={(event) => update(step.id, { use_cache: event.target.checked })} /> Use cache</label><span className="success-note">Example<span>{'inn -> request.body.inn'}</span></span></div><label className="field-label">Input mapping JSON<textarea value={inputJson} onChange={(event) => { try { update(step.id, { input: parseJsonObject(event.target.value, 'Resolver input') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid resolver input'); } }} /></label><label className="field-label">Payload injection JSON<textarea value={injectJson} onChange={(event) => { try { update(step.id, { inject: parseJsonObject(event.target.value, 'Resolver injection') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid resolver injection'); } }} /></label></div>;
   }
 
   function BuildJsonEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {

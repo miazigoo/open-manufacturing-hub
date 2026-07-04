@@ -23,6 +23,7 @@ from app.operation_templates.models import OperationTemplate  # noqa: F401
 from app.packages.models import InstalledPackage  # noqa: F401
 from app.polling.models import PollingJob, PollingJobRun, SourceEventCursor  # noqa: F401
 from app.printing.models import PrintJob, PrintJobLine, PrintJobLog, PrintPrinter  # noqa: F401
+from app.resolvers.models import ResolverCacheEntry, ResolverDefinitionV2  # noqa: F401
 from app.test_console.models import SavedTestCase  # noqa: F401
 from app.workflows.models import Workflow  # noqa: F401
 from app.main import app

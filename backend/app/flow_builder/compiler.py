@@ -7,6 +7,7 @@ from app.flow_builder.validator import validate_builder
 HANDLERS = {
     "read_variable": "flow_read_variable",
     "odata_query": "flow_odata_query",
+    "resolve_object": "resolve_object",
     "build_json": "flow_build_json",
     "condition": "flow_condition",
     "call_endpoint": "flow_call_endpoint",

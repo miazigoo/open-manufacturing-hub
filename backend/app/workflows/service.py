@@ -163,10 +163,11 @@ async def validate_workflow(session: AsyncSession, workflow_id: UUID) -> dict:
 
     for step in steps:
         name = step["name"]
+        handler = step.get("handler") or name
         try:
-            step_registry.get(name)
+            step_registry.get(handler)
         except Exception:
-            errors.append({"step": name, "message": f"Unknown workflow step: {name}"})
+            errors.append({"step": name, "message": f"Unknown workflow step: {handler}"})
             continue
         condition = step.get("on", "always")
         if condition not in {"always", "on_success", "failure", "on_failure", "on_dry_run"}:
@@ -192,9 +193,9 @@ async def _validate_workflow_payload(session: AsyncSession, data: dict) -> None:
         raise BadRequestError(str(exc)) from exc
     for step in steps:
         try:
-            step_registry.get(step["name"])
+            step_registry.get(step.get("handler") or step["name"])
         except Exception as exc:
-            raise BadRequestError(f"Unknown workflow step: {step['name']}") from exc
+            raise BadRequestError(f"Unknown workflow step: {step.get('handler') or step['name']}") from exc
         condition = step.get("on", "always")
         if condition not in {"always", "on_success", "failure", "on_failure", "on_dry_run"}:
             raise BadRequestError(f"Unsupported workflow condition: {condition}")

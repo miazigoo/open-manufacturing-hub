@@ -30,10 +30,14 @@ const IntegrationQueuePage = lazy(() => EnterpriseRuntimePages().then((m) => ({ 
 const QueueItemDetailsPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.QueueItemDetailsPage })));
 const DeadLetterQueuePage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.DeadLetterQueuePage })));
 const TransactionMonitorPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.TransactionMonitorPage })));
-const BusinessObjectsPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.BusinessObjectsPage })));
-const ResolversPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.ResolversPage })));
+const RuntimeBusinessObjectsPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.BusinessObjectsPage })));
+const RuntimeResolversPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.ResolversPage })));
 const TransformationLibraryPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.TransformationLibraryPage })));
 const BusinessRulesPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.BusinessRulesPage })));
+const BusinessObjectsPage = lazy(() => import('./pages/BusinessObjectsPage').then((m) => ({ default: m.BusinessObjectsPage })));
+const ResolversPage = lazy(() => import('./pages/ResolversPage').then((m) => ({ default: m.ResolversPage })));
+const ResolverDetailsPage = lazy(() => import('./pages/ResolverDetailsPage').then((m) => ({ default: m.ResolverDetailsPage })));
+const ResolverCachePage = lazy(() => import('./pages/ResolverCachePage').then((m) => ({ default: m.ResolverCachePage })));
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage').then((m) => ({ default: m.WorkflowsPage })));
 const PipelineEditorPage = lazy(() => import('./pages/PipelineEditorPage').then((m) => ({ default: m.PipelineEditorPage })));
 const MappingEditorPage = lazy(() => import('./pages/MappingEditorPage').then((m) => ({ default: m.MappingEditorPage })));
@@ -88,8 +92,12 @@ export function App() {
           <Route path="runtime/dlq" element={<DeadLetterQueuePage />} />
           <Route path="runtime/monitor" element={<TransactionMonitorPage />} />
           <Route path="transaction-monitor" element={<TransactionMonitorPage />} />
-          <Route path="runtime/business-objects" element={<BusinessObjectsPage />} />
-          <Route path="runtime/resolvers" element={<ResolversPage />} />
+          <Route path="runtime/business-objects" element={<RuntimeBusinessObjectsPage />} />
+          <Route path="runtime/resolvers" element={<RuntimeResolversPage />} />
+          <Route path="business-objects" element={<BusinessObjectsPage />} />
+          <Route path="resolvers" element={<ResolversPage />} />
+          <Route path="resolvers/cache" element={<ResolverCachePage />} />
+          <Route path="resolvers/:id" element={<ResolverDetailsPage />} />
           <Route path="runtime/transforms" element={<TransformationLibraryPage />} />
           <Route path="runtime/business-rules" element={<BusinessRulesPage />} />
           <Route path="workflows" element={<WorkflowsPage />} />

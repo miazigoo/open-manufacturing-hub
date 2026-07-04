@@ -54,6 +54,7 @@ def register_builtin_steps() -> None:
     from app.execution.steps.odata_lookup import ODataLookupStep
     from app.execution.steps.parse_xml import ParseXMLStep
     from app.execution.steps.receive import ReceiveEventStep
+    from app.execution.steps.resolve_object import ResolveObjectStep
     from app.execution.steps.route_by_rule import RouteByRuleStep
     from app.execution.steps.save_integration_message import SaveIntegrationMessageStep
     from app.execution.steps.send_notifications import SendNotificationsStep
@@ -69,6 +70,7 @@ def register_builtin_steps() -> None:
     registry.register(FlowConditionStep())
     registry.register(FlowCallEndpointStep())
     registry.register(FlowReturnResponseStep())
+    registry.register(ResolveObjectStep())
     registry.register(ODataLookupStep())
     registry.register(RouteByRuleStep())
     registry.register(MaintenanceGuardStep())

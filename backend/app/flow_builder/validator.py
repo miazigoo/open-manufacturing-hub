@@ -36,6 +36,13 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
             for field, code in (("connection", "ODATA_CONNECTION_NOT_SET"), ("resource", "ODATA_RESOURCE_NOT_SET"), ("save_as", "ODATA_SAVE_AS_REQUIRED")):
                 if not step.get(field):
                     errors.append(_error(step_id, code, f"OData step needs {field}", "Select connector/resource and save result variable."))
+        if step_type == "resolve_object":
+            if not (step.get("resolver") or step.get("resolver_code")):
+                errors.append(_error(step_id, "RESOLVER_CODE_REQUIRED", "Resolve step needs resolver code", "Select a resolver such as resolve_customer or resolve_product."))
+            if not isinstance(step.get("input") or {}, dict):
+                errors.append(_error(step_id, "RESOLVER_INPUT_INVALID", "Resolve step input must be a JSON object", "Map fields like inn -> request.body.inn."))
+            if not step.get("save_as"):
+                errors.append(_error(step_id, "RESOLVER_SAVE_AS_REQUIRED", "Resolve step needs save_as", "Save the canonical object as customer, product or warehouse."))
         if step_type == "build_json" and not (step.get("template") or step.get("fields")):
             errors.append(_error(step_id, "JSON_TEMPLATE_REQUIRED", "Build JSON step needs template or visual fields", "Add target fields or switch to advanced JSON template."))
         if step_type == "call_endpoint" and not step.get("connector"):

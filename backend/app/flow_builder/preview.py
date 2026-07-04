@@ -37,6 +37,13 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 items = await _preview_odata_items(session, step, query, run_real_queries)
                 result = _saved_odata_result(items, step)
                 variables[str(step["save_as"])] = result
+            elif step_type == "resolve_object":
+                input_data = _resolve_input_preview(step.get("input") or {}, scope)
+                result = _preview_resolved_object(step, input_data)
+                save_as = str(step.get("save_as") or step.get("resolver") or step_id)
+                variables[save_as] = result
+                sample_request = _apply_injections(sample_request, step.get("inject") or {}, result, variables, save_as)
+                request_preview = {"resolver_code": step.get("resolver_code") or step.get("resolver"), "input": input_data, "cache": step.get("use_cache", True)}
             elif step_type == "build_json":
                 result = build_json_from_template(step["template"], scope) if step.get("template") else build_json_from_fields(step.get("fields") or [], scope)
                 variables[str(step.get("save_as") or "target_payload")] = result
@@ -118,6 +125,85 @@ def _saved_odata_result(items: list[dict[str, Any]], step: dict[str, Any]) -> An
     if int(step.get("top") or 1) == 1:
         return items[0] if items else None
     return items
+
+
+def _resolve_input_preview(value: Any, scope: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("Resolver input must be a JSON object")
+    result: dict[str, Any] = {}
+    for key, raw in value.items():
+        if isinstance(raw, str):
+            if "{{" in raw:
+                result[key] = render_template(raw, scope)
+            else:
+                try:
+                    result[key] = resolve_path(scope, raw)
+                except PathResolutionError:
+                    result[key] = raw
+        else:
+            result[key] = render_template(raw, scope)
+    return result
+
+
+def _preview_resolved_object(step: dict[str, Any], input_data: dict[str, Any]) -> dict[str, Any]:
+    mock = step.get("mock_object")
+    if isinstance(mock, dict):
+        return dict(mock)
+    resolver_code = str(step.get("resolver_code") or step.get("resolver") or "")
+    object_type = str(step.get("object_type") or _object_type_from_resolver(resolver_code))
+    key = next((value for value in input_data.values() if value not in (None, "")), "preview")
+    base = {"object_type": object_type, "uuid": f"{object_type.lower()}-{key}", "name": f"{object_type} {key}"}
+    if object_type == "Customer":
+        base["inn"] = input_data.get("inn") or key
+    if object_type == "Product":
+        base["article"] = input_data.get("article") or input_data.get("code") or key
+    if object_type == "Warehouse":
+        base["code"] = input_data.get("code") or key
+    return base
+
+
+def _object_type_from_resolver(resolver_code: str) -> str:
+    lowered = resolver_code.lower()
+    if "customer" in lowered:
+        return "Customer"
+    if "product" in lowered:
+        return "Product"
+    if "warehouse" in lowered:
+        return "Warehouse"
+    if "printer" in lowered:
+        return "PrintJob"
+    if "order" in lowered:
+        return "SalesOrder"
+    return "BusinessObject"
+
+
+def _apply_injections(sample_request: dict[str, Any], inject: Any, result: dict[str, Any], variables: dict[str, Any], save_as: str) -> dict[str, Any]:
+    if not isinstance(inject, dict) or not inject:
+        return sample_request
+    next_payload = dict(sample_request)
+    scope = _scope(next_payload, {**variables, save_as: result, "resolved": result, "object": result})
+    for target, source in inject.items():
+        source_path = str(source)
+        try:
+            value = render_template(source_path, scope) if "{{" in source_path else resolve_path(scope, source_path)
+        except PathResolutionError:
+            value = result.get(source_path)
+        _set_payload_path(next_payload, str(target), value)
+    return next_payload
+
+
+def _set_payload_path(payload: dict[str, Any], path: str, value: Any) -> None:
+    clean_path = path.removeprefix("payload.").removeprefix("request.body.")
+    parts = [part for part in clean_path.split(".") if part]
+    current = payload
+    for part in parts[:-1]:
+        child = current.get(part)
+        if not isinstance(child, dict):
+            child = {}
+            current[part] = child
+        current = child
+    if parts:
+        current[parts[-1]] = value
 
 
 def _preview_error(step_id: str, exc: Exception) -> dict[str, Any]:
