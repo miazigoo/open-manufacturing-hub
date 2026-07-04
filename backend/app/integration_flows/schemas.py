@@ -27,6 +27,7 @@ class IntegrationFlowCreate(BaseModel):
     matcher_group_json: dict[str, Any] = Field(default_factory=lambda: {"mode": "all", "rules": [{"type": "always"}]})
     action_json: dict[str, Any] = Field(default_factory=lambda: {"type": "create_event_only"})
     response_config_json: dict[str, Any] = Field(default_factory=dict)
+    builder_json: dict[str, Any] | None = None
     test_payload_json: dict[str, Any] | None = None
     test_payload_text: str | None = None
 
@@ -38,6 +39,7 @@ class IntegrationFlowPatch(BaseModel):
     matcher_group_json: dict[str, Any] | None = None
     action_json: dict[str, Any] | None = None
     response_config_json: dict[str, Any] | None = None
+    builder_json: dict[str, Any] | None = None
     test_payload_json: dict[str, Any] | None = None
     test_payload_text: str | None = None
 
@@ -53,12 +55,16 @@ class IntegrationFlowRead(BaseModel):
     endpoint_id: UUID | None
     route_id: UUID | None
     workflow_id: UUID | None
+    compiled_workflow_id: UUID | None
     mapping_id: UUID | None
     target_connector_id: UUID | None
     operation_template_id: UUID | None
     matcher_group_json: dict[str, Any]
     action_json: dict[str, Any]
     response_config_json: dict[str, Any]
+    builder_json: dict[str, Any] | None
+    last_validation_json: dict[str, Any] | None
+    compiled_at: datetime | None
     test_payload_json: dict[str, Any] | None
     test_payload_text: str | None
     endpoint_url: str

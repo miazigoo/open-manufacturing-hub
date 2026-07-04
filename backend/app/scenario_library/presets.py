@@ -4,6 +4,20 @@ from typing import Any
 
 SCENARIOS: list[dict[str, Any]] = [
     {
+        "code": "onec_post_two_odata_to_endpoint",
+        "title": "1C POST to DNP with two OData lookups",
+        "description": "Visual builder flow: read INN/product code, query contractor and product through 1C OData, build JSON and send it to DNP API.",
+        "source": "1C",
+        "target": "DNP Service",
+        "input_modes": ["json"],
+        "default_slug": "onec-pool-to-dnp",
+        "event_type": "Flow.onec-pool-to-dnp",
+        "entity_type": "MarkingPool",
+        "workflow_steps": ["read_inn", "read_product_code", "get_contractor", "get_product", "build_payload", "send_to_dnp", "return_dnp_response"],
+        "operation_code": "flow.onec_two_odata_to_endpoint",
+        "sample_payload": {"inn": "1234567890", "product_code": "ABC-123", "pool_id": "POOL-001", "codes": ["code1", "code2"]},
+    },
+    {
         "code": "marking_pool_to_internal_service",
         "title": "1C Marking Code Pool to Internal Service",
         "description": "No-code flow: route DNP marking code pools from 1C to an internal service by body value or text key phrase.",

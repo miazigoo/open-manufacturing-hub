@@ -11,11 +11,13 @@ from app.events.router import router as events_router
 from app.enterprise_runtime.router import router as enterprise_runtime_router
 from app.execution.router import router as execution_router
 from app.external_errors.router import router as external_errors_router
+from app.flow_builder.router import router as flow_builder_router
 from app.health.router import router as health_router
 from app.incidents.router import router as incidents_router
 from app.integration_designer.router import router as integration_designer_router
 from app.integration_bus.router import router as integration_bus_router
 from app.integration_flows.router import router as integration_flows_router
+from app.json_builder.router import router as json_builder_router
 from app.mappings.router import router as mappings_router
 from app.matchers.router import router as matchers_router
 from app.maintenance.router import router as maintenance_router
@@ -64,12 +66,14 @@ app.include_router(mappings_router)
 app.include_router(workflows_router)
 app.include_router(execution_router)
 app.include_router(external_errors_router)
+app.include_router(flow_builder_router)
 app.include_router(artifacts_router)
 app.include_router(replay_router)
 app.include_router(health_router)
 app.include_router(incidents_router)
 app.include_router(integration_bus_router)
 app.include_router(integration_flows_router)
+app.include_router(json_builder_router)
 app.include_router(integration_designer_router)
 app.include_router(matchers_router)
 app.include_router(scenario_library_router)

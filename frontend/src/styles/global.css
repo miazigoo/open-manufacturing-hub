@@ -361,3 +361,22 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .table-panel textarea { min-height: 92px; min-width: 260px; }
 @media (max-width: 1180px) { .scenario-library-grid { grid-template-columns: minmax(0, 1fr); } }
+.visual-builder-hero { background: radial-gradient(circle at 12% 10%, rgba(240,179,90,.22), transparent 28%), linear-gradient(135deg, rgba(143,198,180,.13), rgba(114,167,255,.07), rgba(0,0,0,.12)); }
+.visual-builder-grid { display: grid; grid-template-columns: 280px minmax(0, 1fr) 420px; gap: 18px; align-items: start; }
+.builder-rail, .builder-preview-panel { position: sticky; top: 76px; }
+.builder-step-list { display: grid; gap: 10px; margin-bottom: 14px; }
+.builder-step-card { width: 100%; border: 1px solid var(--line); background: rgba(0,0,0,.18); color: var(--ink); padding: 12px; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; text-align: left; align-items: start; }
+.builder-step-card strong, .builder-step-card small { min-width: 0; overflow-wrap: anywhere; }
+.builder-step-card small { grid-column: 2; color: var(--muted); }
+.builder-step-card.active { border-color: var(--accent); background: linear-gradient(135deg, rgba(240,179,90,.14), rgba(143,198,180,.07)); }
+.builder-add-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.builder-main { min-width: 0; }
+.builder-input-panel, .step-editor-panel, .builder-preview-panel { background: linear-gradient(145deg, rgba(247,239,218,.07), rgba(0,0,0,.18)); }
+.builder-preview-steps { display: grid; gap: 8px; margin: 14px 0; }
+.preview-step { border: 1px solid var(--line); background: rgba(0,0,0,.18); padding: 10px; display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; align-items: center; }
+.preview-step.success { border-color: rgba(111,206,141,.36); }
+.preview-step.failed { border-color: rgba(239,106,90,.48); background: rgba(239,106,90,.08); }
+.preview-step span, .preview-step small { color: var(--muted); overflow-wrap: anywhere; }
+.step-editor-panel textarea { min-height: 230px; }
+@media (max-width: 1320px) { .visual-builder-grid { grid-template-columns: 260px minmax(0, 1fr); } .builder-preview-panel { grid-column: 1 / -1; position: static; } }
+@media (max-width: 900px) { .visual-builder-grid { grid-template-columns: minmax(0, 1fr); } .builder-rail { position: static; } }

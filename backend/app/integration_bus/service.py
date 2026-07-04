@@ -165,6 +165,10 @@ async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, 
         message.event_id = event.id
 
     payload = dict(parsed["payload"] if isinstance(parsed.get("payload"), dict) else parsed)
+    if parsed.get("_headers"):
+        payload["_headers"] = parsed["_headers"]
+    if parsed.get("_query"):
+        payload["_query"] = parsed["_query"]
     payload.update(
         {
             "_bus": {"endpoint_id": str(endpoint.id), "endpoint_slug": endpoint.slug, "route_id": str(route.id) if route else None},

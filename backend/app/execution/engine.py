@@ -155,7 +155,8 @@ class ExecutionEngine:
 
     async def _execute_config(self, context: PipelineContext, config: dict[str, Any]) -> tuple[StepResult, EventStep]:
         step_name = config["name"]
-        step = self.registry.get(step_name)
+        handler_name = config.get("handler") or step_name
+        step = self.registry.get(handler_name)
         step_order = await self._next_step_order(context.run.id)
         event_step = EventStep(
             run_id=context.run.id,

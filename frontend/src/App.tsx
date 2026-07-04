@@ -36,6 +36,7 @@ import { ScenarioLibraryPage } from './pages/ScenarioLibraryPage';
 import { TestConsolePage } from './pages/TestConsolePage';
 import { WorkflowsPage } from './pages/WorkflowsPage';
 import { XmlToolsPage } from './pages/XmlToolsPage';
+import { VisualFlowBuilderPage } from './pages/VisualFlowBuilderPage';
 
 export function App() {
   return (
@@ -50,6 +51,7 @@ export function App() {
         <Route path="connectors" element={<ConnectorsPage />} />
         <Route path="integration-bus" element={<IntegrationBusPage />} />
         <Route path="integration-flows" element={<IntegrationFlowsPage />} />
+        <Route path="integration-flows/:flowId/builder" element={<VisualFlowBuilderPage />} />
         <Route path="integration-designer" element={<IntegrationDesignerPage />} />
         <Route path="scenario-library" element={<ScenarioLibraryPage />} />
         <Route path="odata-explorer" element={<ODataExplorerPage />} />

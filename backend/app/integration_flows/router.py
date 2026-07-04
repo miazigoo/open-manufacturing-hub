@@ -32,6 +32,13 @@ async def install_marking_pool_preset(session: AsyncSession = Depends(get_sessio
     return await service._read_flow(flow)
 
 
+@router.post("/presets/onec-post-two-odata-to-endpoint/install", response_model=IntegrationFlowRead)
+async def install_two_odata_to_endpoint_preset(session: AsyncSession = Depends(get_session)):
+    flow = await service.install_two_odata_to_endpoint_preset(session)
+    await session.commit()
+    return await service._read_flow(flow)
+
+
 @router.get("/by-slug/{slug}", response_model=IntegrationFlowRead)
 async def get_by_slug(slug: str, session: AsyncSession = Depends(get_session)):
     flow = await repository.get_by_slug(session, slug)
