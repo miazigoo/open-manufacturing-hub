@@ -47,6 +47,8 @@ const routeKey: Record<string, string> = {
   '/resolvers': 'nav.resolvers',
   '/resolvers/cache': 'nav.resolvers',
   '/runtime/resolvers': 'nav.resolvers',
+  '/transforms': 'nav.transforms',
+  '/business-rules': 'nav.businessRules',
   '/runtime/transforms': 'nav.transforms',
   '/runtime/business-rules': 'nav.businessRules',
   '/packages': 'nav.packages',

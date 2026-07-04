@@ -7,6 +7,7 @@ from app.core.enums import ArtifactType
 from app.execution.context import PipelineContext
 from app.execution.result import ArtifactCreate, StepResult
 from app.resolvers.engine import ResolverEngine
+from app.transforms.engine import engine as transform_engine
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
 
@@ -84,6 +85,16 @@ def _resolve_input(value: Any, scope: dict[str, Any]) -> dict[str, Any]:
                     result[key] = resolve_path(scope, raw)
                 except PathResolutionError:
                     result[key] = raw
+        elif isinstance(raw, dict) and raw.get("source") is not None:
+            source = str(raw.get("source") or "")
+            try:
+                value = render_template(source, scope) if "{{" in source else resolve_path(scope, source)
+            except PathResolutionError:
+                value = source
+            transformed = transform_engine.apply_chain(value, raw.get("transforms") or [], scope)
+            if not transformed.success:
+                raise ValueError(transformed.error_message or transformed.error_code or "Resolver input transform failed")
+            result[key] = transformed.value
         else:
             result[key] = render_template(raw, scope)
     return result

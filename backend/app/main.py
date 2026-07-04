@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.artifacts.router import router as artifacts_router
+from app.business_rules.router import router as business_rules_router
 from app.business_objects.router import router as business_objects_router
 from app.core.database import async_session
 from app.core.config import get_settings
@@ -41,6 +42,7 @@ from app.replay.router import router as replay_router
 from app.scenario_library.router import router as scenario_library_router
 from app.resolvers.router import router as resolvers_router
 from app.test_console.router import router as test_console_router
+from app.transforms.router import router as transforms_router
 from app.ui.router import router as ui_router
 from app.workflows.router import router as workflows_router
 from app.xml_tools.router import router as xml_tools_router
@@ -78,7 +80,9 @@ async def bad_request_handler(_: Request, exc: BadRequestError):
 
 app.include_router(events_router)
 app.include_router(business_objects_router)
+app.include_router(business_rules_router)
 app.include_router(resolvers_router)
+app.include_router(transforms_router)
 app.include_router(enterprise_runtime_router)
 app.include_router(queue_router)
 app.include_router(dlq_router)

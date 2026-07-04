@@ -46,6 +46,8 @@ def register_builtin_steps() -> None:
     from app.execution.steps.call_connector import CallConnectorStep
     from app.execution.steps.call_print_operation import CallPrintOperationStep
     from app.execution.steps.create_incident import CreateIncidentStep
+    from app.execution.steps.apply_transforms import ApplyTransformsStep
+    from app.execution.steps.evaluate_rules import EvaluateRulesStep
     from app.execution.steps.flow_builder_steps import FlowBuildJsonStep, FlowCallEndpointStep, FlowConditionStep, FlowODataQueryStep, FlowReadVariableStep, FlowReturnResponseStep
     from app.execution.steps.handle_response import HandleResponseStep
     from app.execution.steps.maintenance_guard import MaintenanceGuardStep
@@ -70,6 +72,8 @@ def register_builtin_steps() -> None:
     registry.register(FlowConditionStep())
     registry.register(FlowCallEndpointStep())
     registry.register(FlowReturnResponseStep())
+    registry.register(ApplyTransformsStep())
+    registry.register(EvaluateRulesStep())
     registry.register(ResolveObjectStep())
     registry.register(ODataLookupStep())
     registry.register(RouteByRuleStep())

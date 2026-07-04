@@ -115,6 +115,8 @@ class ExecutionEngine:
 
         try:
             for config in configs:
+                if config.get("name") in set(context.variables.get("skip_steps") or []):
+                    continue
                 condition = step_condition(config)
                 if condition == "failure" or (condition == "on_dry_run" and not is_dry_run):
                     continue

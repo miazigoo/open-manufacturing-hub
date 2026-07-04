@@ -32,6 +32,13 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
             errors.append(_error(step_id, "VARIABLE_NAME_REQUIRED", "Read variable step needs name/save_as", "Choose a variable name such as inn."))
         if step_type == "read_variable" and not step.get("path"):
             errors.append(_error(step_id, "VARIABLE_PATH_REQUIRED", "Read variable step needs source path", "Example: request.body.inn."))
+        if step_type == "apply_transforms":
+            chains = step.get("chains")
+            if not isinstance(chains, list) or not chains:
+                errors.append(_error(step_id, "TRANSFORM_CHAINS_REQUIRED", "Transform step needs at least one chain", "Map source -> transforms -> target."))
+        if step_type == "evaluate_rules":
+            if not (step.get("rule_set") or step.get("rules") or step.get("rules_json")):
+                errors.append(_error(step_id, "RULE_SET_REQUIRED", "Rule step needs rule_set or inline rules", "Select a saved rule set or use advanced JSON."))
         if step_type == "odata_query":
             for field, code in (("connection", "ODATA_CONNECTION_NOT_SET"), ("resource", "ODATA_RESOURCE_NOT_SET"), ("save_as", "ODATA_SAVE_AS_REQUIRED")):
                 if not step.get(field):

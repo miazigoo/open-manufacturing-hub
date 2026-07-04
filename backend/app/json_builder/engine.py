@@ -4,6 +4,7 @@ from typing import Any
 
 from app.variables.resolver import render_template
 from app.variables.paths import resolve_path
+from app.transforms.engine import engine as transform_engine
 
 
 def build_json_from_template(template: dict[str, Any], scope: dict[str, Any]) -> dict[str, Any]:
@@ -27,6 +28,11 @@ def build_json_from_fields(fields: list[dict[str, Any]], scope: dict[str, Any]) 
             value = render_template(raw_value, scope)
         else:
             value = resolve_path(scope, str(raw_value))
+        if field.get("transforms"):
+            transformed = transform_engine.apply_chain(value, field.get("transforms") or [], scope)
+            if not transformed.success:
+                raise ValueError(transformed.error_message or transformed.error_code or "JSON field transform failed")
+            value = transformed.value
         _set_path(result, target, value)
     return result
 

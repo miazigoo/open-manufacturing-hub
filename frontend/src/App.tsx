@@ -34,6 +34,9 @@ const RuntimeBusinessObjectsPage = lazy(() => EnterpriseRuntimePages().then((m) 
 const RuntimeResolversPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.ResolversPage })));
 const TransformationLibraryPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.TransformationLibraryPage })));
 const BusinessRulesPage = lazy(() => EnterpriseRuntimePages().then((m) => ({ default: m.BusinessRulesPage })));
+const TransformLibraryPage = lazy(() => import('./pages/TransformsPage').then((m) => ({ default: m.TransformsPage })));
+const BusinessRuleSetsPage = lazy(() => import('./pages/BusinessRulesPage').then((m) => ({ default: m.BusinessRulesPage })));
+const BusinessRuleDetailsPage = lazy(() => import('./pages/BusinessRuleDetailsPage').then((m) => ({ default: m.BusinessRuleDetailsPage })));
 const BusinessObjectsPage = lazy(() => import('./pages/BusinessObjectsPage').then((m) => ({ default: m.BusinessObjectsPage })));
 const ResolversPage = lazy(() => import('./pages/ResolversPage').then((m) => ({ default: m.ResolversPage })));
 const ResolverDetailsPage = lazy(() => import('./pages/ResolverDetailsPage').then((m) => ({ default: m.ResolverDetailsPage })));
@@ -100,6 +103,9 @@ export function App() {
           <Route path="resolvers/:id" element={<ResolverDetailsPage />} />
           <Route path="runtime/transforms" element={<TransformationLibraryPage />} />
           <Route path="runtime/business-rules" element={<BusinessRulesPage />} />
+          <Route path="transforms" element={<TransformLibraryPage />} />
+          <Route path="business-rules" element={<BusinessRuleSetsPage />} />
+          <Route path="business-rules/:id" element={<BusinessRuleDetailsPage />} />
           <Route path="workflows" element={<WorkflowsPage />} />
           <Route path="pipelines/:workflowId/edit" element={<PipelineEditorPage />} />
           <Route path="mappings" element={<MappingEditorPage />} />

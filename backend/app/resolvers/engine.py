@@ -11,6 +11,7 @@ from app.core.errors import BadRequestError
 from app.resolvers import cache, repository
 from app.resolvers.models import ResolverDefinitionV2
 from app.resolvers.schemas import ResolverArtifact, ResolverResult
+from app.transforms.engine import engine as transform_engine
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
 
@@ -239,6 +240,15 @@ def _entry_matches(entry: dict[str, Any], input_data: dict[str, Any]) -> bool:
 
 def _render_mapping(mapping: Any, input_data: dict[str, Any], context: dict[str, Any]) -> Any:
     if isinstance(mapping, dict):
+        if mapping.get("source") is not None:
+            source = str(mapping.get("source") or "")
+            scope = _scope(input_data, context)
+            try:
+                value = render_template(source, scope) if "{{" in source else resolve_path(scope, source)
+            except PathResolutionError:
+                value = source
+            transformed = transform_engine.apply_chain(value, mapping.get("transforms") or [], scope)
+            return transformed.value if transformed.success else None
         return {key: _render_mapping(value, input_data, context) for key, value in mapping.items()}
     if isinstance(mapping, list):
         return [_render_mapping(item, input_data, context) for item in mapping]

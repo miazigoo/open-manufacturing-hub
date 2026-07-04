@@ -8,6 +8,8 @@ from app.connectors import repository as connector_repository
 from app.connectors.builtin.onec.odata import read_odata
 from app.flow_builder.validator import validate_builder
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
+from app.business_rules.engine import engine as rules_engine
+from app.transforms.engine import engine as transform_engine
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
 
@@ -31,6 +33,20 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 variables[name] = value
                 result = value
                 request_preview = {"path": step["path"]}
+            elif step_type == "apply_transforms":
+                result = _preview_apply_transforms(step, sample_request, variables)
+                sample_request = result["payload"]
+                variables.update(result["variables"])
+                request_preview = {"chains": step.get("chains") or []}
+            elif step_type == "evaluate_rules":
+                rule_set = step.get("rules_json") if isinstance(step.get("rules_json"), dict) else {"mode": step.get("mode") or "first_match", "rules": step.get("rules") or [], "name": step.get("rule_set") or step.get("name")}
+                rule_result = rules_engine.evaluate(rule_set, {"payload": sample_request, "variables": variables})
+                variables.update(rule_result.variables)
+                sample_request = rule_result.payload
+                result = rule_result.model_dump(mode="json")
+                request_preview = {"rule_set": step.get("rule_set"), "matched_rules": rule_result.matched_rules, "status": rule_result.status}
+                if rule_result.status == "failed":
+                    raise ValueError(rule_result.error_message or rule_result.error_code or "BUSINESS_RULE_FAILED")
             elif step_type == "odata_query":
                 query = _odata_query(step, scope)
                 request_preview = {"connection": step.get("connection"), "resource": step.get("resource"), "query": query}
@@ -127,6 +143,40 @@ def _saved_odata_result(items: list[dict[str, Any]], step: dict[str, Any]) -> An
     return items
 
 
+def _preview_apply_transforms(step: dict[str, Any], sample_request: dict[str, Any], variables: dict[str, Any]) -> dict[str, Any]:
+    next_payload = dict(sample_request)
+    next_variables = {key: value for key, value in variables.items() if key != "steps"}
+    traces: list[dict[str, Any]] = []
+    for chain in step.get("chains") or []:
+        scope = _scope(next_payload, next_variables)
+        value = resolve_path(scope, str(chain.get("source")))
+        result = transform_engine.apply_chain(value, chain.get("transforms") or [], scope)
+        if not result.success:
+            raise ValueError(result.error_message or result.error_code or "TRANSFORM_FAILED")
+        target = str(chain.get("target") or "")
+        if target.startswith("payload.") or target.startswith("request.body."):
+            _set_payload_path(next_payload, target, result.value)
+        elif target.startswith("variables."):
+            _set_variable_path(next_variables, target.removeprefix("variables."), result.value)
+        else:
+            raise ValueError("Transform target must start with payload. or variables.")
+        traces.append({"source": chain.get("source"), "target": target, "value": result.value, "trace": [item.model_dump(mode="json") for item in result.trace]})
+    return {"payload": next_payload, "variables": next_variables, "traces": traces}
+
+
+def _set_variable_path(variables: dict[str, Any], path: str, value: Any) -> None:
+    parts = [part for part in path.split(".") if part]
+    current = variables
+    for part in parts[:-1]:
+        child = current.get(part)
+        if not isinstance(child, dict):
+            child = {}
+            current[part] = child
+        current = child
+    if parts:
+        current[parts[-1]] = value
+
+
 def _resolve_input_preview(value: Any, scope: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("Resolver input must be a JSON object")
@@ -142,6 +192,16 @@ def _resolve_input_preview(value: Any, scope: dict[str, Any]) -> dict[str, Any]:
                     result[key] = raw
         else:
             result[key] = render_template(raw, scope)
+        if isinstance(raw, dict) and raw.get("source") is not None:
+            source = str(raw.get("source") or "")
+            try:
+                value = render_template(source, scope) if "{{" in source else resolve_path(scope, source)
+            except PathResolutionError:
+                value = source
+            transformed = transform_engine.apply_chain(value, raw.get("transforms") or [], scope)
+            if not transformed.success:
+                raise ValueError(transformed.error_message or transformed.error_code or "Resolver input transform failed")
+            result[key] = transformed.value
     return result
 
 

@@ -58,8 +58,8 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
             ("Business Objects", "/business-objects", None, False),
             ("Resolvers", "/resolvers", None, False),
             ("Resolver Cache", "/resolvers/cache", None, False),
-            ("Transform Library", "/runtime/transforms", None, False),
-            ("Business Rules", "/runtime/business-rules", None, False),
+            ("Transform Library", "/transforms", None, False),
+            ("Business Rules", "/business-rules", None, False),
         ]),
         ("Packages", [
             ("Packages", "/packages", None, False),
