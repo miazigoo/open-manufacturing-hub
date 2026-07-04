@@ -7,6 +7,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError
+from app.integration_flows import service as flow_service
 from app.integration_bus import repository as bus_repository
 from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
 from app.operation_templates.models import OperationTemplate
@@ -37,6 +38,22 @@ def preview_scenario(code: str) -> dict[str, Any]:
 
 
 async def install_scenario(session: AsyncSession, code: str, request: ScenarioInstallRequest) -> dict[str, Any]:
+    if code == "marking_pool_to_internal_service":
+        flow = await flow_service.install_marking_pool_preset(session)
+        test_case_result = await session.execute(select(SavedTestCase).where(SavedTestCase.name == f"Flow {flow.name} Test"))
+        test_case = test_case_result.scalar_one_or_none()
+        return {
+            "scenario": code,
+            "endpoint_id": flow.endpoint_id,
+            "route_id": flow.route_id,
+            "workflow_id": flow.workflow_id,
+            "operation_template_id": flow.operation_template_id,
+            "test_case_id": test_case.id if test_case else None,
+            "endpoint_url": flow_service.endpoint_url(flow.slug),
+            "curl_example": flow_service.curl_example(flow.slug, "json", flow.test_payload_json),
+            "onec_http_example": flow_service.onec_http_example(flow.slug, "json"),
+            "next_steps": ["Open Integration Flows", "Test matcher trace", "Send sample payload and inspect timeline artifacts"],
+        }
     scenario = _scenario_or_error(code)
     names = _names(scenario, request)
     workflow = await _upsert_workflow(session, scenario, names["workflow_name"], request)

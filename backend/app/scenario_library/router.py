@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
+from app.integration_flows import service as flow_service
 from app.scenario_library import service
 from app.scenario_library.schemas import ScenarioInstallRequest, ScenarioInstallResponse, ScenarioPreview, ScenarioRead
 
@@ -13,6 +14,13 @@ router = APIRouter(prefix="/api/scenario-library", tags=["scenario-library"])
 @router.get("", response_model=list[ScenarioRead])
 async def list_scenarios():
     return service.list_scenarios()
+
+
+@router.post("/marking-pool-to-internal-service/install")
+async def install_marking_pool_flow(session: AsyncSession = Depends(get_session)):
+    flow = await flow_service.install_marking_pool_preset(session)
+    await session.commit()
+    return await flow_service._read_flow(flow)
 
 
 @router.post("/{scenario_code}/preview", response_model=ScenarioPreview)

@@ -21,6 +21,7 @@ const navSections: NavSection[] = [
     titleKey: 'nav.sectionBuild',
     items: [
       { to: '/connectors', labelKey: 'nav.connectors' },
+      { to: '/integration-flows', labelKey: 'nav.integrationFlows' },
       { to: '/integration-bus', labelKey: 'nav.integrationBus' },
       { to: '/runtime/monitor', labelKey: 'nav.transactionMonitor' },
       { to: '/runtime/queue', labelKey: 'nav.integrationQueue' },

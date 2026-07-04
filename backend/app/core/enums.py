@@ -191,3 +191,23 @@ class ODataCacheStatus(StrEnum):
     MISS = "miss"
     STALE = "stale"
     INVALIDATED = "invalidated"
+
+
+class IntegrationFlowSourceType(StrEnum):
+    ONEC = "onec"
+    WEBSITE = "website"
+    WMS = "wms"
+    EXTERNAL_API = "external_api"
+    PRINTER = "printer"
+    MANUAL = "manual"
+    WEBHOOK = "webhook"
+
+
+class IntegrationFlowTargetType(StrEnum):
+    ONEC = "onec"
+    WEBSITE = "website"
+    WMS = "wms"
+    EXTERNAL_API = "external_api"
+    PRINTER = "printer"
+    ODATA_LOOKUP = "odata_lookup"
+    INTERNAL = "internal"

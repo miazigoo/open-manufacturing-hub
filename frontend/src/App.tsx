@@ -19,6 +19,7 @@ import { IncidentDetailsPage } from './pages/IncidentDetailsPage';
 import { IncidentsPage } from './pages/IncidentsPage';
 import { IntegrationBusPage } from './pages/IntegrationBusPage';
 import { IntegrationDesignerPage } from './pages/IntegrationDesignerPage';
+import { IntegrationFlowsPage } from './pages/IntegrationFlowsPage';
 import { MaintenancePage } from './pages/MaintenancePage';
 import { MappingEditorPage } from './pages/MappingEditorPage';
 import { NotificationRulesPage } from './pages/NotificationRulesPage';
@@ -48,6 +49,7 @@ export function App() {
         <Route path="health" element={<HealthPage />} />
         <Route path="connectors" element={<ConnectorsPage />} />
         <Route path="integration-bus" element={<IntegrationBusPage />} />
+        <Route path="integration-flows" element={<IntegrationFlowsPage />} />
         <Route path="integration-designer" element={<IntegrationDesignerPage />} />
         <Route path="scenario-library" element={<ScenarioLibraryPage />} />
         <Route path="odata-explorer" element={<ODataExplorerPage />} />

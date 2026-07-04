@@ -4,6 +4,20 @@ from typing import Any
 
 SCENARIOS: list[dict[str, Any]] = [
     {
+        "code": "marking_pool_to_internal_service",
+        "title": "1C Marking Code Pool to Internal Service",
+        "description": "No-code flow: route DNP marking code pools from 1C to an internal service by body value or text key phrase.",
+        "source": "1C",
+        "target": "DNP Service",
+        "input_modes": ["json"],
+        "default_slug": "marking-pool",
+        "event_type": "Flow.marking-pool",
+        "entity_type": "MarkingCodePool",
+        "workflow_steps": ["receive", "route_by_rule", "call_connector", "handle_response", {"name": "create_incident", "on": "failure"}],
+        "operation_code": "flow.marking_pool",
+        "sample_payload": {"pool_type": "DNP", "order_id": "ORD-123", "codes": ["010464615169738421ABC", "010464615169738421DEF"]},
+    },
+    {
         "code": "onec_to_api",
         "title": "1C to Website/API",
         "description": "Inbound JSON/XML from 1C routed to a REST/API connector.",

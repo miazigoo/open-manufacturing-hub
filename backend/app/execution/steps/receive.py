@@ -12,8 +12,13 @@ class ReceiveEventStep:
 
     async def execute(self, context: PipelineContext) -> StepResult:
         payload = dict(context.variables.get("raw_payload") or context.variables.get("payload") or {})
+        artifacts = [ArtifactCreate(ArtifactType.RAW_PAYLOAD.value, "raw_payload.json", payload)]
+        if isinstance(payload.get("_route_match_trace"), dict):
+            artifacts.append(
+                ArtifactCreate(ArtifactType.VALIDATION_RESULT.value, "route_match_trace.json", payload["_route_match_trace"])
+            )
         return StepResult.success(
             "Payload received",
-            artifacts=[ArtifactCreate(ArtifactType.RAW_PAYLOAD.value, "raw_payload.json", payload)],
+            artifacts=artifacts,
             variables_update={"raw_payload": payload, "payload": payload},
         )

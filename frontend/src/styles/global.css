@@ -273,6 +273,22 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .workflow-steps span { min-width: 0; border: 1px solid var(--line); background: rgba(0,0,0,.22); color: var(--accent-2); padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; overflow-wrap: anywhere; }
 .workflow-steps span::after { content: '→'; margin-left: 9px; color: var(--muted); }
 .workflow-steps span:last-child::after { content: ''; margin: 0; }
+.flow-hero { background: linear-gradient(135deg, rgba(240,179,90,.14), rgba(143,198,180,.1), rgba(0,0,0,.08)); }
+.flow-layout { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 18px; align-items: start; }
+.flow-list-panel { position: sticky; top: 76px; }
+.flow-list { display: grid; gap: 10px; }
+.flow-list-item { width: 100%; border: 1px solid var(--line); background: rgba(0,0,0,.18); color: var(--ink); padding: 12px; display: flex; justify-content: space-between; gap: 12px; text-align: left; align-items: flex-start; }
+.flow-list-item.active { border-color: var(--accent); background: rgba(240,179,90,.1); }
+.flow-list-item span { min-width: 0; display: grid; gap: 4px; }
+.flow-list-item small { color: var(--muted); overflow-wrap: anywhere; }
+.flow-wizard { background: linear-gradient(145deg, rgba(247,239,218,.08), rgba(143,198,180,.055)); }
+.wizard-step { border: 1px solid var(--line); background: rgba(0,0,0,.14); padding: 14px; display: grid; gap: 12px; }
+.flow-detail { display: grid; gap: 16px; }
+.flow-output-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1180px) {
+  .flow-layout, .flow-output-grid { grid-template-columns: minmax(0, 1fr); }
+  .flow-list-panel { position: static; }
+}
 .no-margin { margin: 0; }
 @media (max-width: 1180px) {
   .mapping-editor-grid, .mapping-bottom-grid, .mapping-triptych { grid-template-columns: minmax(0, 1fr); }

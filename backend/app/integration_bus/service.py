@@ -31,6 +31,7 @@ from app.integration_bus.schemas import (
     ODataLookupTemplatePatch,
 )
 from app.mappings.engine import get_path
+from app.matchers.engine import evaluate_matcher_group
 from app.onec_workbench.lookup import extract_fields, render_filter_template
 from app.onec_workbench.models import IntegrationMessage
 from app.workflows.models import Workflow
@@ -133,13 +134,15 @@ async def dispatch(session: AsyncSession, slug: str, request: Request) -> dict[s
     _check_auth(endpoint, request)
 
     parsed = await _parse_request(endpoint, request)
+    parsed["_headers"] = {str(key).lower(): value for key, value in request.headers.items()}
+    parsed["_query"] = dict(request.query_params)
     return await dispatch_parsed(session, endpoint, parsed)
 
 
 async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, parsed: dict[str, Any]) -> dict[str, Any]:
     if not endpoint.enabled:
         raise BadRequestError("BUS_ENDPOINT_DISABLED")
-    route = await select_route(session, endpoint, parsed)
+    route, route_trace = await select_route_with_trace(session, endpoint, parsed)
     target_system = await _target_system(session, endpoint, route)
     workflow_id = endpoint.workflow_id or (route.workflow_id if route else None)
     if (endpoint.route_id and route is None) or (route is None and workflow_id is None):
@@ -178,6 +181,8 @@ async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, 
         payload.setdefault("_omh", {})
         if isinstance(payload["_omh"], dict):
             payload["_omh"]["operation"] = route.operation
+    if route_trace:
+        payload["_route_match_trace"] = route_trace
 
     run = await ExecutionEngine(session).execute_event(event.id, mode=RunMode.NORMAL, initial_payload=payload, workflow_id=workflow_id)
     await _update_message_after_run(session, message, event.status.value if hasattr(event.status, "value") else str(event.status))
@@ -195,9 +200,23 @@ async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, 
 
 
 async def select_route(session: AsyncSession, endpoint: IntegrationEndpoint, parsed: dict[str, Any]) -> IntegrationRoute | None:
+    route, _ = await select_route_with_trace(session, endpoint, parsed)
+    return route
+
+
+async def select_route_with_trace(session: AsyncSession, endpoint: IntegrationEndpoint, parsed: dict[str, Any]) -> tuple[IntegrationRoute | None, dict[str, Any]]:
     if endpoint.route_id is not None:
         route = await repository.get_route(session, endpoint.route_id)
-        return route if route and route.enabled else None
+        if route is None or not route.enabled:
+            return None, {"selected_route": None, "matched": False, "checked_routes": []}
+        matcher_group = _matcher_group(route.condition_json)
+        matcher_result = evaluate_matcher_group(matcher_group, _matcher_context(parsed))
+        selected = route if matcher_result["matched"] else None
+        return selected, {
+            "selected_route": selected.name if selected else None,
+            "matched": selected is not None,
+            "checked_routes": [{"route": route.name, "matched": matcher_result["matched"], "score": 100 if matcher_result["matched"] else 0, "trace": matcher_result["trace"]}],
+        }
     source_system = parsed.get("source_system") or endpoint.default_source_system
     target_system = parsed.get("target_system") or endpoint.default_target_system
     event_type = parsed.get("event_type") or endpoint.default_event_type
@@ -213,10 +232,21 @@ async def select_route(session: AsyncSession, endpoint: IntegrationEndpoint, par
         .where(or_(IntegrationRoute.operation == operation, IntegrationRoute.operation.is_(None)))
     )
     routes = list(result.scalars().all())
-    if not routes:
-        return None
-    routes.sort(key=lambda route: (route.priority, -_route_score(route, source_system, target_system, event_type, message_type, operation)))
-    return routes[0]
+    checked = []
+    matched_routes: list[tuple[IntegrationRoute, int]] = []
+    context = _matcher_context(parsed)
+    for route in routes:
+        matcher_group = _matcher_group(route.condition_json)
+        matcher_result = evaluate_matcher_group(matcher_group, context)
+        score = _route_score(route, source_system, target_system, event_type, message_type, operation) + (50 if matcher_result["matched"] and matcher_group else 0)
+        checked.append({"route": route.name, "matched": matcher_result["matched"], "score": score, "trace": matcher_result["trace"]})
+        if matcher_result["matched"]:
+            matched_routes.append((route, score))
+    if not matched_routes:
+        return None, {"selected_route": None, "matched": False, "checked_routes": checked}
+    matched_routes.sort(key=lambda item: (item[0].priority, -item[1]))
+    selected = matched_routes[0][0]
+    return selected, {"selected_route": selected.name, "matched": True, "checked_routes": checked}
 
 
 async def install_presets(session: AsyncSession) -> tuple[list[IntegrationEndpoint], list[IntegrationRoute], list[ODataLookupTemplate]]:
@@ -431,6 +461,27 @@ def _route_score(route: IntegrationRoute, source_system: Any, target_system: Any
         4 if route.message_type == message_type and message_type else 0,
         3 if route.operation == operation and operation else 0,
     ])
+
+
+def _matcher_group(condition_json: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not condition_json:
+        return None
+    if isinstance(condition_json.get("matcher_group"), dict):
+        return condition_json["matcher_group"]
+    if condition_json.get("mode") and isinstance(condition_json.get("rules"), list):
+        return condition_json
+    return None
+
+
+def _matcher_context(parsed: dict[str, Any]) -> dict[str, Any]:
+    body = parsed.get("payload") if isinstance(parsed.get("payload"), dict) else parsed if isinstance(parsed, dict) else {}
+    return {
+        "body": body,
+        "text": parsed.get("text") or parsed.get("xml") or str(body),
+        "xml": parsed.get("xml"),
+        "headers": parsed.get("_headers") or {},
+        "query": parsed.get("_query") or {},
+    }
 
 
 def _entity_id(parsed: dict[str, Any]) -> str | None:
