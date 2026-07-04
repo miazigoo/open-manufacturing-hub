@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import service as audit_service
 from app.core.database import get_session
 from app.core.errors import NotFoundError
-from app.production import backups, service
-from app.production.schemas import BackupRecordRead, ExportConfigRequest, ExportConfigResponse, ImportApplyResponse, ImportConfigRequest, ImportPreview, ProductionStatus, SystemSnapshot, UpdateCheckResponse, UpdateModeRequest, UpdateModeStatus
+from app.production import backups, release, service
+from app.production.schemas import BackupRecordRead, DoctorResponse, ExportConfigRequest, ExportConfigResponse, FirstRunChecklistResponse, ImportApplyResponse, ImportConfigRequest, ImportPreview, ProductionStatus, SystemSnapshot, UpdateCheckResponse, UpdateModeRequest, UpdateModeStatus
 
 router = APIRouter(prefix="/api/production", tags=["production"])
 
@@ -23,6 +23,16 @@ async def production_status(session: AsyncSession = Depends(get_session)):
 @router.get("/snapshot", response_model=SystemSnapshot)
 async def production_snapshot(session: AsyncSession = Depends(get_session)):
     return await service.snapshot(session)
+
+
+@router.get("/doctor", response_model=DoctorResponse)
+async def production_doctor(session: AsyncSession = Depends(get_session)):
+    return await release.doctor(session)
+
+
+@router.get("/checklist", response_model=FirstRunChecklistResponse)
+async def production_checklist(session: AsyncSession = Depends(get_session)):
+    return await release.first_run_checklist(session)
 
 
 @router.post("/export-config", response_model=ExportConfigResponse)

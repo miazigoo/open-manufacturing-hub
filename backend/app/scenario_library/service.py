@@ -123,12 +123,13 @@ def _scenario_or_error(code: str) -> dict[str, Any]:
 def _names(scenario: dict[str, Any], request: ScenarioInstallRequest) -> dict[str, str]:
     title = scenario["title"]
     slug = request.endpoint_slug or scenario["default_slug"]
+    suffix = f" [{slug}]" if request.endpoint_slug and request.endpoint_slug != scenario["default_slug"] else ""
     return {
-        "endpoint_name": request.endpoint_name or f"Designer {title} Endpoint",
-        "route_name": f"Designer {title} Route",
-        "workflow_name": f"Designer {title} Workflow",
-        "operation_name": f"Designer {title} Operation",
-        "test_case_name": f"Test {title}",
+        "endpoint_name": request.endpoint_name or f"Designer {title}{suffix} Endpoint",
+        "route_name": f"Designer {title}{suffix} Route",
+        "workflow_name": f"Designer {title}{suffix} Workflow",
+        "operation_name": f"Designer {title}{suffix} Operation",
+        "test_case_name": f"Test {title}{suffix}",
         "slug": slug,
     }
 

@@ -11,6 +11,8 @@ export function ProductionPage() {
   const queryClient = useQueryClient();
   const snapshot = useQuery({ queryKey: ['production-snapshot'], queryFn: productionApi.snapshot });
   const exportsQuery = useQuery({ queryKey: ['production-exports'], queryFn: productionApi.exports });
+  const doctor = useQuery({ queryKey: ['production-doctor'], queryFn: productionApi.doctor });
+  const checklist = useQuery({ queryKey: ['production-checklist'], queryFn: productionApi.checklist });
   const [importPayload, setImportPayload] = useState<Record<string, unknown> | null>(null);
   const [importMode, setImportMode] = useState('create_only');
   const [checkResult, setCheckResult] = useState<UpdateCheck | null>(null);
@@ -19,6 +21,8 @@ export function ProductionPage() {
     queryClient.invalidateQueries({ queryKey: ['production-snapshot'] });
     queryClient.invalidateQueries({ queryKey: ['production-status'] });
     queryClient.invalidateQueries({ queryKey: ['production-exports'] });
+    queryClient.invalidateQueries({ queryKey: ['production-doctor'] });
+    queryClient.invalidateQueries({ queryKey: ['production-checklist'] });
   };
   const exportConfig = useMutation({ mutationFn: productionApi.exportConfig, onSuccess: refresh });
   const preCheck = useMutation({ mutationFn: productionApi.preUpdateCheck, onSuccess: setCheckResult });
@@ -54,6 +58,18 @@ export function ProductionPage() {
         <article className="metric-card"><span>Connectors</span><strong>{data.counts.connectors ?? 0}</strong><small>{data.counts.endpoints ?? 0} endpoints</small></article>
         <article className="metric-card"><span>Queue</span><strong>{(data.queue.waiting ?? 0) + (data.queue.retry_waiting ?? 0)}</strong><small>{data.queue.processing ?? 0} processing · {data.dlq_count} DLQ</small></article>
         <article className="metric-card"><span>Last backup</span><strong>{data.last_backup_at ? new Date(data.last_backup_at).toLocaleString() : 'none'}</strong><small>{data.packages.length} packages</small></article>
+      </section>
+
+      <section className="production-grid">
+        <article className="panel">
+          <div className="panel-toolbar"><h2>Release doctor</h2><StatusBadge status={doctor.data?.status === 'ok' ? 'ok' : doctor.data?.status === 'error' ? 'failed' : 'warning'} label={doctor.data?.status ?? 'loading'} /></div>
+          <div className="compact-run-list">{doctor.data?.checks.slice(0, 8).map((check) => <div className={`check-row-card ${check.status}`} key={check.name}><strong>{check.name}</strong><span>{check.message ?? check.status}</span></div>)}</div>
+          <p className="microcopy">CLI: make doctor · Full gate: make release-check</p>
+        </article>
+        <article className="panel">
+          <div className="panel-toolbar"><h2>First-run checklist</h2><StatusBadge status={checklist.data?.complete ? 'ok' : 'warning'} label={checklist.data?.complete ? 'complete' : 'open'} /></div>
+          <div className="compact-run-list">{checklist.data?.items.map((item) => <div className={`check-row-card ${item.status === 'action_required' ? 'error' : item.status === 'ok' ? 'ok' : 'warning'}`} key={item.code}><strong>{item.title}</strong><span>{item.status.replace('_', ' ')}</span></div>)}</div>
+        </article>
       </section>
 
       <section className="production-grid">

@@ -1,4 +1,4 @@
-.PHONY: install-backend install-frontend test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke ui-smoke-live openapi-export snapshot backup backup-config backup-db export-config pre-update-check post-update-check rollback-info restore-db packages-list package-install-onec package-install-printer docker-up docker-down
+.PHONY: install-backend install-frontend check-test-env test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke ui-smoke-live ui-deep-smoke-live openapi-export openapi-check route-inventory-check release-fixtures e2e-release release-check release-check-local release-check-docker doctor snapshot backup backup-config backup-db export-config pre-update-check post-update-check rollback-info restore-db packages-list package-install-onec package-install-printer docker-up docker-down docker-prod-up docker-prod-down
 
 install-backend:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[test]"
@@ -6,14 +6,17 @@ install-backend:
 install-frontend:
 	cd frontend && npm install
 
-test-backend:
-	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[test]" >/tmp/omh_make_backend_pip.log && pytest -q
+check-test-env: install-backend
+	cd backend && . .venv/bin/activate && python scripts/check_test_env.py
+
+test-backend: check-test-env
+	cd backend && . .venv/bin/activate && pytest -q
 
 build-frontend:
 	cd frontend && npm install >/tmp/omh_make_frontend_npm.log && npm run build
 
-lint-backend:
-	cd backend && python3 -m compileall app scripts
+lint-backend: check-test-env
+	cd backend && . .venv/bin/activate && python -m compileall app scripts
 
 lint-frontend:
 	cd frontend && npm run build
@@ -39,8 +42,43 @@ ui-smoke:
 ui-smoke-live:
 	cd frontend && npm run smoke:ui:live
 
-openapi-export:
-	cd backend && . .venv/bin/activate && python -c "import json; from pathlib import Path; from app.main import app; target = Path('../frontend/src/api/generated/openapi.json'); target.parent.mkdir(parents=True, exist_ok=True); target.write_text(json.dumps(app.openapi(), indent=2, sort_keys=True), encoding='utf-8')"
+ui-deep-smoke-live:
+	cd frontend && npm run smoke:ui:deep:live
+
+openapi-export: openapi-check
+
+openapi-check: check-test-env
+	cd backend && . .venv/bin/activate && python scripts/openapi_check.py
+
+route-inventory-check: check-test-env
+	cd backend && . .venv/bin/activate && python scripts/route_inventory_check.py
+
+release-fixtures:
+	cd backend && . .venv/bin/activate && python scripts/seed_release_fixtures.py
+
+e2e-release:
+	cd backend && python3 scripts/e2e_scenarios.py
+
+release-check: release-check-local
+
+release-check-local: lint-backend test-backend build-frontend openapi-check route-inventory-check
+	@echo "release-check-local OK"
+
+release-check-docker:
+	docker compose down --remove-orphans
+	docker compose up -d --build
+	docker compose exec -T backend alembic upgrade head
+	docker compose exec -T backend python scripts/seed_release_fixtures.py
+	SMOKE_BASE_URL=http://localhost:8000 $(MAKE) smoke-test
+	SMOKE_BASE_URL=http://localhost:8000 $(MAKE) integration-smoke
+	E2E_BASE_URL=http://localhost:8000 $(MAKE) e2e-release
+	$(MAKE) ui-smoke-live
+	$(MAKE) ui-deep-smoke-live
+	docker compose exec -T backend python -m app.cli.production doctor
+	@echo "release-check-docker OK"
+
+doctor:
+	cd backend && . .venv/bin/activate && python -m app.cli.production doctor
 
 snapshot:
 	cd backend && . .venv/bin/activate && python -m app.cli.production snapshot
@@ -78,6 +116,12 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+docker-prod-up:
+	docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production up -d --build
+
+docker-prod-down:
+	docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production down
 
 packages-list:
 	curl -s http://localhost:8000/api/packages/available | python3 -m json.tool

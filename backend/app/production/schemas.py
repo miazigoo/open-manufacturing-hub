@@ -105,3 +105,25 @@ class UpdateCheckResponse(BaseModel):
     safe_to_update: bool
     checks: list[ProductionCheck]
     required_actions: list[str]
+
+
+class DoctorResponse(BaseModel):
+    generated_at: str
+    app_env: str
+    status: Literal["ok", "warning", "error"]
+    summary: dict[str, int]
+    checks: list[ProductionCheck]
+    counts: dict[str, int]
+
+
+class FirstRunChecklistItem(BaseModel):
+    code: str
+    title: str
+    status: Literal["ok", "warning", "action_required", "manual"]
+    details: dict[str, Any]
+
+
+class FirstRunChecklistResponse(BaseModel):
+    generated_at: str
+    complete: bool
+    items: list[FirstRunChecklistItem]

@@ -32,7 +32,16 @@ def ok(label: str) -> None:
     print(f"OK {label}")
 
 
+def ensure_package(package_id: str, install_demo_data: bool = False) -> None:
+    response = request(f"/api/packages/{package_id}/install", "POST", {"install_demo_data": install_demo_data})
+    package = response.get("package") if isinstance(response, dict) else None
+    if not package or package.get("enabled") is not True:
+        raise RuntimeError(f"package {package_id} was not enabled: {response}")
+    ok(f"package {package_id}")
+
+
 def main() -> int:
+    ensure_package("omh-package-onec", install_demo_data=False)
     checks = [
         ("events", "/api/events"),
         ("health", "/api/health/dashboard"),

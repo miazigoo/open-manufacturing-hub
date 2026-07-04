@@ -1,0 +1,37 @@
+services:
+  postgres:
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-omh}
+      POSTGRES_USER: ${POSTGRES_USER:-omh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+
+  backend:
+    image: open-manufacturing-hub-backend:production
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      OMH_APP_ENV: production
+      OMH_DATABASE_URL: ${OMH_DATABASE_URL:?Set OMH_DATABASE_URL in .env.production}
+      OMH_SECRET_KEY: ${OMH_SECRET_KEY:?Set OMH_SECRET_KEY in .env.production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      OMH_ALLOW_DEMO_SEED_IN_PRODUCTION: "false"
+    volumes:
+      - ./backups:/app/backups
+      - ./backend/exports:/app/exports
+    command: >
+      sh -c "i=0;
+      until alembic upgrade head; do
+        i=$$((i+1));
+        if [ $$i -ge 30 ]; then exit 1; fi;
+        echo 'Waiting for database DNS/connection...';
+        sleep 2;
+      done;
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+
+  frontend:
+    image: open-manufacturing-hub-frontend:production
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    command: sh -c "npm run build && npm run preview -- --port 5173 --host 0.0.0.0"

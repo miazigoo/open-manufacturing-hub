@@ -2462,6 +2462,58 @@
         "title": "DesignerCreated",
         "type": "object"
       },
+      "DoctorResponse": {
+        "properties": {
+          "app_env": {
+            "title": "App Env",
+            "type": "string"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ProductionCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warning",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Summary",
+            "type": "object"
+          }
+        },
+        "required": [
+          "generated_at",
+          "app_env",
+          "status",
+          "summary",
+          "checks",
+          "counts"
+        ],
+        "title": "DoctorResponse",
+        "type": "object"
+      },
       "EditReplayRequest": {
         "properties": {
           "edited_content": {
@@ -4064,6 +4116,67 @@
           "created_at"
         ],
         "title": "ExternalErrorSummary",
+        "type": "object"
+      },
+      "FirstRunChecklistItem": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warning",
+              "action_required",
+              "manual"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "status",
+          "details"
+        ],
+        "title": "FirstRunChecklistItem",
+        "type": "object"
+      },
+      "FirstRunChecklistResponse": {
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FirstRunChecklistItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "complete",
+          "items"
+        ],
+        "title": "FirstRunChecklistResponse",
         "type": "object"
       },
       "FlowBuilderPreviewRequest": {
@@ -26392,6 +26505,48 @@
         "summary": "Patch Printer",
         "tags": [
           "printing"
+        ]
+      }
+    },
+    "/api/production/checklist": {
+      "get": {
+        "operationId": "production_checklist_api_production_checklist_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FirstRunChecklistResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Production Checklist",
+        "tags": [
+          "production"
+        ]
+      }
+    },
+    "/api/production/doctor": {
+      "get": {
+        "operationId": "production_doctor_api_production_doctor_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoctorResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Production Doctor",
+        "tags": [
+          "production"
         ]
       }
     },

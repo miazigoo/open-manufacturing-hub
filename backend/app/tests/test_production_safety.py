@@ -117,3 +117,30 @@ async def test_demo_seed_blocked_in_production(monkeypatch, client):
     finally:
         monkeypatch.setenv("APP_ENV", "development")
         get_settings.cache_clear()
+
+
+async def test_production_doctor_and_first_run_checklist(client):
+    await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    await client.post("/api/packages/omh-package-printer/install", json={"install_demo_data": False})
+
+    doctor = await client.get("/api/production/doctor")
+    assert doctor.status_code == 200, doctor.text
+    body = doctor.json()
+    assert body["status"] in {"ok", "warning"}
+    assert body["counts"]["connectors"] >= 0
+    assert any(item["name"] == "Package compatibility" for item in body["checks"])
+    assert any(item["name"] == "1C Package" and item["status"] == "ok" for item in body["checks"])
+
+    checklist = await client.get("/api/production/checklist")
+    assert checklist.status_code == 200, checklist.text
+    items = {item["code"]: item for item in checklist.json()["items"]}
+    assert items["release_check"]["status"] == "manual"
+    assert "onec_package" in items
+
+
+async def test_route_inventory_gate_api(client):
+    inventory = await client.get("/api/packages/route-inventory")
+    assert inventory.status_code == 200, inventory.text
+    paths = {item["path"]: item for item in inventory.json()}
+    assert paths["/api/bus/in/{slug}"]["source"] == "core"
+    assert paths["/api/printing/*"]["guarded"] is True

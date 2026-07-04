@@ -58,9 +58,26 @@ export interface ImportPreview {
   applied?: boolean;
 }
 
+export interface ProductionDoctor {
+  generated_at: string;
+  app_env: string;
+  status: 'ok' | 'warning' | 'error';
+  summary: Record<string, number>;
+  checks: Array<{ name: string; status: 'ok' | 'warning' | 'error'; message: string | null; details?: Record<string, unknown> | null }>;
+  counts: Record<string, number>;
+}
+
+export interface FirstRunChecklist {
+  generated_at: string;
+  complete: boolean;
+  items: Array<{ code: string; title: string; status: 'ok' | 'warning' | 'action_required' | 'manual'; details: Record<string, unknown> }>;
+}
+
 export const productionApi = {
   status: () => request<ProductionStatus>('/api/production/status'),
   snapshot: () => request<SystemSnapshot>('/api/production/snapshot'),
+  doctor: () => request<ProductionDoctor>('/api/production/doctor'),
+  checklist: () => request<FirstRunChecklist>('/api/production/checklist'),
   exports: () => request<BackupRecord[]>('/api/production/exports'),
   exportConfig: () => request<{ export_id: string; file_name: string; size_bytes: number; warnings: string[]; download_url: string }>('/api/production/export-config', { method: 'POST', body: JSON.stringify({ secrets_policy: 'masked' }) }),
   previewImport: (payload: Record<string, unknown>, mode: string) => request<ImportPreview>('/api/production/import-config/preview', { method: 'POST', body: JSON.stringify({ export: payload, mode }) }),
