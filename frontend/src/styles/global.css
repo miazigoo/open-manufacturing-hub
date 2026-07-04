@@ -323,3 +323,9 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 @media (max-width: 1180px) {
   .bus-grid, .bus-grid.lower, .lookup-grid, .quick-steps, .inline-create { grid-template-columns: minmax(0, 1fr); }
 }
+.scenario-library-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.scenario-install-card { padding: 18px; display: grid; gap: 14px; }
+.designer-hero { background: linear-gradient(145deg, rgba(143,198,180,.12), rgba(240,179,90,.07)); }
+hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
+.table-panel textarea { min-height: 92px; min-width: 260px; }
+@media (max-width: 1180px) { .scenario-library-grid { grid-template-columns: minmax(0, 1fr); } }

@@ -85,3 +85,13 @@ class WorkflowDryRunRead(BaseModel):
     workflow_name: str
     status: RunStatus
     run: EventRunRead
+
+
+class WorkflowValidationError(BaseModel):
+    step: str | None = None
+    message: str
+
+
+class WorkflowValidationRead(BaseModel):
+    valid: bool
+    errors: list[WorkflowValidationError] = []

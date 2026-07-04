@@ -12,6 +12,7 @@ from app.execution.router import router as execution_router
 from app.external_errors.router import router as external_errors_router
 from app.health.router import router as health_router
 from app.incidents.router import router as incidents_router
+from app.integration_designer.router import router as integration_designer_router
 from app.integration_bus.router import router as integration_bus_router
 from app.mappings.router import router as mappings_router
 from app.maintenance.router import router as maintenance_router
@@ -21,11 +22,15 @@ from app.onec_workbench.router import router as onec_workbench_router
 from app.onec_scenarios.router import router as onec_scenarios_router
 from app.onec_templates.router import router as onec_templates_router
 from app.operation_templates.router import router as operation_templates_router
+from app.odata_explorer.router import router as odata_explorer_router
 from app.polling.router import router as polling_router
 from app.printing.router import router as printing_router
 from app.retention.router import router as retention_router
 from app.replay.router import router as replay_router
+from app.scenario_library.router import router as scenario_library_router
+from app.test_console.router import router as test_console_router
 from app.workflows.router import router as workflows_router
+from app.xml_tools.router import router as xml_tools_router
 
 app = FastAPI(title="Open Manufacturing Hub")
 settings = get_settings()
@@ -60,6 +65,11 @@ app.include_router(replay_router)
 app.include_router(health_router)
 app.include_router(incidents_router)
 app.include_router(integration_bus_router)
+app.include_router(integration_designer_router)
+app.include_router(scenario_library_router)
+app.include_router(odata_explorer_router)
+app.include_router(xml_tools_router)
+app.include_router(test_console_router)
 app.include_router(notifications_router)
 app.include_router(maintenance_router)
 app.include_router(retention_router)

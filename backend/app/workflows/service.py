@@ -150,6 +150,41 @@ async def dry_run_workflow(session: AsyncSession, workflow_id: UUID, request: Wo
     return workflow, loaded_run
 
 
+async def validate_workflow(session: AsyncSession, workflow_id: UUID) -> dict:
+    workflow = await get_workflow_or_404(session, workflow_id)
+    errors: list[dict] = []
+    try:
+        steps = normalize_step_configs(workflow.steps_json)
+    except ValueError as exc:
+        return {"valid": False, "errors": [{"step": None, "message": str(exc)}]}
+    from app.connectors.repository import get_by_name
+    from app.integration_bus.repository import get_lookup_template_by_name
+    from app.operation_templates.repository import get_by_name as get_operation_by_name
+
+    for step in steps:
+        name = step["name"]
+        try:
+            step_registry.get(name)
+        except Exception:
+            errors.append({"step": name, "message": f"Unknown workflow step: {name}"})
+            continue
+        condition = step.get("on", "always")
+        if condition not in {"always", "on_success", "failure", "on_failure", "on_dry_run"}:
+            errors.append({"step": name, "message": f"Unsupported workflow condition: {condition}"})
+        config = step.get("config") or {}
+        if name == "odata_lookup":
+            if config.get("template") and await get_lookup_template_by_name(session, str(config["template"])) is None:
+                errors.append({"step": name, "message": f"Lookup template not found: {config['template']}"})
+            if config.get("connector") and await get_by_name(session, str(config["connector"])) is None:
+                errors.append({"step": name, "message": f"Connector not found: {config['connector']}"})
+            if not config.get("template") and not config.get("resource"):
+                errors.append({"step": name, "message": "OData lookup requires template or resource"})
+        if name in {"call_connector", "call_print_operation"} and config.get("operation_template"):
+            if await get_operation_by_name(session, str(config["operation_template"])) is None:
+                errors.append({"step": name, "message": f"Operation template not found: {config['operation_template']}"})
+    return {"valid": not errors, "errors": errors}
+
+
 async def _validate_workflow_payload(session: AsyncSession, data: dict) -> None:
     try:
         steps = normalize_step_configs(data.get("steps_json") or DEFAULT_WORKFLOW_STEPS)

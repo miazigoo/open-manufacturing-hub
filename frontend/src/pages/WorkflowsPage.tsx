@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { asJson } from '../api/client';
 import { mappingsApi } from '../api/mappings';
 import { WorkflowPayload, workflowsApi } from '../api/workflows';
@@ -113,6 +114,7 @@ export function WorkflowsPage() {
               <span>{t('common.updated')}<strong>{formatDateTime(workflow.updated_at)}</strong></span>
             </div>
             <div className="action-row">
+              <Link className="primary-link" to={`/pipelines/${workflow.id}/edit`}>Edit pipeline</Link>
               <button className="ghost-button" onClick={() => runDryRun(workflow.id)}>{t('workflows.dryRun')}</button>
               <button className="ghost-button" onClick={() => workflow.enabled ? disable.mutate(workflow.id) : enable.mutate(workflow.id)}>{workflow.enabled ? t('connectors.disable') : t('connectors.enable')}</button>
               <button className="ghost-button danger" onClick={() => remove.mutate(workflow.id)}>{t('connectors.delete')}</button>

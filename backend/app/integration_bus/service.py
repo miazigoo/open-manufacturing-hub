@@ -132,6 +132,12 @@ async def dispatch(session: AsyncSession, slug: str, request: Request) -> dict[s
     _check_auth(endpoint, request)
 
     parsed = await _parse_request(endpoint, request)
+    return await dispatch_parsed(session, endpoint, parsed)
+
+
+async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, parsed: dict[str, Any]) -> dict[str, Any]:
+    if not endpoint.enabled:
+        raise BadRequestError("BUS_ENDPOINT_DISABLED")
     route = await select_route(session, endpoint, parsed)
     target_system = await _target_system(session, endpoint, route)
     workflow_id = endpoint.workflow_id or (route.workflow_id if route else None)

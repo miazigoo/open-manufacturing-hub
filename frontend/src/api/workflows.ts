@@ -36,6 +36,8 @@ export interface WorkflowPayload {
   target_mapping_version_id?: string | null;
 }
 
+export interface WorkflowValidation { valid: boolean; errors: Array<{ step: string | null; message: string }> }
+
 export interface WorkflowDryRunResponse {
   workflow_id: string;
   workflow_name: string;
@@ -54,4 +56,5 @@ export const workflowsApi = {
     request<WorkflowDryRunResponse>(`/api/workflows/${id}/dry-run`, { method: 'POST', body: JSON.stringify({ payload, source_system, target_system, entity_type }) }),
   test: (id: string, payload: Record<string, unknown>, source_system?: string | null, target_system?: string | null, entity_type?: string | null) =>
     request<WorkflowDryRunResponse>(`/api/workflows/${id}/test`, { method: 'POST', body: JSON.stringify({ payload, source_system, target_system, entity_type }) }),
+  validate: (id: string) => request<WorkflowValidation>(`/api/workflows/${id}/validate`, { method: 'POST' }),
 };

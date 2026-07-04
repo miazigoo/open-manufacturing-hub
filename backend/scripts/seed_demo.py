@@ -20,6 +20,8 @@ from app.maintenance.models import MaintenanceWindow
 from app.mappings.models import MappingDefinition, MappingVersion
 from app.notifications.models import NotificationDelivery, NotificationRule
 from app.onec_scenarios.service import install_bidirectional_demo, install_sales_order_demo
+from app.scenario_library.schemas import ScenarioInstallRequest
+from app.scenario_library.service import install_scenario
 from app.workflows.models import Workflow
 
 
@@ -429,6 +431,22 @@ async def ensure_retention_examples(session: AsyncSession) -> None:
     await session.flush()
 
 
+async def ensure_designer_examples(session: AsyncSession) -> None:
+    examples = [
+        ("onec_to_api", "demo-onec-to-api"),
+        ("api_to_onec", "demo-api-to-onec"),
+        ("onec_xml_raw_bridge", "demo-upd-xml"),
+        ("onec_xml_odata_lookup", "demo-upd-inn-lookup"),
+        ("onec_to_printer", "demo-print-zpl"),
+    ]
+    for scenario_code, slug in examples:
+        await install_scenario(
+            session,
+            scenario_code,
+            ScenarioInstallRequest(endpoint_slug=slug, response_mode="sync_response", create_test_case=True),
+        )
+
+
 async def normalize_demo_timestamps(session: AsyncSession) -> None:
     demo_time = datetime.now(timezone.utc) - timedelta(minutes=12)
     events = (
@@ -459,6 +477,7 @@ async def seed_demo(session: AsyncSession) -> dict[str, Any]:
     await ensure_notification_rule(session)
     await ensure_maintenance(session)
     await ensure_retention_examples(session)
+    await ensure_designer_examples(session)
     await normalize_demo_timestamps(session)
     return {
         "status": "ok",
@@ -468,6 +487,7 @@ async def seed_demo(session: AsyncSession) -> dict[str, Any]:
         "maintenance": "Mock WMS",
         "onec_scenario": onec_scenario["scenario"],
         "onec_bidirectional_scenario": bidirectional_scenario["scenario"],
+        "designer_examples": ["demo-onec-to-api", "demo-api-to-onec", "demo-upd-xml", "demo-upd-inn-lookup", "demo-print-zpl"],
     }
 
 

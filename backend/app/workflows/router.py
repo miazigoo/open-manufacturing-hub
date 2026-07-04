@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.workflows import service
-from app.workflows.schemas import WorkflowCreate, WorkflowDryRunRead, WorkflowDryRunRequest, WorkflowPatch, WorkflowRead
+from app.workflows.schemas import WorkflowCreate, WorkflowDryRunRead, WorkflowDryRunRequest, WorkflowPatch, WorkflowRead, WorkflowValidationRead
 
 router = APIRouter(tags=["workflows"])
 
@@ -68,3 +68,8 @@ async def test_workflow(workflow_id: UUID, request: WorkflowDryRunRequest, sessi
     workflow, run = await service.dry_run_workflow(session, workflow_id, request)
     await session.commit()
     return {"workflow_id": workflow.id, "workflow_name": workflow.name, "status": run.status, "run": run}
+
+
+@router.post("/api/workflows/{workflow_id}/validate", response_model=WorkflowValidationRead)
+async def validate_workflow(workflow_id: UUID, session: AsyncSession = Depends(get_session)):
+    return await service.validate_workflow(session, workflow_id)
