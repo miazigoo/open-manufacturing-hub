@@ -3,6 +3,11 @@ import httpx
 from app.connectors.builtin.onec.client import OneCHTTPClient
 
 
+async def _install_onec_package(client):
+    response = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert response.status_code == 200, response.text
+
+
 def shipment_fact(order_id: str = "1532"):
     return {
         "shipment_id": f"WMS-SHIP-{order_id}",
@@ -46,6 +51,7 @@ async def test_shipment_fact_mapping_preset(client):
 
 
 async def test_bidirectional_scenario_installer_is_idempotent(client):
+    await _install_onec_package(client)
     first = await client.post("/api/onec-scenarios/install-bidirectional-demo")
     second = await client.post("/api/onec-scenarios/install-bidirectional-demo")
     assert first.status_code == 200
@@ -56,6 +62,7 @@ async def test_bidirectional_scenario_installer_is_idempotent(client):
 
 
 async def test_full_erp_wms_integration_installs_standard_exchange(client):
+    await _install_onec_package(client)
     first = await client.post("/api/onec-scenarios/install-erp-wms-integration")
     second = await client.post("/api/onec-scenarios/install-erp-wms-integration")
     assert first.status_code == 200
@@ -72,6 +79,7 @@ async def test_full_erp_wms_integration_installs_standard_exchange(client):
 
 
 async def test_full_erp_wms_reverse_events(monkeypatch, client):
+    await _install_onec_package(client)
     calls = []
 
     async def fake_request(self, method, url, *, params=None, json_payload=None):
@@ -101,6 +109,7 @@ async def test_full_erp_wms_reverse_events(monkeypatch, client):
 
 
 async def test_bidirectional_workflow_success_and_incidents(monkeypatch, client):
+    await _install_onec_package(client)
     async def fake_request(self, method, url, *, params=None, json_payload=None):
         order_id = json_payload["payload"]["external_order_id"]
         if order_id == "404":

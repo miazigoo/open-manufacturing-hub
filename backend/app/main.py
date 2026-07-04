@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -37,6 +37,7 @@ from app.onec_templates.router import router as onec_templates_router
 from app.operation_templates.router import router as operation_templates_router
 from app.odata_explorer.router import router as odata_explorer_router
 from app.packages.router import router as packages_router
+from app.packages.runtime import PackageAccessError, require_package_enabled
 from app.plugin_store.router import router as plugin_store_router
 from app.polling.router import router as polling_router
 from app.printing.router import router as printing_router
@@ -51,6 +52,8 @@ from app.ui.router import router as ui_router
 from app.workflows.router import router as workflows_router
 from app.xml_tools.router import router as xml_tools_router
 from app.packages.service import startup_package_check
+from app.packages_onec.router import router as packages_onec_router
+from app.packages_printer.router import router as packages_printer_router
 from app.packages_auth.router import router as auth_router
 from app.production.router import router as production_router
 
@@ -87,6 +90,11 @@ async def bad_request_handler(_: Request, exc: BadRequestError):
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
+@app.exception_handler(PackageAccessError)
+async def package_access_handler(_: Request, exc: PackageAccessError):
+    return JSONResponse(status_code=exc.status_code, content={"error": exc.error, "package_id": exc.package_id, "message": exc.message})
+
+
 app.include_router(events_router)
 app.include_router(business_objects_router)
 app.include_router(business_rules_router)
@@ -112,7 +120,7 @@ app.include_router(json_builder_router)
 app.include_router(integration_designer_router)
 app.include_router(matchers_router)
 app.include_router(scenario_library_router)
-app.include_router(odata_explorer_router)
+app.include_router(odata_explorer_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(xml_tools_router)
 app.include_router(test_console_router)
 app.include_router(ui_router)
@@ -122,13 +130,15 @@ app.include_router(secrets_router)
 app.include_router(production_router)
 app.include_router(audit_router)
 app.include_router(packages_router)
+app.include_router(packages_onec_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
+app.include_router(packages_printer_router, dependencies=[Depends(require_package_enabled("omh-package-printer"))])
 app.include_router(plugin_store_router)
 app.include_router(maintenance_router)
 app.include_router(retention_router)
 app.include_router(polling_router)
-app.include_router(printing_router)
-app.include_router(onec_workbench_router)
-app.include_router(onec_scenarios_router)
-app.include_router(onec_templates_router)
+app.include_router(printing_router, dependencies=[Depends(require_package_enabled("omh-package-printer"))])
+app.include_router(onec_workbench_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
+app.include_router(onec_scenarios_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
+app.include_router(onec_templates_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(operation_templates_router)
 app.include_router(mock_onec_router)

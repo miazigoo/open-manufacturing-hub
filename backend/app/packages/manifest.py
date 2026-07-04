@@ -34,6 +34,13 @@ class PackageDocsManifest(BaseModel):
     quick_start: str | None = None
 
 
+class PackageDependency(BaseModel):
+    package_id: str
+    version_min: str | None = None
+    optional: bool = False
+    reason: str | None = None
+
+
 class PackageManifest(BaseModel):
     package_id: str
     name: str
@@ -50,6 +57,7 @@ class PackageManifest(BaseModel):
     presets: dict[str, Any] = Field(default_factory=dict)
     docs: PackageDocsManifest = Field(default_factory=PackageDocsManifest)
     extension_points: list[str] = Field(default_factory=list)
+    dependencies: list[PackageDependency] = Field(default_factory=list)
 
     def to_json(self) -> dict[str, Any]:
         return self.model_dump(mode="json")

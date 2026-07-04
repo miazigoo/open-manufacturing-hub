@@ -24,6 +24,7 @@ from app.integration_flows.schemas import FlowTestRequest, IntegrationFlowCreate
 from app.matchers.engine import evaluate_matcher_group
 from app.matchers.validators import validate_matcher_group
 from app.operation_templates.models import OperationTemplate
+from app.packages import repository as package_repository
 from app.secrets.redaction import is_secret_ref
 from app.test_console.models import SavedTestCase
 from app.workflows.models import Workflow
@@ -49,7 +50,7 @@ def onec_http_example(slug: str, input_mode: str, token: str | None = None) -> s
 
 
 async def list_flows(session: AsyncSession) -> list[dict[str, Any]]:
-    return [await _read_flow(flow) for flow in await repository.list_flows(session)]
+    return [await _read_flow(flow, session) for flow in await repository.list_flows(session)]
 
 
 async def get_flow_or_404(session: AsyncSession, flow_id: UUID) -> IntegrationFlow:
@@ -142,7 +143,7 @@ async def duplicate_flow(session: AsyncSession, flow_id: UUID) -> IntegrationFlo
 
 async def export_flow(session: AsyncSession, flow_id: UUID) -> dict[str, Any]:
     flow = await get_flow_or_404(session, flow_id)
-    return {"flow": await _read_flow(flow), "config": {"matcher_group": flow.matcher_group_json, "action": flow.action_json, "response": flow.response_config_json, "builder": flow.builder_json}}
+    return {"flow": await _read_flow(flow, session), "config": {"matcher_group": flow.matcher_group_json, "action": flow.action_json, "response": flow.response_config_json, "builder": flow.builder_json}}
 
 
 async def save_builder(session: AsyncSession, flow_id: UUID, builder_json: dict[str, Any]) -> IntegrationFlow:
@@ -401,7 +402,7 @@ def _parsed_test_payload(request: FlowTestRequest) -> dict[str, Any]:
     return {"text": text, "payload": {"text": text}}
 
 
-async def _read_flow(flow: IntegrationFlow) -> dict[str, Any]:
+async def _read_flow(flow: IntegrationFlow, session: AsyncSession | None = None) -> dict[str, Any]:
     return {
         "id": flow.id,
         "name": flow.name,
@@ -428,9 +429,41 @@ async def _read_flow(flow: IntegrationFlow) -> dict[str, Any]:
         "endpoint_url": endpoint_url(flow.slug),
         "curl_example": _curl_for_flow(flow),
         "onec_http_example": _onec_for_flow(flow),
+        "package_warnings": await _package_warnings(flow, session) if session else [],
         "created_at": flow.created_at,
         "updated_at": flow.updated_at,
     }
+
+
+async def _package_warnings(flow: IntegrationFlow, session: AsyncSession) -> list[dict[str, Any]]:
+    required = _required_package_ids(flow)
+    warnings: list[dict[str, Any]] = []
+    for package_id in sorted(required):
+        package = await package_repository.get_installed(session, package_id)
+        if package is None:
+            warnings.append({"package_id": package_id, "code": "PACKAGE_NOT_INSTALLED", "message": f"Flow references capability from {package_id}, but package is not installed."})
+        elif not package.enabled:
+            warnings.append({"package_id": package_id, "code": "PACKAGE_DISABLED", "message": f"Flow references capability from {package_id}, but package is disabled."})
+    return warnings
+
+
+def _required_package_ids(flow: IntegrationFlow) -> set[str]:
+    text = " ".join(
+        [
+            getattr(flow.source_type, "value", str(flow.source_type)),
+            getattr(flow.target_type, "value", str(flow.target_type)),
+            json.dumps(flow.action_json or {}, ensure_ascii=False),
+            json.dumps(flow.builder_json or {}, ensure_ascii=False),
+            flow.slug or "",
+            flow.name or "",
+        ]
+    ).lower()
+    required: set[str] = set()
+    if any(marker in text for marker in ("onec", "1c", "odata", "xml")):
+        required.add("omh-package-onec")
+    if any(marker in text for marker in ("printer", "print", "zpl")):
+        required.add("omh-package-printer")
+    return required
 
 
 def _curl_for_flow(flow: IntegrationFlow, endpoint: IntegrationEndpoint | None = None) -> str:

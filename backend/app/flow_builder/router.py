@@ -41,7 +41,7 @@ async def get_flow_builder(flow_id: UUID, session: AsyncSession = Depends(get_se
 async def save_flow_builder(flow_id: UUID, request: FlowBuilderPreviewRequest, session: AsyncSession = Depends(get_session)):
     flow = await flow_service.save_builder(session, flow_id, request.builder_json)
     await session.commit()
-    return await flow_service._read_flow(flow)
+    return await flow_service._read_flow(flow, session)
 
 
 @router.post("/flows/{flow_id}/preview", response_model=FlowBuilderPreviewResponse)

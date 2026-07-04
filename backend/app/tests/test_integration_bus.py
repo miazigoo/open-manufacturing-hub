@@ -87,6 +87,8 @@ async def test_bus_route_priority_selects_best_route(client):
 
 
 async def test_bus_xml_endpoint_stores_message_hash_and_preview(client):
+    package = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert package.status_code == 200, package.text
     workflow = await _workflow(client, name="XML Bus Workflow", steps=[{"name": "receive"}], event_type="OneCXmlReceived")
     endpoint = await client.post(
         "/api/integration-bus/endpoints",
@@ -164,6 +166,8 @@ async def test_bus_presets_and_print_endpoint(client):
     assert timeline["event"]["status"] == "success"
     assert any(step["step_name"] == "call_print_operation" for step in timeline["runs"][0]["steps"])
 
+    package = await client.post("/api/packages/omh-package-printer/install", json={"install_demo_data": False})
+    assert package.status_code == 200, package.text
     existing = await client.post(
         "/api/printing/onec/send-batch",
         json={

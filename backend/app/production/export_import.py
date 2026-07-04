@@ -17,7 +17,7 @@ from app.maintenance.models import MaintenanceWindow
 from app.mappings.models import MappingDefinition, MappingVersion
 from app.notifications.models import NotificationRule
 from app.operation_templates.models import OperationTemplate
-from app.packages.models import InstalledPackage
+from app.packages.models import InstalledPackage, PackageRuntimeCapability
 from app.printing.models import PrintPrinter
 from app.resolvers.models import ResolverDefinitionV2
 from app.secrets.redaction import is_secret_ref
@@ -28,6 +28,7 @@ SECRET_FIELD_MARKERS = ("password", "token", "secret", "authorization", "api_key
 
 EXPORT_MODELS: dict[str, type] = {
     "packages": InstalledPackage,
+    "package_runtime_capabilities": PackageRuntimeCapability,
     "connectors": ConnectorInstance,
     "integration_endpoints": IntegrationEndpoint,
     "integration_routes": IntegrationRoute,
@@ -49,6 +50,8 @@ EXPORT_MODELS: dict[str, type] = {
 }
 
 IMPORT_KEYS: dict[str, str] = {
+    "packages": "package_id",
+    "package_runtime_capabilities": "id",
     "connectors": "name",
     "integration_endpoints": "slug",
     "integration_routes": "name",
@@ -255,4 +258,15 @@ def _import_warnings(export: dict[str, Any]) -> list[str]:
     warnings = list(export.get("warnings") or []) if isinstance(export.get("warnings"), list) else []
     if export.get("secrets_policy") in {"masked", "references_only"}:
         warnings.append(export_warning())
+    objects = export.get("objects") if isinstance(export.get("objects"), dict) else {}
+    package_ids = {str(row.get("package_id")) for row in objects.get("packages", []) if isinstance(row, dict) and row.get("package_id")}
+    for name, rows in objects.items():
+        if name in {"packages", "package_runtime_capabilities"} or not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            package_id = row.get("package_id") or row.get("owner_package_id")
+            if package_id and str(package_id) not in package_ids:
+                warnings.append(f"Object group {name} references package {package_id}, but that package is not included in export.")
     return sorted(set(str(item) for item in warnings))

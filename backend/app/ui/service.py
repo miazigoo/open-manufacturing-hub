@@ -137,7 +137,7 @@ async def flow_builder_options(session: AsyncSession) -> dict[str, Any]:
 
 async def flow_builder_state(session: AsyncSession, flow_id: UUID) -> dict[str, Any]:
     flow = await flow_service.get_flow_or_404(session, flow_id)
-    return {"flow_id": flow.id, "flow": await flow_service._read_flow(flow), "builder_json": flow.builder_json or {}, "options": await flow_builder_options(session)}
+    return {"flow_id": flow.id, "flow": await flow_service._read_flow(flow, session), "builder_json": flow.builder_json or {}, "options": await flow_builder_options(session)}
 
 
 async def _shared_options(session: AsyncSession) -> dict[str, Any]:

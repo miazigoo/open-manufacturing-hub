@@ -10,6 +10,7 @@ from app.audit.models import AuditEvent  # noqa: F401
 from app.connectors.models import ConnectorInstance  # noqa: F401
 from app.core.config import get_settings
 from app.core.database import Base
+from app.packages.models import InstalledPackage, PackageRuntimeCapability  # noqa: F401
 from app.packages_auth.models import AuthRecoveryKey, AuthSession, AuthSettings, AuthUser  # noqa: F401
 from app.production.models import BackupRecord, ProductionState  # noqa: F401
 from app.events.models import EventRun, EventStep, IntegrationEvent  # noqa: F401

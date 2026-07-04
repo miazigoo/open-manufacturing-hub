@@ -1,4 +1,6 @@
 async def _create_printer(client):
+    package = await client.post("/api/packages/omh-package-printer/install", json={"install_demo_data": False})
+    assert package.status_code == 200, package.text
     connector_response = await client.post(
         "/api/connectors",
         json={
@@ -86,6 +88,8 @@ async def test_printing_job_key_is_idempotent_but_rejects_different_payload(clie
 
 
 async def test_onec_send_batch_creates_printer_job_and_sends(client):
+    package = await client.post("/api/packages/omh-package-printer/install", json={"install_demo_data": False})
+    assert package.status_code == 200, package.text
     response = await client.post(
         "/api/printing/onec/send-batch",
         json={

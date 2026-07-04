@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, Enum, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
@@ -30,3 +30,16 @@ class InstalledPackage(TimestampMixin, Base):
     manifest_json: Mapped[dict[str, Any]] = mapped_column(JSON_TYPE, nullable=False)
     install_log_json: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON_TYPE, nullable=True)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class PackageRuntimeCapability(TimestampMixin, Base):
+    __tablename__ = "package_runtime_capabilities"
+    __table_args__ = (UniqueConstraint("package_id", "capability_type", "capability_code", name="uq_package_runtime_capability"),)
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=new_uuid)
+    package_id: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
+    capability_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    capability_code: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON_TYPE, nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=True)

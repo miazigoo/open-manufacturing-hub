@@ -15,7 +15,13 @@ ONEC_ITEMS = [
 ]
 
 
+async def _install_onec_package(client):
+    response = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert response.status_code == 200, response.text
+
+
 async def test_onec_scenario_installer_creates_end_to_end_assets(client):
+    await _install_onec_package(client)
     presets = await client.get("/api/onec-scenarios/presets")
     assert presets.status_code == 200
     assert presets.json()[0]["key"] == "onec_sales_order_to_mock_wms"
@@ -33,6 +39,7 @@ async def test_onec_scenario_installer_creates_end_to_end_assets(client):
 
 
 async def test_onec_polling_run_once_is_idempotent_and_executes_workflow(monkeypatch, client):
+    await _install_onec_package(client)
     async def fake_read_odata(self, config, resource, query=None, context=None):
         return OneCReadResult(True, items=ONEC_ITEMS, count=len(ONEC_ITEMS), request_payload={"resource": resource, "query": query})
 

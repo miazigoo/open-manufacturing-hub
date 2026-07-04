@@ -24,21 +24,21 @@ async def create_flow(payload: IntegrationFlowCreate, http_request: Request, ses
     flow = await service.create_flow(session, payload)
     await audit_service.record_change(session, request=http_request, action="integration_flow.created", category="integration_flows", object_type="integration_flow", object_id=flow.id, object_name=flow.name, before=None, after=audit_service.snapshot_model(flow), summary=f"Integration flow {flow.name} created")
     await session.commit()
-    return await service._read_flow(flow)
+    return await service._read_flow(flow, session)
 
 
 @router.post("/presets/marking-pool-to-internal-service/install", response_model=IntegrationFlowRead)
 async def install_marking_pool_preset(session: AsyncSession = Depends(get_session)):
     flow = await service.install_marking_pool_preset(session)
     await session.commit()
-    return await service._read_flow(flow)
+    return await service._read_flow(flow, session)
 
 
 @router.post("/presets/onec-post-two-odata-to-endpoint/install", response_model=IntegrationFlowRead)
 async def install_two_odata_to_endpoint_preset(session: AsyncSession = Depends(get_session)):
     flow = await service.install_two_odata_to_endpoint_preset(session)
     await session.commit()
-    return await service._read_flow(flow)
+    return await service._read_flow(flow, session)
 
 
 @router.get("/by-slug/{slug}", response_model=IntegrationFlowRead)
@@ -46,13 +46,13 @@ async def get_by_slug(slug: str, session: AsyncSession = Depends(get_session)):
     flow = await repository.get_by_slug(session, slug)
     if flow is None:
         raise NotFoundError("Integration flow not found")
-    return await service._read_flow(flow)
+    return await service._read_flow(flow, session)
 
 
 @router.get("/{flow_id}", response_model=IntegrationFlowRead)
 async def get_flow(flow_id: UUID, session: AsyncSession = Depends(get_session)):
     flow = await service.get_flow_or_404(session, flow_id)
-    return await service._read_flow(flow)
+    return await service._read_flow(flow, session)
 
 
 @router.patch("/{flow_id}", response_model=IntegrationFlowRead)
@@ -62,7 +62,7 @@ async def patch_flow(flow_id: UUID, payload: IntegrationFlowPatch, http_request:
     flow = await service.patch_flow(session, flow_id, payload)
     await audit_service.record_change(session, request=http_request, action="integration_flow.updated", category="integration_flows", object_type="integration_flow", object_id=flow.id, object_name=flow.name, before=before, after=audit_service.snapshot_model(flow), summary=f"Integration flow {flow.name} updated")
     await session.commit()
-    return await service._read_flow(flow)
+    return await service._read_flow(flow, session)
 
 
 @router.delete("/{flow_id}", status_code=204)
@@ -88,7 +88,7 @@ async def test_flow(flow_id: UUID, payload: FlowTestRequest, http_request: Reque
 async def duplicate_flow(flow_id: UUID, session: AsyncSession = Depends(get_session)):
     flow = await service.duplicate_flow(session, flow_id)
     await session.commit()
-    return await service._read_flow(flow)
+    return await service._read_flow(flow, session)
 
 
 @router.get("/{flow_id}/export", response_model=FlowExportResponse)

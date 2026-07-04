@@ -70,6 +70,7 @@ class IntegrationFlowRead(BaseModel):
     endpoint_url: str
     curl_example: str
     onec_http_example: str
+    package_warnings: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

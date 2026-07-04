@@ -6,7 +6,13 @@ from app.sdk.types import ConnectorContext
 from app.xml_bridge.parser import XMLBridgeError, parse_xml_safe
 
 
+async def _install_onec_package(client):
+    response = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert response.status_code == 200, response.text
+
+
 async def test_xml_inbound_json_creates_message_event_and_timeline(client):
+    await _install_onec_package(client)
     response = await client.post(
         "/api/onec/xml/inbound",
         json={
@@ -39,6 +45,7 @@ async def test_xml_inbound_json_creates_message_event_and_timeline(client):
 
 
 async def test_xml_inbound_raw_headers_and_invalid_xml_are_traceable(client):
+    await _install_onec_package(client)
     response = await client.post(
         "/api/onec/xml/inbound",
         content=b"<root><broken></root>",
@@ -113,6 +120,7 @@ async def test_onec_raw_xml_body_mode(monkeypatch):
 
 
 async def test_odata_lookup_test_endpoint_extracts_fields(monkeypatch, client):
+    await _install_onec_package(client)
     async def fake_request(self, method, url, *, params=None, json_payload=None):
         assert params["$filter"] == "ИНН eq '1234567890'"
         return httpx.Response(200, json={"value": [{"Ref_Key": "uuid-1", "Description": "ООО Ромашка"}]}), {"method": method, "url": url, "params": params}, None, None
@@ -131,6 +139,7 @@ async def test_odata_lookup_test_endpoint_extracts_fields(monkeypatch, client):
 
 
 async def test_workbench_presets_install_and_print_pipeline_dry_run(client):
+    await _install_onec_package(client)
     installed = await client.post("/api/onec-workbench/install-print-pipeline")
     assert installed.status_code == 200
 

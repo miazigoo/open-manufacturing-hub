@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import service as audit_service
 from app.core.database import get_session
 from app.packages import service
-from app.packages.schemas import InstalledPackageRead, PackageActionResponse, PackageAvailableRead, PackageDocsRead, PackageExportRead, PackageInstallRequest, PackageNavigationRead
+from app.packages.schemas import InstalledPackageRead, PackageActionResponse, PackageAvailableRead, PackageCapabilityRead, PackageCompatibilityReport, PackageDocsRead, PackageExportRead, PackageInstallRequest, PackageNavigationRead, PackageRouteInventoryItem, PackageUpgradeRead
 
 router = APIRouter(prefix="/api/packages", tags=["packages"])
 
@@ -29,6 +29,21 @@ async def package_navigation(session: AsyncSession = Depends(get_session)):
 @router.get("/export-config", response_model=PackageExportRead)
 async def export_config(session: AsyncSession = Depends(get_session)):
     return await service.export_config(session)
+
+
+@router.get("/capabilities", response_model=list[PackageCapabilityRead])
+async def package_capabilities(session: AsyncSession = Depends(get_session)):
+    return await service.package_capabilities(session)
+
+
+@router.get("/compatibility-report", response_model=PackageCompatibilityReport)
+async def compatibility_report(session: AsyncSession = Depends(get_session)):
+    return await service.compatibility_report(session)
+
+
+@router.get("/route-inventory", response_model=list[PackageRouteInventoryItem])
+async def route_inventory(request: Request):
+    return service.route_inventory(list(request.app.routes))
 
 
 @router.get("/{package_id}", response_model=PackageAvailableRead)
@@ -82,3 +97,21 @@ async def install_demo_data(package_id: str, http_request: Request, session: Asy
 @router.get("/{package_id}/docs", response_model=PackageDocsRead)
 async def package_docs(package_id: str, session: AsyncSession = Depends(get_session)):
     return await service.package_docs(session, package_id)
+
+
+@router.get("/{package_id}/capabilities", response_model=list[PackageCapabilityRead])
+async def package_capabilities_by_id(package_id: str, session: AsyncSession = Depends(get_session)):
+    return await service.package_capabilities(session, package_id)
+
+
+@router.get("/{package_id}/check-upgrade", response_model=PackageUpgradeRead)
+async def check_upgrade(package_id: str, session: AsyncSession = Depends(get_session)):
+    return await service.check_upgrade(session, package_id)
+
+
+@router.post("/{package_id}/mark-upgraded", response_model=PackageUpgradeRead)
+async def mark_upgraded(package_id: str, http_request: Request, session: AsyncSession = Depends(get_session)):
+    result = await service.mark_upgraded(session, package_id)
+    await audit_service.record_action(session, request=http_request, action="package.mark_upgraded", category="packages", object_type="package", object_id=package_id, object_name=package_id, summary=f"Package {package_id} marked upgraded", details=result, package_id=package_id)
+    await session.commit()
+    return result

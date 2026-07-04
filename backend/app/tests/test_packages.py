@@ -81,3 +81,68 @@ async def test_printer_package_install_and_demo_data(client):
     demo = await client.post("/api/packages/omh-package-printer/install-demo-data")
     assert demo.status_code == 200, demo.text
     assert demo.json()["log"][0]["status"] == "ok"
+
+
+async def test_package_capabilities_route_inventory_and_guards(client):
+    blocked = await client.get("/api/odata-explorer/00000000-0000-0000-0000-000000000000/resources")
+    assert blocked.status_code == 404
+    assert blocked.json()["error"] == "PACKAGE_NOT_INSTALLED"
+
+    installed = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert installed.status_code == 200, installed.text
+
+    capabilities = await client.get("/api/packages/omh-package-onec/capabilities")
+    assert capabilities.status_code == 200, capabilities.text
+    capability_pairs = {(item["capability_type"], item["capability_code"]) for item in capabilities.json()}
+    assert ("connector", "onec") in capability_pairs
+    assert ("router", "odata_explorer") in capability_pairs
+    assert ("navigation_item", "/onec-workbench") in capability_pairs
+
+    route_inventory = await client.get("/api/packages/route-inventory")
+    assert route_inventory.status_code == 200, route_inventory.text
+    odata_route = next(item for item in route_inventory.json() if item["path"].startswith("/api/odata-explorer"))
+    assert odata_route["package_id"] == "omh-package-onec"
+    assert odata_route["guarded"] is True
+
+    disabled = await client.post("/api/packages/omh-package-onec/disable")
+    assert disabled.status_code == 200, disabled.text
+    blocked_disabled = await client.get("/api/odata-explorer/00000000-0000-0000-0000-000000000000/resources")
+    assert blocked_disabled.status_code == 403
+    assert blocked_disabled.json()["error"] == "PACKAGE_DISABLED"
+    disabled_capabilities = await client.get("/api/packages/omh-package-onec/capabilities")
+    assert all(item["enabled"] is False for item in disabled_capabilities.json())
+
+
+async def test_package_compatibility_dependencies_and_connector_catalog(client):
+    connector_types = await client.get("/api/connectors/types")
+    assert connector_types.status_code == 200
+    initial_types = {item["connector_type"] for item in connector_types.json()}
+    assert {"rest", "webhook", "mock_erp", "mock_wms"}.issubset(initial_types)
+    assert "onec" not in initial_types
+
+    report = await client.get("/api/packages/compatibility-report")
+    assert report.status_code == 200
+    printer = next(item for item in report.json()["packages"] if item["package_id"] == "omh-package-printer")
+    assert any("OPTIONAL_PACKAGE_NOT_INSTALLED" in item for item in printer["warnings"])
+
+    installed = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert installed.status_code == 200, installed.text
+    connector_types_after = await client.get("/api/connectors/types")
+    assert "onec" in {item["connector_type"] for item in connector_types_after.json()}
+
+
+async def test_required_package_dependency_blocks_install(client):
+    manifest = PackageManifest(
+        package_id="omh-package-dependent-test",
+        name="Dependent Test",
+        version="0.1.0",
+        description="Requires missing package",
+        dependencies=[{"package_id": "omh-package-missing", "optional": False}],
+    )
+    package_registry.register_manifest(manifest)
+    try:
+        response = await client.post("/api/packages/omh-package-dependent-test/install", json={"install_demo_data": False})
+        assert response.status_code == 400
+        assert "PACKAGE_DEPENDENCY_MISSING" in response.json()["detail"]
+    finally:
+        package_registry._manifests.pop("omh-package-dependent-test", None)

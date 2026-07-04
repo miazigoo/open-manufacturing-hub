@@ -9,6 +9,7 @@ from app.connectors.registry import registry
 from app.connectors.schemas import ConnectorConfigValidationRead, ConnectorHealthRead, ConnectorInstanceCreate, ConnectorInstancePatch, ConnectorInstanceRead, ConnectorTypeRead, OneCHTTPServiceTestRequest, OneCODataReadRequest, WebhookEventResponse
 from app.core.database import get_session
 from app.core.errors import BadRequestError, NotFoundError
+from app.packages.runtime import enabled_capability_codes
 from app.events.schemas import EventCreate
 from app.events.service import create_event
 from app.secrets.service import SecretResolver
@@ -18,8 +19,10 @@ router = APIRouter(tags=["connectors"])
 
 
 @router.get("/api/connectors/types", response_model=list[ConnectorTypeRead])
-async def connector_types():
-    return registry.list()
+async def connector_types(session: AsyncSession = Depends(get_session)):
+    package_connectors = await enabled_capability_codes(session, "connector")
+    core_connectors = {"rest", "webhook", "mock_erp", "mock_wms"}
+    return [item for item in registry.list() if item.connector_type in core_connectors or item.connector_type in package_connectors]
 
 
 @router.get("/api/connectors", response_model=list[ConnectorInstanceRead])

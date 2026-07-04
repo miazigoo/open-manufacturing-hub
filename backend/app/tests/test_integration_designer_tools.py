@@ -47,6 +47,8 @@ async def test_xml_tools_parse_diff_and_paths(client):
 
 
 async def test_odata_explorer_resources_query_and_lookup(monkeypatch, client):
+    package = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert package.status_code == 200, package.text
     async def fake_request(self, method, url, *, params=None, json_payload=None):
         if url.endswith("$metadata"):
             return httpx.Response(200, text='<Schema><EntitySet Name="Catalog_Контрагенты" /></Schema>'), {"url": url}, None, None

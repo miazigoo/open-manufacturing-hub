@@ -5825,6 +5825,14 @@
             ],
             "title": "Operation Template Id"
           },
+          "package_warnings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Package Warnings",
+            "type": "array"
+          },
           "response_config_json": {
             "additionalProperties": true,
             "title": "Response Config Json",
@@ -9612,6 +9620,20 @@
             "title": "Compatible",
             "type": "boolean"
           },
+          "dependency_errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dependency Errors",
+            "type": "array"
+          },
+          "dependency_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dependency Warnings",
+            "type": "array"
+          },
           "enabled": {
             "default": false,
             "title": "Enabled",
@@ -9634,6 +9656,11 @@
                 "type": "null"
               }
             ]
+          },
+          "upgrade_available": {
+            "default": false,
+            "title": "Upgrade Available",
+            "type": "boolean"
           }
         },
         "required": [
@@ -9674,6 +9701,195 @@
           }
         },
         "title": "PackageBackendManifest",
+        "type": "object"
+      },
+      "PackageCapabilityRead": {
+        "properties": {
+          "capability_code": {
+            "title": "Capability Code",
+            "type": "string"
+          },
+          "capability_type": {
+            "title": "Capability Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "metadata_json": {
+            "additionalProperties": true,
+            "title": "Metadata Json",
+            "type": "object"
+          },
+          "package_id": {
+            "title": "Package Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "package_id",
+          "capability_type",
+          "capability_code",
+          "enabled",
+          "metadata_json",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PackageCapabilityRead",
+        "type": "object"
+      },
+      "PackageCompatibilityItem": {
+        "properties": {
+          "compatible": {
+            "title": "Compatible",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "installed": {
+            "title": "Installed",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "package_id": {
+            "title": "Package Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "upgrade_available": {
+            "default": false,
+            "title": "Upgrade Available",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "package_id",
+          "name",
+          "installed",
+          "enabled",
+          "status",
+          "compatible"
+        ],
+        "title": "PackageCompatibilityItem",
+        "type": "object"
+      },
+      "PackageCompatibilityReport": {
+        "properties": {
+          "core_version": {
+            "title": "Core Version",
+            "type": "string"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "packages": {
+            "items": {
+              "$ref": "#/components/schemas/PackageCompatibilityItem"
+            },
+            "title": "Packages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at",
+          "core_version",
+          "packages"
+        ],
+        "title": "PackageCompatibilityReport",
+        "type": "object"
+      },
+      "PackageDependency": {
+        "properties": {
+          "optional": {
+            "default": false,
+            "title": "Optional",
+            "type": "boolean"
+          },
+          "package_id": {
+            "title": "Package Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "version_min": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Min"
+          }
+        },
+        "required": [
+          "package_id"
+        ],
+        "title": "PackageDependency",
         "type": "object"
       },
       "PackageDocsManifest": {
@@ -9749,6 +9965,14 @@
               "type": "object"
             },
             "title": "Installed Packages",
+            "type": "array"
+          },
+          "runtime_capabilities": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Runtime Capabilities",
             "type": "array"
           }
         },
@@ -9853,6 +10077,13 @@
             "default": "0.1.0",
             "title": "Core Version Min",
             "type": "string"
+          },
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/PackageDependency"
+            },
+            "title": "Dependencies",
+            "type": "array"
           },
           "description": {
             "title": "Description",
@@ -9962,6 +10193,98 @@
           "route"
         ],
         "title": "PackageNavigationRead",
+        "type": "object"
+      },
+      "PackageRouteInventoryItem": {
+        "properties": {
+          "capability_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability Code"
+          },
+          "guarded": {
+            "default": false,
+            "title": "Guarded",
+            "type": "boolean"
+          },
+          "methods": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Methods",
+            "type": "array"
+          },
+          "package_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Id"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "source": {
+            "default": "core",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "methods"
+        ],
+        "title": "PackageRouteInventoryItem",
+        "type": "object"
+      },
+      "PackageUpgradeRead": {
+        "properties": {
+          "available_version": {
+            "title": "Available Version",
+            "type": "string"
+          },
+          "installed_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed Version"
+          },
+          "package_id": {
+            "title": "Package Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "upgrade_available": {
+            "title": "Upgrade Available",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "package_id",
+          "available_version",
+          "upgrade_available",
+          "status"
+        ],
+        "title": "PackageUpgradeRead",
         "type": "object"
       },
       "PasswordChangeRequest": {
@@ -24490,6 +24813,52 @@
         ]
       }
     },
+    "/api/packages/capabilities": {
+      "get": {
+        "operationId": "package_capabilities_api_packages_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackageCapabilityRead"
+                  },
+                  "title": "Response Package Capabilities Api Packages Capabilities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Package Capabilities",
+        "tags": [
+          "packages"
+        ]
+      }
+    },
+    "/api/packages/compatibility-report": {
+      "get": {
+        "operationId": "compatibility_report_api_packages_compatibility_report_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageCompatibilityReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Compatibility Report",
+        "tags": [
+          "packages"
+        ]
+      }
+    },
     "/api/packages/export-config": {
       "get": {
         "operationId": "export_config_api_packages_export_config_get",
@@ -24561,6 +24930,69 @@
         ]
       }
     },
+    "/api/packages/onec/metadata": {
+      "get": {
+        "operationId": "metadata_api_packages_onec_metadata_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Metadata",
+        "tags": [
+          "packages-onec"
+        ]
+      }
+    },
+    "/api/packages/printer/metadata": {
+      "get": {
+        "operationId": "metadata_api_packages_printer_metadata_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Metadata",
+        "tags": [
+          "packages-printer"
+        ]
+      }
+    },
+    "/api/packages/route-inventory": {
+      "get": {
+        "operationId": "route_inventory_api_packages_route_inventory_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackageRouteInventoryItem"
+                  },
+                  "title": "Response Route Inventory Api Packages Route Inventory Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Route Inventory",
+        "tags": [
+          "packages"
+        ]
+      }
+    },
     "/api/packages/{package_id}": {
       "get": {
         "operationId": "package_details_api_packages__package_id__get",
@@ -24598,6 +25030,94 @@
           }
         },
         "summary": "Package Details",
+        "tags": [
+          "packages"
+        ]
+      }
+    },
+    "/api/packages/{package_id}/capabilities": {
+      "get": {
+        "operationId": "package_capabilities_by_id_api_packages__package_id__capabilities_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "package_id",
+            "required": true,
+            "schema": {
+              "title": "Package Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PackageCapabilityRead"
+                  },
+                  "title": "Response Package Capabilities By Id Api Packages  Package Id  Capabilities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Package Capabilities By Id",
+        "tags": [
+          "packages"
+        ]
+      }
+    },
+    "/api/packages/{package_id}/check-upgrade": {
+      "get": {
+        "operationId": "check_upgrade_api_packages__package_id__check_upgrade_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "package_id",
+            "required": true,
+            "schema": {
+              "title": "Package Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageUpgradeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Upgrade",
         "tags": [
           "packages"
         ]
@@ -24823,6 +25343,48 @@
           }
         },
         "summary": "Install Demo Data",
+        "tags": [
+          "packages"
+        ]
+      }
+    },
+    "/api/packages/{package_id}/mark-upgraded": {
+      "post": {
+        "operationId": "mark_upgraded_api_packages__package_id__mark_upgraded_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "package_id",
+            "required": true,
+            "schema": {
+              "title": "Package Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageUpgradeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Upgraded",
         "tags": [
           "packages"
         ]
