@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 from app.core.enums import IncidentSeverity, IncidentStatus
+from app.external_errors.schemas import ExternalErrorSummary
 
 
 class IncidentRead(BaseModel):
@@ -22,6 +23,7 @@ class IncidentRead(BaseModel):
     last_seen_at: datetime
     acknowledged_at: datetime | None
     resolved_at: datetime | None
+    sample_external_errors: list[ExternalErrorSummary] = []
 
     model_config = ConfigDict(from_attributes=True)
 

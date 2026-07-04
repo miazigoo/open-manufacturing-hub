@@ -46,6 +46,7 @@ class ArtifactType(StrEnum):
     OUTGOING_REQUEST = "outgoing_request"
     INCOMING_RESPONSE = "incoming_response"
     ERROR_DETAILS = "error_details"
+    EXTERNAL_ERROR = "external_error"
     DRY_RUN_REQUEST = "dry_run_request"
 
 

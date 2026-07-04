@@ -110,7 +110,7 @@ class OneCConnector:
         if not validation.valid:
             return ConnectorSendResult(False, error_code=errors.ONEC_CONFIG_INVALID, error_message="; ".join(validation.errors))
         success, status_code, request_payload, response_payload, error_code, error_message = await call_http_service(config, payload, context)
-        return ConnectorSendResult(success=success, status_code=status_code, request_payload=request_payload, response_payload=response_payload, error_code=error_code, error_message=error_message)
+        return _send_result(success, status_code, request_payload, response_payload, error_code, error_message)
 
     async def dry_run_send(self, config: dict[str, Any], payload: dict, context: ConnectorContext) -> ConnectorSendResult:
         operation, method, path, options, error = resolve_operation(config, payload)
@@ -143,3 +143,54 @@ def _http_health_path(config: dict[str, Any]) -> str:
         if service.get("name") == "health" and service.get("path"):
             return str(service["path"])
     return str((config.get("http_services") or {}).get("health_path") or "/health")
+
+
+def _send_result(
+    success: bool,
+    status_code: int | None,
+    request_payload: dict[str, Any],
+    response_payload: dict[str, Any] | None,
+    error_code: str | None,
+    error_message: str | None,
+) -> ConnectorSendResult:
+    body = response_payload.get("body") if isinstance(response_payload, dict) else None
+    headers = response_payload.get("headers") if isinstance(response_payload, dict) else None
+    content_type = response_payload.get("content_type") if isinstance(response_payload, dict) else None
+    raw_text = body.get("text") if isinstance(body, dict) and isinstance(body.get("text"), str) else None
+    raw_json = body if isinstance(body, (dict, list)) and raw_text is None else None
+    external_code = body.get("error_code") if isinstance(body, dict) and body.get("error_code") else None
+    external_message = body.get("error_message") if isinstance(body, dict) and body.get("error_message") else None
+    if raw_text is None and isinstance(body, str):
+        raw_text = body
+    human_title = None
+    human_summary = None
+    developer_message = None
+    hint = None
+    if not success:
+        human_title = "1C rejected operation" if status_code is None or status_code < 500 else "1C HTTP service error"
+        human_summary = f"1C says: {external_message or error_message or 'operation failed'}"
+        if status_code:
+            human_summary = f"1C HTTP {status_code}: {external_message or error_message or 'operation failed'}"
+        developer_message = "Original 1C response is preserved in incoming_response.json and external_error.json artifacts."
+        hint = "Check the 1C document, HTTP service handler, operation path and mapping, then replay from the failed step."
+    return ConnectorSendResult(
+        success=success,
+        status_code=status_code,
+        request_payload=request_payload,
+        response_payload=response_payload,
+        error_code=error_code,
+        error_message=error_message,
+        external_error_code=str(external_code or error_code) if error_code else None,
+        external_error_message=str(external_message or error_message) if error_message else None,
+        external_error_type="business_error" if status_code and status_code < 400 else "http_error" if status_code else "connection_error",
+        developer_message=developer_message,
+        human_title=human_title,
+        human_summary=human_summary,
+        hint=hint,
+        raw_response_text=raw_text,
+        raw_response_json=raw_json,
+        response_headers=headers,
+        response_content_type=content_type,
+        endpoint_url=request_payload.get("url"),
+        operation=request_payload.get("operation"),
+    )

@@ -2,6 +2,7 @@ from app.connectors.manager import ConnectorManager
 from app.core.enums import ArtifactType
 from app.execution.context import PipelineContext
 from app.execution.result import ArtifactCreate, StepResult
+from app.external_errors.normalizers import external_error_artifact, external_error_payload_from_result
 from app.sdk.exceptions import ConnectorNotFoundError
 from app.sdk.types import ConnectorContext
 
@@ -49,11 +50,24 @@ class CallConnectorStep:
             artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", result.response_payload))
         variables = {"connector_result": result, "response": {"status_code": result.status_code, "body": result.response_payload or {}}}
         if not result.success:
+            external_error = external_error_payload_from_result(
+                result,
+                source_system=context.source_system,
+                target_system=context.target_system,
+                connector_type=getattr(result, "connector_type", None),
+                connector_name=getattr(result, "connector_name", None) or context.target_system,
+            )
+            artifacts.append(ArtifactCreate(ArtifactType.EXTERNAL_ERROR.value, "external_error.json", external_error_artifact(external_error)))
             return StepResult.failed(
                 result.error_code or "CONNECTOR_SEND_FAILED",
                 result.error_message or "Connector send failed",
                 artifacts=artifacts,
                 variables_update=variables,
+                metadata={"external_error": external_error},
+                human_title=external_error.get("human_title"),
+                human_summary=external_error.get("human_summary"),
+                developer_message=external_error.get("developer_message"),
+                hint=external_error.get("hint"),
             )
         if context.dry_run:
             return StepResult.dry_run("Connector dry-run complete", artifacts=artifacts, variables_update=variables)

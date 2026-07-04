@@ -33,6 +33,11 @@ class StepResult:
     next_step: str | None = None
     retry_after: datetime | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    human_title: str | None = None
+    human_summary: str | None = None
+    developer_message: str | None = None
+    hint: str | None = None
+    external_error_record_id: str | None = None
 
     @classmethod
     def success(
@@ -60,6 +65,10 @@ class StepResult:
         artifacts: list[ArtifactCreate] | None = None,
         variables_update: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
+        human_title: str | None = None,
+        human_summary: str | None = None,
+        developer_message: str | None = None,
+        hint: str | None = None,
     ) -> StepResult:
         return cls(
             status=StepResultStatus.FAILED,
@@ -68,6 +77,10 @@ class StepResult:
             artifacts=artifacts or [],
             variables_update=variables_update or {},
             metadata=metadata or {},
+            human_title=human_title,
+            human_summary=human_summary,
+            developer_message=developer_message,
+            hint=hint,
         )
 
     @classmethod

@@ -19,6 +19,7 @@ from app.execution.exceptions import StepNotFoundError
 from app.execution.registry import StepRegistry, registry as default_registry
 from app.execution.result import ArtifactCreate, StepResult, StepResultStatus
 from app.execution.workflow import DEFAULT_EXECUTION_STEPS, DEFAULT_VALIDATION, normalize_step_configs, step_condition
+from app.external_errors import service as external_error_service
 from app.workflows import service as workflow_service
 from app.workflows.models import Workflow
 
@@ -203,8 +204,9 @@ class ExecutionEngine:
                     },
                 )
             )
+        created_artifacts: list[Artifact] = []
         for artifact in result.artifacts:
-            await create_artifact(
+            created_artifact = await create_artifact(
                 self.session,
                 event_id=context.event.id,
                 run_id=context.run.id,
@@ -213,12 +215,26 @@ class ExecutionEngine:
                 name=artifact.name,
                 content=artifact.content,
             )
+            created_artifacts.append(created_artifact)
         context.variables.update(result.variables_update)
         event_step.status = self._step_status(result.status)
         event_step.error_code = result.error_code
         event_step.error_message = result.error_message
         event_step.finished_at = datetime.now(timezone.utc)
         event_step.duration_ms = _duration_ms(event_step.started_at, event_step.finished_at)
+        if result.status == StepResultStatus.FAILED and isinstance(result.metadata.get("external_error"), dict):
+            request_id, response_id, error_id = external_error_service.artifact_ids_by_type(created_artifacts)
+            external_error = await external_error_service.record_external_error(
+                self.session,
+                event=context.event,
+                run_id=context.run.id,
+                step=event_step,
+                payload=result.metadata["external_error"],
+                request_artifact_id=request_id,
+                response_artifact_id=response_id,
+                error_artifact_id=error_id,
+            )
+            result.external_error_record_id = str(external_error.id)
         await self.session.flush()
         return result, event_step
 

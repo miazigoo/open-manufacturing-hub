@@ -9,6 +9,7 @@ from app.core.errors import BadRequestError, NotFoundError
 from app.demo.router import router as demo_router
 from app.events.router import router as events_router
 from app.execution.router import router as execution_router
+from app.external_errors.router import router as external_errors_router
 from app.health.router import router as health_router
 from app.incidents.router import router as incidents_router
 from app.integration_bus.router import router as integration_bus_router
@@ -53,6 +54,7 @@ app.include_router(connectors_router)
 app.include_router(mappings_router)
 app.include_router(workflows_router)
 app.include_router(execution_router)
+app.include_router(external_errors_router)
 app.include_router(artifacts_router)
 app.include_router(replay_router)
 app.include_router(health_router)

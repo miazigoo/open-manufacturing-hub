@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.events import service
-from app.events.schemas import EventCreate, EventSummary, EventTimeline
+from app.events.schemas import EventCreate, EventJournalItem, EventSummary, EventTimeline
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -20,6 +20,11 @@ async def create_event(request: EventCreate, session: AsyncSession = Depends(get
 @router.get("", response_model=list[EventSummary])
 async def list_events(session: AsyncSession = Depends(get_session)):
     return await service.get_events(session)
+
+
+@router.get("/journal", response_model=list[EventJournalItem])
+async def list_event_journal(session: AsyncSession = Depends(get_session)):
+    return await service.get_event_journal(session)
 
 
 @router.get("/{event_id}", response_model=EventSummary)

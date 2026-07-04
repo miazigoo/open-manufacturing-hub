@@ -29,6 +29,36 @@ export interface EventSummary {
   created_at: string;
 }
 
+export interface ExternalErrorSummary {
+  id: string;
+  event_id: string | null;
+  run_id: string | null;
+  step_id: string | null;
+  incident_id: string | null;
+  source_system: string | null;
+  target_system: string | null;
+  connector_type: string | null;
+  connector_name: string | null;
+  operation: string | null;
+  endpoint_url: string | null;
+  http_method: string | null;
+  http_status: number | null;
+  normalized_code: string;
+  normalized_message: string;
+  human_title: string | null;
+  human_summary: string | null;
+  developer_message: string | null;
+  hint: string | null;
+  external_error_code: string | null;
+  external_error_message: string | null;
+  external_error_type: string | null;
+  response_content_type: string | null;
+  response_body_preview: string | null;
+  response_body_sha256: string | null;
+  response_size_bytes: number | null;
+  created_at: string;
+}
+
 export interface Artifact {
   id: string;
   event_id: string;
@@ -49,6 +79,12 @@ export interface EventStep {
   status: StepStatus;
   error_code: string | null;
   error_message: string | null;
+  human_title: string | null;
+  human_summary: string | null;
+  developer_message: string | null;
+  hint: string | null;
+  external_error_record_id: string | null;
+  external_error: ExternalErrorSummary | null;
   artifacts: Artifact[];
 }
 

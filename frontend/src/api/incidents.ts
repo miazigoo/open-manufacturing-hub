@@ -1,4 +1,4 @@
-import { request } from './client';
+import { ExternalErrorSummary, request } from './client';
 
 export type IncidentStatus = 'open' | 'acknowledged' | 'resolved' | 'ignored';
 export type IncidentSeverity = 'info' | 'warning' | 'error' | 'critical';
@@ -19,6 +19,7 @@ export interface Incident {
   last_seen_at: string;
   acknowledged_at: string | null;
   resolved_at: string | null;
+  sample_external_errors: ExternalErrorSummary[];
 }
 
 export interface IncidentEventLink {

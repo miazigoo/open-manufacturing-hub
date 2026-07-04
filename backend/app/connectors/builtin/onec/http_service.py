@@ -52,7 +52,13 @@ async def call_http_service(config: dict[str, Any], payload: dict[str, Any], con
         return False, None, request_payload, None, error_code, error_message
     assert response is not None
     data, text = response_json(response)
-    response_payload = {"status_code": response.status_code, "body": data if data is not None else {"text": text}}
+    content_type = response.headers.get("content-type")
+    response_payload = {
+        "status_code": response.status_code,
+        "headers": dict(response.headers),
+        "content_type": content_type,
+        "body": data if data is not None else {"text": text},
+    }
     if response.status_code == 401:
         return False, response.status_code, request_payload, response_payload, errors.ONEC_AUTH_FAILED, "1C authentication failed"
     if response.status_code >= 400:

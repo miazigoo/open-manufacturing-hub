@@ -36,6 +36,22 @@ class ConnectorSendResult:
     error_code: str | None = None
     error_message: str | None = None
     request_payload: dict[str, Any] | None = None
+    external_error_code: str | None = None
+    external_error_message: str | None = None
+    external_error_type: str | None = None
+    developer_message: str | None = None
+    human_title: str | None = None
+    human_summary: str | None = None
+    hint: str | None = None
+    raw_response_text: str | None = None
+    raw_response_json: dict[str, Any] | list[Any] | None = None
+    raw_response_xml: str | None = None
+    response_headers: dict[str, Any] | None = None
+    response_content_type: str | None = None
+    endpoint_url: str | None = None
+    operation: str | None = None
+    connector_type: str | None = None
+    connector_name: str | None = None
 
 
 @dataclass(slots=True)

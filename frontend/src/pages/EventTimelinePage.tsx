@@ -8,6 +8,7 @@ import { ArtifactViewer } from '../components/ArtifactViewer';
 import { DiffViewer } from '../components/DiffViewer';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
+import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { ReplayActions } from '../components/ReplayActions';
 import { StatusBadge } from '../components/StatusBadge';
@@ -55,6 +56,9 @@ export function EventTimelinePage() {
     }
   }, [selectedStep, selectedArtifactId]);
   const allArtifacts = timeline.data?.runs.flatMap((run) => run.artifacts) ?? [];
+  const requestArtifact = selectedStep?.artifacts.find((artifact) => artifact.artifact_type === 'outgoing_request' || artifact.artifact_type === 'dry_run_request') ?? null;
+  const responseArtifact = selectedStep?.artifacts.find((artifact) => artifact.artifact_type === 'incoming_response') ?? null;
+  const externalErrorArtifact = selectedStep?.artifacts.find((artifact) => artifact.artifact_type === 'external_error') ?? null;
 
   if (timeline.isLoading) return <LoadingState label={t('timeline.loading')} />;
   if (timeline.error) return <ErrorState error={timeline.error} />;
@@ -101,7 +105,7 @@ export function EventTimelinePage() {
               <div className="step-rail">
                 {selectedRun.steps.map((step) => <TimelineStep key={step.id} step={step} selected={step.id === selectedStep?.id} onSelect={() => { setSelectedStepId(step.id); setSelectedArtifactId(null); }} />)}
               </div>
-              {failedStep && <div className="error-callout"><strong>{failedStep.error_code}</strong><span>{failedStep.error_message}</span></div>}
+              {failedStep && <div className="error-callout"><strong>{failedStep.human_title ?? failedStep.error_code}</strong><span>{failedStep.human_summary ?? failedStep.error_message}</span></div>}
               {selectedStep && (
                 <div className="step-detail-card">
                   <div className="panel-toolbar"><div><span className="eyebrow">{t('timeline.selectedStep')}</span><h2>{selectedStep.step_name}</h2></div><StatusBadge status={selectedStep.status} /></div>
@@ -110,6 +114,31 @@ export function EventTimelinePage() {
                     <span>{t('incidents.errorCode')}<strong>{selectedStep.error_code ?? '—'}</strong></span>
                     <span>{t('timeline.artifacts')}<strong>{selectedStep.artifacts.length}</strong></span>
                   </div>
+                  {selectedStep.status === 'failed' && (
+                    <section className="external-error-panel">
+                      <div className="panel-toolbar"><div><span className="eyebrow">{t('timeline.externalError')}</span><h3>{selectedStep.human_title ?? selectedStep.error_code ?? t('common.unknownError')}</h3></div><StatusBadge status="failed" /></div>
+                      <div className="error-section-grid">
+                        <article><span>{t('timeline.summary')}</span><p>{selectedStep.human_summary ?? selectedStep.error_message ?? '—'}</p></article>
+                        <article><span>{t('timeline.normalized')}</span><p><strong>{selectedStep.error_code ?? '—'}</strong><br />{selectedStep.error_message ?? '—'}</p></article>
+                        <article><span>{t('timeline.hint')}</span><p>{selectedStep.hint ?? '—'}</p></article>
+                      </div>
+                      {selectedStep.external_error && (
+                        <div className="external-response-card">
+                          <div className="metadata-grid compact-grid no-margin">
+                            <span>HTTP<strong>{selectedStep.external_error.http_status ?? '—'}</strong></span>
+                            <span>{t('common.type')}<strong>{selectedStep.external_error.response_content_type ?? '—'}</strong></span>
+                            <span>{t('common.hash')}<strong className="mono">{selectedStep.external_error.response_body_sha256?.slice(0, 12) ?? '—'}</strong></span>
+                          </div>
+                          <pre>{selectedStep.external_error.response_body_preview ?? selectedStep.external_error.external_error_message ?? selectedStep.external_error.normalized_message}</pre>
+                        </div>
+                      )}
+                      <div className="artifact-quick-grid">
+                        {externalErrorArtifact && <JsonBlock title={t('timeline.originalExternalError')} value={externalErrorArtifact.content_json} searchable={false} />}
+                        {requestArtifact && <JsonBlock title={t('timeline.request')} value={requestArtifact.content_json} searchable={false} />}
+                        {responseArtifact && <JsonBlock title={t('timeline.response')} value={responseArtifact.content_json} searchable={false} />}
+                      </div>
+                    </section>
+                  )}
                   <div className="artifact-tabs">
                     {selectedStep.artifacts.map((artifact) => <button key={artifact.id} className={artifact.id === selectedArtifact?.id ? 'active' : ''} onClick={() => setSelectedArtifactId(artifact.id)}>{artifact.name}</button>)}
                   </div>

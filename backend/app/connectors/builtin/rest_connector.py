@@ -42,18 +42,50 @@ class RESTConnector:
                 response = await client.request(method, url, json=payload, headers=headers)
             try:
                 response_body = response.json()
+                raw_json = response_body
+                raw_text = None
             except Exception:
                 response_body = {"text": response.text}
+                raw_json = None
+                raw_text = response.text
+            content_type = response.headers.get("content-type")
+            success = 200 <= response.status_code < 300
+            message = _external_message(response_body)
             return ConnectorSendResult(
-                success=200 <= response.status_code < 300,
+                success=success,
                 status_code=response.status_code,
                 request_payload=request_payload,
-                response_payload=response_body if isinstance(response_body, dict) else {"body": response_body},
-                error_code=None if response.status_code < 400 else "REST_NON_2XX",
-                error_message=None if response.status_code < 400 else f"REST target returned {response.status_code}",
+                response_payload={"status_code": response.status_code, "headers": dict(response.headers), "content_type": content_type, "body": response_body},
+                error_code=None if success else "REST_NON_2XX",
+                error_message=None if success else message or f"REST target returned {response.status_code}",
+                external_error_message=None if success else message,
+                external_error_type=None if success else "http_error",
+                human_title=None if success else "External API returned an error",
+                human_summary=None if success else f"External API HTTP {response.status_code}: {message or 'request failed'}",
+                developer_message=None if success else "Original REST response is preserved in incoming_response.json and external_error.json artifacts.",
+                hint=None if success else "Check API credentials, endpoint contract and request payload before replay.",
+                raw_response_json=raw_json if isinstance(raw_json, (dict, list)) else None,
+                raw_response_text=raw_text,
+                response_headers=dict(response.headers),
+                response_content_type=content_type,
+                endpoint_url=url,
+                operation=method,
             )
         except Exception as exc:
-            return ConnectorSendResult(success=False, request_payload=request_payload, error_code="REST_SEND_FAILED", error_message=str(exc))
+            return ConnectorSendResult(
+                success=False,
+                request_payload=request_payload,
+                error_code="REST_SEND_FAILED",
+                error_message=str(exc),
+                external_error_message=str(exc),
+                external_error_type="connection_error",
+                human_title="External API is unreachable",
+                human_summary=f"REST send failed: {exc}",
+                developer_message=str(exc),
+                hint="Check network connectivity, DNS, TLS and target API availability.",
+                endpoint_url=url,
+                operation=method,
+            )
 
     async def dry_run_send(self, config: dict, payload: dict, context: ConnectorContext) -> ConnectorSendResult:
         validation = await self.validate_config(config)
@@ -68,3 +100,21 @@ class RESTConnector:
 
     async def receive(self, config: dict, context: ConnectorContext) -> list[ConnectorReceivedEvent]:
         return []
+
+
+def _external_message(body: object) -> str | None:
+    if isinstance(body, dict):
+        for key in ("error_message", "message", "detail", "description", "error"):
+            value = body.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        for value in body.values():
+            nested = _external_message(value)
+            if nested:
+                return nested
+    if isinstance(body, list):
+        for item in body:
+            nested = _external_message(item)
+            if nested:
+                return nested
+    return None

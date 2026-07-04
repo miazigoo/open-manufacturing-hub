@@ -174,8 +174,8 @@ async def dispatch(session: AsyncSession, slug: str, request: Request) -> dict[s
 
     run = await ExecutionEngine(session).execute_event(event.id, mode=RunMode.NORMAL, initial_payload=payload, workflow_id=workflow_id)
     await _update_message_after_run(session, message, event.status.value if hasattr(event.status, "value") else str(event.status))
-    response = await _response_from_run(session, run)
-    return _format_response(endpoint, event, message, route, response)
+    response, external_error = await _response_context_from_run(session, run)
+    return _format_response(endpoint, event, message, route, response, external_error)
 
 
 async def select_route(session: AsyncSession, endpoint: IntegrationEndpoint, parsed: dict[str, Any]) -> IntegrationRoute | None:
@@ -336,7 +336,7 @@ async def _update_message_after_run(session: AsyncSession, message: IntegrationM
     await session.flush()
 
 
-async def _response_from_run(session: AsyncSession, run: EventRun) -> dict[str, Any] | None:
+async def _response_context_from_run(session: AsyncSession, run: EventRun) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     result = await session.execute(
         select(Artifact)
         .where(Artifact.run_id == run.id)
@@ -345,20 +345,66 @@ async def _response_from_run(session: AsyncSession, run: EventRun) -> dict[str, 
     )
     artifacts = list(result.scalars().all())
     artifact = next((item for item in artifacts if item.name == "incoming_response.json"), artifacts[0] if artifacts else None)
-    return artifact.content_json if artifact else None
+    from app.external_errors.models import ExternalErrorRecord
+
+    error_result = await session.execute(
+        select(ExternalErrorRecord).where(ExternalErrorRecord.run_id == run.id).order_by(ExternalErrorRecord.created_at.desc()).limit(1)
+    )
+    external_error = error_result.scalar_one_or_none()
+    return artifact.content_json if artifact else None, _external_error_payload(external_error)
 
 
-def _format_response(endpoint: IntegrationEndpoint, event: IntegrationEvent, message: IntegrationMessage | None, route: IntegrationRoute | None, response: dict[str, Any] | None) -> dict[str, Any]:
+def _format_response(
+    endpoint: IntegrationEndpoint,
+    event: IntegrationEvent,
+    message: IntegrationMessage | None,
+    route: IntegrationRoute | None,
+    response: dict[str, Any] | None,
+    external_error: dict[str, Any] | None,
+) -> dict[str, Any]:
     base = {"accepted": True, "event_id": event.id, "message_id": message.id if message else None, "status": event.status.value, "timeline_url": f"/events/{event.id}", "route_id": route.id if route else None}
     if endpoint.response_mode == ACCEPTED_EVENT:
         return {key: value for key, value in base.items() if key != "message_id" or value is not None}
     if endpoint.response_mode == ACCEPTED_MESSAGE:
         return base
+    if event.status.value != "success" and external_error:
+        failure = {
+            "success": False,
+            **base,
+            "error_code": external_error.get("external_error_code") or external_error.get("normalized_code"),
+            "error_message": external_error.get("external_error_message") or external_error.get("normalized_message"),
+            "human_summary": external_error.get("human_summary"),
+            "external_error": external_error,
+            "response": response,
+        }
+        return failure
     if endpoint.response_mode == PROXY_RESPONSE:
         return response or {**base, "response": None}
     if endpoint.response_mode == SYNC_RESPONSE:
         return {"success": event.status.value == "success", **base, "response": response}
     return base
+
+
+def _external_error_payload(record: Any | None) -> dict[str, Any] | None:
+    if record is None:
+        return None
+    body = record.response_body_json if record.response_body_json is not None else record.response_body_xml or record.response_body_text
+    return {
+        "id": record.id,
+        "system": record.connector_name or record.target_system,
+        "normalized_code": record.normalized_code,
+        "normalized_message": record.normalized_message,
+        "external_error_code": record.external_error_code,
+        "external_error_message": record.external_error_message,
+        "human_title": record.human_title,
+        "human_summary": record.human_summary,
+        "hint": record.hint,
+        "status_code": record.http_status,
+        "content_type": record.response_content_type,
+        "body": body,
+        "body_preview": record.response_body_preview,
+        "body_sha256": record.response_body_sha256,
+    }
 
 
 def _route_score(route: IntegrationRoute, source_system: Any, target_system: Any, event_type: Any, message_type: Any, operation: Any) -> int:

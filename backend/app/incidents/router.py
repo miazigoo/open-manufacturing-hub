@@ -14,7 +14,8 @@ router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 
 @router.get("", response_model=list[IncidentRead])
 async def list_incidents(session: AsyncSession = Depends(get_session)):
-    return await repository.list_incidents(session)
+    incidents = await repository.list_incidents(session)
+    return await service.attach_external_error_samples_many(session, incidents)
 
 
 @router.get("/{incident_id}", response_model=IncidentRead)
@@ -22,7 +23,7 @@ async def get_incident(incident_id: UUID, session: AsyncSession = Depends(get_se
     incident = await repository.get_incident(session, incident_id)
     if incident is None:
         raise NotFoundError("Incident not found")
-    return incident
+    return await service.attach_external_error_samples(session, incident)
 
 
 @router.get("/{incident_id}/events", response_model=list[IncidentEventRead])

@@ -11,6 +11,7 @@ import { useT } from '../i18n/useI18n';
 
 const sampleJson = { warehouse_id: 'MAIN', target_order_id: 'SO-1001', items: [] };
 const sampleXml = '<Документ><Номер>UPD-1001</Номер></Документ>';
+type BusFailureContract = { human_summary?: unknown; timeline_url?: unknown; external_error?: Record<string, unknown> };
 
 export function IntegrationBusPage() {
   const t = useT();
@@ -38,6 +39,8 @@ export function IntegrationBusPage() {
   }});
 
   const selectedEndpoint = useMemo(() => endpoints.data?.find((item) => item.slug === consoleForm.slug), [endpoints.data, consoleForm.slug]);
+  const busFailure = sendTest.data && typeof sendTest.data === 'object' && 'external_error' in sendTest.data ? sendTest.data as BusFailureContract : null;
+  const busFailureTimelineUrl = busFailure?.timeline_url ? String(busFailure.timeline_url) : null;
   const error = endpoints.error ?? routes.error ?? lookups.error;
   if (endpoints.isLoading || routes.isLoading || lookups.isLoading) return <LoadingState label={t('bus.loading')} />;
   if (error) return <ErrorState error={error} />;
@@ -114,6 +117,13 @@ export function IntegrationBusPage() {
           {formError && <div className="error-state compact">{formError}</div>}
           {sendTest.error instanceof Error && <div className="error-state compact">{sendTest.error.message}</div>}
           <button className="primary-button" disabled={!consoleForm.slug || sendTest.isPending}>{t('bus.sendTest')}</button>
+          {busFailure && (
+            <section className="bus-error-contract">
+              <strong>{String(busFailure.human_summary ?? t('timeline.externalError'))}</strong>
+              {busFailureTimelineUrl ? <Link className="primary-link" to={busFailureTimelineUrl}>{t('timeline.eyebrow')}</Link> : null}
+              <JsonBlock title={t('timeline.originalExternalError')} value={busFailure.external_error ?? {}} searchable={false} />
+            </section>
+          )}
           <JsonBlock title={t('bus.response')} value={sendTest.data ?? {}} searchable={false} />
         </form>
       </section>

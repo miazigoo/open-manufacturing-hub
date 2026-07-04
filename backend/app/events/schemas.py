@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.artifacts.schemas import ArtifactRead
 from app.core.enums import EventStatus, RunMode, RunStatus, StepStatus
+from app.external_errors.schemas import ExternalErrorSummary
 
 
 class EventCreate(BaseModel):
@@ -40,6 +41,12 @@ class EventStepRead(BaseModel):
     status: StepStatus
     error_code: str | None
     error_message: str | None
+    human_title: str | None = None
+    human_summary: str | None = None
+    developer_message: str | None = None
+    hint: str | None = None
+    external_error_record_id: UUID | None = None
+    external_error: ExternalErrorSummary | None = None
     step_config_json: dict[str, Any]
     condition: str | None
     artifacts: list[ArtifactRead] = []
@@ -69,3 +76,30 @@ class EventRunRead(BaseModel):
 class EventTimeline(BaseModel):
     event: EventSummary
     runs: list[EventRunRead]
+
+
+class EventJournalItem(BaseModel):
+    id: UUID
+    correlation_id: str | None
+    source_system: str
+    target_system: str | None
+    event_type: str
+    entity_type: str | None
+    entity_id: str | None
+    status: EventStatus
+    pinned: bool
+    created_at: datetime
+    human_title: str
+    human_summary: str
+    business_key: str | None = None
+    operation: str | None = None
+    document_type: str | None = None
+    document_number: str | None = None
+    source_display: str | None = None
+    target_display: str | None = None
+    last_step: str | None = None
+    last_error_code: str | None = None
+    last_error_summary: str | None = None
+    last_external_error_message: str | None = None
+    hint: str | None = None
+    requires_attention: bool = False

@@ -19,7 +19,7 @@ export function EventJournalPage() {
   const [eventType, setEventType] = useState('');
   const [source, setSource] = useState('');
   const [target, setTarget] = useState('');
-  const query = useQuery({ queryKey: ['events'], queryFn: eventsApi.list });
+  const query = useQuery({ queryKey: ['events-journal'], queryFn: eventsApi.journal });
 
   const rows = useMemo(() => (query.data ?? []).filter((event) => {
     if (status !== 'all' && event.status !== status) return false;
@@ -45,17 +45,17 @@ export function EventJournalPage() {
       <section className="table-panel">
         {rows.length === 0 ? <EmptyState title={t('events.noEvents')} detail={t('events.noEventsDetail')} /> : (
           <table>
-            <thead><tr><th>{t('common.created')}</th><th>{t('common.status')}</th><th>{t('events.eventType')}</th><th>{t('common.entity')}</th><th>{t('common.source')}</th><th>{t('common.target')}</th><th>{t('events.correlationId')}</th><th>{t('common.actions')}</th></tr></thead>
+            <thead><tr><th>{t('common.created')}</th><th>{t('common.status')}</th><th>{t('events.journalTitle')}</th><th>{t('common.source')} → {t('common.target')}</th><th>{t('events.operation')}</th><th>{t('events.businessKey')}</th><th>{t('events.lastError')}</th><th>{t('common.actions')}</th></tr></thead>
             <tbody>
               {rows.map((event) => (
-                <tr key={event.id}>
+                <tr key={event.id} className={event.requires_attention ? 'attention-row' : ''}>
                   <td className="muted">{formatDateTime(event.created_at)}</td>
                   <td><StatusBadge status={event.status} /></td>
-                  <td><strong>{event.event_type}</strong></td>
-                  <td>{event.entity_type ?? t('common.entity')} #{event.entity_id ?? t('common.unknown')}</td>
-                  <td>{event.source_system}</td>
-                  <td>{event.target_system ?? '—'}</td>
-                  <td className="mono">{event.correlation_id ?? '—'}</td>
+                  <td><strong>{event.human_title}</strong><small>{event.human_summary}</small></td>
+                  <td>{event.source_display ?? event.source_system} → {event.target_display ?? event.target_system ?? '—'}</td>
+                  <td>{event.operation ?? event.event_type}</td>
+                  <td>{event.business_key ?? event.correlation_id ?? '—'}</td>
+                  <td><strong>{event.last_error_code ?? '—'}</strong><small>{event.last_external_error_message ?? event.last_error_summary ?? event.hint ?? ''}</small></td>
                   <td><Link className="primary-link" to={`/events/${event.id}`}>{t('common.open')}</Link></td>
                 </tr>
               ))}

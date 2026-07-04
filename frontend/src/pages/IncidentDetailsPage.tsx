@@ -47,6 +47,21 @@ export function IncidentDetailsPage() {
         </div>
         <pre className="fingerprint-block">{incident.data.fingerprint}</pre>
       </section>
+      {!!incident.data.sample_external_errors?.length && (
+        <section className="panel">
+          <div className="panel-toolbar"><h2>{t('incidents.externalSamples')}</h2><span className="microcopy">{incident.data.sample_external_errors.length}</span></div>
+          <div className="external-sample-list">
+            {incident.data.sample_external_errors.map((sample) => (
+              <article key={sample.id} className="external-sample-card">
+                <strong>{sample.human_title ?? sample.normalized_code}</strong>
+                <span>{sample.external_error_message ?? sample.normalized_message}</span>
+                <small>HTTP {sample.http_status ?? '—'} · {sample.response_content_type ?? '—'} · {sample.response_body_sha256?.slice(0, 12) ?? 'no hash'}</small>
+                <pre>{sample.response_body_preview ?? '—'}</pre>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
       <section className="table-panel">
         <div className="panel-toolbar"><h2>{t('incidents.linkedEvents')}</h2></div>
         <table>

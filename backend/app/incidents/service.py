@@ -112,3 +112,16 @@ async def safe_record_failure(session: AsyncSession, event: IntegrationEvent, ru
     except Exception:
         logger.exception("Failed to record incident for event %s", event.id)
         return None
+
+
+async def attach_external_error_samples(session: AsyncSession, incident: Incident) -> Incident:
+    from app.external_errors.service import list_for_incident
+
+    setattr(incident, "sample_external_errors", await list_for_incident(session, incident.id, limit=5))
+    return incident
+
+
+async def attach_external_error_samples_many(session: AsyncSession, incidents: list[Incident]) -> list[Incident]:
+    for incident in incidents:
+        await attach_external_error_samples(session, incident)
+    return incidents

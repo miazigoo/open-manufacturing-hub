@@ -89,6 +89,14 @@ class ZPLPrinterConnector:
                 request_payload=request_payload,
                 error_code="ZPL_PRINTER_SEND_FAILED",
                 error_message=str(exc),
+                external_error_message=str(exc),
+                external_error_type="socket_error",
+                human_title="Printer is unreachable",
+                human_summary=f"Printer {host}:{port} rejected TCP send: {exc}",
+                developer_message=str(exc),
+                hint="Check printer power, network route, TCP port 9100 and firewall rules.",
+                endpoint_url=f"tcp://{host}:{port}",
+                operation="print_zpl",
             )
 
         return ConnectorSendResult(
