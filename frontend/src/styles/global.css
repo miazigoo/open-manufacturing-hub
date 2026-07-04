@@ -390,3 +390,78 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .package-category-control { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .package-nav-link { border-style: dashed; }
 @media (max-width: 1180px) { .package-detail-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Product UI foundation */
+.slim-topbar { min-height: 48px; padding-top: 7px; padding-bottom: 7px; }
+.compact-main-nav { gap: 9px; }
+.collapsible-nav-section { gap: 4px; }
+.nav-section-toggle { width: 100%; border: 1px solid transparent; background: rgba(247,239,218,.035); color: var(--accent-2); padding: 9px 10px; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; letter-spacing: .15em; font-size: 10px; font-weight: 700; }
+.nav-section-toggle:hover { border-color: var(--line); background: rgba(247,239,218,.07); }
+.nav-section-toggle strong { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+.nav-link.advanced { opacity: .84; }
+.nav-warning { padding: 8px 10px; color: var(--yellow); }
+.product-page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; overflow: hidden; position: relative; }
+.product-page-header p { max-width: 820px; margin-top: 14px; }
+.product-header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; min-width: 220px; }
+.product-section-card .panel-toolbar p { margin-top: 6px; max-width: 760px; }
+.product-empty-panel .action-row { margin-top: 16px; }
+.product-data-table { padding: 0; box-shadow: none; background: rgba(0,0,0,.12); overflow-x: auto; }
+.product-data-table table { min-width: 880px; }
+.form-grid { display: grid; gap: 12px; align-items: end; }
+.form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.form-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.endpoint-url-box { border: 1px solid var(--line); background: rgba(0,0,0,.18); padding: 12px; display: grid; grid-template-columns: minmax(90px, .25fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.endpoint-url-box span { color: var(--muted); font-size: 12px; }
+.endpoint-url-box code { min-width: 0; overflow-wrap: anywhere; color: var(--accent-2); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.result-panel { display: grid; gap: 12px; }
+.result-panel .panel-toolbar { margin-bottom: 0; }
+.product-error-panel .json-panel { box-shadow: none; }
+.package-gate-panel { display: grid; gap: 14px; max-width: 760px; }
+.integration-block { border: 1px solid var(--line); background: rgba(0,0,0,.13); padding: 16px; display: grid; gap: 14px; }
+.integration-block .panel-toolbar { margin-bottom: 0; }
+.lookup-editor-list { display: grid; gap: 12px; margin-bottom: 12px; }
+.advanced-json-details { border: 1px solid var(--line); background: rgba(0,0,0,.18); padding: 12px; margin-top: 14px; }
+.advanced-json-details summary { cursor: pointer; color: var(--accent); font-weight: 700; }
+.advanced-json-details .json-panel { box-shadow: none; margin-top: 12px; }
+
+/* 1C cockpit */
+.cockpit-hero { background: radial-gradient(circle at 80% 10%, rgba(143,198,180,.22), transparent 28%), radial-gradient(circle at 12% 16%, rgba(240,179,90,.22), transparent 32%), linear-gradient(135deg, rgba(247,239,218,.1), rgba(0,0,0,.12)); }
+.cockpit-hero.wizard { background: radial-gradient(circle at 14% 12%, rgba(114,167,255,.18), transparent 26%), linear-gradient(135deg, rgba(143,198,180,.13), rgba(240,179,90,.08), rgba(0,0,0,.13)); }
+.cockpit-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cockpit-command-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(340px, .65fr); gap: 18px; align-items: start; }
+.cockpit-command-grid.lower { grid-template-columns: minmax(0, 1fr) minmax(360px, .72fr); }
+.cockpit-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.cockpit-action-card { min-height: 180px; border: 1px solid var(--line); background: linear-gradient(145deg, rgba(247,239,218,.075), rgba(0,0,0,.16)); padding: 16px; display: grid; align-content: start; gap: 10px; transition: .16s ease; }
+.cockpit-action-card:hover { transform: translateY(-2px); border-color: rgba(240,179,90,.55); background: rgba(240,179,90,.09); }
+.cockpit-action-card.primary { border-color: rgba(240,179,90,.48); background: linear-gradient(145deg, rgba(240,179,90,.16), rgba(143,198,180,.08)); }
+.cockpit-action-card span { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.cockpit-action-card p { font-size: 13px; }
+.cockpit-health-list, .cockpit-event-list { display: grid; gap: 10px; }
+.cockpit-health-list article, .cockpit-event-list article { border: 1px solid var(--line); background: rgba(0,0,0,.16); padding: 13px; display: grid; gap: 8px; min-width: 0; }
+.cockpit-health-list article { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+.cockpit-health-list article p { grid-column: 1 / -1; }
+.cockpit-health-list span, .cockpit-event-list small { color: var(--muted); overflow-wrap: anywhere; }
+.cockpit-event-list article { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.cockpit-event-list article > div { display: grid; gap: 6px; min-width: 0; }
+.cockpit-wizard-grid { display: grid; grid-template-columns: minmax(0, 1fr) 430px; gap: 18px; align-items: start; }
+.cockpit-wizard-form { display: grid; gap: 16px; background: linear-gradient(145deg, rgba(247,239,218,.08), rgba(143,198,180,.045)); }
+.cockpit-wizard-sidecar { display: grid; gap: 18px; position: sticky; top: 66px; min-width: 0; }
+.cockpit-preview-steps .preview-step { grid-template-columns: auto minmax(0, 1fr) auto; }
+.cockpit-preview-steps .preview-step small { grid-column: 2 / -1; }
+
+@media (max-width: 1320px) {
+  .cockpit-wizard-grid, .cockpit-command-grid, .cockpit-command-grid.lower { grid-template-columns: minmax(0, 1fr); }
+  .cockpit-wizard-sidecar { position: static; }
+}
+@media (max-width: 1180px) {
+  .product-page-header { display: grid; }
+  .product-header-actions { justify-content: flex-start; }
+  .cockpit-metrics, .form-grid-4, .form-grid-3, .form-grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .endpoint-url-box { grid-template-columns: minmax(0, 1fr); align-items: start; }
+}
+@media (max-width: 760px) {
+  .nav-section-toggle { padding: 9px 8px; }
+  .cockpit-action-card { min-height: auto; }
+  .cockpit-health-list article, .cockpit-event-list article { grid-template-columns: minmax(0, 1fr); }
+}

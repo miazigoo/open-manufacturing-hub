@@ -39,6 +39,7 @@ from app.retention.router import router as retention_router
 from app.replay.router import router as replay_router
 from app.scenario_library.router import router as scenario_library_router
 from app.test_console.router import router as test_console_router
+from app.ui.router import router as ui_router
 from app.workflows.router import router as workflows_router
 from app.xml_tools.router import router as xml_tools_router
 from app.packages.service import startup_package_check
@@ -95,6 +96,7 @@ app.include_router(scenario_library_router)
 app.include_router(odata_explorer_router)
 app.include_router(xml_tools_router)
 app.include_router(test_console_router)
+app.include_router(ui_router)
 app.include_router(notifications_router)
 app.include_router(packages_router)
 app.include_router(plugin_store_router)
