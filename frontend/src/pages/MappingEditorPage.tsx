@@ -1,11 +1,13 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
+import { configVersionsApi } from '../api/configVersions';
 import { MappingPayload, mappingsApi } from '../api/mappings';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
+import { VersionHistoryPanel } from '../features/configVersions';
 import { useT } from '../i18n/useI18n';
 import { formatDateTime } from '../utils';
 
@@ -43,6 +45,27 @@ export function MappingEditorPage() {
 
   const create = useMutation({ mutationFn: mappingsApi.create, onSuccess: (mapping) => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setSelectedId(mapping.id); setMessage(t('mappings.created')); } });
   const createVersion = useMutation({ mutationFn: (payload: { id: string; rules: Array<Record<string, unknown>>; sourceSchema: Record<string, unknown>; targetSchema: Record<string, unknown> }) => mappingsApi.createVersion(payload.id, { rules_json: payload.rules, source_schema_json: payload.sourceSchema, target_schema_json: payload.targetSchema, notes: 'Created from editor' }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setMessage(t('mappings.versionCreated')); } });
+  const saveDraft = useMutation({
+    mutationFn: (payload: { id: string; rules: Array<Record<string, unknown>>; sourceSchema: Record<string, unknown>; targetSchema: Record<string, unknown> }) => configVersionsApi.createDraft('mapping', payload.id, {
+      config_json: {
+        name: selected!.name,
+        description: selected!.description,
+        source_entity: selected!.source_entity,
+        target_entity: selected!.target_entity,
+        version_payload: {
+          rules_json: payload.rules,
+          source_schema_json: payload.sourceSchema,
+          target_schema_json: payload.targetSchema,
+          notes: 'Published through config versioning',
+        },
+      },
+      comment: 'Draft saved from mapping editor',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['config-versions', 'mapping', selected?.id] });
+      setMessage('Draft saved. Publish it from release control.');
+    },
+  });
   const clone = useMutation({ mutationFn: (payload: { id: string; version: number }) => mappingsApi.cloneVersion(payload.id, payload.version), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mappings'] }); setMessage(t('mappings.cloned')); } });
   const validate = useMutation({ mutationFn: (payload: { rules: Array<Record<string, unknown>>; sample: Record<string, unknown> }) => mappingsApi.validate(payload.rules, payload.sample), onSuccess: (data) => { setPreview(data.preview); setMessage(data.valid ? t('mappings.valid') : t('mappings.invalid', { errors: data.errors.join(', ') })); } });
   const execute = useMutation({ mutationFn: (payload: { id: string; version: number; sample: Record<string, unknown> }) => mappingsApi.execute(payload.id, payload.version, payload.sample), onSuccess: (data) => setPreview(data.output) });
@@ -80,6 +103,11 @@ export function MappingEditorPage() {
     try { const data = parsed(); createVersion.mutate({ id: selected.id, rules: data.rules, sourceSchema: data.sourceSchema, targetSchema: data.targetSchema }); } catch (error) { setFormError(error instanceof Error ? error.message : 'Invalid JSON'); }
   }
 
+  function draftCurrent() {
+    if (!selected) return;
+    try { const data = parsed(); saveDraft.mutate({ id: selected.id, rules: data.rules, sourceSchema: data.sourceSchema, targetSchema: data.targetSchema }); } catch (error) { setFormError(error instanceof Error ? error.message : 'Invalid JSON'); }
+  }
+
   const error = mappings.error ?? presets.error;
   if (mappings.isLoading || presets.isLoading) return <LoadingState label={t('mappings.loading')} />;
   if (error) return <ErrorState error={error} />;
@@ -102,7 +130,7 @@ export function MappingEditorPage() {
           )) : <EmptyState title={t('mappings.noMappings')} detail={t('mappings.noMappingsDetail')} />}
         </aside>
         <form className="panel mapping-editor-panel" onSubmit={submit}>
-          <div className="panel-toolbar"><h2>{t('mappings.editor')}</h2><div className="action-row"><button type="button" className="ghost-button" onClick={validateCurrent}>{t('mappings.validate')}</button><button type="button" className="ghost-button" disabled={!selected} onClick={versionCurrent}>{t('mappings.createVersion')}</button><button className="primary-button">{t('mappings.createMapping')}</button></div></div>
+          <div className="panel-toolbar"><h2>{t('mappings.editor')}</h2><div className="action-row"><button type="button" className="ghost-button" onClick={validateCurrent}>{t('mappings.validate')}</button><button type="button" className="ghost-button" disabled={!selected || saveDraft.isPending} onClick={draftCurrent}>Save Draft</button><button type="button" className="ghost-button" disabled={!selected} onClick={versionCurrent}>{t('mappings.createVersion')}</button><button className="primary-button">{t('mappings.createMapping')}</button></div></div>
           <div className="mapping-triptych">
             <label className="field-label">{t('mappings.sourceSchema')}<textarea value={form.source_schema_json} onChange={(event) => setForm({ ...form, source_schema_json: event.target.value })} spellCheck={false} /></label>
             <label className="field-label">{t('mappings.rulesJson')}<textarea value={form.rules_json} onChange={(event) => setForm({ ...form, rules_json: event.target.value })} spellCheck={false} /></label>
@@ -127,6 +155,7 @@ export function MappingEditorPage() {
         <div className="panel"><JsonBlock title={t('mappings.preview')} value={preview ?? { hint: t('mappings.previewHint') }} searchable={false} /></div>
         <div className="panel"><JsonBlock title={t('mappings.versionDiff')} value={(diff as Record<string, unknown> | null) ?? { hint: t('mappings.diffHint') }} searchable={false} /></div>
       </section>
+      {selected && <VersionHistoryPanel objectType="mapping" objectId={selected.id} compact onChanged={() => queryClient.invalidateQueries({ queryKey: ['mappings'] })} />}
     </div>
   );
 }

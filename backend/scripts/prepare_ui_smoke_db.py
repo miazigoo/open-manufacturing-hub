@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.artifacts.models import Artifact  # noqa: F401
 from app.audit.models import AuditEvent  # noqa: F401
 from app.business_rules.models import BusinessRuleSet  # noqa: F401
+from app.config_versions.models import ConfigVersion  # noqa: F401
 from app.connectors.models import ConnectorInstance
 from app.core.database import Base, async_session, engine
 from app.core.enums import ConnectorDirection, ConnectorInstanceStatus
@@ -30,6 +31,7 @@ from app.integration_flows.models import IntegrationFlow  # noqa: F401
 from app.maintenance.models import MaintenanceWindow  # noqa: F401
 from app.mappings.models import MappingDefinition, MappingVersion  # noqa: F401
 from app.notifications.models import NotificationDelivery, NotificationRule  # noqa: F401
+from app.onboarding.models import OnboardingState  # noqa: F401
 from app.onec_workbench.models import IntegrationMessage  # noqa: F401
 from app.operation_templates.models import OperationTemplate  # noqa: F401
 from app.packages.models import InstalledPackage  # noqa: F401

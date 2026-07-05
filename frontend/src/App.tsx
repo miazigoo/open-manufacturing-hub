@@ -62,6 +62,7 @@ const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then((m) => ({ de
 const DocumentationPage = lazy(() => import('./pages/DocumentationPage').then((m) => ({ default: m.DocumentationPage })));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then((m) => ({ default: m.OnboardingPage })));
 const FirstIntegrationWizardPage = lazy(() => import('./pages/FirstIntegrationWizardPage').then((m) => ({ default: m.FirstIntegrationWizardPage })));
+const ConfigHistoryPage = lazy(() => import('./pages/ConfigHistoryPage').then((m) => ({ default: m.ConfigHistoryPage })));
 
 function onec(element: React.ReactNode) {
   return <PackageGate packageId="omh-package-onec">{element}</PackageGate>;
@@ -138,6 +139,7 @@ export function App() {
           <Route path="auth-settings" element={<AuthSettingsPage />} />
           <Route path="production" element={<ProductionPage />} />
           <Route path="audit" element={<AuditLogPage />} />
+          <Route path="config-history/:objectType/:objectId" element={<ConfigHistoryPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

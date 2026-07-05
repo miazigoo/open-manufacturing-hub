@@ -723,3 +723,174 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
   .help-panel { width: 100%; }
   .tour-popover { left: 16px !important; right: 16px; }
 }
+
+/* Configuration versioning */
+.config-history-hero {
+  background: radial-gradient(circle at 86% 8%, rgba(143,198,180,.24), transparent 30%), radial-gradient(circle at 18% 10%, rgba(240,179,90,.18), transparent 34%), linear-gradient(135deg, rgba(17,25,24,.96), rgba(27,21,13,.94));
+}
+.config-history-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, .72fr) minmax(360px, .85fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.config-version-panel, .config-release-panel, .config-diff-panel {
+  min-width: 0;
+}
+.config-version-panel.compact-panel {
+  display: grid;
+  gap: 14px;
+}
+.config-draft-banner {
+  border: 1px solid rgba(240,179,90,.42);
+  background: linear-gradient(135deg, rgba(240,179,90,.14), rgba(0,0,0,.14));
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+}
+.config-draft-banner strong, .config-draft-banner small {
+  display: block;
+}
+.config-draft-banner small {
+  color: var(--muted);
+  margin-top: 4px;
+}
+.config-version-badge {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  gap: 3px 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.18);
+  padding: 8px 10px;
+  color: var(--muted);
+  min-width: max-content;
+}
+.config-version-badge strong {
+  color: var(--ink);
+  font-family: var(--font-mono);
+}
+.config-version-badge small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.config-version-badge.active, .config-version-badge.rollback {
+  border-color: rgba(111,206,141,.38);
+  background: rgba(111,206,141,.08);
+}
+.config-version-badge.draft {
+  border-color: rgba(240,179,90,.48);
+  background: rgba(240,179,90,.1);
+}
+.config-version-badge.rejected, .config-version-badge.archived {
+  opacity: .78;
+}
+.config-version-badge .passed {
+  color: var(--green);
+}
+.config-version-badge .failed {
+  color: var(--red);
+}
+.config-version-badge .warning, .config-version-badge .not_tested {
+  color: var(--accent);
+}
+.config-version-badge.compact {
+  display: inline-flex;
+  padding: 7px 9px;
+}
+.config-version-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.config-version-list {
+  display: grid;
+  gap: 10px;
+}
+.config-version-card {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.12);
+  color: var(--ink);
+  text-align: left;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  transition: .16s ease;
+}
+.config-version-card:hover, .config-version-card.active {
+  border-color: rgba(240,179,90,.44);
+  background: rgba(240,179,90,.08);
+  transform: translateY(-1px);
+}
+.config-version-card span, .config-version-card small {
+  color: var(--muted);
+}
+.config-release-panel, .config-test-panel {
+  display: grid;
+  gap: 16px;
+}
+.config-test-panel textarea {
+  min-height: 150px;
+}
+.config-release-actions, .config-action-box {
+  display: grid;
+  gap: 12px;
+}
+.config-action-box {
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.12);
+  padding: 12px;
+}
+.config-rollback-row {
+  justify-content: start;
+}
+.config-diff-viewer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.config-diff-column {
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.12);
+  padding: 12px;
+  min-width: 0;
+}
+.config-diff-column h3 {
+  margin-bottom: 10px;
+}
+.config-diff-item {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+  display: grid;
+  gap: 8px;
+}
+.config-diff-item strong {
+  color: var(--accent-2);
+  overflow-wrap: anywhere;
+}
+.config-diff-item pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: #d8cdb3;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+@media (max-width: 1320px) {
+  .config-history-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .config-draft-banner, .config-diff-viewer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

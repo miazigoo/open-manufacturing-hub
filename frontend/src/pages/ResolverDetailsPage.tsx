@@ -7,6 +7,7 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { VersionHistoryPanel } from '../features/configVersions';
 
 function parseObject(value: string, label: string): Record<string, unknown> {
   const parsed = JSON.parse(value || '{}') as unknown;
@@ -34,6 +35,7 @@ export function ResolverDetailsPage() {
   return (
     <div className="page-stack enterprise-runtime-page">
       <section className="page-header enterprise-hero"><span className="eyebrow">Resolver Details</span><h1>{item.name}</h1><p><code>{item.resolver_code}</code> resolves {item.object_type} through {item.strategy}.</p><div className="hero-meta"><StatusBadge status={item.enabled ? 'ok' : 'warning'} label={item.enabled ? 'enabled' : 'disabled'} /><Link className="primary-link" to="/resolvers">Back to resolvers</Link><Link className="primary-link" to={`/resolvers/cache?resolver_code=${encodeURIComponent(item.resolver_code)}`}>Open cache</Link></div></section>
+      <VersionHistoryPanel objectType="resolver" objectId={item.id} compact onChanged={() => queryClient.invalidateQueries({ queryKey: ['resolver-v2', id] })} />
       <section className="runtime-grid">
         <form className="panel stack-form runtime-control-card" onSubmit={run}><span className="eyebrow">Test bench</span><h2>Resolve now</h2><label className="field-label">Input JSON<textarea value={input} onChange={(event) => setInput(event.target.value)} /></label><div className="action-row wrap-actions"><button className="primary-button" disabled={resolve.isPending}>Resolve</button><button className="ghost-button" type="button" onClick={() => clear.mutate()} disabled={clear.isPending}>Clear cache</button></div>{error && <div className="error-state compact">{error}</div>}{resolve.error instanceof Error && <div className="error-state compact">{resolve.error.message}</div>}{clear.data && <div className="success-note">Cache cleared<span>{clear.data.deleted} entries</span></div>}</form>
         <section className="page-stack"><JsonBlock title="Definition" value={item} searchable={false} />{resolve.data && <JsonBlock title="Resolve result" value={resolve.data} searchable={false} />}</section>

@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { asJson } from '../api/client';
+import { configVersionsApi } from '../api/configVersions';
 import { executionApi } from '../api/execution';
-import { workflowsApi } from '../api/workflows';
+import { WorkflowDefinition, workflowsApi } from '../api/workflows';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
+import { VersionHistoryPanel } from '../features/configVersions';
 
 interface Row { name: string; on: string; config: string; enabled: boolean }
 
@@ -27,6 +29,23 @@ function parseRows(rows: Row[]): ParsedStep[] {
   });
 }
 
+function workflowConfig(workflow: WorkflowDefinition, steps_json: ParsedStep[]): Record<string, unknown> {
+  return {
+    name: workflow.name,
+    description: workflow.description,
+    event_type: workflow.event_type,
+    source_system: workflow.source_system,
+    target_system: workflow.target_system,
+    entity_type: workflow.entity_type,
+    version: workflow.version,
+    enabled: workflow.enabled,
+    steps_json,
+    validation_json: workflow.validation_json,
+    source_mapping_version_id: workflow.source_mapping_version_id,
+    target_mapping_version_id: workflow.target_mapping_version_id,
+  };
+}
+
 export function PipelineEditorPage() {
   const { workflowId = '' } = useParams();
   const queryClient = useQueryClient();
@@ -36,12 +55,13 @@ export function PipelineEditorPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const currentRows = rows ?? toRows(workflow.data?.steps_json ?? []);
   const save = useMutation({
-    mutationFn: (parsedRows: ParsedStep[]) => workflowsApi.patch(workflowId, { steps_json: parsedRows }),
+    mutationFn: (parsedRows: ParsedStep[]) => configVersionsApi.createDraft('workflow', workflowId, { config_json: workflowConfig(workflow.data!, parsedRows), comment: 'Draft saved from pipeline editor' }),
     onSuccess: () => {
       setRows(null);
       setFormError(null);
       queryClient.invalidateQueries({ queryKey: ['workflow', workflowId] });
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      queryClient.invalidateQueries({ queryKey: ['config-versions', 'workflow', workflowId] });
     },
   });
   const validate = useMutation({ mutationFn: () => workflowsApi.validate(workflowId) });
@@ -89,8 +109,12 @@ export function PipelineEditorPage() {
       <section className="page-header">
         <span className="eyebrow">Pipeline Editor</span>
         <h1>{workflow.data.name}</h1>
-        <p>Table editor for workflow steps. Validate before saving.</p>
+        <p>Table editor for workflow steps. Changes are saved as a draft and affect runtime only after publish.</p>
       </section>
+      <VersionHistoryPanel objectType="workflow" objectId={workflowId} compact onChanged={() => {
+        queryClient.invalidateQueries({ queryKey: ['workflow', workflowId] });
+        queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      }} />
       <section className="table-panel">
         <table>
           <thead><tr><th>Order</th><th>Step</th><th>Condition</th><th>Config JSON</th><th>Enabled</th><th>Actions</th></tr></thead>
@@ -119,7 +143,7 @@ export function PipelineEditorPage() {
         <div className="action-row">
           <button className="ghost-button" onClick={() => setRows([...currentRows, { name: stepNames[0] ?? 'receive', on: 'always', config: '{}', enabled: true }])}>Add Step</button>
           <button className="ghost-button" onClick={handleValidate} disabled={validate.isPending}>Validate</button>
-          <button className="primary-button" onClick={handleSave} disabled={save.isPending}>Save Pipeline</button>
+          <button className="primary-button" onClick={handleSave} disabled={save.isPending}>Save Draft</button>
         </div>
       </section>
       <JsonBlock title="Validation" value={validate.data ?? { hint: 'Validate the current workflow before saving production changes.' }} searchable={false} />

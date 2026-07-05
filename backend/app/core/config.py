@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     queue_worker_batch_size: int = 10
     audit_retention_days: int = Field(default=180, validation_alias=AliasChoices("AUDIT_RETENTION_DAYS", "OMH_AUDIT_RETENTION_DAYS"))
     secret_key: str | None = Field(default=None, validation_alias=AliasChoices("OMH_SECRET_KEY", "SECRET_KEY"))
+    config_require_test_before_publish: bool | None = Field(default=None, validation_alias=AliasChoices("REQUIRE_TEST_BEFORE_PUBLISH", "OMH_REQUIRE_TEST_BEFORE_PUBLISH"))
+    config_require_comment_on_publish: bool | None = Field(default=None, validation_alias=AliasChoices("REQUIRE_COMMENT_ON_PUBLISH", "OMH_REQUIRE_COMMENT_ON_PUBLISH"))
     cors_allow_origins: str = Field(
         default="http://localhost:5173,http://127.0.0.1:5173",
         validation_alias=AliasChoices("CORS_ORIGINS", "OMH_CORS_ALLOW_ORIGINS"),

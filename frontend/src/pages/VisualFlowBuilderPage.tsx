@@ -3,12 +3,14 @@ import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { connectorsApi } from '../api/connectors';
+import { configVersionsApi } from '../api/configVersions';
 import { integrationFlowsApi } from '../api/integrationFlows';
 import { resolversApi } from '../api/resolvers';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { VersionHistoryPanel } from '../features/configVersions';
 
 type BuilderStep = Record<string, unknown> & { id: string; type: string; name?: string; save_as?: string };
 type BuilderJson = { version: number; input: Record<string, unknown>; variables: Array<Record<string, unknown>>; steps: BuilderStep[] };
@@ -64,7 +66,27 @@ export function VisualFlowBuilderPage() {
   const builder = useMemo(() => safeBuilder(builderText ? JSON.parse(builderText) : flow.data?.builder_json, flow.data?.slug ?? 'flow'), [builderText, flow.data]);
   const selectedStep = builder.steps.find((step) => step.id === selectedStepId) ?? builder.steps[0];
   const preview = useMutation({ mutationFn: (payload: { builder_json: Record<string, unknown>; sample_request: Record<string, unknown> }) => integrationFlowsApi.previewBuilder(payload) });
-  const save = useMutation({ mutationFn: (payload: BuilderJson) => integrationFlowsApi.saveBuilder(flowId!, { builder_json: payload, sample_request: parseJsonObject(sampleText, 'Sample request') }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['integration-flow', flowId] }) });
+  const save = useMutation({
+    mutationFn: (payload: BuilderJson) => configVersionsApi.createDraft('integration_flow', flowId!, {
+      config_json: {
+        name: flow.data!.name,
+        description: flow.data!.description,
+        enabled: flow.data!.enabled,
+        matcher_group_json: flow.data!.matcher_group_json,
+        action_json: flow.data!.action_json,
+        response_config_json: flow.data!.response_config_json,
+        builder_json: payload,
+        test_payload_json: parseJsonObject(sampleText, 'Sample request'),
+        test_payload_text: flow.data!.test_payload_text,
+      },
+      comment: 'Draft saved from visual flow builder',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['integration-flow', flowId] });
+      queryClient.invalidateQueries({ queryKey: ['integration-flows'] });
+      queryClient.invalidateQueries({ queryKey: ['config-versions', 'integration_flow', flowId] });
+    },
+  });
   const compile = useMutation({ mutationFn: () => integrationFlowsApi.compileBuilder(flowId!), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['integration-flow', flowId] }) });
 
   if (flow.isLoading || connectors.isLoading) return <LoadingState label="Loading visual flow builder" />;
@@ -141,6 +163,10 @@ export function VisualFlowBuilderPage() {
         <p>Configure the flow in integration terms: read request fields, query OData, build JSON, call the target endpoint and return a response.</p>
         <div className="hero-meta"><StatusBadge status={flow.data.compiled_workflow_id ? 'ok' : 'warning'} label={flow.data.compiled_workflow_id ? 'compiled' : 'not compiled'} /><span className="microcopy">{flow.data.endpoint_url}</span></div>
       </section>
+      <VersionHistoryPanel objectType="integration_flow" objectId={flow.data.id} compact onChanged={() => {
+        queryClient.invalidateQueries({ queryKey: ['integration-flow', flowId] });
+        queryClient.invalidateQueries({ queryKey: ['integration-flows'] });
+      }} />
 
       <section className="visual-builder-grid">
         <aside className="panel builder-rail">
@@ -174,7 +200,7 @@ export function VisualFlowBuilderPage() {
 
         <aside className="panel builder-preview-panel">
           <div className="panel-toolbar"><div><span className="eyebrow">Preview & Compile</span><h2>Dry-run without code</h2></div></div>
-          <div className="action-row wrap-actions"><button className="primary-button" onClick={runPreview} disabled={preview.isPending}>Preview</button><button className="ghost-button" onClick={runSave} disabled={save.isPending}>Save builder</button><button className="primary-button" onClick={() => compile.mutate()} disabled={compile.isPending}>Compile workflow</button>{flow.data.workflow_id && <Link className="primary-link" to={`/pipelines/${flow.data.workflow_id}/edit`}>Open workflow</Link>}</div>
+          <div className="action-row wrap-actions"><button className="primary-button" onClick={runPreview} disabled={preview.isPending}>Preview</button><button className="ghost-button" onClick={runSave} disabled={save.isPending}>Save Draft</button><Link className="ghost-button" to={`/config-history/integration_flow/${flow.data.id}`}>Release control</Link><button className="primary-button" onClick={() => compile.mutate()} disabled={compile.isPending}>Compile workflow</button>{flow.data.workflow_id && <Link className="primary-link" to={`/pipelines/${flow.data.workflow_id}/edit`}>Open workflow</Link>}</div>
           {(error || preview.error || save.error || compile.error) && <div className="error-state compact">{error ?? (preview.error as Error | null)?.message ?? (save.error as Error | null)?.message ?? (compile.error as Error | null)?.message}</div>}
           {preview.data && <div className="builder-preview-steps">{preview.data.steps.map((step) => <article key={step.id} className={`preview-step ${step.status}`}><strong>{step.id}</strong><span>{step.type}</span><StatusBadge status={step.status === 'success' ? 'ok' : 'failed'} label={step.status} compact />{step.error && <small>{String(step.error.message ?? step.error.code)}</small>}</article>)}</div>}
           {preview.data && <JsonBlock title="Final JSON preview" value={preview.data.final_payload_preview ?? {}} searchable={false} />}
