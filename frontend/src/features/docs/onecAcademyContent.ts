@@ -102,6 +102,143 @@ const defaultBefore = [
   'Для OData уроков опубликован OData сервис 1C и известен URL вида http://server/base/odata/standard.odata.',
 ];
 
+const academySelfCheckQuestions: Record<string, string[]> = {
+  'create-odata-connection': [
+    'Чем OData Connection отличается от Endpoint?',
+    'Где хранится пароль 1C: в JSON flow или в secret reference?',
+    'Что должен подтвердить Test metadata перед настройкой flow?',
+  ],
+  'test-odata-explorer': [
+    'Зачем сначала выполнить `Catalog_Контрагенты?$top=5` без сложного фильтра?',
+    'Где вы увидите точный resource name из metadata?',
+    'Почему OData Explorer должен использовать ту же connection, что и будущий flow?',
+  ],
+  'find-contractor-by-inn': [
+    'Что обычно означает `Ref_Key` в ответе 1C OData?',
+    'Где проверить точный `$filter`, если поиск по ИНН вернул пустой результат?',
+    'Какие причины кроме “контрагента нет” могут дать `{ "value": [] }`?',
+  ],
+  'create-inbound-endpoint': [
+    'Чем inbound token endpoint отличается от логина/пароля OData?',
+    'Какой путь должен вызвать 1C: `/api/bus/in/{slug}` или страницу документации?',
+    'Где скопировать правильный endpoint URL перед передачей разработчику 1C?',
+  ],
+  'read-request-fields': [
+    'Почему `request.body.inn` отличается от `request.inn`?',
+    'Какие поля Golden Scenario нужно прочитать из входного JSON?',
+    'Где в Preview проверить, что `codes` остался массивом?',
+  ],
+  'first-odata-query-contractor': [
+    'Какой input value должен попасть в фильтр `ИНН eq ...`?',
+    'Почему результат сохраняется как `contractor`?',
+    'Какие artifacts нужно открыть при ошибке первого OData lookup?',
+  ],
+  'second-odata-query-product': [
+    'Почему второй lookup нельзя сохранить снова как `contractor`?',
+    'Как выбрать между `OData ERP` и `OData WMS` для номенклатуры?',
+    'Какие поля нужно вернуть через `$select`, чтобы JSON Builder не упал?',
+  ],
+  'build-target-json': [
+    'Почему во внешний API не нужно отправлять весь OData response?',
+    'Откуда берется `contractor_uuid` в target JSON?',
+    'Как проверить, что `codes` не превратился в строку?',
+  ],
+  'send-to-external-api': [
+    'Где посмотреть реальный body, который OMH отправил во внешний API?',
+    'Какие ошибки target API нельзя просто бесконечно retry?',
+    'Чем `target.request.json` отличается от `target.response.json`?',
+  ],
+  'full-flow-click-by-click': [
+    'Какие шаги должен показать Expected Timeline полного сценария?',
+    'Почему Dry Run нужно выполнить до реального Send?',
+    'Где найти оба OData request preview и target request preview?',
+  ],
+  'test-full-flow': [
+    'Что подтверждает `event_id` после Send?',
+    'Почему HTTP 200/accepted еще не доказывает успешную интеграцию?',
+    'Какие artifacts нужно открыть после end-to-end теста?',
+  ],
+  'lesson-01-what-is-omh-for-1c-users': [
+    'Что является входной точкой для POST из 1C?',
+    'Почему Timeline важнее общего текста ошибки?',
+    'Какой экран отвечает за сохраненные подключения к базам 1C?',
+  ],
+  'lesson-02-create-odata-connection': [
+    'Какие поля обязательны для OData Connection?',
+    'Что проверяет `$metadata`?',
+    'Почему connection нужно называть по базе, например `OData ERP`?',
+  ],
+  'lesson-03-test-odata-in-odata-explorer': [
+    'Где увидеть список ресурсов из metadata?',
+    'Что означает пустой массив `value`?',
+    'Почему сначала проверяют `$top`, а потом `$filter`?',
+  ],
+  'lesson-04-create-inbound-endpoint-for-1c-post': [
+    'Какой URL должен использовать 1C для вызова OMH?',
+    'Какие headers нужны для JSON POST?',
+    'Где проверить, что endpoint создал событие?',
+  ],
+  'lesson-05-read-values-from-incoming-request': [
+    'Какие четыре поля читает Golden Scenario из request body?',
+    'Почему path должен совпадать с фактическим JSON?',
+    'Как Preview помогает найти ошибку до publish?',
+  ],
+  'lesson-06-first-odata-lookup-contractor-by-inn': [
+    'Где вы видите точный OData filter, который OMH отправил в 1C?',
+    'Что обычно представляет `Ref_Key`?',
+    'Что делать, если lookup вернул `{ "value": [] }`?',
+  ],
+  'lesson-07-second-odata-lookup-product-by-article': [
+    'Какое поле входного JSON используется для поиска товара?',
+    'Почему у товара может быть другая OData база?',
+    'Какой artifact доказывает, что найден правильный продукт?',
+  ],
+  'lesson-08-build-target-json': [
+    'Какие поля должны попасть в target JSON?',
+    'Почему source path должен быть точным?',
+    'Как JSON Builder показывает ошибку missing variable?',
+  ],
+  'lesson-09-send-json-to-external-api': [
+    'Где хранить auth внешнего API?',
+    'Какой artifact содержит оригинальный ответ target API?',
+    'Когда retry может создать дубль операции?',
+  ],
+  'lesson-10-test-full-flow': [
+    'Чем Dry Run отличается от Send?',
+    'Как понять, что flow прошел оба OData lookup?',
+    'Где увидеть response, который вернулся caller’у?',
+  ],
+  'lesson-11-read-timeline-and-artifacts': [
+    'Как найти первый failed step?',
+    'Какие artifacts показывают OData request и response?',
+    'Почему исправлять нужно причину, а не последний статус?',
+  ],
+  'lesson-12-fix-common-errors': [
+    'Как отличить inbound 401 от OData 401?',
+    'Что проверять при 404 от OMH в 1C?',
+    'Когда событие нужно возвращать из DLQ в retry?',
+  ],
+};
+
+const defaultSelfCheckQuestions = [
+  'Какой экран OMH вы откроете первым для проверки результата?',
+  'Какой artifact доказывает, что шаг выполнился именно так?',
+  'Что вы проверите перед тем, как нажать Send или Retry?',
+];
+
+function withSelfCheck(seed: PageSeed): PageSeed {
+  if (seed.markdown.includes('## Вопросы для самопроверки')) return seed;
+  const questions = academySelfCheckQuestions[seed.slug] ?? defaultSelfCheckQuestions;
+  const block = ['', '## Вопросы для самопроверки', ...questions.map((item, index) => `${index + 1}. ${item}`), ''].join('\n');
+  for (const marker of ['\n## Частые ошибки', '\n## Следующий урок']) {
+    const index = seed.markdown.indexOf(marker);
+    if (index >= 0) {
+      return { ...seed, markdown: `${seed.markdown.slice(0, index)}${block}${seed.markdown.slice(index)}` };
+    }
+  }
+  return { ...seed, markdown: `${seed.markdown}${block}` };
+}
+
 export const academyPackAPages: PageSeed[] = [
   page('academy', 'create-odata-connection', 'Создаём OData-подключение к 1С', 'Подробный урок: создать OData ERP connection, понять поля формы, secrets и healthcheck.', 21, mdLines(
     '# Создаём OData-подключение к 1С',
@@ -323,7 +460,7 @@ export const academyPackAPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Создать входную точку для POST-запроса из 1С" href="/docs/onec/academy/lesson-04-create-inbound-endpoint-for-1c-post"}',
   )),
-];
+].map(withSelfCheck);
 
 export const academyPackBPages: PageSeed[] = [
   page('academy', 'create-inbound-endpoint', 'Создаём входную точку для POST-запроса из 1С', 'Создать URL, куда 1C отправляет Golden Scenario payload.', 51, mdLines(
@@ -1279,7 +1416,7 @@ export const academyPackBPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Прочитать Timeline и артефакты" href="/docs/onec/academy/lesson-11-read-timeline-and-artifacts"}',
   )),
-];
+].map(withSelfCheck);
 
 export const academyPages: PageSeed[] = [
   lesson({
@@ -1751,7 +1888,7 @@ DLQ -> inspect artifacts, fix, replay
     ],
     checklist: ['Понял 401 inbound', 'Понял 401 OData', 'Понял empty lookup', 'Понял target error', 'Понял DLQ replay']
   }),
-];
+].map(withSelfCheck);
 
 export const referencePages: PageSeed[] = [
   page('reference', 'odata-connection', 'Reference — OData Connection', 'Что хранит OData connection и где он используется.', 10, md(`
@@ -1997,6 +2134,269 @@ export const troubleshootingPages: PageSeed[] = [
   symptomPage({ slug: 'printer-unavailable', title: 'Symptom: Printer unavailable', description: 'Printer connector cannot deliver a print job.', order: 220, whatYouSee: ['- Print job is failed or retry_waiting.', '- Timeline shows network error.', '- 1C sent print request but label did not print.'], meaning: 'OMH rendered or accepted the print job, but cannot reach the printer, port, network route or printer state.', quickFix: 'Test TCP connectivity from the OMH backend host to printer IP/port before retrying the print job.', checklist: ['Printer IP is current.', 'Port 9100 or configured raw port is open.', 'Firewall/VLAN allows OMH backend to reach printer.', 'Printer is online and not paused.', 'ZPL artifact exists.', 'Retry will not create unwanted duplicate print.'], where: ['Printing page -> printer status.', 'Printing page -> print job details.', 'Timeline -> `zpl.rendered.txt`.', 'Timeline -> printer request/response artifacts.', 'Queue/DLQ for print event.'], exampleLanguage: 'text', example: ['Connection refused 192.168.1.50:9100', 'Print job: retry_waiting'], related: ['[Recipe 5 print request to Zebra](/docs/onec/recipes/recipe-05-onec-print-request-to-zebra)', '[Printing](/printing)', '[Event moved to DLQ](/docs/onec/troubleshooting/event-moved-to-dlq)'] }),
   symptomPage({ slug: 'zpl-label-wrong', title: 'Symptom: ZPL sent but label wrong', description: 'Printer prints a label, but size, barcode, text or encoding is wrong.', order: 230, whatYouSee: ['- Printer prints something, but barcode cannot be scanned.', '- Text is shifted/cut off.', '- Cyrillic or GS1 content is wrong.'], meaning: 'Network delivery worked. The problem is ZPL template, data mapping, encoding, printer DPI/label size or barcode format.', quickFix: 'Open `zpl.rendered.txt`, compare it with expected printer template and test the same ZPL on a safe test printer.', checklist: ['Correct printer DPI and label size.', 'Template variables are filled from expected request fields.', 'Barcode format matches GS1/Code128/DataMatrix requirements.', 'Encoding/font supports required characters.', 'No extra spaces/newlines inside barcode data.', 'Rendered ZPL artifact matches what was sent.'], where: ['Timeline -> `zpl.rendered.txt`.', 'Printing job details.', 'Template/config version history.', 'Incoming request artifact.', 'Printer test page if available.'], exampleLanguage: 'text', example: ['^XA', '^FO50,50^BCN,100,Y,N,N', '^FD010464615169738421ABC^FS', '^XZ'], related: ['[Recipe 5 print request to Zebra](/docs/onec/recipes/recipe-05-onec-print-request-to-zebra)', '[Printing](/printing)', '[Урок 11 — Читаем Timeline и артефакты](/docs/onec/academy/lesson-11-read-timeline-and-artifacts)'] }),
   symptomPage({ slug: 'print-job-not-printed', title: 'Symptom: Print job created but not printed', description: 'OMH created a print job, but the physical label never appeared.', order: 240, whatYouSee: ['- Printing page shows job created.', '- No physical label printed.', '- Timeline may show job accepted but no printer completion.'], meaning: 'The event reached print subsystem, but the job may be waiting, assigned to wrong printer, paused, duplicate-guarded, or blocked by printer/network state.', quickFix: 'Open the print job, verify assigned printer and status, then check whether the job is queued, failed, duplicate or delivered.', checklist: ['Correct printer selected by route/business rule.', 'Job status is not queued behind earlier failed jobs.', 'Duplicate guard did not suppress printing.', 'Printer connector is enabled.', 'Printer is online and has paper/ribbon.', 'No DLQ event exists for this print job.'], where: ['Printing page -> jobs list.', 'Timeline -> print job artifacts.', 'Business rule result if printer is selected dynamically.', 'Queue/DLQ for print event.', 'Printer hardware status.'], exampleLanguage: 'json', example: ['{', '  "print_job_id": "job-uuid",', '  "printer": "Zebra-01",', '  "status": "queued"', '}'], related: ['[Recipe 5 print request to Zebra](/docs/onec/recipes/recipe-05-onec-print-request-to-zebra)', '[Printer unavailable](/docs/onec/troubleshooting/printer-unavailable)', '[Business Rule stopped flow](/docs/onec/troubleshooting/business-rule-stopped-flow)'] }),
+];
+
+type ExerciseConfig = {
+  slug: string;
+  title: string;
+  description: string;
+  order: number;
+  goal: string;
+  open: string[];
+  task: string[];
+  pass: string[];
+  testConsole?: boolean;
+  related: string[];
+};
+
+function exercisePage(config: ExerciseConfig): PageSeed {
+  return page('exercises', config.slug, config.title, config.description, config.order, mdLines(
+    `# ${config.title}`,
+    '',
+    '## Цель',
+    config.goal,
+    '',
+    '## Что открыть в OMH',
+    ...config.open.map((item) => `- ${item}`),
+    '',
+    '## Задание',
+    ...config.task.map((item, index) => `${index + 1}. ${item}`),
+    '',
+    '## Проверка результата',
+    ...config.pass.map((item) => `- [ ] ${item}`),
+    '',
+    ...(config.testConsole ? [
+      '## Open Exercise in Test Console',
+      '::open-page{route="/test-console?exampleId=onec.golden_scenario" label="Open Exercise in Test Console"}',
+      '',
+      'Run sample request через Test Console, затем откройте Timeline по `event_id`.',
+      '',
+    ] : []),
+    '## Если не получилось',
+    '- Не переходите к следующему упражнению, пока не найден первый failed step.',
+    '- Откройте Timeline и artifacts, а не только общий текст ошибки.',
+    '- Сверьте результат с troubleshooting по симптомам.',
+    '',
+    '## Связанные уроки',
+    ...config.related.map((item) => `- ${item}`),
+  ));
+}
+
+const exercisesIndex = page('exercises', 'index', 'Практические упражнения и проверка навыков', '10 упражнений, которые показывают, готов ли пользователь самостоятельно настраивать базовую 1C интеграцию.', 1, mdLines(
+  '# Практические упражнения и проверка навыков',
+  '',
+  'Этот раздел превращает документацию в проверяемое обучение. После каждого упражнения пользователь должен получить конкретный результат: созданную настройку, успешный preview, event id, Timeline или исправленную ошибку.',
+  '',
+  '## Что вы сможете проверить',
+  '- Can I configure OData?',
+  '- Can I build a flow?',
+  '- Can I debug Timeline?',
+  '- Can I fix common errors?',
+  '',
+  '## Маршрут упражнений',
+  '1. [Create OData connection and find contractor](/docs/onec/exercises/create-odata-connection-find-contractor).',
+  '2. [Create endpoint and send test POST](/docs/onec/exercises/create-endpoint-send-test-post).',
+  '3. [Add OData lookup by INN](/docs/onec/exercises/add-odata-lookup-by-inn).',
+  '4. [Add second OData lookup by product_code](/docs/onec/exercises/add-second-odata-lookup-by-product-code).',
+  '5. [Build target JSON](/docs/onec/exercises/build-target-json).',
+  '6. [Run flow with Dry Run](/docs/onec/exercises/run-flow-with-dry-run).',
+  '7. [Run flow with real send](/docs/onec/exercises/run-flow-with-real-send).',
+  '8. [Find original error in Timeline](/docs/onec/exercises/find-original-error-in-timeline).',
+  '9. [Move DLQ item back to retry](/docs/onec/exercises/move-dlq-item-back-to-retry).',
+  '10. [Fix missing contractor error](/docs/onec/exercises/fix-missing-contractor-error).',
+  '',
+  '## Как сдавать самому себе',
+  '- Не отмечайте exercise complete, пока не можете показать экран или artifact.',
+  '- Для OData упражнений сохраняйте exact resource, filter и response.',
+  '- Для flow упражнений сохраняйте `event_id`, `timeline_url` и список artifacts.',
+  '- Для error упражнений называйте first failed step и root cause.',
+  '',
+  '## После упражнений',
+  'Перейдите к [Readiness checklist](/docs/onec/readiness-checklist) и мини-сертификации.',
+));
+
+export const exercisePages: PageSeed[] = [
+  exercisesIndex,
+  exercisePage({
+    slug: 'create-odata-connection-find-contractor',
+    title: 'Упражнение 01 — Create OData connection and find contractor',
+    description: 'Создать OData ERP connection и найти контрагента по ИНН.',
+    order: 10,
+    goal: 'Проверить, что пользователь может подключить 1C OData, увидеть metadata и найти `Ref_Key` контрагента без Flow Builder.',
+    open: ['OData Connections', 'OData Explorer', 'Secrets Store если пароль хранится через secret reference'],
+    task: ['Создайте connection `OData ERP`.', 'Запустите Test metadata.', 'Откройте OData Explorer.', 'Выберите resource `Catalog_Контрагенты`.', "Выполните filter `ИНН eq '7707083893'` и `$top=1`.", 'Найдите `Ref_Key` и `Description`.'],
+    pass: ['OData metadata загружается без ошибки.', 'OData Explorer показывает `Catalog_Контрагенты`.', 'Query возвращает одну строку или понятный empty result.', 'Вы можете объяснить, что такое `Ref_Key`.'],
+    related: ['[Создаём OData-подключение к 1С](/docs/onec/academy/create-odata-connection)', '[Ищем контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)', '[OData empty result](/docs/onec/troubleshooting/odata-empty-result)'],
+  }),
+  exercisePage({
+    slug: 'create-endpoint-send-test-post',
+    title: 'Упражнение 02 — Create endpoint and send test POST',
+    description: 'Создать inbound endpoint и отправить Golden Scenario payload.',
+    order: 20,
+    goal: 'Проверить, что пользователь отличает endpoint URL от frontend URL и может отправить первый POST в OMH.',
+    open: ['Integration Bus или Flow Builder', 'Test Console', 'Event Journal / Timeline'],
+    task: ['Создайте endpoint slug `onec-pool-to-dnp`.', 'Скопируйте URL `/api/bus/in/onec-pool-to-dnp`.', 'Откройте Test Console.', 'Вставьте Golden Scenario payload.', 'Нажмите Send.', 'Откройте Timeline из ответа.'],
+    pass: ['Test Console отправляет POST без `Not Found`.', 'Ответ содержит `event_id` или понятную controlled error.', 'В Event Journal появился новый event.', 'Вы можете показать `incoming.request.json`.'],
+    testConsole: true,
+    related: ['[Создаём входную точку для POST-запроса из 1С](/docs/onec/academy/create-inbound-endpoint)', '[1C receives 404 from OMH](/docs/onec/troubleshooting/omh-404-from-1c)', '[Test Console](/test-console)'],
+  }),
+  exercisePage({
+    slug: 'add-odata-lookup-by-inn',
+    title: 'Упражнение 03 — Add OData lookup by INN',
+    description: 'Добавить первый OData Query step, который сохраняет contractor.',
+    order: 30,
+    goal: 'Проверить, что пользователь умеет использовать входное поле `request.body.inn` как значение фильтра OData.',
+    open: ['Integration Flow Builder', 'OData Explorer', 'Timeline artifacts'],
+    task: ['Откройте flow Golden Scenario.', 'Добавьте step `get_contractor`.', 'Connection: `OData ERP`.', 'Resource: `Catalog_Контрагенты`.', "Filter: `ИНН eq request.body.inn`.", '`$select`: `Ref_Key,Description,ИНН`.', 'Save result as: `contractor`.', 'Required: yes.'],
+    pass: ['Preview строит правильный OData request.', '`contractor.Ref_Key` доступен следующему шагу.', 'Timeline содержит OData request/response artifact.', 'Пустой результат дает понятную ошибку, а не null в target JSON.'],
+    related: ['[Первая выборка OData: контрагент по ИНН](/docs/onec/academy/first-odata-query-contractor)', '[Как строить $filter](/docs/onec/odata-course/filter-basics)', '[OData step failed](/docs/onec/troubleshooting/odata-step-failed)'],
+  }),
+  exercisePage({
+    slug: 'add-second-odata-lookup-by-product-code',
+    title: 'Упражнение 04 — Add second OData lookup by product_code',
+    description: 'Добавить второй lookup товара и не перезаписать contractor.',
+    order: 40,
+    goal: 'Проверить, что пользователь понимает chaining: второй OData result сохраняется как `product`, а первый остается `contractor`.',
+    open: ['Flow Builder', 'OData Explorer', 'Preview variables'],
+    task: ['Добавьте step `get_product` после `get_contractor`.', 'Выберите connection, где хранится номенклатура: `OData ERP` или `OData WMS`.', 'Resource: `Catalog_Номенклатура`.', 'Filter field: `Артикул` или фактическое поле из metadata.', 'Value source: `request.body.product_code`.', 'Save result as: `product`.', 'Запустите Preview.'],
+    pass: ['Preview показывает одновременно `contractor` и `product`.', '`product.Ref_Key` доступен JSON Builder.', 'Вы не перезаписали переменную `contractor`.', 'OData response artifact показывает выбранную connection.'],
+    related: ['[Вторая выборка OData: товар по артикулу](/docs/onec/academy/second-odata-query-product)', '[Multiple OData connections](/docs/onec/odata-course/multiple-connections)', '[Product not found](/docs/onec/troubleshooting/product-not-found)'],
+  }),
+  exercisePage({
+    slug: 'build-target-json',
+    title: 'Упражнение 05 — Build target JSON',
+    description: 'Собрать target payload только из нужных полей.',
+    order: 50,
+    goal: 'Проверить, что пользователь умеет выбирать нужные поля из request, contractor и product, а не отправлять весь сырой OData response.',
+    open: ['Flow Builder JSON Builder', 'Preview variables', 'Timeline target_payload artifact'],
+    task: ['Добавьте `build_target_payload`.', 'Создайте `pool_id <- request.body.pool_id`.', 'Создайте `contractor_uuid <- contractor.Ref_Key`.', 'Создайте `product_uuid <- product.Ref_Key`.', 'Создайте `codes <- request.body.codes`.', 'Добавьте constant `source_system = "1C"`.', 'Запустите Preview.'],
+    pass: ['Preview показывает валидный JSON.', '`codes` остался массивом.', 'В target JSON нет лишних полей OData.', '`target_payload.json` открывается в Timeline.'],
+    related: ['[Собираем целевой JSON](/docs/onec/academy/build-target-json)', '[Как использовать результат OData дальше](/docs/onec/odata-course/use-result-json-builder)', '[JSON Builder variable missing](/docs/onec/troubleshooting/json-builder-variable-missing)'],
+  }),
+  exercisePage({
+    slug: 'run-flow-with-dry-run',
+    title: 'Упражнение 06 — Run flow with Dry Run',
+    description: 'Проверить flow без реальной отправки во внешний API.',
+    order: 60,
+    goal: 'Проверить, что пользователь умеет видеть будущие OData requests, target JSON и target request preview до реального Send.',
+    open: ['Test Console', 'Flow Builder Preview', 'Timeline если Dry Run сохраняет run preview'],
+    task: ['Откройте Test Console.', 'Выберите endpoint `onec-pool-to-dnp`.', 'Вставьте Golden Scenario payload.', 'Нажмите Dry Run.', 'Откройте OData request preview для contractor.', 'Откройте OData request preview для product.', 'Откройте JSON builder output и target request preview.'],
+    pass: ['Dry Run не отправляет запрос во внешний API.', 'Оба OData filters читаемы.', 'Target request preview содержит `target_payload`.', 'Вы можете объяснить, что произойдет при Send.'],
+    testConsole: true,
+    related: ['[Настраиваем полный обмен click-by-click](/docs/onec/academy/full-flow-click-by-click)', '[Проверяем весь интеграционный поток](/docs/onec/academy/test-full-flow)', '[OData artifacts](/docs/onec/odata-course/odata-artifacts)'],
+  }),
+  exercisePage({
+    slug: 'run-flow-with-real-send',
+    title: 'Упражнение 07 — Run flow with real send',
+    description: 'Выполнить настоящий запуск и открыть Timeline.',
+    order: 70,
+    goal: 'Проверить, что пользователь умеет отличить accepted event от полного результата выполнения.',
+    open: ['Test Console', 'Event Journal', 'Timeline'],
+    task: ['Убедитесь, что Dry Run корректный.', 'Нажмите Send.', 'Скопируйте `event_id`.', 'Откройте `timeline_url`.', 'Проверьте steps: receive, get_contractor, get_product, build_target_payload, send_to_dnp, handle_response.', 'Откройте artifacts каждого шага.'],
+    pass: ['Send создает event id.', 'Timeline показывает все ожидаемые steps.', 'Target request и target response сохранены.', 'Вы можете объяснить итог без чтения backend logs.'],
+    testConsole: true,
+    related: ['[Проверяем весь интеграционный поток](/docs/onec/academy/test-full-flow)', '[Timeline reference](/docs/onec/reference/timeline)', '[External API returned error](/docs/onec/troubleshooting/target-api-returned-error)'],
+  }),
+  exercisePage({
+    slug: 'find-original-error-in-timeline',
+    title: 'Упражнение 08 — Find original error in Timeline',
+    description: 'Найти первопричину ошибки по artifacts, а не по последнему статусу.',
+    order: 80,
+    goal: 'Проверить, что пользователь умеет открыть first failed step, request artifact и response artifact.',
+    open: ['Event Timeline', 'Artifacts panel', 'Troubleshooting по симптомам'],
+    task: ['Откройте failed event.', 'Найдите первый красный/failed step.', 'Откройте request artifact этого step.', 'Откройте response/error artifact этого step.', 'Сформулируйте root cause одной фразой.', 'Откройте соответствующий symptom playbook.'],
+    pass: ['Назван first failed step.', 'Открыт original external response.', 'Root cause не подменен общим `failed`.', 'Понятно, retry безопасен или нет.'],
+    related: ['[Урок 11 — Читаем Timeline и артефакты](/docs/onec/academy/lesson-11-read-timeline-and-artifacts)', '[Errors, Timeline and artifacts](/docs/onec/support/errors-timeline-artifacts)', '[Troubleshooting по симптомам](/docs/onec/troubleshooting)'],
+  }),
+  exercisePage({
+    slug: 'move-dlq-item-back-to-retry',
+    title: 'Упражнение 09 — Move DLQ item back to retry',
+    description: 'Вернуть событие из DLQ после исправления причины.',
+    order: 90,
+    goal: 'Проверить, что пользователь не делает replay blindly, а сначала исправляет root cause и понимает риск дублей.',
+    open: ['Dead Letter Queue', 'Timeline', 'Audit log'],
+    task: ['Откройте DLQ item.', 'Перейдите в Timeline.', 'Найдите first failed step.', 'Исправьте конфигурацию, secret или payload.', 'Проверьте, что retry не создаст дубль target operation.', 'Нажмите Replay from DLQ или Edit & Retry.', 'Откройте новый run.'],
+    pass: ['Причина DLQ названа до retry.', 'Новый run появился в Timeline.', 'Audit log содержит ручное действие.', 'Target operation не продублирована без контроля.'],
+    related: ['[Queue, Retry и DLQ](/docs/onec/support/queue-retry-dlq)', '[Event moved to DLQ](/docs/onec/troubleshooting/event-moved-to-dlq)', '[Runtime DLQ](/runtime/dlq)'],
+  }),
+  exercisePage({
+    slug: 'fix-missing-contractor-error',
+    title: 'Упражнение 10 — Fix missing contractor error',
+    description: 'Разобрать ODATA_LOOKUP_NOT_FOUND и исправить lookup.',
+    order: 100,
+    goal: 'Проверить, что пользователь умеет отличить успешное обращение к 1C от пустого результата фильтра.',
+    open: ['Timeline', 'OData Explorer', 'Flow Builder OData step'],
+    task: ['Откройте event с `ODATA_LOOKUP_NOT_FOUND`.', 'Откройте `odata_query_request`.', 'Скопируйте resource/filter в OData Explorer.', 'Проверьте filter без лишних пробелов.', 'Попробуйте `$top=5` без filter.', 'Исправьте connection, field или value source.', 'Запустите Dry Run повторно.'],
+    pass: ['Понятно, что OMH reached 1C successfully.', 'Найдено, почему `value` пустой.', 'Исправленный filter возвращает contractor.', 'Flow больше не падает на contractor lookup.'],
+    testConsole: true,
+    related: ['[OData query returns empty result](/docs/onec/troubleshooting/odata-empty-result)', '[Contractor not found by INN](/docs/onec/troubleshooting/contractor-not-found-by-inn)', '[Пустой результат OData](/docs/onec/odata-course/empty-result-debugging)'],
+  }),
+];
+
+export const readinessChecklistPages: PageSeed[] = [
+  page('readiness-checklist', 'index', 'Readiness checklist для 1C интеграций', 'Самопроверка: готов ли пользователь настраивать базовые 1C интеграции в OMH.', 10, mdLines(
+    '# Readiness checklist для 1C интеграций',
+    '',
+    'Отмечайте пункты только если можете показать экран, request, response или artifact. Это не формальность, а защита от ситуации “документацию прочитал, но настроить не могу”.',
+    '',
+    '## Checklist',
+    '- [ ] I can create OData connection.',
+    '- [ ] I can run OData query.',
+    '- [ ] I can create endpoint.',
+    '- [ ] I can send test JSON.',
+    '- [ ] I can add OData lookup.',
+    '- [ ] I can build JSON.',
+    '- [ ] I can open Timeline.',
+    '- [ ] I can find request/response artifacts.',
+    '- [ ] I can read external error.',
+    '- [ ] I can retry failed event.',
+    '',
+    '## Практическая проверка',
+    '::checklist{id="onec-readiness" items="I can create OData connection|I can run OData query|I can create endpoint|I can send test JSON|I can add OData lookup|I can build JSON|I can open Timeline|I can find request/response artifacts|I can read external error|I can retry failed event"}',
+    '',
+    '## Мини-сертификация',
+    'You are ready to configure basic 1C integrations if:',
+    '- you completed these exercises;',
+    '- all test cases passed;',
+    '- you can explain Timeline artifacts.',
+    '',
+    '## Что приложить к приемке',
+    '- Screenshot или export OData Connection с redacted secrets.',
+    '- Test Console request и response.',
+    '- Event `event_id` и Timeline URL.',
+    '- `odata_query_request`, `odata_query_response`, `target_payload.json`, `target.response.json`.',
+    '- Короткое объяснение: что было входом, что OMH запросил в OData, что отправил наружу, где была ошибка.',
+    '',
+    '## Следующий шаг',
+    '- [Открыть упражнения](/docs/onec/exercises).',
+    '- [Открыть мини-сертификацию](/docs/onec/readiness-checklist/mini-certification).',
+  )),
+  page('readiness-checklist', 'mini-certification', 'Mini certification — готовность к базовым 1C интеграциям', 'Неформальная внутренняя проверка перед самостоятельной настройкой.', 20, mdLines(
+    '# Mini certification — готовность к базовым 1C интеграциям',
+    '',
+    'Это не официальный сертификат. Это короткий внутренний gate: пользователь готов настраивать базовые интеграции, если может воспроизвести путь от OData до Timeline без подсказок.',
+    '',
+    '## Условие готовности',
+    'You are ready to configure basic 1C integrations if:',
+    '- you completed these exercises;',
+    '- all test cases passed;',
+    '- you can explain Timeline artifacts.',
+    '',
+    '## Устная проверка',
+    '1. Explain the difference between Endpoint and OData Connection.',
+    '2. Show where OMH stores the exact OData filter sent to 1C.',
+    '3. Explain what `Ref_Key` usually represents.',
+    '4. Show `target_payload.json` and explain every field.',
+    '5. Show how you would fix `ODATA_LOOKUP_NOT_FOUND`.',
+    '',
+    '## Практический минимум',
+    '- Run sample request в Test Console.',
+    '- Open Exercise in Test Console for the Golden Scenario.',
+    '- Open Timeline and name first failed step for a broken run.',
+    '- Move one DLQ item back to retry only after explaining duplicate risk.',
+    '',
+    '::open-page{route="/test-console?exampleId=onec.golden_scenario" label="Run sample request"}',
+  )),
 ];
 
 export const recipePages: PageSeed[] = [

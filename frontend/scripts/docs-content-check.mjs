@@ -18,6 +18,11 @@ const requiredPages = [
   'academy/create-inbound-endpoint', 'academy/read-request-fields', 'academy/first-odata-query-contractor',
   'academy/second-odata-query-product', 'academy/build-target-json', 'academy/send-to-external-api',
   'academy/full-flow-click-by-click', 'academy/test-full-flow',
+  'exercises/index', 'exercises/create-odata-connection-find-contractor', 'exercises/create-endpoint-send-test-post',
+  'exercises/add-odata-lookup-by-inn', 'exercises/add-second-odata-lookup-by-product-code',
+  'exercises/build-target-json', 'exercises/run-flow-with-dry-run', 'exercises/run-flow-with-real-send',
+  'exercises/find-original-error-in-timeline', 'exercises/move-dlq-item-back-to-retry',
+  'exercises/fix-missing-contractor-error',
   'reference/odata-connection', 'reference/endpoint', 'reference/integration-flow', 'reference/visual-flow-builder',
   'reference/json-builder', 'reference/timeline', 'reference/queue-dlq', 'reference/secrets',
   'troubleshooting/index', 'troubleshooting/odata-connection-test-failed', 'troubleshooting/onec-returned-401',
@@ -42,6 +47,7 @@ const requiredPages = [
   'odata-course/what-is-odata-for-omh', 'odata-course/multiple-connections', 'odata-course/select-connection-in-flow',
   'odata-course/filter-basics', 'odata-course/select-top-orderby', 'odata-course/use-result-json-builder',
   'odata-course/empty-result-debugging', 'odata-course/odata-artifacts',
+  'readiness-checklist/index', 'readiness-checklist/mini-certification',
 ];
 const requiredExamples = ['onec.marking_pool_to_api', 'onec.two_odata_to_json_endpoint', 'onec.xml_raw_forward', 'onec.print_label', 'onec.golden_scenario'];
 const requiredLearningExamples = ['onec.customer_lookup_by_inn', 'onec.product_lookup_by_article', 'onec.stock_balance_update', 'onec.order_status_to_1c', 'onec.odata_polling_delta', 'onec.xml_inn_to_api', 'onec.printer_sscc_label', 'onec.error_missing_contractor', 'onec.odata.find_contractor_by_inn', 'onec.odata.find_product_by_article', 'onec.odata.find_order_by_number', 'onec.odata.empty_result', 'onec.odata.unauthorized'];
@@ -333,11 +339,50 @@ for (const troubleshootingRequired of [
 ]) assert(onecDocsContent.includes(troubleshootingRequired), `Task 047 symptom troubleshooting docs missing: ${troubleshootingRequired}`);
 const symptomPageSlugs = [...onecAcademyContent.matchAll(/symptomPage\(\{\s*slug: '([^']+)'/g)].map((match) => match[1]);
 assert(symptomPageSlugs.length >= 15, `Task 047 requires at least 15 symptom pages, got ${symptomPageSlugs.length}`);
+for (const task048Required of [
+  'Практические упражнения и проверка навыков',
+  'Can I configure OData?',
+  'Can I build a flow?',
+  'Can I debug Timeline?',
+  'Can I fix common errors?',
+  'Упражнение 01 — Create OData connection and find contractor',
+  'Упражнение 02 — Create endpoint and send test POST',
+  'Упражнение 03 — Add OData lookup by INN',
+  'Упражнение 04 — Add second OData lookup by product_code',
+  'Упражнение 05 — Build target JSON',
+  'Упражнение 06 — Run flow with Dry Run',
+  'Упражнение 07 — Run flow with real send',
+  'Упражнение 08 — Find original error in Timeline',
+  'Упражнение 09 — Move DLQ item back to retry',
+  'Упражнение 10 — Fix missing contractor error',
+  'Open Exercise in Test Console',
+  'Run sample request',
+  '## Вопросы для самопроверки',
+  'Чем OData Connection отличается от Endpoint?',
+  'Где вы видите точный OData filter, который OMH отправил в 1C?',
+  'Readiness checklist для 1C интеграций',
+  '- [ ] I can create OData connection.',
+  '- [ ] I can run OData query.',
+  '- [ ] I can create endpoint.',
+  '- [ ] I can send test JSON.',
+  '- [ ] I can add OData lookup.',
+  '- [ ] I can build JSON.',
+  '- [ ] I can open Timeline.',
+  '- [ ] I can find request/response artifacts.',
+  '- [ ] I can read external error.',
+  '- [ ] I can retry failed event.',
+  'You are ready to configure basic 1C integrations if:',
+  'you completed these exercises;',
+  'all test cases passed;',
+  'you can explain Timeline artifacts.',
+]) assert(onecDocsContent.includes(task048Required), `Task 048 readiness docs missing: ${task048Required}`);
+const exercisePageSlugs = [...onecAcademyContent.matchAll(/exercisePage\(\{\s*slug: '([^']+)'/g)].map((match) => match[1]);
+assert(exercisePageSlugs.length >= 10, `Task 048 requires at least 10 exercises, got ${exercisePageSlugs.length}`);
 assert(odataConnectionsPage.includes('Create OData Connection') && odataConnectionsPage.includes('Choose the 1C base where OMH will search data.'), 'OData Connections UI wording must guide users to OData Connection');
 assert(odataExplorerPage.includes('Create OData Connection') && odataExplorerPage.includes('Choose the 1C base where OMH will search data.') && odataExplorerPage.includes('/docs/onec/academy/test-odata-explorer'), 'OData Explorer UI wording must guide users to OData Connection and lesson');
 assert(odataLookupBlockEditor.includes('OData Connection') && odataLookupBlockEditor.includes('Select OData Connection'), 'OData lookup builder must say OData Connection, not generic connector');
 for (const section of ['case-studies', 'request-examples', 'error-playbooks']) assert(onecContent.includes(`id: '${section}'`), `1C docs missing ${section} section`);
-for (const section of ['academy', 'recipes', 'reference', 'troubleshooting']) assert(onecContent.includes(`id: '${section}'`), `1C docs missing ${section} section`);
+for (const section of ['academy', 'exercises', 'recipes', 'reference', 'troubleshooting', 'readiness-checklist']) assert(onecContent.includes(`id: '${section}'`), `1C docs missing ${section} section`);
 assert(onecContent.includes('caseStudyPages') && onecContent.includes('requestExamplePages') && onecContent.includes('errorPlaybookPages'), '1C docs must include expanded learning sections');
 assert(existsSync(path.join(repoRoot, 'docs/documentation-quality-checklist.md')), 'documentation-quality-checklist.md is missing');
 

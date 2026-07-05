@@ -1,5 +1,5 @@
 import type { PackageSeed, PageSeed } from './content';
-import { academyPackAPages, academyPackBPages, academyPages, caseStudyPages, decisionPages, errorPlaybookPages, recipePages, requestExamplePages, referencePages, troubleshootingPages } from './onecAcademyContent';
+import { academyPackAPages, academyPackBPages, academyPages, caseStudyPages, decisionPages, errorPlaybookPages, exercisePages, readinessChecklistPages, recipePages, requestExamplePages, referencePages, troubleshootingPages } from './onecAcademyContent';
 
 function md(...lines: string[]) {
   return lines.join('\n').trim();
@@ -1362,6 +1362,7 @@ export const onecPackageSeed: PackageSeed = {
     { id: 'start-here', title: 'Начните здесь', description: 'Первый понятный маршрут для пользователя без опыта интеграций.', order: 5, pages: [startIn15Minutes, whatYouWillBuild, onecConcepts, terminologyGlossary, beginnerPath] },
     { id: 'overview', title: 'Обзор 1C', description: 'Что дает 1C package и где он заканчивается.', order: 10, pages: [overview] },
     { id: 'academy', title: 'Академия интеграции 1C', description: 'Пошаговое обучение: от OData profile до production checklist.', order: 15, pages: [...academyPackAPages, ...academyPackBPages, ...academyPages] },
+    { id: 'exercises', title: 'Упражнения и проверка навыков', description: 'Практические задания, Test Console links и критерии готовности пользователя.', order: 16, pages: exercisePages },
     { id: 'recipes', title: 'Practical Recipes', description: 'Практические рецепты с endpoints, payload, UI-настройкой и диагностикой.', order: 17, pages: recipePages },
     { id: 'case-studies', title: 'Production Case Studies', description: 'Разборы реальных промышленных сценариев: цель, actors, flow, OData, Timeline и риски.', order: 18, pages: caseStudyPages },
     { id: 'request-examples', title: 'Request Examples', description: 'Готовые HTTP/1C/OData примеры для Test Console и разработчика 1C.', order: 19, pages: requestExamplePages },
@@ -1370,6 +1371,7 @@ export const onecPackageSeed: PackageSeed = {
     { id: 'odata-course', title: 'Глубокий курс OData', description: 'Практическое обучение OData для 1C: connections, resources, filters, select/top/orderby, JSON Builder и artifacts.', order: 22, pages: odataCoursePages },
     { id: 'reference', title: 'Reference', description: 'Справочник понятий и экранов: OData Connection, Endpoint, Flow, Timeline, Queue/DLQ, Secrets.', order: 23, pages: referencePages },
     { id: 'troubleshooting', title: 'Troubleshooting', description: 'Типовые ошибки 1C интеграций и первые действия по диагностике.', order: 24, pages: troubleshootingPages },
+    { id: 'readiness-checklist', title: 'Readiness checklist', description: 'Самопроверка и мини-сертификация перед самостоятельной настройкой 1C интеграций.', order: 24.5, pages: readinessChecklistPages },
     { id: 'setup', title: 'Настройка 1C', description: 'Connector, secrets, endpoint auth и проверка соединения.', order: 25, pages: [connectorSetup, secretsToken] },
     { id: 'tools', title: 'Инструменты 1C', description: 'Connector, OData Explorer, XML Tools, Cockpit, Flow Builder.', order: 30, pages: toolPages },
     { id: 'scenarios', title: 'Практические сценарии 1C', description: 'Полные payload, endpoints, 1C code, artifacts и troubleshooting.', order: 40, pages: scenarios },

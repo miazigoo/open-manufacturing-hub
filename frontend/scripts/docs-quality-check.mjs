@@ -48,6 +48,14 @@ const requiredTroubleshooting = [
   'event-moved-to-dlq', 'retry-does-not-happen', 'worker-not-processing',
   'printer-unavailable', 'zpl-label-wrong', 'print-job-not-printed',
 ];
+const requiredExercises = [
+  'index', 'create-odata-connection-find-contractor', 'create-endpoint-send-test-post',
+  'add-odata-lookup-by-inn', 'add-second-odata-lookup-by-product-code',
+  'build-target-json', 'run-flow-with-dry-run', 'run-flow-with-real-send',
+  'find-original-error-in-timeline', 'move-dlq-item-back-to-retry',
+  'fix-missing-contractor-error',
+];
+const requiredReadiness = ['index', 'mini-certification'];
 const requiredODataCourse = [
   'what-is-odata-for-omh', 'multiple-connections', 'select-connection-in-flow', 'filter-basics',
   'select-top-orderby', 'use-result-json-builder', 'empty-result-debugging', 'odata-artifacts',
@@ -56,6 +64,8 @@ const requiredODataCourse = [
 for (const slug of requiredAcademy) assert(onecAcademyContent.includes(`'${slug}'`) || onecAcademyContent.includes(`"${slug}"`), `required academy page missing: ${slug}`);
 for (const slug of requiredRecipes) assert(onecAcademyContent.includes(`"${slug}"`) || onecAcademyContent.includes(`'${slug}'`), `required recipe page missing: ${slug}`);
 for (const slug of requiredTroubleshooting) assert(onecAcademyContent.includes(`"${slug}"`) || onecAcademyContent.includes(`'${slug}'`), `required troubleshooting page missing: ${slug}`);
+for (const slug of requiredExercises) assert(onecAcademyContent.includes(`"${slug}"`) || onecAcademyContent.includes(`'${slug}'`), `required exercise page missing: ${slug}`);
+for (const slug of requiredReadiness) assert(onecAcademyContent.includes(`"${slug}"`) || onecAcademyContent.includes(`'${slug}'`), `required readiness page missing: ${slug}`);
 for (const slug of requiredODataCourse) assert(onecContent.includes(`'${slug}'`) || onecContent.includes(`"${slug}"`), `required OData course page missing: ${slug}`);
 
 for (const forbidden of ['lorem ipsum', 'СКРИНШОТ ОТСУТСТВУЕТ']) {
@@ -88,6 +98,11 @@ const knownRoutes = new Set(['/docs', '/docs/search']);
 for (const slug of requiredAcademy) knownRoutes.add(`/docs/onec/academy/${slug}`);
 for (const slug of requiredRecipes) knownRoutes.add(`/docs/onec/recipes/${slug}`);
 for (const slug of requiredTroubleshooting) knownRoutes.add(`/docs/onec/troubleshooting/${slug}`);
+knownRoutes.add('/docs/onec/troubleshooting');
+for (const slug of requiredExercises) knownRoutes.add(`/docs/onec/exercises/${slug}`);
+knownRoutes.add('/docs/onec/exercises');
+for (const slug of requiredReadiness) knownRoutes.add(`/docs/onec/readiness-checklist/${slug}`);
+knownRoutes.add('/docs/onec/readiness-checklist');
 for (const match of allDocsSource.matchAll(/page\(\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']/g)) knownRoutes.add(`/docs/onec/${match[1]}/${match[2]}`);
 for (const match of allDocsSource.matchAll(/caseStudy\(\{\s*slug:\s*'([^']+)'/g)) knownRoutes.add(`/docs/onec/case-studies/${match[1]}`);
 for (const match of allDocsSource.matchAll(/requestExample\(\{\s*slug:\s*'([^']+)'/g)) knownRoutes.add(`/docs/onec/request-examples/${match[1]}`);
@@ -121,9 +136,12 @@ for (const heading of ['## What you see', '## What it means', '## Quick fix', '#
   assert(onecAcademyContent.includes(heading), `Task 047 symptom troubleshooting template missing heading: ${heading}`);
 }
 assert(onecAcademyContent.includes('Troubleshooting по симптомам') && onecAcademyContent.includes('Symptom: OData query returns empty result') && onecAcademyContent.includes('Symptom: 1C receives 404 from OMH'), 'Task 047 symptom troubleshooting manual is incomplete');
+assert(onecAcademyContent.includes('Практические упражнения и проверка навыков') && onecAcademyContent.includes('Open Exercise in Test Console') && onecAcademyContent.includes('Readiness checklist для 1C интеграций'), 'Task 048 exercises/readiness docs are incomplete');
+assert(onecAcademyContent.includes('## Вопросы для самопроверки') && onecAcademyContent.includes('Чем OData Connection отличается от Endpoint?') && onecAcademyContent.includes('Где вы видите точный OData filter, который OMH отправил в 1C?'), 'Task 048 academy self-check questions are incomplete');
+assert(onecAcademyContent.includes('- [ ] I can create OData connection.') && onecAcademyContent.includes('- [ ] I can retry failed event.') && onecAcademyContent.includes('You are ready to configure basic 1C integrations if:'), 'Task 048 readiness checklist/mini certification is incomplete');
 for (const forbidden of ['## What you will build', '## Before you start', '## Что вы соберете', '## Перед началом']) {
   assert(!onecAcademyContent.includes(forbidden), `forbidden lesson heading remains: ${forbidden}`);
 }
 assert(existsSync(path.join(repoRoot, 'docs/documentation-quality-checklist.md')), 'documentation quality checklist file is missing');
 
-console.log(`[docs-quality-check] ${requiredAcademy.length} academy pages, ${requiredRecipes.length} recipes, ${requiredTroubleshooting.length} troubleshooting playbooks, ${docsLinks.size} docs links and ${assetRefs.size} screenshot assets verified`);
+console.log(`[docs-quality-check] ${requiredAcademy.length} academy pages, ${requiredExercises.length} exercises, ${requiredRecipes.length} recipes, ${requiredTroubleshooting.length} troubleshooting playbooks, ${docsLinks.size} docs links and ${assetRefs.size} screenshot assets verified`);

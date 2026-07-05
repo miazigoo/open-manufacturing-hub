@@ -83,7 +83,7 @@ export function DocumentationPage() {
   const isLanding = !isSearch && !params.packageId;
   const page = findDocPage(bundle, params.packageId, params.sectionId, params.pageId);
   const toc = extractToc(page.markdown);
-  const practicalSections = new Set(['start-here', 'academy', 'odata-course', 'recipes', 'troubleshooting', 'tools', 'scenarios', 'request-examples', 'error-playbooks', 'setup', 'support']);
+  const practicalSections = new Set(['start-here', 'academy', 'exercises', 'odata-course', 'recipes', 'troubleshooting', 'readiness-checklist', 'tools', 'scenarios', 'request-examples', 'error-playbooks', 'setup', 'support']);
   const showActionBar = page.packageId === 'onec' && practicalSections.has(page.sectionId);
   const endpointUrl = extractEndpointUrl(page.markdown);
   const academyPages = bundle.packages.find((pkg) => pkg.id === 'onec')?.sections.find((section) => section.id === 'academy')?.pages ?? [];

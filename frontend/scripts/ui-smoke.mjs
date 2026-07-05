@@ -235,6 +235,12 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/docs/onec/academy/full-flow-click-by-click', '/docs/onec/academy/test-full-flow',
     '/docs/onec/academy/lesson-01-what-is-omh-for-1c-users', '/docs/onec/academy/lesson-02-create-odata-connection',
     '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn', '/docs/onec/academy/lesson-12-fix-common-errors',
+    '/docs/onec/exercises', '/docs/onec/exercises/index',
+    '/docs/onec/exercises/create-odata-connection-find-contractor', '/docs/onec/exercises/create-endpoint-send-test-post',
+    '/docs/onec/exercises/add-odata-lookup-by-inn', '/docs/onec/exercises/add-second-odata-lookup-by-product-code',
+    '/docs/onec/exercises/build-target-json', '/docs/onec/exercises/run-flow-with-dry-run',
+    '/docs/onec/exercises/run-flow-with-real-send', '/docs/onec/exercises/find-original-error-in-timeline',
+    '/docs/onec/exercises/move-dlq-item-back-to-retry', '/docs/onec/exercises/fix-missing-contractor-error',
     '/docs/onec/recipes/recipe-01-onec-marking-pool-to-external-api',
     '/docs/onec/recipes/recipe-02-onec-post-two-odata-lookups',
     '/docs/onec/recipes/recipe-03-onec-xml-raw-forwarding',
@@ -254,6 +260,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/docs/onec/troubleshooting/event-stuck-in-queue', '/docs/onec/troubleshooting/worker-not-processing',
     '/docs/onec/troubleshooting/printer-unavailable', '/docs/onec/troubleshooting/zpl-label-wrong',
     '/docs/onec/troubleshooting/print-job-not-printed', '/docs/onec/troubleshooting/event-moved-to-dlq',
+    '/docs/onec/readiness-checklist', '/docs/onec/readiness-checklist/index', '/docs/onec/readiness-checklist/mini-certification',
     '/docs/onec/case-studies/case-03-wms-stock-fact-to-1c', '/docs/onec/request-examples/request-03-two-lookups-order',
     '/docs/onec/error-playbooks/odata-empty-required',
     '/docs/onec/setup/connector-setup', '/docs/onec/tools/odata-chaining-fields', '/docs/onec/tools/visual-flow-builder',
@@ -432,6 +439,38 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (!(await page.locator('.docs-checklist-score').count()) || !(await page.locator('.docs-checklist-progress').count())) fail('ACADEMY_CHECKLIST_PROGRESS', 'Academy checklist percent/progress is missing');
   const academyText = await page.locator('body').innerText();
   if (!academyText.includes('Golden Scenario') || !academyText.includes('Что вы настроите') || !academyText.includes('Что нужно заранее') || !academyText.includes('Пошаговая настройка')) fail('ACADEMY_TEMPLATE_COPY', 'Academy lesson does not render required curriculum structure');
+  if (!academyText.includes('Вопросы для самопроверки') || !academyText.includes('Где вы видите точный OData filter')) fail('TASK_048_SELF_CHECK', 'Academy lesson self-check questions are missing');
+
+  await gotoRoute(page, uiBase, '/docs/onec/exercises');
+  const exercisesText = await page.locator('body').innerText();
+  for (const required of ['Практические упражнения и проверка навыков', 'Can I configure OData?', 'Can I build a flow?', 'Can I debug Timeline?', 'Can I fix common errors?', 'Create endpoint and send test POST', 'Move DLQ item back to retry']) {
+    if (!exercisesText.includes(required)) fail('TASK_048_EXERCISES_INDEX', required);
+  }
+
+  const exerciseChecks = [
+    ['/docs/onec/exercises/create-endpoint-send-test-post', ['Упражнение 02', 'Open Exercise in Test Console', 'event_id', 'incoming.request.json']],
+    ['/docs/onec/exercises/run-flow-with-dry-run', ['Упражнение 06', 'Dry Run не отправляет запрос', 'OData request preview', 'target request preview']],
+    ['/docs/onec/exercises/fix-missing-contractor-error', ['Упражнение 10', 'ODATA_LOOKUP_NOT_FOUND', 'odata_query_request', 'OMH reached 1C successfully']],
+  ];
+  for (const [route, requiredItems] of exerciseChecks) {
+    await gotoRoute(page, uiBase, route);
+    const exerciseText = await page.locator('body').innerText();
+    for (const required of requiredItems) {
+      if (!exerciseText.includes(required)) fail('TASK_048_EXERCISE_PAGE', `${route}: ${required}`);
+    }
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/readiness-checklist');
+  const readinessText = await page.locator('body').innerText();
+  for (const required of ['Readiness checklist для 1C интеграций', 'I can create OData connection', 'I can run OData query', 'I can retry failed event', 'You are ready to configure basic 1C integrations if']) {
+    if (!readinessText.includes(required)) fail('TASK_048_READINESS', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/readiness-checklist/mini-certification');
+  const miniCertText = await page.locator('body').innerText();
+  for (const required of ['Mini certification', 'you completed these exercises', 'all test cases passed', 'you can explain Timeline artifacts', 'Run sample request']) {
+    if (!miniCertText.includes(required)) fail('TASK_048_MINI_CERTIFICATION', required);
+  }
 
   await gotoRoute(page, uiBase, '/docs/onec/start-here/concepts');
   const conceptsText = await page.locator('body').innerText();
