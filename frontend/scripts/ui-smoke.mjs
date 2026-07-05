@@ -224,7 +224,10 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/transforms', '/business-rules', ruleId ? `/business-rules/${ruleId}` : null,
     '/test-console', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
     '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
-    '/retention', '/notifications', '/onec-cockpit', '/printing',
+    '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
+    '/docs/onec/setup/connector-setup', '/docs/onec/tools/visual-flow-builder',
+    '/docs/onec/scenarios/onec-post-two-odata-json-endpoint', '/docs/onec/scenarios/onec-to-printer',
+    '/docs/onec/support/errors-timeline-artifacts', '/docs/onec/support/queue-retry-dlq',
   ].filter(Boolean);
 
   for (const route of routes) await gotoRoute(page, uiBase, route);
