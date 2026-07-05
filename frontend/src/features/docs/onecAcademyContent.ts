@@ -8,6 +8,33 @@ function page(sectionId: string, slug: string, title: string, description: strin
   return { packageId: 'onec', sectionId, slug, title, description, order, markdown };
 }
 
+export const goldenScenarioPayload = `{
+  "inn": "7707083893",
+  "product_code": "ABC-123",
+  "pool_id": "POOL-001",
+  "codes": [
+    "010464615169738421ABC",
+    "010464615169738421DEF"
+  ]
+}`;
+
+export const goldenScenarioTargetJson = `{
+  "pool_id": "POOL-001",
+  "contractor_uuid": "contractor-ref-key",
+  "contractor_name": "ООО Ромашка",
+  "product_uuid": "product-ref-key",
+  "product_name": "Плата ABC",
+  "codes": [
+    "010464615169738421ABC",
+    "010464615169738421DEF"
+  ],
+  "source_system": "1C"
+}`;
+
+const goldenScenarioIntro = `Golden Scenario: 1C POST -> two OData lookups -> JSON -> external endpoint.
+
+В каждом уроке мы держим один и тот же пример: 1C отправляет INN, product_code, pool_id и marking codes. OMH принимает запрос, ищет контрагента в 1C ERP OData по INN, ищет товар в 1C ERP или WMS OData по product_code, собирает целевой JSON и отправляет его во внутренний DNP API. Так пользователь не перескакивает между разными абстрактными примерами.`;
+
 type LessonConfig = {
   slug: string;
   order: number;
@@ -15,6 +42,7 @@ type LessonConfig = {
   description: string;
   build: string;
   why: string;
+  before: string[];
   steps: string[];
   example: string;
   expected: string[];
@@ -24,470 +52,701 @@ type LessonConfig = {
 };
 
 function lesson(config: LessonConfig): PageSeed {
+  const nextLink = config.next ? /^\[([^\]]+)\]\(([^)]+)\)\.$/.exec(config.next) : null;
+  const nextBlock = nextLink
+    ? `::next-lesson{label="${nextLink[1]}" href="${nextLink[2]}"}`
+    : (config.next ?? 'Курс завершен. Дальше используйте Practical Recipes и Troubleshooting для производственных кейсов.');
   return page('academy', config.slug, config.title, config.description, config.order, md(`
 # ${config.title}
 
-## Что вы соберете
+::lesson-page{label="1C Integration Academy"}
+
+::concept-callout{title="Golden Scenario" body="${goldenScenarioIntro.replace(/"/g, '&quot;').replace(/\n/g, ' ')}"}
+
+## What you will build
 ${config.build}
 
-## Почему это важно
+## Why this matters
 ${config.why}
 
-## Перед стартом
-- Установлен и включен пакет 1C Integration Package в Plugin Store.
-- Есть доступ к веб-интерфейсу OMH.
-- Если в уроке используется OData, в 1C опубликован OData сервис и известен URL вида http://server/base/odata/standard.odata.
-- Если endpoint принимает запросы из 1C, заранее решите, будет ли нужен статический inbound token.
+## Before you start
+${config.before.map((item) => `- ${item}`).join('\n')}
 
-## Карта действий
+## Step-by-step
 ${config.steps.map((item, index) => `${index + 1}. ${item}`).join('\n')}
 
-## Пример, который можно повторить
+## Example values
 ${config.example}
 
-## Как понять, что все получилось
-${config.expected.map((item) => `- ${item}`).join('\n')}
+## What should happen
+::expected-result{items="${config.expected.join('|')}"}
 
-## Частые ошибки
-${config.mistakes.map((item) => `- ${item}`).join('\n')}
-
+## Check yourself
 ::checklist{id="${config.slug}" items="${config.checklist.join('|')}"}
 
-${config.next ? `## Следующий урок\n${config.next}` : ''}
+## Common mistakes
+::common-mistakes{items="${config.mistakes.join('|')}"}
+
+## Next lesson
+${nextBlock}
 `));
 }
 
+const defaultBefore = [
+  'Пакет 1C установлен и enabled в Plugin Store.',
+  'Вы открыли веб-интерфейс OMH и можете перейти в OData Connections, OData Explorer, Integration Flows, Test Console и Event Timeline.',
+  'Для OData уроков опубликован OData сервис 1C и известен URL вида http://server/base/odata/standard.odata.',
+];
+
 export const academyPages: PageSeed[] = [
   lesson({
-    slug: 'lesson-01-map-of-the-product',
+    slug: 'lesson-01-what-is-omh-for-1c-users',
     order: 10,
-    title: 'Урок 1. Карта продукта: endpoint, flow, OData, timeline',
-    description: 'Объясняет простыми словами, из каких частей состоит 1C интеграция в OMH.',
-    build: 'Вы не настраиваете интеграцию полностью. Вы собираете mental model: где входной запрос из 1C, где no-code pipeline, где OData подключение, где ответ целевой системе и где смотреть ошибки.',
-    why: 'Большинство ошибок внедрения возникает не из-за OData или JSON, а из-за путаницы терминов. Пользователь создает connector, потом ищет endpoint, потом не понимает, почему Flow Builder просит connection. Этот урок связывает все понятия в один путь.',
+    title: 'Lesson 01 — What is OMH for 1C users',
+    description: 'Карта продукта для 1C пользователя: endpoint, OData connection, flow, timeline и artifact.',
+    build: 'Вы соберете понятную карту: где 1C отправляет POST, где OMH читает поля, где выполняются два OData lookup, где собирается JSON и где смотреть результат.',
+    why: 'Новичок должен сначала понять роли экранов. OData Connection не равен endpoint, endpoint не равен Flow, а Timeline не просто лог. Это рабочая карта внедрения.',
+    before: ['Ничего создавать пока не нужно.', 'Откройте Documentation и 1C Cockpit в соседних вкладках.', 'Держите перед глазами Golden Scenario, потому что все уроки идут вокруг него.'],
     steps: [
-      'Откройте 1C Cockpit. Это стартовая рабочая поверхность для 1C.',
-      'Откройте OData Connections. Здесь создаются понятные профили: OData ERP, OData УСП, OData WMS.',
-      'Откройте Integration Flows. Здесь создается бизнес-маршрут: кто вызывает OMH, какие lookup нужны, что отправлять дальше.',
-      'Откройте OData Explorer. Здесь проверяется реальный ресурс 1C и фильтр до того, как вы вставите его в pipeline.',
-      'Откройте Timeline любого события. Здесь видно, какой шаг сработал, какой запрос ушел наружу и какой ответ вернулась внешняя система.'
+      'Откройте 1C Cockpit и посмотрите основные плитки: OData, Flows, Test Console, Timeline.',
+      'Откройте OData Connections. Запомните: здесь хранятся подключения к базам 1C, например OData ERP или OData WMS.',
+      'Откройте Integration Flows. Запомните: здесь описывается бизнес-маршрут Golden Scenario.',
+      'Откройте Test Console. Запомните: здесь можно отправить POST без кода 1C.',
+      'Откройте Event Journal или Timeline. Запомните: здесь видно каждый шаг и каждый artifact.'
     ],
     example: `~~~text
-1C POST /api/flows/in/marking-pool
-  -> OMH endpoint проверяет token
-  -> Flow читает inn и product_code
-  -> Flow делает OData lookup в OData ERP
-  -> Flow собирает JSON для DNP API
-  -> OMH отправляет POST во внешний endpoint
-  -> Timeline сохраняет вход, lookup, target request и target response
+1C POST /api/bus/in/onec-pool-to-dnp
+  -> read request.body.inn
+  -> OData ERP: find contractor by INN
+  -> read request.body.product_code
+  -> OData ERP/WMS: find product by article
+  -> Build target JSON
+  -> POST to DNP API
+  -> Timeline + artifacts
 ~~~`,
     expected: [
-      'Вы понимаете, что OData Connection отвечает только за подключение к базе 1C.',
-      'Вы понимаете, что Integration Flow отвечает за бизнес-логику маршрута.',
-      'Вы знаете, что OData Explorer нужен для проверки ресурса и фильтра до настройки pipeline.',
-      'Вы знаете, что Timeline является главным местом диагностики.'
+      'Пользователь понимает, что сначала создается OData connection, затем endpoint/flow, затем тестовый запрос.',
+      'Пользователь знает, что OData пароль нужен OMH для запроса в 1C, а inbound token нужен 1C для вызова OMH.',
+      'Пользователь знает, что Timeline является главным местом проверки результата.'
     ],
     mistakes: [
-      'Создавать отдельный raw connector для каждого flow, хотя достаточно одного named OData connection на базу 1C.',
-      'Настраивать фильтр в pipeline без проверки в OData Explorer.',
-      'Искать ошибку только в браузере, не открывая Timeline и artifacts.',
-      'Смешивать inbound token из 1C и логин/пароль OData. Это разные уровни доступа.'
+      'Начинать с редактирования JSON flow без проверки OData connection.',
+      'Искать ошибку только в браузере, не открывая Timeline.',
+      'Путать входной token endpoint с логином/паролем OData.'
     ],
-    checklist: ['Открыл 1C Cockpit', 'Понял разницу OData Connection и Integration Flow', 'Нашел OData Explorer', 'Понял где смотреть Timeline'],
-    next: 'Перейдите к уроку 2 и создайте первый named OData profile.'
+    checklist: ['Понял Endpoint', 'Понял OData Connection', 'Понял Integration Flow', 'Понял Timeline', 'Понял Artifact'],
+    next: '[Lesson 02 — Create OData connection](/docs/onec/academy/lesson-02-create-odata-connection).'
   }),
   lesson({
     slug: 'lesson-02-create-odata-connection',
     order: 20,
-    title: 'Урок 2. Создаем OData Connection: ERP, УСП или WMS',
-    description: 'Пошаговое создание понятного OData профиля вместо сырого JSON-коннектора.',
-    build: 'Вы создадите профиль OData ERP или OData УСП с URL, пользователем, паролем или ссылкой на secret. Этот профиль потом будет выбираться в Explorer и Visual Flow Builder.',
-    why: 'Новичку трудно понять, какой connector выбрать в flow. Named profile решает это: вместо технической записи пользователь видит OData ERP, OData УСП, OData WMS и понимает, в какую базу идет запрос.',
+    title: 'Lesson 02 — Create OData connection',
+    description: 'Создание named OData profile для ERP, WMS или УСП.',
+    build: 'Вы создадите saved connection `OData ERP training`, которую следующие уроки будут выбирать из списка, а не вводить руками каждый раз.',
+    why: 'Named connection делает интеграцию предсказуемой. В flow видно, в какую базу идет lookup, кто владелец credentials и где проверять metadata.',
+    before: defaultBefore,
     steps: [
       'Откройте Data Tools -> OData Connections.',
-      'Нажмите пресет OData ERP, OData УСП или OData WMS.',
-      'Укажите URL OData. Обычно это http://server/base/odata/standard.odata.',
-      'Выберите auth basic, если 1C требует логин и пароль.',
-      'Укажите пользователя. Например Администратор для тестовой УСП или exchange_user для ERP.',
-      'Укажите пароль напрямую для локальной проверки или $secret:onec.erp.password для production.',
-      'Нажмите Create connection.',
-      'Откройте созданный профиль и нажмите Test $metadata.'
+      'Нажмите Create или выберите preset OData ERP.',
+      'Введите name: OData ERP training.',
+      'Введите base URL: http://erp-demo/ERP/odata/standard.odata.',
+      'Выберите auth type basic.',
+      'Введите username: Администратор, password: 123 для учебного стенда или `$secret:onec.erp.password` для production.',
+      'Сохраните connection.',
+      'Нажмите Test $metadata и дождитесь HTTP 200 или понятной внешней ошибки.'
     ],
     example: `~~~json
 {
-  "name": "OData УСП",
-  "base_url": "http://usp-server/Trade/odata/standard.odata",
+  "name": "OData ERP training",
+  "base_url": "http://erp-demo/ERP/odata/standard.odata",
   "auth_type": "basic",
   "username": "Администратор",
   "password": "123",
-  "default_top": 100,
-  "max_pages": 10,
-  "tags": ["УСП", "marking"]
+  "default_top": 50,
+  "max_pages": 5
 }
+~~~`,
+    expected: [
+      'В списке OData Connections появился `OData ERP training`.',
+      'Metadata test показывает success или точную ошибку 1C.',
+      'Connection доступен в OData Explorer и Flow Builder.'
+    ],
+    mistakes: [
+      'Указывать URL базы без `/odata/standard.odata`.',
+      'Создавать raw Connector вместо OData Connection для каждого flow.',
+      'Оставлять пароль `123` в production вместо Secrets Store.'
+    ],
+    checklist: ['Создал OData connection', 'Проверил base URL', 'Проверил $metadata', 'Понял где хранить пароль'],
+    next: '[Lesson 03 — Test OData in OData Explorer](/docs/onec/academy/lesson-03-test-odata-in-odata-explorer).'
+  }),
+  lesson({
+    slug: 'lesson-03-test-odata-in-odata-explorer',
+    order: 30,
+    title: 'Lesson 03 — Test OData in OData Explorer',
+    description: 'Проверка resource, filter, select и sample response до настройки flow.',
+    build: 'Вы выполните первый запрос к `Catalog_Контрагенты` и сохраните точные поля, которые потом нужны для contractor lookup.',
+    why: 'Flow не должен быть местом угадывания имен ресурсов. Сначала пользователь проверяет запрос в Explorer и только потом переносит его в builder.',
+    before: ['Пройден Lesson 02.', 'Есть OData connection `OData ERP training`.', 'Пользователь 1C имеет права читать справочник контрагентов.'],
+    steps: [
+      'Откройте OData Explorer.',
+      'Выберите connection `OData ERP training`.',
+      'Загрузите resources из metadata.',
+      'Найдите resource контрагентов, например `Catalog_Контрагенты`.',
+      'Введите filter: `ИНН eq \'7707083893\'`.',
+      'Введите select: `Ref_Key,Description,ИНН`.',
+      'Поставьте top: 1.',
+      'Нажмите Run query.',
+      'Сохраните lookup template `Find contractor by INN`, если результат корректный.'
+    ],
+    example: `~~~text
+Connection: OData ERP training
+Resource: Catalog_Контрагенты
+$filter: ИНН eq '7707083893'
+$select: Ref_Key,Description,ИНН
+$top: 1
+~~~`,
+    expected: [
+      'Explorer показывает запрос и ответ OData.',
+      'В ответе есть `Ref_Key`, `Description`, `ИНН`.',
+      'Пользователь понимает, какие поля переносить в первый OData lookup.'
+    ],
+    mistakes: [
+      'Писать человекочитаемое имя справочника вместо technical OData resource.',
+      'Забывать кавычки вокруг строкового ИНН.',
+      'Делать широкий запрос без `$top` и `$select`.'
+    ],
+    checklist: ['Выбрал connection', 'Нашел resource', 'Проверил filter', 'Проверил select', 'Сохранил lookup idea'],
+    next: '[Lesson 04 — Create inbound endpoint for 1C POST](/docs/onec/academy/lesson-04-create-inbound-endpoint-for-1c-post).'
+  }),
+  lesson({
+    slug: 'lesson-04-create-inbound-endpoint-for-1c-post',
+    order: 40,
+    title: 'Lesson 04 — Create inbound endpoint for 1C POST',
+    description: 'Создание входной точки, куда 1C отправит Golden Scenario payload.',
+    build: 'Вы создадите endpoint `/api/bus/in/onec-pool-to-dnp` с JSON input и optional static token.',
+    why: 'Endpoint фиксирует контракт между 1C и OMH: URL, method, headers, content type и поведение при ошибке auth.',
+    before: ['Пройден Lesson 01.', 'Вы знаете, какой JSON 1C будет отправлять.', 'Решено, нужен ли inbound token для учебного стенда.'],
+    steps: [
+      'Откройте Integration Bus или Integration Flows.',
+      'Создайте inbound endpoint с slug `onec-pool-to-dnp`.',
+      'Выберите method POST.',
+      'Выберите input mode JSON.',
+      'Включите static token для production-like проверки.',
+      'Скопируйте endpoint URL для 1C разработчика.',
+      'Сохраните контракт headers: Content-Type и X-OMH-Token.'
+    ],
+    example: `~~~bash
+curl -X POST http://localhost:8000/api/bus/in/onec-pool-to-dnp \\
+  -H 'Content-Type: application/json' \\
+  -H 'X-OMH-Token: training-token' \\
+  -d '${goldenScenarioPayload.replace(/'/g, "'\\''")}'
+~~~`,
+    expected: [
+      'Endpoint виден в списке routes или flow inputs.',
+      'Без token возвращается понятная auth ошибка, если token включен.',
+      'С token создается event или тестовый accepted response.'
+    ],
+    mistakes: [
+      'Передавать OData username/password во входном JSON.',
+      'Использовать GET для payload с marking codes.',
+      'Не документировать \`X-OMH-Token\` для разработчика 1C.'
+    ],
+    checklist: ['Создал endpoint', 'Скопировал URL', 'Проверил headers', 'Понял token auth'],
+    next: '[Lesson 05 — Read values from incoming request](/docs/onec/academy/lesson-05-read-values-from-incoming-request).'
+  }),
+  lesson({
+    slug: 'lesson-05-read-values-from-incoming-request',
+    order: 50,
+    title: 'Lesson 05 — Read values from incoming request',
+    description: 'Извлечение INN, product_code, pool_id и codes из входного JSON.',
+    build: 'Вы настроите первые шаги flow: прочитать поля из \`request.body\` и сохранить их как понятные variables.',
+    why: 'Следующие OData lookup не должны читать сырой JSON руками. Им нужны named variables: \`inn\`, \`product_code\`, `pool_id`, `codes`.',
+    before: ['Создан endpoint из Lesson 04.', 'Есть sample payload Golden Scenario.', 'Открыт Visual Flow Builder.'],
+    steps: [
+      'Откройте flow builder для `onec-pool-to-dnp`.',
+      'Вставьте sample request Golden Scenario.',
+      'Добавьте Read field `request.body.inn`, save as \`inn\`.',
+      'Добавьте Read field `request.body.product_code`, save as \`product_code\`.',
+      'Добавьте Read field `request.body.pool_id`, save as `pool_id`.',
+      'Добавьте Read field `request.body.codes`, save as `codes`.',
+      'Включите required для \`inn\`, \`product_code\` и `pool_id`.'
+    ],
+    example: `~~~json
+${goldenScenarioPayload}
 ~~~
 
-Production-вариант отличается только хранением пароля:
+Variables after read:
 
+~~~json
+{
+  "inn": "7707083893",
+  "product_code": "ABC-123",
+  "pool_id": "POOL-001",
+  "codes": ["010464615169738421ABC", "010464615169738421DEF"]
+}
+~~~`,
+    expected: [
+      'Preview показывает variables без undefined/null.',
+      'Если удалить \`inn\`, flow останавливается понятной validation error.',
+      'Эти variables доступны следующим OData steps.'
+    ],
+    mistakes: [
+      'Писать path `body.inn` вместо `request.body.inn`, если builder ожидает полный path.',
+      'Не включать required и потом отправлять пустой lookup.',
+      'Сохранять `codes` как строку, хотя target JSON ожидает массив.'
+    ],
+    checklist: ['Добавил inn', 'Добавил product_code', 'Добавил pool_id', 'Добавил codes', 'Проверил Preview'],
+    next: '[Lesson 06 — First OData lookup: contractor by INN](/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn).'
+  }),
+  lesson({
+    slug: 'lesson-06-first-odata-lookup-contractor-by-inn',
+    order: 60,
+    title: 'Lesson 06 — First OData lookup: contractor by INN',
+    description: 'Первый lookup Golden Scenario: найти контрагента в 1C ERP по ИНН.',
+    build: 'Вы добавите OData step, который берет variable \`inn\`, ищет контрагента и сохраняет результат как `contractor`.',
+    why: 'DNP API не должен получать только ИНН, если ему нужен UUID/Ref_Key контрагента. OMH дочитывает данные из 1C и сохраняет artifact запроса.',
+    before: ['Пройден Lesson 05.', 'В OData Explorer проверен filter для `Catalog_Контрагенты`.', 'В flow есть variable \`inn\`.'],
+    steps: [
+      'Добавьте step OData lookup.',
+      'Выберите connection `OData ERP training`.',
+      'Укажите resource `Catalog_Контрагенты`.',
+      'Укажите filter field `ИНН`, operator `eq`, value `{{variables.inn}}`.',
+      'Укажите select `Ref_Key,Description,ИНН`.',
+      'Поставьте top 1.',
+      'Save as: `contractor`.',
+      'Включите Required result.'
+    ],
+    example: `~~~json
+{
+  "connection": "OData ERP training",
+  "resource": "Catalog_Контрагенты",
+  "filter": "ИНН eq '{{variables.inn}}'",
+  "select": ["Ref_Key", "Description", "ИНН"],
+  "top": 1,
+  "save_as": "contractor",
+  "required": true
+}
+~~~`,
+    expected: [
+      'Preview показывает `contractor.Ref_Key` и `contractor.Description`.',
+      'Timeline сохраняет OData request и response artifacts.',
+      'Если контрагент не найден, flow останавливается до target API.'
+    ],
+    mistakes: [
+      'Не ставить Required result и отправлять target JSON с пустым contractor_uuid.',
+      'Использовать \`product_code\` вместо \`inn\` в filter.',
+      'Писать filter вручную иначе, чем он прошел в OData Explorer.'
+    ],
+    checklist: ['Выбрал connection', 'Настроил resource', 'Настроил filter by INN', 'Сохранил as contractor', 'Включил Required'],
+    next: '[Lesson 07 — Second OData lookup: product by article](/docs/onec/academy/lesson-07-second-odata-lookup-product-by-article).'
+  }),
+  lesson({
+    slug: 'lesson-07-second-odata-lookup-product-by-article',
+    order: 70,
+    title: 'Lesson 07 — Second OData lookup: product by article',
+    description: 'Второй lookup Golden Scenario: найти товар по product_code.',
+    build: 'Вы добавите второй OData lookup, который ищет номенклатуру в ERP или WMS и сохраняет результат как `product`.',
+    why: 'Один flow может использовать несколько OData sources. Главное — явно назвать connection и save_as, чтобы следующий step не перепутал contractor и product.',
+    before: ['Пройден Lesson 06.', 'В OData Explorer проверен resource номенклатуры.', 'В flow есть variable \`product_code\`.'],
+    steps: [
+      'Добавьте второй OData lookup после contractor lookup.',
+      'Выберите connection `OData ERP training` или `OData WMS training`, если товар хранится в WMS.',
+      'Укажите resource `Catalog_Номенклатура`.',
+      'Укажите filter field `Артикул`, operator `eq`, value `{{variables.product_code}}`.',
+      'Укажите select `Ref_Key,Description,Артикул`.',
+      'Save as: `product`.',
+      'Включите Required result, если без товара DNP payload нельзя отправлять.'
+    ],
+    example: `~~~json
+{
+  "connection": "OData ERP training",
+  "resource": "Catalog_Номенклатура",
+  "filter": "Артикул eq '{{variables.product_code}}'",
+  "select": ["Ref_Key", "Description", "Артикул"],
+  "top": 1,
+  "save_as": "product",
+  "required": true
+}
+~~~`,
+    expected: [
+      'Preview показывает два независимых результата: `contractor` и `product`.',
+      'Timeline содержит два OData request artifacts.',
+      'Product lookup использует \`product_code\`, а не \`inn\`.'
+    ],
+    mistakes: [
+      'Назвать второй lookup тоже `contractor` и перезаписать результат.',
+      'Выбрать не ту OData connection, например WMS вместо ERP без проверки.',
+      'Не ограничить `$select` и тащить весь справочник.'
+    ],
+    checklist: ['Добавил второй lookup', 'Выбрал правильную базу', 'Сохранил as product', 'Проверил два artifacts'],
+    next: '[Lesson 08 — Build target JSON](/docs/onec/academy/lesson-08-build-target-json).'
+  }),
+  lesson({
+    slug: 'lesson-08-build-target-json',
+    order: 80,
+    title: 'Lesson 08 — Build target JSON',
+    description: 'Сборка финального JSON для DNP API из входных данных и OData результатов.',
+    build: 'Вы соберете `target_payload`, где pool_id и codes приходят из 1C, а contractor/product UUID и names приходят из OData.',
+    why: 'Целевой API должен получить стабильную схему, а не случайный сырой ответ 1C OData. JSON Builder делает контракт явным и тестируемым.',
+    before: ['Пройдены Lesson 06 и Lesson 07.', 'В preview есть `contractor` и `product`.', 'Известна схема DNP API.'],
+    steps: [
+      'Добавьте Build JSON step.',
+      'Создайте поле `pool_id` из `{{variables.pool_id}}`.',
+      'Создайте поле `contractor_uuid` из `{{steps.contractor.first.Ref_Key}}` или equivalent path вашего builder.',
+      'Создайте поле `contractor_name` из `{{steps.contractor.first.Description}}`.',
+      'Создайте поле `product_uuid` из `{{steps.product.first.Ref_Key}}`.',
+      'Создайте поле `product_name` из `{{steps.product.first.Description}}`.',
+      'Передайте `codes` как массив, не как строку.',
+      'Добавьте `source_system`: `1C`.',
+      'Save as: `target_payload`.'
+    ],
+    example: `~~~json
+${goldenScenarioTargetJson}
+~~~`,
+    expected: [
+      'Preview показывает JSON той же формы, что ожидает DNP API.',
+      'В target_payload нет лишнего сырого OData объекта.',
+      '`codes` остается массивом.'
+    ],
+    mistakes: [
+      'Отправлять наружу весь `contractor` и `product` вместо нужных полей.',
+      'Потерять массив codes при ручной строковой склейке.',
+      'Не зафиксировать target schema в документации flow.'
+    ],
+    checklist: ['Собрал pool_id', 'Собрал contractor fields', 'Собрал product fields', 'Сохранил codes массивом', 'Проверил target_payload'],
+    next: '[Lesson 09 — Send JSON to external API](/docs/onec/academy/lesson-09-send-json-to-external-api).'
+  }),
+  lesson({
+    slug: 'lesson-09-send-json-to-external-api',
+    order: 90,
+    title: 'Lesson 09 — Send JSON to external API',
+    description: 'Отправка target_payload во внешний DNP/internal API.',
+    build: 'Вы добавите target call: POST JSON на внутренний DNP API с timeout, headers и response handling.',
+    why: 'Интеграция заканчивается не сборкой JSON, а контролируемым вызовом внешней системы с artifacts, timeout и понятной ошибкой.',
+    before: ['Пройден Lesson 08.', 'Создан REST connector или endpoint для DNP API.', 'Известен path и auth target API.'],
+    steps: [
+      'Добавьте Target call или REST step.',
+      'Выберите connector `DNP internal API`.',
+      'Method: POST.',
+      'Path: `/api/v1/marking/pools`.',
+      'Header `Content-Type: application/json`.',
+      'Body source: `target_payload`.',
+      'Timeout: начните с 10 секунд для sync и больше для async.',
+      'Включите сохранение target.request и target.response artifacts.'
+    ],
+    example: `~~~bash
+curl -X POST https://dnp.internal/api/v1/marking/pools \\
+  -H 'Content-Type: application/json' \\
+  -H 'Authorization: Bearer <secret>' \\
+  -d '${goldenScenarioTargetJson.replace(/'/g, "'\\''")}'
+~~~`,
+    expected: [
+      'Target request artifact содержит финальный JSON.',
+      'Target response artifact содержит HTTP status и body DNP API.',
+      'При 4xx/5xx ошибка не теряется, а видна в Timeline.'
+    ],
+    mistakes: [
+      'Вызывать target API до Required OData lookup.',
+      'Не сохранять response artifact и потом не понимать, что вернула внешняя система.',
+      'Держать production bearer token в flow JSON вместо Secrets Store.'
+    ],
+    checklist: ['Выбрал target connector', 'Настроил POST', 'Передал target_payload', 'Проверил timeout', 'Проверил artifacts'],
+    next: '[Lesson 10 — Test full flow](/docs/onec/academy/lesson-10-test-full-flow).'
+  }),
+  lesson({
+    slug: 'lesson-10-test-full-flow',
+    order: 100,
+    title: 'Lesson 10 — Test full flow',
+    description: 'Полный прогон Golden Scenario через Test Console и curl.',
+    build: 'Вы отправите учебный POST, проверите response, event id и убедитесь, что все шаги flow прошли в правильном порядке.',
+    why: 'Настройка считается рабочей только после полного end-to-end теста. Отдельный OData success не доказывает, что target JSON и DNP call настроены правильно.',
+    before: ['Пройдены Lesson 01-09.', 'Flow сохранен как draft или опубликован.', 'DNP target доступен или заменен mock endpoint.'],
+    steps: [
+      'Откройте Test Console.',
+      'Выберите endpoint `onec-pool-to-dnp`.',
+      'Вставьте Golden Scenario payload.',
+      'Добавьте headers `Content-Type` и \`X-OMH-Token\`.',
+      'Нажмите Send.',
+      'Скопируйте event id из ответа.',
+      'Повторите тот же запрос через curl, чтобы разработчик 1C видел контракт без UI.'
+    ],
+    example: `~~~json
+${goldenScenarioPayload}
+~~~`,
+    expected: [
+      'Test Console возвращает success, accepted или понятную контролируемую ошибку.',
+      'Event появился в Event Journal.',
+      'Flow steps идут в порядке: incoming, read fields, contractor lookup, product lookup, build JSON, target call.'
+    ],
+    mistakes: [
+      'Проверять только preview, но не отправлять реальный POST.',
+      'Не проверять negative case: неверный token, пустой INN, неизвестный product_code.',
+      'Не сохранять curl пример для 1C разработчика.'
+    ],
+    checklist: ['Отправил Test Console', 'Получил event id', 'Повторил curl', 'Проверил success и controlled error'],
+    next: '[Lesson 11 — Read Timeline and artifacts](/docs/onec/academy/lesson-11-read-timeline-and-artifacts).'
+  }),
+  lesson({
+    slug: 'lesson-11-read-timeline-and-artifacts',
+    order: 110,
+    title: 'Lesson 11 — Read Timeline and artifacts',
+    description: 'Как читать результат выполнения без доступа к коду.',
+    build: 'Вы откроете event Timeline и научитесь находить входной JSON, OData requests, OData responses, target JSON и ошибку внешней системы.',
+    why: 'Timeline превращает “не работает” в конкретный факт: какой шаг упал, какой request ушел, какой response вернулся и что можно повторить.',
+    before: ['Пройден Lesson 10.', 'Есть event id успешного или ошибочного теста.', 'Доступен Event Journal.'],
+    steps: [
+      'Откройте Event Journal.',
+      'Найдите event по id, trace id, pool_id или времени.',
+      'Откройте Timeline.',
+      'Найдите `incoming.request` и проверьте исходный payload.',
+      'Откройте artifacts contractor lookup: request и response.',
+      'Откройте artifacts product lookup: request и response.',
+      'Откройте `transform.output` или `target_payload`.',
+      'Откройте \`target.request\` и \`target.response\`.',
+      'Если step failed, сначала читайте original external error.'
+    ],
+    example: `~~~text
+Artifacts to read:
+- incoming.request.json
+- odata.contractor.request.json
+- odata.contractor.response.json
+- odata.product.request.json
+- odata.product.response.json
+- target_payload.json
+- target.request.json
+- target.response.json
+- external.error.json
+~~~`,
+    expected: [
+      'Пользователь может объяснить результат по artifacts, а не по догадкам.',
+      'Видно, какое поле пришло из 1C и какое поле пришло из OData.',
+      'Оригинальная ошибка target/OData не замаскирована общим текстом.'
+    ],
+    mistakes: [
+      'Смотреть только общий статус event.',
+      'Не открывать OData request artifact при пустом lookup.',
+      'Делать retry до понимания root cause.'
+    ],
+    checklist: ['Открыл incoming.request', 'Открыл оба OData artifacts', 'Открыл target_payload', 'Открыл target.response', 'Понял failed step'],
+    next: '[Lesson 12 — Fix common errors](/docs/onec/academy/lesson-12-fix-common-errors).'
+  }),
+  lesson({
+    slug: 'lesson-12-fix-common-errors',
+    order: 120,
+    title: 'Lesson 12 — Fix common errors',
+    description: 'Первые действия при 401, resource not found, empty lookup, target error и DLQ.',
+    build: 'Вы получите короткий алгоритм исправления Golden Scenario без паники: где смотреть, что менять и когда делать replay.',
+    why: 'В production важна не только настройка happy path. Пользователь должен понимать, какие ошибки исправляются данными, какие конфигурацией, а какие retry.',
+    before: ['Пройден Lesson 11.', 'Есть доступ к Timeline, OData Connections, OData Explorer и DLQ.', 'Пользователь понимает разницу inbound token, OData credentials и target API auth.'],
+    steps: [
+      'Если входной endpoint вернул 401, проверьте \`X-OMH-Token\`.',
+      'Если OData вернула 401, проверьте OData Connection credentials или secret.',
+      'Если resource не найден, откройте OData Explorer и выберите resource из metadata.',
+      'Если contractor/product lookup пустой, скопируйте filter из artifact и повторите в Explorer.',
+      'Если target API вернул ошибку, откройте target.response и проверьте business message.',
+      'Если event в DLQ, сначала прочитайте root cause, потом исправьте данные/config и только затем Replay from DLQ.',
+      'Если меняли flow, публикуйте новую config version с нормальным comment.'
+    ],
+    example: `~~~text
+401 inbound endpoint -> X-OMH-Token
+401 OData -> OData username/password/secret
+404 OData resource -> metadata/resource name
+Required lookup empty -> filter/value/source data
+Target 400 -> target_payload contract
+Target timeout -> response mode, queue, retry policy
+DLQ -> inspect artifacts, fix, replay
+~~~`,
+    expected: [
+      'Пользователь выбирает правильный экран для каждой ошибки.',
+      'Replay выполняется только после исправления причины.',
+      'Ошибки Golden Scenario объяснимы для поддержки и 1C разработчика.'
+    ],
+    mistakes: [
+      'Нажимать retry на auth ошибку без изменения credentials.',
+      'Менять flow filter, не проверив его в OData Explorer.',
+      'Удалять DLQ событие до разбора artifacts.'
+    ],
+    checklist: ['Понял 401 inbound', 'Понял 401 OData', 'Понял empty lookup', 'Понял target error', 'Понял DLQ replay']
+  }),
+];
+
+export const referencePages: PageSeed[] = [
+  page('reference', 'odata-connection', 'Reference — OData Connection', 'Что хранит OData connection и где он используется.', 10, md(`
+# Reference — OData Connection
+
+OData Connection — сохраненное подключение к конкретной публикации 1C OData. Пользователь создает его один раз, а потом выбирает из списка в OData Explorer и Flow Builder.
+
+## Примеры имен
+- OData ERP production
+- OData WMS
+- OData УСП test
+
+## Что хранить
 ~~~json
 {
   "name": "OData ERP production",
-  "password_secret": "onec.erp.production.password"
-}
-~~~`,
-    expected: [
-      'Профиль появляется в списке Saved OData connections.',
-      'Test $metadata возвращает HTTP 200 или понятную внешнюю ошибку.',
-      'Этот же профиль доступен в OData Explorer.',
-      'В Visual Flow Builder OData step предлагает этот профиль в списке OData connection.'
-    ],
-    mistakes: [
-      'Указывать URL базы без /odata/standard.odata.',
-      'Использовать пароль 1C пользователя, которому не опубликованы нужные OData объекты.',
-      'Путать пароль OData и X-OMH-Token для входного endpoint.',
-      'Оставлять тестовый пароль 123 в production вместо Secrets Store.'
-    ],
-    checklist: ['Создал OData profile', 'Проверил URL', 'Проверил $metadata', 'Понял где хранить пароль', 'Открыл профиль в Explorer'],
-    next: 'Урок 3 покажет, как проверить ресурс, фильтр и выборку в OData Explorer.'
-  }),
-  lesson({
-    slug: 'lesson-03-odata-explorer-first-query',
-    order: 30,
-    title: 'Урок 3. Первый запрос в OData Explorer',
-    description: 'Как безопасно проверить ресурс, фильтр, select и top перед pipeline.',
-    build: 'Вы выберете OData profile, загрузите список ресурсов, выполните запрос к Catalog_Контрагенты и сохраните lookup template.',
-    why: 'Pipeline не должен быть местом угадывания. Сначала проверяем OData отдельно: существует ли ресурс, правильно ли называется поле, возвращает ли фильтр одну запись, какие поля надо забрать.',
-    steps: [
-      'Откройте OData Explorer.',
-      'Выберите OData connection: например OData ERP.',
-      'Если список resources загрузился, найдите нужный Catalog или Document.',
-      'Введите resource, например Catalog_Контрагенты.',
-      'Введите $filter: ИНН eq 1234567890 или ИНН eq строка в кавычках, если ваша 1C требует строку.',
-      'Введите $select: Ref_Key,Description,ИНН.',
-      'Поставьте $top 10 для проверки.',
-      'Нажмите Run query.',
-      'Если результат правильный, сохраните lookup template: Find contractor by INN.'
-    ],
-    example: `~~~text
-Connection: OData ERP
-Resource: Catalog_Контрагенты
-$filter: ИНН eq '1234567890'
-$select: Ref_Key,Description,ИНН
-$top: 10
-~~~
-
-Lookup template:
-
-~~~json
-{
-  "name": "Find contractor by INN",
-  "filter_template": "ИНН eq '{inn}'",
-  "extract_json": {
-    "contractor_uuid": "Ref_Key",
-    "contractor_name": "Description"
-  }
-}
-~~~`,
-    expected: [
-      'Explorer показывает request payload и response payload.',
-      'В sample items есть Ref_Key и Description.',
-      'Lookup template создан без ошибки JSON.',
-      'Вы понимаете, какой resource и filter переносить в flow.'
-    ],
-    mistakes: [
-      'Писать русское имя справочника вместо технического OData имени.',
-      'Забывать кавычки вокруг строковых значений в $filter.',
-      'Делать $top 1000 при проверке и ждать долгий ответ.',
-      'Сохранять extract_json как массив, хотя нужен объект field -> ODataField.'
-    ],
-    checklist: ['Выбрал OData profile', 'Выполнил Run query', 'Увидел sample items', 'Сохранил lookup template'],
-    next: 'В уроке 4 этот проверенный запрос станет OData step внутри Visual Flow Builder.'
-  }),
-  lesson({
-    slug: 'lesson-04-build-1c-post-to-odata-flow',
-    order: 40,
-    title: 'Урок 4. Flow: 1C POST -> OData lookup -> JSON -> endpoint',
-    description: 'Главный сценарий: 1C присылает запрос, OMH обогащает его через OData и отправляет наружу.',
-    build: 'Вы соберете no-code pipeline: входной JSON от 1C, чтение INN, OData lookup контрагента, сборка target JSON и отправка во внешний REST endpoint.',
-    why: 'Это самый частый промышленный сценарий. 1C знает часть данных, OMH должен найти недостающие данные в OData, нормализовать их и отдать внешней системе предсказуемый JSON.',
-    steps: [
-      'Откройте Integration Flows и создайте flow с source 1C и target REST/API.',
-      'В input выберите JSON и endpoint slug, например marking-pool.',
-      'Добавьте Read field: path request.body.inn, save_as inn.',
-      'Добавьте OData step и выберите OData connection OData ERP.',
-      'Укажите resource Catalog_Контрагенты.',
-      'Укажите filter field ИНН, operator eq, value request.body.inn.',
-      'Укажите $select Ref_Key,Description,ИНН и $top 1.',
-      'Укажите save_as contractor и Required result enabled.',
-      'Добавьте Build JSON: customer_uuid из contractor.Ref_Key, pool_id из request.body.pool_id.',
-      'Добавьте Call endpoint: REST connector, POST, path /api/marking/pools, body target_payload.',
-      'Нажмите Preview, затем Save Draft, затем Compile workflow.'
-    ],
-    example: `~~~json
-{
-  "inn": "1234567890",
-  "product_code": "ABC-123",
-  "pool_id": "POOL-001",
-  "codes": ["010460123456789021ABC"]
+  "base_url": "https://erp.example.local/ERP/odata/standard.odata",
+  "auth_type": "basic",
+  "username": "exchange_user",
+  "password": "$secret:onec.erp.password"
 }
 ~~~
 
-Target JSON после OData lookup:
+## Почему это важно
+Flow должен явно показывать, в какую базу идет lookup. Пароль храните через Secrets Store.
+`)),
+  page('reference', 'endpoint', 'Reference — Endpoint', 'Куда 1C отправляет request и какие headers нужны.', 20, md(`
+# Reference — Endpoint
+
+Endpoint — URL в OMH, куда 1C отправляет запрос.
+
+~~~text
+POST /api/bus/in/onec-pool-to-dnp
+~~~
+
+## Минимальный контракт
+- Method: POST.
+- Header: Content-Type: application/json.
+- Header: X-OMH-Token, если endpoint закрыт static token.
+- Body: JSON или XML по выбранному input mode.
+
+Endpoint защищает вход в OMH. Он не заменяет OData credentials.
+`)),
+  page('reference', 'integration-flow', 'Reference — Integration Flow', 'No-code сценарий для endpoint, lookup, transform и target call.', 30, md(`
+# Reference — Integration Flow
+
+Integration Flow — пользовательский сценарий обмена. В Golden Scenario flow делает: read fields, contractor lookup, product lookup, build JSON, call DNP API.
+
+## Хороший flow
+1. Имеет понятный endpoint slug.
+2. Использует named OData connections.
+3. Сохраняет результаты как \`contractor\`, \`product\`, \`target_payload\`.
+4. Публикуется через draft/publish, а не правится вслепую.
+`)),
+  page('reference', 'visual-flow-builder', 'Reference — Visual Flow Builder', 'Где собирать шаги Golden Scenario.', 40, md(`
+# Reference — Visual Flow Builder
+
+Visual Flow Builder — экран, где внедренец собирает integration flow без кода.
+
+## Основные блоки
+- Read field: берет значения из \`request.body\`.
+- OData lookup: ищет объект в 1C OData.
+- JSON Builder: собирает target payload.
+- Target call: отправляет JSON во внешнюю систему.
+- Preview: проверяет flow на sample request до публикации.
+`)),
+  page('reference', 'json-builder', 'Reference — JSON Builder', 'Как собирать финальный JSON из variables и lookup results.', 50, md(`
+# Reference — JSON Builder
+
+JSON Builder превращает входные поля и результаты OData в стабильный target payload.
+
+~~~json
+${goldenScenarioTargetJson}
+~~~
+
+## Практическое правило
+Отправляйте наружу только поля target contract. Не отправляйте целиком raw OData response, если внешней системе нужны только UUID и name.
+`)),
+  page('reference', 'timeline', 'Reference — Timeline', 'Где OMH показывает шаги, длительность, ошибки и artifacts.', 60, md(`
+# Reference — Timeline
+
+Timeline — главный экран диагностики одного event. Он показывает каждый step, статус, duration и artifacts.
+
+## Что открывать первым
+- failed step;
+- incoming.request;
+- odata request/response;
+- target request/response;
+- external.error.
+`)),
+  page('reference', 'queue-dlq', 'Reference — Queue / DLQ', 'Очередь, retry и Dead Letter Queue для 1C интеграций.', 70, md(`
+# Reference — Queue / DLQ
+
+Queue нужна для async processing и retry. DLQ — место, куда попадают события после исчерпания попыток или после non-retryable ошибки.
+
+## Когда retry уместен
+- timeout;
+- temporary network error;
+- target 5xx;
+- блокировка объекта 1C.
+
+## Когда retry вреден
+- неверный token;
+- неверный OData пароль;
+- обязательный объект не найден;
+- ошибка mapping contract.
+`)),
+  page('reference', 'secrets', 'Reference — Secrets', 'Как хранить пароли OData и target API безопасно.', 80, md(`
+# Reference — Secrets
+
+Secrets Store хранит реальные значения паролей и токенов. В config остается только reference.
 
 ~~~json
 {
-  "pool_id": "POOL-001",
-  "customer_uuid": "Ref_Key из Catalog_Контрагенты",
-  "product_code": "ABC-123",
-  "codes": ["010460123456789021ABC"]
+  "password": "$secret:onec.erp.password",
+  "authorization_header": "$secret:dnp.api.authorization"
 }
-~~~`,
-    expected: [
-      'Preview проходит без ошибки Invalid preview input.',
-      'OData step показывает выбранный named profile.',
-      'Compiled workflow появляется у flow.',
-      'Тестовый POST создает событие и Timeline показывает lookup и target request.'
-    ],
-    mistakes: [
-      'В value source писать просто inn, когда в sample request поле лежит в request.body.inn.',
-      'Не включить Required result и отправить наружу payload без найденного контрагента.',
-      'Путать save_as contractor и имя поля contractor_uuid в финальном JSON.',
-      'Собирать JSON руками в 1C, хотя проще передать исходные поля и собрать target в OMH.'
-    ],
-    checklist: ['Создал flow', 'Добавил OData step', 'Выбрал OData connection', 'Собрал target JSON', 'Запустил Preview', 'Compiled workflow создан'],
-    next: 'Урок 5 объясняет endpoint auth: как 1C должна безопасно вызывать OMH.'
-  }),
-  lesson({
-    slug: 'lesson-05-inbound-token-and-1c-request',
-    order: 50,
-    title: 'Урок 5. Входной endpoint и ключ от 1C',
-    description: 'Разница между X-OMH-Token для входа в OMH и логином OData для чтения 1C.',
-    build: 'Вы настроите понятный контракт вызова из 1C: URL, method, headers, body, token и expected response.',
-    why: 'Пользователи часто думают, что логин OData защищает входной endpoint. Нет: OData credentials используются OMH для запроса в 1C, а inbound token проверяет, имеет ли 1C право вызвать endpoint OMH.',
-    steps: [
-      'Откройте flow и найдите endpoint URL.',
-      'Решите, нужен ли token. Для production почти всегда нужен.',
-      'В документации flow сохраните header X-OMH-Token.',
-      'В 1C HTTPЗапрос добавьте Content-Type application/json.',
-      'Добавьте X-OMH-Token со значением, выданным для endpoint.',
-      'Передайте JSON body в UTF-8.',
-      'Проверьте код ответа. 2xx означает accepted или success, 4xx означает ошибка контракта, 5xx означает инфраструктурная или внешняя ошибка.'
-    ],
-    example: `~~~1c
-HTTP = Новый HTTPСоединение("omh.example.local", 443,,,, Новый ЗащищенноеСоединениеOpenSSL);
-Запрос = Новый HTTPЗапрос("/api/flows/in/marking-pool");
-Запрос.Заголовки.Вставить("Content-Type", "application/json");
-Запрос.Заголовки.Вставить("X-OMH-Token", "token-from-omh");
-Запрос.УстановитьТелоИзСтроки(ТелоЗапроса, КодировкаТекста.UTF8);
-Ответ = HTTP.ОтправитьДляОбработки(Запрос);
-~~~`,
-    expected: [
-      'Без token endpoint возвращает понятную auth ошибку.',
-      'С token endpoint создает event или возвращает sync response.',
-      'Timeline содержит incoming.request с исходным JSON.',
-      'OData credentials нигде не передаются из 1C в OMH endpoint.'
-    ],
-    mistakes: [
-      'Отправлять логин и пароль OData в body входного запроса.',
-      'Не проверять HTTP status в 1C и считать, что запрос прошел.',
-      'Использовать Content-Type text/plain для JSON.',
-      'Вшивать production token в общий модуль без контроля доступа.'
-    ],
-    checklist: ['Понял разницу token и OData credentials', 'Скопировал endpoint URL', 'Добавил headers в 1C', 'Проверил 2xx/4xx поведение'],
-    next: 'Урок 6 показывает, как выбирать response mode.'
-  }),
-  lesson({
-    slug: 'lesson-06-response-modes',
-    order: 60,
-    title: 'Урок 6. Какой ответ возвращать в 1C',
-    description: 'Proxy response, accepted event и sync response простыми словами.',
-    build: 'Вы выберете режим ответа flow: ждать внешнюю систему, вернуть только event id или собрать собственный sync JSON.',
-    why: 'Неправильный response mode ломает UX в 1C. Если 1C ждет результат сразу, нельзя молча вернуть accepted. Если внешний API нестабилен, нельзя держать пользователя в форме 1C 60 секунд.',
-    steps: [
-      'Если 1C должна получить ответ внешнего API прямо сейчас, выберите proxy_response.',
-      'Если 1C только передает событие в очередь, выберите accepted_event.',
-      'Если OMH должен вернуть собственный компактный ответ, выберите sync_response.',
-      'Для долгих операций включайте очередь и возвращайте accepted_event.',
-      'Проверьте response в Test Console и в 1C обработчике HTTP status.'
-    ],
-    example: `~~~json
-{
-  "response_mode": "accepted_event",
-  "response": {
-    "status": "accepted",
-    "event_id": "uuid",
-    "message": "Request accepted for processing"
-  }
-}
-~~~`,
-    expected: [
-      '1C получает предсказуемый формат ответа.',
-      'Пользователь 1C не ждет долгую операцию без необходимости.',
-      'Ошибки внешней системы остаются в Timeline и DLQ.',
-      'Для sync сценария response содержит бизнес-результат.'
-    ],
-    mistakes: [
-      'Использовать proxy_response при нестабильном target API.',
-      'Возвращать accepted_event, когда 1C должна показать номер созданного документа.',
-      'Не документировать response contract для разработчика 1C.',
-      'Считать 202 ошибкой, хотя для accepted_event это нормальный ответ.'
-    ],
-    checklist: ['Выбрал response mode', 'Проверил ответ в Test Console', 'Зафиксировал contract для 1C', 'Понимаю когда нужна очередь'],
-    next: 'Урок 7 посвящен ошибкам, retry и DLQ.'
-  }),
-  lesson({
-    slug: 'lesson-07-errors-retry-dlq',
-    order: 70,
-    title: 'Урок 7. Ошибки, Retry и DLQ без паники',
-    description: 'Как читать Timeline и отличать исправимые ошибки от ошибок настройки.',
-    build: 'Вы научитесь открывать событие, читать original external error, находить failed step, решать Retry now или исправлять config.',
-    why: 'Ценность OMH в том, что ошибка не превращается в фразу “не работает”. Система хранит исходный request, outgoing request, response и ошибку внешней системы без маскировки.',
-    steps: [
-      'Откройте Event Journal или Transaction Monitor.',
-      'Найдите failed или attention event.',
-      'Откройте Timeline.',
-      'Прочитайте failed step: endpoint auth, OData lookup, transform, target request или response mapping.',
-      'Откройте artifacts incoming.request, target.request, target.response.',
-      'Если ошибка временная, нажмите Retry now.',
-      'Если ошибка в данных, исправьте payload или source data и используйте replay.',
-      'Если ошибка в конфигурации, выпустите новую версию flow и повторите событие.'
-    ],
-    example: `~~~text
-404 OData resource -> проверить resource в OData Explorer
-401 OData auth -> проверить пользователя/пароль профиля
-Required lookup empty -> проверить filter и source field
-Target 500 -> смотреть target.response и решать retry
-Mapping error -> проверить template и sample request
-~~~`,
-    expected: [
-      'Вы можете назвать конкретный failed step.',
-      'Вы видите оригинальную ошибку внешней системы.',
-      'Вы понимаете, retry поможет или сначала нужна правка данных/config.',
-      'DLQ используется как рабочая очередь расследования, а не мусорная корзина.'
-    ],
-    mistakes: [
-      'Нажимать retry на 401 auth ошибку без изменения credentials.',
-      'Исправлять OData filter в flow, не проверив его в Explorer.',
-      'Смотреть только общий status event, игнорируя artifacts.',
-      'Удалять DLQ событие до сохранения причины.'
-    ],
-    checklist: ['Открыл Timeline', 'Нашел failed step', 'Посмотрел artifacts', 'Принял решение retry/fix/replay'],
-    next: 'Урок 8 показывает, как использовать Secrets Store для паролей OData.'
-  }),
-  lesson({
-    slug: 'lesson-08-secrets-for-odata',
-    order: 80,
-    title: 'Урок 8. Пароли OData через Secrets Store',
-    description: 'Как не хранить production пароли в открытом config.',
-    build: 'Вы создадите secret для пароля 1C и подключите его к OData Connection через $secret:name.',
-    why: 'Тестовый пароль можно быстро ввести руками, но production конфигурация должна быть переносимой и безопасной. Config version хранит ссылку на secret, а не сам пароль.',
-    steps: [
-      'Установите и включите Secrets Store package, если он еще не включен.',
-      'Откройте Secrets.',
-      'Создайте secret onec.erp.production.password.',
-      'Откройте OData Connections.',
-      'В поле Password or secret введите $secret:onec.erp.production.password.',
-      'Сохраните профиль и выполните Test $metadata.',
-      'Проверьте, что config_json показывает masked или ссылку, но не пароль.'
-    ],
-    example: `~~~text
-Secret name: onec.erp.production.password
-OData profile password field: $secret:onec.erp.production.password
-~~~`,
-    expected: [
-      'Пароль не виден в JSON config.',
-      'Test $metadata работает после подстановки secret.',
-      'Экспорт config можно переносить между окружениями без раскрытия пароля.',
-      'В dev/stage/prod можно держать разные значения одного secret name.'
-    ],
-    mistakes: [
-      'Писать $secret: с пробелом после двоеточия.',
-      'Создать secret в одном окружении и забыть создать его в production.',
-      'Давать secret слишком общее имя password.',
-      'Оставлять старый raw password в description или tags.'
-    ],
-    checklist: ['Создал secret', 'Указал $secret в OData profile', 'Проверил metadata', 'Убедился что пароль скрыт'],
-    next: 'Урок 9 объясняет promotion pipeline и безопасные изменения config.'
-  }),
-  lesson({
-    slug: 'lesson-09-config-versioning',
-    order: 90,
-    title: 'Урок 9. Draft, Publish, Rollback для интеграций 1C',
-    description: 'Как менять flow без случайного полома production.',
-    build: 'Вы сохраните draft из Visual Flow Builder, опубликуете версию и поймете, когда использовать rollback.',
-    why: 'Интеграция 1C обычно критична для операций. Нельзя редактировать production flow как черновик без истории. OMH хранит версии config, комментарий изменения и возможность отката.',
-    steps: [
-      'Откройте Visual Flow Builder нужного flow.',
-      'Измените OData step или JSON template.',
-      'Нажмите Preview на sample request.',
-      'Нажмите Save Draft.',
-      'Откройте Release control.',
-      'Проверьте diff draft vs published.',
-      'Опубликуйте draft с понятным комментарием.',
-      'Если после публикации появились ошибки, используйте rollback на предыдущую версию.'
-    ],
-    example: `~~~text
-Good publish comment:
-Add OData ERP lookup by INN and include contractor_uuid in DNP payload.
+~~~
 
-Bad publish comment:
-fix
-~~~`,
-    expected: [
-      'Изменение имеет номер версии.',
-      'В audit log видно кто и что поменял.',
-      'Rollback возвращает предыдущий config.',
-      'Preview прогоняется до публикации.'
-    ],
-    mistakes: [
-      'Публиковать без sample request.',
-      'Не писать смысловой комментарий.',
-      'Откатывать config, не проверив, нет ли новых данных, зависящих от новой версии.',
-      'Менять endpoint contract без уведомления разработчика 1C.'
-    ],
-    checklist: ['Сохранил draft', 'Проверил diff', 'Опубликовал с комментарием', 'Знаю где rollback'],
-    next: 'Урок 10 собирает production checklist перед сдачей интеграции.'
-  }),
-  lesson({
-    slug: 'lesson-10-production-checklist',
-    order: 100,
-    title: 'Урок 10. Production checklist перед сдачей 1C интеграции',
-    description: 'Финальная проверка: доступы, тесты, retry, документация и диагностика.',
-    build: 'Вы пройдете контрольный список перед включением интеграции в рабочем режиме.',
-    why: 'Интеграция считается готовой не когда “один раз сработало”, а когда понятны доступы, ошибки, повторная обработка, владельцы данных и инструкция для поддержки.',
-    steps: [
-      'Проверьте package enabled и route inventory.',
-      'Проверьте OData profiles: metadata, credentials, secrets, timeout.',
-      'Проверьте endpoint auth и 1C HTTP code.',
-      'Проверьте sample requests для success и error случаев.',
-      'Проверьте Timeline: incoming, lookup, transform, target request, target response.',
-      'Проверьте retry policy и DLQ path.',
-      'Проверьте audit log и config version comment.',
-      'Сохраните ссылку на recipe/lesson в описании flow.',
-      'Попросите человека, который не настраивал flow, пройти по документации и повторить тест.'
-    ],
-    example: `~~~text
-Minimum production acceptance:
-- OData $metadata OK
-- Test Console success case OK
-- Test Console missing required object OK with readable error
-- 1C sends real request and handles non-2xx
-- Timeline contains enough artifacts for support
-- Rollback path known
-~~~`,
-    expected: [
-      'Интеграция воспроизводимо проходит happy path.',
-      'Ошибки объяснимы по Timeline без доступа к коду.',
-      'Production пароли не лежат в открытом config.',
-      'Команда поддержки знает, где смотреть event, retry и DLQ.'
-    ],
-    mistakes: [
-      'Считать готовым сценарий, проверенный только через браузерную форму.',
-      'Не проверять отрицательный кейс: отсутствующий контрагент, неверный token, недоступная OData.',
-      'Не документировать endpoint URL и headers для 1C.',
-      'Не согласовать, кто имеет право менять OData profile.'
-    ],
-    checklist: ['Проверил happy path', 'Проверил error path', 'Проверил secrets', 'Проверил retry/DLQ', 'Документация приложена к flow']
-  }),
+Так config можно переносить между окружениями без раскрытия production secret values.
+`)),
+];
+
+export const troubleshootingPages: PageSeed[] = [
+  page('troubleshooting', 'onec-returned-401', 'Troubleshooting — 1C returned 401', 'Как отличить входной 401 от OData/target 401.', 10, md(`# Troubleshooting — 1C returned 401
+
+## Что проверить
+1. Если 401 вернул endpoint OMH, проверьте \`X-OMH-Token\`.
+2. Если 401 вернула OData 1C, проверьте OData Connection username/password/secret.
+3. Если 401 вернул target API, проверьте REST connector auth.
+
+## Где смотреть
+Timeline -> failed step -> response artifact.
+`)),
+  page('troubleshooting', 'odata-resource-not-found', 'Troubleshooting — OData resource not found', 'Resource не найден в OData publication.', 20, md(`# Troubleshooting — OData resource not found
+
+Откройте OData Explorer, загрузите metadata и выберите resource из списка. Не вводите имя справочника по памяти.
+
+Если resource отсутствует, проверьте публикацию OData в 1C и base URL выбранной базы.
+`)),
+  page('troubleshooting', 'contractor-not-found-by-inn', 'Troubleshooting — Contractor not found by INN', 'Lookup контрагента по ИНН вернул пустой результат.', 30, md(`# Troubleshooting — Contractor not found by INN
+
+1. Откройте incoming.request и проверьте фактический \`inn\`.
+2. Откройте odata.contractor.request и скопируйте filter.
+3. Повторите filter в OData Explorer.
+4. Проверьте пробелы, кавычки, лидирующие нули и права пользователя 1C.
+5. После исправления данных сделайте replay.
+`)),
+  page('troubleshooting', 'product-not-found', 'Troubleshooting — Product not found', 'Lookup товара по product_code не нашел номенклатуру.', 40, md(`# Troubleshooting — Product not found
+
+Проверьте, что \`product_code\` читается из входного JSON, а filter использует правильное поле: \`Артикул\`, \`Code\`, \`SKU\` или поле вашей конфигурации.
+
+Если товар лежит в WMS, выберите OData WMS connection, а не ERP.
+`)),
+  page('troubleshooting', 'target-api-returned-error', 'Troubleshooting — Target API returned error', 'Внешний DNP/API вернул 4xx/5xx.', 50, md(`# Troubleshooting — Target API returned error
+
+Откройте \`target.request\` и \`target.response\`. Сравните JSON с контрактом target API.
+
+- 400/422 обычно означает ошибку данных или mapping.
+- 401/403 означает auth target connector.
+- 5xx/timeout можно отправлять в retry, если target operation idempotent.
+`)),
+  page('troubleshooting', 'xml-parse-error', 'Troubleshooting — XML parse error', 'XML не парсится или потерялась кодировка.', 60, md(`# Troubleshooting — XML parse error
+
+Проверьте raw incoming.request, Content-Type, XML declaration и encoding. Если XML пришел escaped строкой внутри JSON, сначала извлеките строку, потом парсите XML.
+`)),
+  page('troubleshooting', 'printer-unavailable', 'Troubleshooting — Printer unavailable', 'Printer package не может отправить job на принтер.', 70, md(`# Troubleshooting — Printer unavailable
+
+Проверьте IP, port, network route из backend host/container, статус printer connector и print job artifacts. Не делайте blind replay, если есть риск повторной печати.
+`)),
+  page('troubleshooting', 'event-moved-to-dlq', 'Troubleshooting — Event moved to DLQ', 'Что делать, когда событие ушло в Dead Letter Queue.', 80, md(`# Troubleshooting — Event moved to DLQ
+
+1. Откройте DLQ event.
+2. Прочитайте original error.
+3. Откройте artifacts failed step.
+4. Исправьте данные, credentials или config.
+5. Используйте Replay from DLQ только после исправления причины.
+`)),
 ];
 
 type RecipeConfig = {

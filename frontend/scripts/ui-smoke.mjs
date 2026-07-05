@@ -226,8 +226,12 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/test-console', '/test-console?exampleId=onec.two_odata_to_json_endpoint', '/odata-connections', '/odata-explorer', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
     '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
     '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
-    '/docs/onec/start-here/beginner-path',
-    '/docs/onec/academy/lesson-02-create-odata-connection', '/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint',
+    '/docs/onec/start-here/start-in-15-minutes', '/docs/onec/start-here/what-you-will-build', '/docs/onec/start-here/concepts', '/docs/onec/start-here/beginner-path',
+    '/docs/onec/academy/lesson-01-what-is-omh-for-1c-users', '/docs/onec/academy/lesson-02-create-odata-connection',
+    '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn', '/docs/onec/academy/lesson-12-fix-common-errors',
+    '/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint',
+    '/docs/onec/reference/odata-connection', '/docs/onec/reference/timeline',
+    '/docs/onec/troubleshooting/contractor-not-found-by-inn', '/docs/onec/troubleshooting/event-moved-to-dlq',
     '/docs/onec/case-studies/case-03-wms-stock-fact-to-1c', '/docs/onec/request-examples/request-03-two-lookups-order',
     '/docs/onec/error-playbooks/odata-empty-required',
     '/docs/onec/setup/connector-setup', '/docs/onec/tools/odata-chaining-fields', '/docs/onec/tools/visual-flow-builder',
@@ -250,6 +254,21 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (!(await page.locator('.docs-example-card').count())) fail('DOCS_BEGINNER_EXAMPLE', 'Beginner guide runnable example is missing');
   if (!(await page.locator('.code-panel').count())) fail('CODE_BLOCK_DOCS', 'Documentation code blocks do not use highlighted code panels');
   if (!(await page.locator('.code-panel .tok-string, .code-panel .tok-key, .code-panel .tok-command').count())) fail('CODE_BLOCK_TOKENS', 'Documentation code block syntax tokens are missing');
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn');
+  if (!(await page.locator('.docs-lesson-shell').count())) fail('ACADEMY_LESSON_SHELL', 'Academy lesson page shell is missing');
+  if (!(await page.locator('.docs-concept-callout').count())) fail('ACADEMY_CONCEPT_CALLOUT', 'Academy Golden Scenario callout is missing');
+  if (!(await page.locator('.docs-expected-result').count())) fail('ACADEMY_EXPECTED_RESULT', 'Academy expected-result block is missing');
+  if (!(await page.locator('.docs-common-mistakes').count())) fail('ACADEMY_COMMON_MISTAKES', 'Academy common mistakes block is missing');
+  if (!(await page.locator('.docs-next-lesson').count())) fail('ACADEMY_NEXT_LESSON', 'Academy next lesson block is missing');
+  const academyText = await page.locator('body').innerText();
+  if (!academyText.includes('Golden Scenario') || !academyText.includes('Step-by-step')) fail('ACADEMY_TEMPLATE_COPY', 'Academy lesson does not render required curriculum structure');
+
+  await gotoRoute(page, uiBase, '/docs/onec/start-here/concepts');
+  const conceptsText = await page.locator('body').innerText();
+  for (const concept of ['Endpoint', 'OData Connection', 'Connector', 'Integration Flow', 'Variable', 'Timeline', 'Artifact', 'DLQ']) {
+    if (!conceptsText.includes(concept)) fail('DOCS_CONCEPT_MISSING', concept);
+  }
 
   await gotoRoute(page, uiBase, '/test-console');
   if ((await page.locator('.code-editor-shell').count()) < 2) fail('CODE_EDITOR_TEST_CONSOLE', 'Test Console JSON inputs do not use code editors');

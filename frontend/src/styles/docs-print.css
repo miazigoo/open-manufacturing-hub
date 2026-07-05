@@ -6,7 +6,7 @@
   .docs-page-header { border-bottom: 1px solid #999 !important; margin-bottom: 18px !important; }
   .docs-page-header h1, .docs-markdown h1, .docs-markdown h2, .docs-markdown h3, .docs-markdown p, .docs-markdown li, .docs-markdown td, .docs-markdown th { color: #111 !important; }
   .docs-markdown h2 { break-before: auto; page-break-before: auto; border-top: 1px solid #aaa !important; }
-  .code-panel, .docs-example-card, .docs-screenshot-block, .docs-screenshot-placeholder { break-inside: avoid; page-break-inside: avoid; border: 1px solid #999 !important; background: #fff !important; color: #111 !important; }
+  .code-panel, .docs-example-card, .docs-screenshot-block, .docs-screenshot-placeholder, .docs-checklist, .docs-lesson-shell, .docs-concept-callout, .docs-expected-result, .docs-common-mistakes, .docs-next-lesson { break-inside: avoid; page-break-inside: avoid; border: 1px solid #999 !important; background: #fff !important; color: #111 !important; }
   .code-toolbar { background: #eee !important; border-bottom: 1px solid #aaa !important; }
   .code-toolbar button { display: none !important; }
   .code-block { color: #111 !important; background: #f8f8f8 !important; white-space: pre-wrap !important; }

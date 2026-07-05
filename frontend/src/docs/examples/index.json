@@ -407,5 +407,48 @@
     },
     "runnable": true,
     "requires_setup": true
+  },
+  "onec.golden_scenario": {
+    "title": {
+      "ru": "Golden Scenario: 1C POST -> two OData lookups -> JSON -> external endpoint",
+      "en": "Golden Scenario: 1C POST -> two OData lookups -> JSON -> external endpoint",
+      "zh": "黄金场景：1C POST -> 两次 OData 查询 -> JSON -> 外部端点"
+    },
+    "description": {
+      "ru": "Единый учебный пример академии: 1C отправляет ключи, OMH ищет контрагента и товар через OData, затем отправляет JSON в DNP API.",
+      "en": "The shared academy training example: 1C sends keys, OMH looks up contractor and product through OData, then sends JSON to DNP API.",
+      "zh": "学院共享训练示例：1C 发送键，OMH 通过 OData 查询客户和商品，然后向 DNP API 发送 JSON。"
+    },
+    "endpoint_slug": "onec-pool-to-dnp",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "1c",
+      "X-OMH-Token": "<training-token>"
+    },
+    "body": {
+      "inn": "7707083893",
+      "product_code": "ABC-123",
+      "pool_id": "POOL-001",
+      "codes": [
+        "010464615169738421ABC",
+        "010464615169738421DEF"
+      ]
+    },
+    "expected": {
+      "pool_id": "POOL-001",
+      "contractor_uuid": "contractor-ref-key",
+      "contractor_name": "ООО Ромашка",
+      "product_uuid": "product-ref-key",
+      "product_name": "Плата ABC",
+      "codes": [
+        "010464615169738421ABC",
+        "010464615169738421DEF"
+      ],
+      "source_system": "1C"
+    },
+    "runnable": true,
+    "requires_setup": true
   }
 }

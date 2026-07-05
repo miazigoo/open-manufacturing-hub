@@ -1,6 +1,11 @@
 import type { ReactElement } from 'react';
 import { CodeBlockWithCopy } from './CodeBlockWithCopy';
 import { DocsChecklist } from './DocsChecklist';
+import { DocsCommonMistakes } from './DocsCommonMistakes';
+import { DocsConceptCallout } from './DocsConceptCallout';
+import { DocsExpectedResult } from './DocsExpectedResult';
+import { DocsLessonPage } from './DocsLessonPage';
+import { DocsNextLesson } from './DocsNextLesson';
 import { ExampleBlock } from './ExampleBlock';
 import { OpenPageLink } from './OpenPageLink';
 import { Screenshot } from './Screenshot';
@@ -104,6 +109,43 @@ function parseMarkdown(markdown: string) {
       nodes.push(<DocsChecklist key={`checklist-${nodes.length}`} id={attrs.id ?? `checklist-${nodes.length}`} items={items} />);
       continue;
     }
+    const lessonPageShortcode = /^::lesson-page\{(.+)\}$/.exec(line.trim());
+    if (lessonPageShortcode) {
+      flushAll();
+      const attrs = parseShortcodeAttrs(lessonPageShortcode[1]);
+      nodes.push(<DocsLessonPage key={`lesson-${nodes.length}`} label={attrs.label} />);
+      continue;
+    }
+    const conceptCalloutShortcode = /^::concept-callout\{(.+)\}$/.exec(line.trim());
+    if (conceptCalloutShortcode) {
+      flushAll();
+      const attrs = parseShortcodeAttrs(conceptCalloutShortcode[1]);
+      nodes.push(<DocsConceptCallout key={`concept-${nodes.length}`} title={attrs.title ?? 'Concept'} body={decodeAttr(attrs.body ?? '')} />);
+      continue;
+    }
+    const expectedResultShortcode = /^::expected-result\{(.+)\}$/.exec(line.trim());
+    if (expectedResultShortcode) {
+      flushAll();
+      const attrs = parseShortcodeAttrs(expectedResultShortcode[1]);
+      const items = (attrs.items ?? '').split('|').map((item) => item.trim()).filter(Boolean);
+      nodes.push(<DocsExpectedResult key={`expected-${nodes.length}`} items={items} />);
+      continue;
+    }
+    const commonMistakesShortcode = /^::common-mistakes\{(.+)\}$/.exec(line.trim());
+    if (commonMistakesShortcode) {
+      flushAll();
+      const attrs = parseShortcodeAttrs(commonMistakesShortcode[1]);
+      const items = (attrs.items ?? '').split('|').map((item) => item.trim()).filter(Boolean);
+      nodes.push(<DocsCommonMistakes key={`mistakes-${nodes.length}`} items={items} />);
+      continue;
+    }
+    const nextLessonShortcode = /^::next-lesson\{(.+)\}$/.exec(line.trim());
+    if (nextLessonShortcode) {
+      flushAll();
+      const attrs = parseShortcodeAttrs(nextLessonShortcode[1]);
+      nodes.push(<DocsNextLesson key={`next-${nodes.length}`} label={attrs.label ?? 'Next lesson'} href={attrs.href} />);
+      continue;
+    }
 
     const screenshot = /^\{\{screenshot:(.+)\}\}$/.exec(line.trim());
     if (screenshot) { flushAll(); nodes.push(<ScreenshotPlaceholder key={`shot-${nodes.length}`} label={screenshot[1].trim()} />); continue; }
@@ -161,4 +203,8 @@ function parseShortcodeAttrs(value: string) {
   const attrs: Record<string, string> = {};
   for (const match of value.matchAll(/(\w+)="([^"]*)"/g)) attrs[match[1]] = match[2];
   return attrs;
+}
+
+function decodeAttr(value: string) {
+  return value.replace(/&quot;/g, '"');
 }
