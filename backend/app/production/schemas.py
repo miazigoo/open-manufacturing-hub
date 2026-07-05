@@ -22,6 +22,9 @@ class ProductionStatus(BaseModel):
     packages: list[dict[str, Any]]
     warnings: list[str]
     update_mode_enabled: bool = False
+    current_environment: dict[str, Any] | None = None
+    pending_change_sets: int = 0
+    last_applied_change_set: dict[str, Any] | None = None
 
 
 class SystemSnapshot(BaseModel):
@@ -37,6 +40,9 @@ class SystemSnapshot(BaseModel):
     queue: dict[str, int]
     dlq_count: int
     auth_users_count: int | None = None
+    current_environment: dict[str, Any] | None = None
+    pending_change_sets: int = 0
+    last_applied_change_set: dict[str, Any] | None = None
     last_backup_at: datetime | None = None
     health: dict[str, Any]
     warnings: list[str]

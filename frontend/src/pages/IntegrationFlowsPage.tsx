@@ -1,7 +1,8 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
+import { changeSetsApi } from '../api/changeSets';
 import { integrationFlowsApi, IntegrationFlow } from '../api/integrationFlows';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
@@ -32,6 +33,7 @@ function actionFor(kind: string, target: string, path: string) {
 
 export function IntegrationFlowsPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const flows = useQuery({ queryKey: ['integration-flows'], queryFn: integrationFlowsApi.list });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(() => (flows.data ?? []).find((item) => item.id === selectedId) ?? flows.data?.[0] ?? null, [flows.data, selectedId]);
@@ -65,6 +67,10 @@ export function IntegrationFlowsPage() {
   const installBuilderPreset = useMutation({ mutationFn: integrationFlowsApi.installTwoODataToEndpoint, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const duplicate = useMutation({ mutationFn: integrationFlowsApi.duplicate, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const exportFlow = useMutation({ mutationFn: integrationFlowsApi.export, onSuccess: setResult });
+  const exportForProduction = useMutation({
+    mutationFn: (flow: IntegrationFlow) => changeSetsApi.createFromDrafts({ name: `Promote ${flow.name}`, description: 'Export for production from Integration Flow detail', object_refs: [{ object_type: 'integration_flow', object_id: flow.id }], include_dependencies: true }),
+    onSuccess: (changeSet) => navigate(`/change-sets/${changeSet.id}`),
+  });
   const testFlow = useMutation({ mutationFn: (payload: { id: string; body: Record<string, unknown> }) => integrationFlowsApi.test(payload.id, { input_mode: 'json', payload_json: payload.body, dry_run: false }), onSuccess: setResult });
   const testMatcher = useMutation({ mutationFn: (payload: { body: Record<string, unknown>; matcher: Record<string, unknown> }) => integrationFlowsApi.testMatcher({ input_mode: 'json', payload: payload.body, matcher_group: payload.matcher }), onSuccess: setResult });
 
@@ -137,7 +143,7 @@ export function IntegrationFlowsPage() {
       </section>
 
       {selected && <VersionHistoryPanel objectType="integration_flow" objectId={selected.id} compact onChanged={refresh} />}
-      {selected && <section className="panel flow-detail" data-tour="flow-detail"><div className="panel-toolbar"><div><span className="eyebrow">Selected Flow</span><h2>{selected.name}</h2><p>{selected.description}</p></div><StatusBadge status={selected.enabled ? 'ok' : 'cancelled'} label={selected.enabled ? 'enabled' : 'disabled'} /></div><div className="metadata-grid compact-grid"><span>Endpoint<strong>{selected.endpoint_url}</strong></span><span>Source<strong>{selected.source_type}</strong></span><span>Target<strong>{selected.target_type}</strong></span></div><div className="action-row"><Link className="primary-button" to={`/integration-flows/${selected.id}/builder`}>Open visual builder</Link><Link className="ghost-button" to={`/config-history/integration_flow/${selected.id}`}>Release control</Link><button className="primary-button" onClick={() => runSelectedFlow(selected)} disabled={testFlow.isPending}>Test this flow</button><button className="ghost-button" onClick={() => navigator.clipboard?.writeText(selected.endpoint_url)}>Copy URL</button><button className="ghost-button" onClick={() => duplicate.mutate(selected.id)} disabled={duplicate.isPending}>Duplicate</button><button className="ghost-button" onClick={() => exportFlow.mutate(selected.id)} disabled={exportFlow.isPending}>Export</button>{selected.endpoint_id && <Link className="primary-link" to="/test-console">Open Test Console</Link>}</div><section className="flow-output-grid"><JsonBlock title="Matcher" value={selected.matcher_group_json} searchable={false} /><JsonBlock title="Builder JSON" value={selected.builder_json ?? selected.action_json} searchable={false} /><pre className="json-block">{selected.curl_example}</pre><pre className="json-block">{selected.onec_http_example}</pre></section></section>}
+      {selected && <section className="panel flow-detail" data-tour="flow-detail"><div className="panel-toolbar"><div><span className="eyebrow">Selected Flow</span><h2>{selected.name}</h2><p>{selected.description}</p></div><StatusBadge status={selected.enabled ? 'ok' : 'cancelled'} label={selected.enabled ? 'enabled' : 'disabled'} /></div><div className="metadata-grid compact-grid"><span>Endpoint<strong>{selected.endpoint_url}</strong></span><span>Source<strong>{selected.source_type}</strong></span><span>Target<strong>{selected.target_type}</strong></span></div><div className="action-row"><Link className="primary-button" to={`/integration-flows/${selected.id}/builder`}>Open visual builder</Link><button className="primary-button" onClick={() => exportForProduction.mutate(selected)} disabled={exportForProduction.isPending}>Export for Production</button><Link className="ghost-button" to={`/config-history/integration_flow/${selected.id}`}>Release control</Link><button className="primary-button" onClick={() => runSelectedFlow(selected)} disabled={testFlow.isPending}>Test this flow</button><button className="ghost-button" onClick={() => navigator.clipboard?.writeText(selected.endpoint_url)}>Copy URL</button><button className="ghost-button" onClick={() => duplicate.mutate(selected.id)} disabled={duplicate.isPending}>Duplicate</button><button className="ghost-button" onClick={() => exportFlow.mutate(selected.id)} disabled={exportFlow.isPending}>Export</button>{selected.endpoint_id && <Link className="primary-link" to="/test-console">Open Test Console</Link>}</div>{exportForProduction.error instanceof Error && <div className="error-state compact">{exportForProduction.error.message}</div>}<section className="flow-output-grid"><JsonBlock title="Matcher" value={selected.matcher_group_json} searchable={false} /><JsonBlock title="Builder JSON" value={selected.builder_json ?? selected.action_json} searchable={false} /><pre className="json-block">{selected.curl_example}</pre><pre className="json-block">{selected.onec_http_example}</pre></section></section>}
       {result !== null && <JsonBlock title="Flow result" value={(result as Record<string, unknown>) ?? {}} searchable />}
     </div>
   );

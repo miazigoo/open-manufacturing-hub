@@ -13,11 +13,13 @@ from app.core.database import async_session
 from app.core.access import optional_auth_guard
 from app.core.config import get_settings
 from app.connectors.router import router as connectors_router
+from app.change_sets.router import router as change_sets_router
 from app.config_versions.router import router as config_versions_router
 from app.core.errors import BadRequestError, NotFoundError
 from app.demo.router import router as demo_router
 from app.docs_portal.router import router as docs_portal_router
 from app.events.router import router as events_router
+from app.environments.router import router as environments_router
 from app.enterprise_runtime.router import dlq_router, queue_router, router as enterprise_runtime_router
 from app.execution.router import router as execution_router
 from app.external_errors.router import router as external_errors_router
@@ -115,6 +117,8 @@ app.include_router(dlq_router)
 app.include_router(demo_router)
 app.include_router(connectors_router)
 app.include_router(config_versions_router)
+app.include_router(environments_router)
+app.include_router(change_sets_router)
 app.include_router(mappings_router)
 app.include_router(workflows_router)
 app.include_router(execution_router)

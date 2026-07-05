@@ -8,6 +8,9 @@ export interface ProductionStatus {
   packages: Array<Record<string, unknown>>;
   warnings: string[];
   update_mode_enabled: boolean;
+  current_environment: Record<string, unknown> | null;
+  pending_change_sets: number;
+  last_applied_change_set: Record<string, unknown> | null;
 }
 
 export interface SystemSnapshot {
@@ -23,6 +26,9 @@ export interface SystemSnapshot {
   queue: Record<string, number>;
   dlq_count: number;
   auth_users_count: number | null;
+  current_environment: Record<string, unknown> | null;
+  pending_change_sets: number;
+  last_applied_change_set: Record<string, unknown> | null;
   last_backup_at: string | null;
   health: Record<string, unknown>;
   warnings: string[];

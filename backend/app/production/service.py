@@ -10,9 +10,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.models import ConnectorInstance
+from app.change_sets.models import ChangeSet, ChangeSetStatus
 from app.core.config import get_settings
 from app.core.enums import BackupType, EnterpriseQueueStatus
 from app.enterprise_runtime.models import DeadLetterQueueItem, IntegrationQueueMessage
+from app.environments.models import EnvironmentProfile
 from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
 from app.integration_flows.models import IntegrationFlow
 from app.mappings.models import MappingDefinition
@@ -33,14 +35,16 @@ async def status(session: AsyncSession) -> dict[str, Any]:
     warnings = await production_warnings(session)
     packages = [snapshots.package_row(item) for item in (await session.execute(select(InstalledPackage).order_by(InstalledPackage.package_id))).scalars().all()]
     state = await update_safety.state(session)
+    promotion = await _promotion_summary(session)
     return {
         "app_env": settings.app_env,
-        "production_mode": settings.app_env == "production",
+        "production_mode": settings.app_env.lower() in {"production", "prod"},
         "version": snapshots.app_version(),
         "database_revision": await checks.database_revision(session),
         "packages": packages,
         "warnings": warnings,
         "update_mode_enabled": state.update_mode_enabled,
+        **promotion,
     }
 
 
@@ -51,12 +55,13 @@ async def snapshot(session: AsyncSession) -> dict[str, Any]:
     last = await backups.last_success(session)
     warnings = await production_warnings(session)
     state = await update_safety.state(session)
+    promotion = await _promotion_summary(session)
     return {
         "app_version": snapshots.app_version(),
         "backend_version": snapshots.app_version(),
         "frontend_version": snapshots.frontend_version(),
         "app_env": settings.app_env,
-        "production_mode": settings.app_env == "production",
+        "production_mode": settings.app_env.lower() in {"production", "prod"},
         "database_revision": await checks.database_revision(session),
         "migration_head": checks.MIGRATION_HEAD,
         "packages": packages,
@@ -67,11 +72,14 @@ async def snapshot(session: AsyncSession) -> dict[str, Any]:
             "workflows": await _count(session, Workflow),
             "integration_flows": await _count(session, IntegrationFlow),
             "mappings": await _count(session, MappingDefinition),
+            "environments": await _count_optional(session, EnvironmentProfile) or 0,
+            "change_sets": await _count_optional(session, ChangeSet) or 0,
         },
         "queue": queue,
         "dlq_count": queue.get("dlq", 0),
         "auth_users_count": await _count_optional(session, AuthUser),
         "last_backup_at": last.created_at if last else None,
+        **promotion,
         "health": {"queue": queue, "status": "warning" if warnings else "ok"},
         "warnings": warnings,
         "update_mode": update_safety.as_status(state),
@@ -92,7 +100,34 @@ async def production_warnings(session: AsyncSession) -> list[str]:
     state = await update_safety.state(session)
     if state.update_mode_enabled:
         warnings.append("Update mode enabled. New requests are queued but not processed.")
+    promotion = await _promotion_summary(session)
+    if not promotion.get("current_environment"):
+        warnings.append("No current environment profile selected")
+    if int(promotion.get("pending_change_sets") or 0):
+        warnings.append(f"{promotion['pending_change_sets']} pending change sets")
     return warnings
+
+
+async def _promotion_summary(session: AsyncSession) -> dict[str, Any]:
+    try:
+        current = (await session.execute(select(EnvironmentProfile).where(EnvironmentProfile.is_current.is_(True)).limit(1))).scalar_one_or_none()
+        pending = int(await session.scalar(select(func.count()).select_from(ChangeSet).where(ChangeSet.status.in_([ChangeSetStatus.DRAFT, ChangeSetStatus.EXPORTED, ChangeSetStatus.IMPORT_PREVIEWED, ChangeSetStatus.FAILED]))) or 0)
+        last = (await session.execute(select(ChangeSet).where(ChangeSet.status == ChangeSetStatus.APPLIED).order_by(ChangeSet.applied_at.desc().nullslast(), ChangeSet.created_at.desc()).limit(1))).scalar_one_or_none()
+    except Exception:
+        return {"current_environment": None, "pending_change_sets": 0, "last_applied_change_set": None}
+    return {
+        "current_environment": _environment_row(current) if current else None,
+        "pending_change_sets": pending,
+        "last_applied_change_set": _change_set_row(last) if last else None,
+    }
+
+
+def _environment_row(item: EnvironmentProfile) -> dict[str, Any]:
+    return {"id": str(item.id), "name": item.name, "code": item.code, "environment_type": item.environment_type.value, "base_url": item.base_url, "is_current": item.is_current}
+
+
+def _change_set_row(item: ChangeSet) -> dict[str, Any]:
+    return {"id": str(item.id), "name": item.name, "status": item.status.value, "source_environment": item.source_environment, "target_environment": item.target_environment, "applied_at": item.applied_at.isoformat() if item.applied_at else None}
 
 
 async def export_config(session: AsyncSession, request: ExportConfigRequest) -> tuple[BackupRecord, dict[str, Any]]:

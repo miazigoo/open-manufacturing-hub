@@ -191,6 +191,12 @@ async function ensurePackageWorkspace(page, uiBase, route) {
 async function runBrowserSmoke(apiBase, uiBase) {
   const flows = await requestJson(`${apiBase}/api/integration-flows`);
   const flowId = flows?.[0]?.id;
+  let changeSetId = null;
+  if (flowId) {
+    await requestJson(`${apiBase}/api/environments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Smoke Dev', code: 'smoke-dev', environment_type: 'development', is_current: true, variables: [{ key: 'SMOKE_BASE_URL', value_json: 'https://smoke.example.local' }] }) });
+    const changeSet = await requestJson(`${apiBase}/api/change-sets/from-drafts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Smoke flow promotion', object_refs: [{ object_type: 'integration_flow', object_id: flowId }], include_dependencies: true }) });
+    changeSetId = changeSet?.id ?? null;
+  }
   const resolvers = await requestJson(`${apiBase}/api/resolvers`);
   const resolverId = resolvers?.[0]?.id;
   const rules = await requestJson(`${apiBase}/api/business-rules`);
@@ -217,7 +223,8 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/business-objects', '/resolvers', resolverId ? `/resolvers/${resolverId}` : null, '/resolvers/cache',
     '/transforms', '/business-rules', ruleId ? `/business-rules/${ruleId}` : null,
     '/test-console', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
-    '/workflows', '/execution/steps', '/maintenance', '/retention', '/notifications', '/onec-cockpit', '/printing',
+    '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
+    '/retention', '/notifications', '/onec-cockpit', '/printing',
   ].filter(Boolean);
 
   for (const route of routes) await gotoRoute(page, uiBase, route);
@@ -268,6 +275,8 @@ async function runBrowserSmoke(apiBase, uiBase) {
   await gotoRoute(page, uiBase, '/');
   await gotoRoute(page, uiBase, '/integration-flows');
   await gotoRoute(page, uiBase, '/business-rules');
+  await gotoRoute(page, uiBase, '/environments');
+  await gotoRoute(page, uiBase, '/change-sets');
 }
 
 async function main() {

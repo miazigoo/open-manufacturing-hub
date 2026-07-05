@@ -29,6 +29,8 @@ const fallbackNavigation: UINavigationItem[] = [
   { group: 'Packages', title: 'Packages', route: '/packages', package_id: null, enabled: true, advanced: false },
   { group: 'Advanced', title: 'Connectors', route: '/connectors', package_id: null, enabled: true, advanced: true },
   { group: 'Advanced', title: 'Secrets', route: '/secrets', package_id: 'omh-package-secrets', enabled: false, installed: false, advanced: true },
+  { group: 'Advanced', title: 'Environments', route: '/environments', package_id: null, enabled: true, advanced: true },
+  { group: 'Advanced', title: 'Change Sets', route: '/change-sets', package_id: null, enabled: true, advanced: true },
 ];
 
 const groupKey: Record<string, string> = {
@@ -77,6 +79,8 @@ const routeKey: Record<string, string> = {
   '/workflows': 'nav.workflows',
   '/execution/steps': 'nav.executionSteps',
   '/maintenance': 'nav.maintenance',
+  '/environments': 'nav.environments',
+  '/change-sets': 'nav.changeSets',
   '/production': 'nav.production',
   '/retention': 'nav.retention',
   '/notifications': 'nav.notifications',

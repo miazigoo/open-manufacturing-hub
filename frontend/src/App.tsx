@@ -63,6 +63,10 @@ const DocumentationPage = lazy(() => import('./pages/DocumentationPage').then((m
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then((m) => ({ default: m.OnboardingPage })));
 const FirstIntegrationWizardPage = lazy(() => import('./pages/FirstIntegrationWizardPage').then((m) => ({ default: m.FirstIntegrationWizardPage })));
 const ConfigHistoryPage = lazy(() => import('./pages/ConfigHistoryPage').then((m) => ({ default: m.ConfigHistoryPage })));
+const EnvironmentsPage = lazy(() => import('./pages/EnvironmentsPage').then((m) => ({ default: m.EnvironmentsPage })));
+const ChangeSetsPage = lazy(() => import('./pages/ChangeSetsPage').then((m) => ({ default: m.ChangeSetsPage })));
+const ChangeSetDetailsPage = lazy(() => import('./pages/ChangeSetDetailsPage').then((m) => ({ default: m.ChangeSetDetailsPage })));
+const ChangeSetImportPage = lazy(() => import('./pages/ChangeSetImportPage').then((m) => ({ default: m.ChangeSetImportPage })));
 
 function onec(element: React.ReactNode) {
   return <PackageGate packageId="omh-package-onec">{element}</PackageGate>;
@@ -140,6 +144,10 @@ export function App() {
           <Route path="production" element={<ProductionPage />} />
           <Route path="audit" element={<AuditLogPage />} />
           <Route path="config-history/:objectType/:objectId" element={<ConfigHistoryPage />} />
+          <Route path="environments" element={<EnvironmentsPage />} />
+          <Route path="change-sets" element={<ChangeSetsPage />} />
+          <Route path="change-sets/import" element={<ChangeSetImportPage />} />
+          <Route path="change-sets/:id" element={<ChangeSetDetailsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -8,10 +8,12 @@ from sqlalchemy import select
 from app.artifacts.models import Artifact  # noqa: F401
 from app.audit.models import AuditEvent  # noqa: F401
 from app.business_rules.models import BusinessRuleSet  # noqa: F401
+from app.change_sets.models import ChangeSet, ChangeSetItem  # noqa: F401
 from app.config_versions.models import ConfigVersion  # noqa: F401
 from app.connectors.models import ConnectorInstance
 from app.core.database import Base, async_session, engine
 from app.core.enums import ConnectorDirection, ConnectorInstanceStatus
+from app.environments.models import EnvironmentProfile, EnvironmentVariable  # noqa: F401
 from app.enterprise_runtime.models import (
     BusinessRuleDefinition,
     CanonicalBusinessObject,

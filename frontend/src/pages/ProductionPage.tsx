@@ -58,6 +58,9 @@ export function ProductionPage() {
         <article className="metric-card"><span>Connectors</span><strong>{data.counts.connectors ?? 0}</strong><small>{data.counts.endpoints ?? 0} endpoints</small></article>
         <article className="metric-card"><span>Queue</span><strong>{(data.queue.waiting ?? 0) + (data.queue.retry_waiting ?? 0)}</strong><small>{data.queue.processing ?? 0} processing · {data.dlq_count} DLQ</small></article>
         <article className="metric-card"><span>Last backup</span><strong>{data.last_backup_at ? new Date(data.last_backup_at).toLocaleString() : 'none'}</strong><small>{data.packages.length} packages</small></article>
+        <article className="metric-card"><span>Current environment</span><strong>{String(data.current_environment?.code ?? 'not set')}</strong><small>{String(data.current_environment?.environment_type ?? 'select before apply')}</small></article>
+        <article className="metric-card"><span>Pending change sets</span><strong>{data.pending_change_sets}</strong><small>must be reviewed before update</small></article>
+        <article className="metric-card"><span>Last applied</span><strong>{String(data.last_applied_change_set?.name ?? 'none')}</strong><small>{String(data.last_applied_change_set?.applied_at ?? 'no promotion yet')}</small></article>
       </section>
 
       <section className="production-grid">

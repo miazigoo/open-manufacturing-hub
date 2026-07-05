@@ -8,9 +8,11 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.models import ConnectorInstance
+from app.change_sets.models import ChangeSet, ChangeSetStatus
 from app.core.config import get_settings
 from app.core.enums import EnterpriseQueueStatus, IntegrationPackageStatus
 from app.enterprise_runtime.models import DeadLetterQueueItem, IntegrationQueueMessage
+from app.environments.models import EnvironmentProfile
 from app.integration_bus.models import IntegrationEndpoint
 from app.integration_flows.models import IntegrationFlow
 from app.packages.models import InstalledPackage
@@ -61,6 +63,11 @@ async def doctor(session: AsyncSession) -> dict[str, Any]:
     users_count = int(await session.scalar(select(func.count()).select_from(AuthUser)) or 0)
     items.append(ProductionCheck(name="Auth state", status="ok" if auth_package and auth_package.enabled and users_count else "warning", message=f"auth_package_enabled={bool(auth_package and auth_package.enabled)} users={users_count}"))
 
+    current_environment = (await session.execute(select(EnvironmentProfile).where(EnvironmentProfile.is_current.is_(True)).limit(1))).scalar_one_or_none()
+    pending_change_sets = int(await session.scalar(select(func.count()).select_from(ChangeSet).where(ChangeSet.status.in_([ChangeSetStatus.DRAFT, ChangeSetStatus.EXPORTED, ChangeSetStatus.IMPORT_PREVIEWED, ChangeSetStatus.FAILED]))) or 0)
+    items.append(ProductionCheck(name="Current environment", status="ok" if current_environment else "warning", message=f"{current_environment.name} ({current_environment.code})" if current_environment else "No current environment selected"))
+    items.append(ProductionCheck(name="Pending change sets", status="warning" if pending_change_sets else "ok", message=f"{pending_change_sets} pending/failed" if pending_change_sets else "No pending change sets"))
+
     package_report = await package_service.compatibility_report(session)
     package_errors = [f"{item['package_id']}: {', '.join(item['errors'])}" for item in package_report["packages"] if item.get("errors")]
     items.append(ProductionCheck(name="Package compatibility", status="error" if package_errors else "ok", message="; ".join(package_errors) if package_errors else "registered packages compatible"))
@@ -86,6 +93,8 @@ async def doctor(session: AsyncSession) -> dict[str, Any]:
         "endpoints": await _count(session, IntegrationEndpoint),
         "flows": await _count(session, IntegrationFlow),
         "saved_test_cases": await _count(session, SavedTestCase),
+        "environments": await _count(session, EnvironmentProfile),
+        "change_sets": await _count(session, ChangeSet),
         "secrets": await _count(session, Secret),
         "queue_messages": await _count(session, IntegrationQueueMessage),
         "dlq_items": await _count(session, DeadLetterQueueItem),

@@ -20,7 +20,7 @@ from app.resolvers.models import ResolverDefinitionV2
 from app.secrets.models import Secret
 from app.secrets.redaction import collect_secret_references, raw_secret_warnings
 
-MIGRATION_HEAD = "0025_config_versions"
+MIGRATION_HEAD = "0026_environment_profiles_change_sets"
 
 
 async def database_revision(session: AsyncSession) -> str | None:
@@ -56,6 +56,7 @@ async def update_checks(session: AsyncSession, *, post_update: bool = False) -> 
     package_status = "error" if failed or compatibility_errors else "ok"
     checks.append(ProductionCheck(name="Package compatibility", status=package_status, message="; ".join(failed + compatibility_errors) if package_status == "error" else "Installed packages are compatible."))
 
+    checks.extend(await _promotion_checks(session))
     checks.extend(await _secret_checks(session))
 
     usage = shutil.disk_usage(".")
@@ -65,6 +66,30 @@ async def update_checks(session: AsyncSession, *, post_update: bool = False) -> 
     if post_update:
         checks.append(ProductionCheck(name="Backend startup", status="ok", message="Backend responded to post-update check."))
         checks.append(ProductionCheck(name="Package registry", status="ok", message=f"{len(package_registry.list_packages())} package manifests loaded."))
+    return checks
+
+
+async def _promotion_checks(session: AsyncSession) -> list[ProductionCheck]:
+    from app.change_sets.models import ChangeSet, ChangeSetStatus
+    from app.environments.models import EnvironmentProfile, EnvironmentType
+
+    checks: list[ProductionCheck] = []
+    settings = get_settings()
+    production_mode = settings.app_env.lower() in {"production", "prod"}
+    try:
+        current = (await session.execute(select(EnvironmentProfile).where(EnvironmentProfile.is_current.is_(True)).limit(1))).scalar_one_or_none()
+        pending = int(await session.scalar(select(func.count()).select_from(ChangeSet).where(ChangeSet.status.in_([ChangeSetStatus.DRAFT, ChangeSetStatus.EXPORTED, ChangeSetStatus.IMPORT_PREVIEWED, ChangeSetStatus.FAILED]))) or 0)
+        failed_smoke = int(await session.scalar(select(func.count()).select_from(ChangeSet).where(ChangeSet.status == ChangeSetStatus.FAILED)) or 0)
+    except Exception as exc:
+        return [ProductionCheck(name="Promotion schema", status="warning", message=f"Environment/change set tables are not available yet: {exc.__class__.__name__}. Run database migrations.")]
+
+    checks.append(ProductionCheck(name="Current environment", status="ok" if current else "warning", message=f"{current.name} ({current.code})" if current else "No current environment profile selected."))
+    if current:
+        env_is_prod = current.environment_type == EnvironmentType.PRODUCTION
+        mismatch = production_mode != env_is_prod
+        checks.append(ProductionCheck(name="Production environment alignment", status="warning" if mismatch else "ok", message=f"app_env={settings.app_env}, current_environment={current.code}:{current.environment_type.value}"))
+    checks.append(ProductionCheck(name="Pending change sets", status="warning" if pending else "ok", message=f"{pending} pending or failed change sets" if pending else "No pending change sets."))
+    checks.append(ProductionCheck(name="Change set smoke tests", status="warning" if failed_smoke else "ok", message=f"{failed_smoke} failed change set smoke runs" if failed_smoke else "No failed change set smoke runs."))
     return checks
 
 

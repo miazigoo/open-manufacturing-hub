@@ -1873,6 +1873,648 @@
         "title": "CanonicalObjectRead",
         "type": "object"
       },
+      "ChangeSetExport": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "omh_change_set_version": {
+            "default": 1,
+            "title": "Omh Change Set Version",
+            "type": "integer"
+          },
+          "required_packages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Required Packages",
+            "type": "array"
+          },
+          "secrets_policy": {
+            "default": "references_only",
+            "title": "Secrets Policy",
+            "type": "string"
+          },
+          "source_environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Environment"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "created_at"
+        ],
+        "title": "ChangeSetExport",
+        "type": "object"
+      },
+      "ChangeSetFromDraftsRequest": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "include_dependencies": {
+            "default": true,
+            "title": "Include Dependencies",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "object_refs": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigObjectRef"
+            },
+            "title": "Object Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "object_refs"
+        ],
+        "title": "ChangeSetFromDraftsRequest",
+        "type": "object"
+      },
+      "ChangeSetImportApplyRequest": {
+        "properties": {
+          "change_set": {
+            "additionalProperties": true,
+            "title": "Change Set",
+            "type": "object"
+          },
+          "mapping": {
+            "$ref": "#/components/schemas/ChangeSetImportMapping"
+          }
+        },
+        "required": [
+          "change_set"
+        ],
+        "title": "ChangeSetImportApplyRequest",
+        "type": "object"
+      },
+      "ChangeSetImportApplyResponse": {
+        "properties": {
+          "applied": {
+            "default": false,
+            "title": "Applied",
+            "type": "boolean"
+          },
+          "applied_change_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied Change Set Id"
+          },
+          "applied_items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Applied Items",
+            "type": "array"
+          },
+          "change_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Set Id"
+          },
+          "conflicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "missing_environment_variables": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Missing Environment Variables",
+            "type": "array"
+          },
+          "missing_packages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Missing Packages",
+            "type": "array"
+          },
+          "missing_secrets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Missing Secrets",
+            "type": "array"
+          },
+          "smoke": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smoke"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "will_create": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Will Create",
+            "type": "array"
+          },
+          "will_update": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Will Update",
+            "type": "array"
+          }
+        },
+        "required": [
+          "valid"
+        ],
+        "title": "ChangeSetImportApplyResponse",
+        "type": "object"
+      },
+      "ChangeSetImportMapping": {
+        "properties": {
+          "allow_conflicts": {
+            "default": false,
+            "title": "Allow Conflicts",
+            "type": "boolean"
+          },
+          "connector_mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Connector Mapping",
+            "type": "object"
+          },
+          "environment_variables": {
+            "additionalProperties": true,
+            "title": "Environment Variables",
+            "type": "object"
+          },
+          "run_smoke_tests": {
+            "default": false,
+            "title": "Run Smoke Tests",
+            "type": "boolean"
+          },
+          "secret_mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Secret Mapping",
+            "type": "object"
+          }
+        },
+        "title": "ChangeSetImportMapping",
+        "type": "object"
+      },
+      "ChangeSetImportPreview": {
+        "properties": {
+          "change_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Set Id"
+          },
+          "conflicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "missing_environment_variables": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Missing Environment Variables",
+            "type": "array"
+          },
+          "missing_packages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Missing Packages",
+            "type": "array"
+          },
+          "missing_secrets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Missing Secrets",
+            "type": "array"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "will_create": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Will Create",
+            "type": "array"
+          },
+          "will_update": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Will Update",
+            "type": "array"
+          }
+        },
+        "required": [
+          "valid"
+        ],
+        "title": "ChangeSetImportPreview",
+        "type": "object"
+      },
+      "ChangeSetImportPreviewRequest": {
+        "properties": {
+          "change_set": {
+            "additionalProperties": true,
+            "title": "Change Set",
+            "type": "object"
+          },
+          "mapping": {
+            "$ref": "#/components/schemas/ChangeSetImportMapping"
+          }
+        },
+        "required": [
+          "change_set"
+        ],
+        "title": "ChangeSetImportPreviewRequest",
+        "type": "object"
+      },
+      "ChangeSetItemRead": {
+        "properties": {
+          "change_set_id": {
+            "format": "uuid",
+            "title": "Change Set Id",
+            "type": "string"
+          },
+          "config_json": {
+            "additionalProperties": true,
+            "title": "Config Json",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dependencies_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dependencies Json"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "object_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Id"
+          },
+          "object_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Name"
+          },
+          "object_type": {
+            "title": "Object Type",
+            "type": "string"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/ChangeSetOperation"
+          },
+          "package_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Id"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id"
+          }
+        },
+        "required": [
+          "id",
+          "change_set_id",
+          "object_type",
+          "operation",
+          "config_json",
+          "created_at"
+        ],
+        "title": "ChangeSetItemRead",
+        "type": "object"
+      },
+      "ChangeSetOperation": {
+        "enum": [
+          "create",
+          "update",
+          "enable",
+          "disable",
+          "delete_disabled_in_mvp"
+        ],
+        "title": "ChangeSetOperation",
+        "type": "string"
+      },
+      "ChangeSetRead": {
+        "properties": {
+          "applied_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "exported_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exported At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChangeSetItemRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "metadata_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Json"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Environment"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ChangeSetStatus"
+          },
+          "target_environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Environment"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "created_at"
+        ],
+        "title": "ChangeSetRead",
+        "type": "object"
+      },
+      "ChangeSetSmokeResult": {
+        "properties": {
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "passed",
+          "failed",
+          "results"
+        ],
+        "title": "ChangeSetSmokeResult",
+        "type": "object"
+      },
+      "ChangeSetStatus": {
+        "enum": [
+          "draft",
+          "exported",
+          "import_previewed",
+          "applied",
+          "failed",
+          "rolled_back"
+        ],
+        "title": "ChangeSetStatus",
+        "type": "string"
+      },
       "ConfigDiffResponse": {
         "properties": {
           "added": {
@@ -1997,6 +2639,25 @@
           }
         },
         "title": "ConfigDraftRequest",
+        "type": "object"
+      },
+      "ConfigObjectRef": {
+        "properties": {
+          "object_id": {
+            "format": "uuid",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "object_type": {
+            "title": "Object Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object_type",
+          "object_id"
+        ],
+        "title": "ConfigObjectRef",
         "type": "object"
       },
       "ConfigPublishRequest": {
@@ -3361,6 +4022,359 @@
         ],
         "title": "EnterpriseQueueStatus",
         "type": "string"
+      },
+      "EnvironmentCreate": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "code": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "environment_type": {
+            "$ref": "#/components/schemas/EnvironmentType",
+            "default": "custom"
+          },
+          "is_current": {
+            "default": false,
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/EnvironmentVariableCreate"
+            },
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "code"
+        ],
+        "title": "EnvironmentCreate",
+        "type": "object"
+      },
+      "EnvironmentPatch": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "environment_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EnvironmentType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_current": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Current"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "EnvironmentPatch",
+        "type": "object"
+      },
+      "EnvironmentRead": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "environment_type": {
+            "$ref": "#/components/schemas/EnvironmentType"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_current": {
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/EnvironmentVariableRead"
+            },
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "code",
+          "environment_type",
+          "is_current",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "EnvironmentRead",
+        "type": "object"
+      },
+      "EnvironmentType": {
+        "enum": [
+          "development",
+          "test",
+          "staging",
+          "production",
+          "custom"
+        ],
+        "title": "EnvironmentType",
+        "type": "string"
+      },
+      "EnvironmentVariableCreate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "key": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          },
+          "secret_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Ref"
+          },
+          "value_json": {
+            "title": "Value Json"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "EnvironmentVariableCreate",
+        "type": "object"
+      },
+      "EnvironmentVariablePatch": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "secret_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Ref"
+          },
+          "value_json": {
+            "title": "Value Json"
+          }
+        },
+        "title": "EnvironmentVariablePatch",
+        "type": "object"
+      },
+      "EnvironmentVariableRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "environment_id": {
+            "format": "uuid",
+            "title": "Environment Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "secret_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Ref"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "value_json": {
+            "title": "Value Json"
+          }
+        },
+        "required": [
+          "id",
+          "environment_id",
+          "key",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "EnvironmentVariableRead",
+        "type": "object"
       },
       "EventCreate": {
         "properties": {
@@ -12957,6 +13971,18 @@
             "title": "App Env",
             "type": "string"
           },
+          "current_environment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Environment"
+          },
           "database_revision": {
             "anyOf": [
               {
@@ -12968,6 +13994,18 @@
             ],
             "title": "Database Revision"
           },
+          "last_applied_change_set": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Applied Change Set"
+          },
           "packages": {
             "items": {
               "additionalProperties": true,
@@ -12975,6 +14013,11 @@
             },
             "title": "Packages",
             "type": "array"
+          },
+          "pending_change_sets": {
+            "default": 0,
+            "title": "Pending Change Sets",
+            "type": "integer"
           },
           "production_mode": {
             "title": "Production Mode",
@@ -15888,6 +16931,18 @@
             "title": "Counts",
             "type": "object"
           },
+          "current_environment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Environment"
+          },
           "database_revision": {
             "anyOf": [
               {
@@ -15919,6 +16974,18 @@
             "title": "Health",
             "type": "object"
           },
+          "last_applied_change_set": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Applied Change Set"
+          },
           "last_backup_at": {
             "anyOf": [
               {
@@ -15949,6 +17016,11 @@
             },
             "title": "Packages",
             "type": "array"
+          },
+          "pending_change_sets": {
+            "default": 0,
+            "title": "Pending Change Sets",
+            "type": "integer"
           },
           "production_mode": {
             "title": "Production Mode",
@@ -19306,6 +20378,283 @@
         ]
       }
     },
+    "/api/change-sets": {
+      "get": {
+        "operationId": "list_change_sets_api_change_sets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ChangeSetRead"
+                  },
+                  "title": "Response List Change Sets Api Change Sets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Change Sets",
+        "tags": [
+          "change-sets"
+        ]
+      }
+    },
+    "/api/change-sets/from-drafts": {
+      "post": {
+        "operationId": "create_from_drafts_api_change_sets_from_drafts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeSetFromDraftsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create From Drafts",
+        "tags": [
+          "change-sets"
+        ]
+      }
+    },
+    "/api/change-sets/import/apply": {
+      "post": {
+        "operationId": "import_apply_api_change_sets_import_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeSetImportApplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetImportApplyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Apply",
+        "tags": [
+          "change-sets"
+        ]
+      }
+    },
+    "/api/change-sets/import/preview": {
+      "post": {
+        "operationId": "import_preview_api_change_sets_import_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeSetImportPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetImportPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Preview",
+        "tags": [
+          "change-sets"
+        ]
+      }
+    },
+    "/api/change-sets/{change_set_id}": {
+      "get": {
+        "operationId": "get_change_set_api_change_sets__change_set_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Change Set",
+        "tags": [
+          "change-sets"
+        ]
+      }
+    },
+    "/api/change-sets/{change_set_id}/export": {
+      "get": {
+        "operationId": "export_change_set_api_change_sets__change_set_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetExport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Change Set",
+        "tags": [
+          "change-sets"
+        ]
+      }
+    },
+    "/api/change-sets/{change_set_id}/run-smoke-tests": {
+      "post": {
+        "operationId": "run_smoke_tests_api_change_sets__change_set_id__run_smoke_tests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_set_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Set Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSetSmokeResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Smoke Tests",
+        "tags": [
+          "change-sets"
+        ]
+      }
+    },
     "/api/config/{object_type}/{object_id}/diff": {
       "get": {
         "operationId": "diff_versions_api_config__object_type___object_id__diff_get",
@@ -22518,6 +23867,428 @@
         "summary": "Worker Health",
         "tags": [
           "enterprise-runtime"
+        ]
+      }
+    },
+    "/api/environments": {
+      "get": {
+        "operationId": "list_environments_api_environments_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EnvironmentRead"
+                  },
+                  "title": "Response List Environments Api Environments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Environments",
+        "tags": [
+          "environments"
+        ]
+      },
+      "post": {
+        "operationId": "create_environment_api_environments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Environment",
+        "tags": [
+          "environments"
+        ]
+      }
+    },
+    "/api/environments/current": {
+      "get": {
+        "operationId": "current_environment_api_environments_current_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/EnvironmentRead"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Current Environment Api Environments Current Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Current Environment",
+        "tags": [
+          "environments"
+        ]
+      }
+    },
+    "/api/environments/{environment_id}": {
+      "delete": {
+        "operationId": "delete_environment_api_environments__environment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "environment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Environment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Environment",
+        "tags": [
+          "environments"
+        ]
+      },
+      "get": {
+        "operationId": "get_environment_api_environments__environment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "environment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Environment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Environment",
+        "tags": [
+          "environments"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_environment_api_environments__environment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "environment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Environment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Environment",
+        "tags": [
+          "environments"
+        ]
+      }
+    },
+    "/api/environments/{environment_id}/set-current": {
+      "post": {
+        "operationId": "set_current_api_environments__environment_id__set_current_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "environment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Environment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Current",
+        "tags": [
+          "environments"
+        ]
+      }
+    },
+    "/api/environments/{environment_id}/variables": {
+      "post": {
+        "operationId": "upsert_variable_api_environments__environment_id__variables_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "environment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Environment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentVariableCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentVariableRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upsert Variable",
+        "tags": [
+          "environments"
+        ]
+      }
+    },
+    "/api/environments/{environment_id}/variables/{key}": {
+      "delete": {
+        "operationId": "delete_variable_api_environments__environment_id__variables__key__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "environment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Environment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Variable",
+        "tags": [
+          "environments"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_variable_api_environments__environment_id__variables__key__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "environment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Environment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentVariablePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentVariableRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Variable",
+        "tags": [
+          "environments"
         ]
       }
     },

@@ -8,9 +8,11 @@ from httpx import ASGITransport, AsyncClient
 from app.artifacts.models import Artifact  # noqa: F401
 from app.audit.models import AuditEvent  # noqa: F401
 from app.business_rules.models import BusinessRuleSet  # noqa: F401
+from app.change_sets.models import ChangeSet, ChangeSetItem  # noqa: F401
 from app.config_versions.models import ConfigVersion  # noqa: F401
 from app.connectors.models import ConnectorInstance  # noqa: F401
 from app.core.database import Base, async_session, engine
+from app.environments.models import EnvironmentProfile, EnvironmentVariable  # noqa: F401
 from app.events.models import EventRun, EventStep, IntegrationEvent  # noqa: F401
 from app.enterprise_runtime.models import BusinessRuleDefinition, CanonicalBusinessObject, DeadLetterQueueItem, IntegrationQueueMessage, ODataCacheEntry, QueueAttempt, ResolverDefinition  # noqa: F401
 from app.external_errors.models import ExternalErrorRecord  # noqa: F401
