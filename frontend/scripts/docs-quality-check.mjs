@@ -40,8 +40,13 @@ const requiredRecipes = [
   'recipe-07-wms-shipment-fact-to-onec', 'recipe-08-route-by-key-phrase-value',
 ];
 const requiredTroubleshooting = [
-  'onec-returned-401', 'odata-resource-not-found', 'contractor-not-found-by-inn', 'product-not-found',
-  'target-api-returned-error', 'xml-parse-error', 'printer-unavailable', 'event-moved-to-dlq',
+  'index', 'odata-connection-test-failed', 'onec-returned-401', 'odata-metadata-does-not-load',
+  'odata-resource-not-found', 'odata-empty-result', 'contractor-not-found-by-inn', 'product-not-found',
+  'omh-404-from-1c', 'omh-401-403-from-1c', 'route-did-not-match', 'invalid-json-body',
+  'xml-parse-error', 'odata-step-failed', 'json-builder-variable-missing', 'business-rule-stopped-flow',
+  'target-connector-not-found', 'target-api-returned-error', 'event-stuck-in-queue',
+  'event-moved-to-dlq', 'retry-does-not-happen', 'worker-not-processing',
+  'printer-unavailable', 'zpl-label-wrong', 'print-job-not-printed',
 ];
 const requiredODataCourse = [
   'what-is-odata-for-omh', 'multiple-connections', 'select-connection-in-flow', 'filter-basics',
@@ -112,6 +117,10 @@ assert(onecAcademyContent.includes('Настраиваем полный обме
 for (const exampleId of ['onec.odata.find_contractor_by_inn', 'onec.odata.find_product_by_article', 'onec.odata.find_order_by_number', 'onec.odata.empty_result', 'onec.odata.unauthorized']) {
   assert(examples[exampleId], `Task 045 OData example missing: ${exampleId}`);
 }
+for (const heading of ['## What you see', '## What it means', '## Quick fix', '## Full checklist', '## Where to look in OMH', '## Example', '## Related lessons']) {
+  assert(onecAcademyContent.includes(heading), `Task 047 symptom troubleshooting template missing heading: ${heading}`);
+}
+assert(onecAcademyContent.includes('Troubleshooting по симптомам') && onecAcademyContent.includes('Symptom: OData query returns empty result') && onecAcademyContent.includes('Symptom: 1C receives 404 from OMH'), 'Task 047 symptom troubleshooting manual is incomplete');
 for (const forbidden of ['## What you will build', '## Before you start', '## Что вы соберете', '## Перед началом']) {
   assert(!onecAcademyContent.includes(forbidden), `forbidden lesson heading remains: ${forbidden}`);
 }

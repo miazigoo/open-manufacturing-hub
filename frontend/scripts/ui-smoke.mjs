@@ -244,10 +244,16 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/docs/onec/recipes/recipe-07-wms-shipment-fact-to-onec',
     '/docs/onec/recipes/recipe-08-route-by-key-phrase-value',
     '/docs/onec/reference/odata-connection', '/docs/onec/reference/timeline',
-    '/docs/onec/troubleshooting/onec-returned-401', '/docs/onec/troubleshooting/odata-resource-not-found',
+    '/docs/onec/troubleshooting', '/docs/onec/troubleshooting/index',
+    '/docs/onec/troubleshooting/odata-connection-test-failed', '/docs/onec/troubleshooting/onec-returned-401',
+    '/docs/onec/troubleshooting/odata-metadata-does-not-load', '/docs/onec/troubleshooting/odata-resource-not-found',
+    '/docs/onec/troubleshooting/odata-empty-result',
     '/docs/onec/troubleshooting/contractor-not-found-by-inn', '/docs/onec/troubleshooting/product-not-found',
+    '/docs/onec/troubleshooting/omh-404-from-1c', '/docs/onec/troubleshooting/json-builder-variable-missing',
     '/docs/onec/troubleshooting/target-api-returned-error', '/docs/onec/troubleshooting/xml-parse-error',
-    '/docs/onec/troubleshooting/printer-unavailable', '/docs/onec/troubleshooting/event-moved-to-dlq',
+    '/docs/onec/troubleshooting/event-stuck-in-queue', '/docs/onec/troubleshooting/worker-not-processing',
+    '/docs/onec/troubleshooting/printer-unavailable', '/docs/onec/troubleshooting/zpl-label-wrong',
+    '/docs/onec/troubleshooting/print-job-not-printed', '/docs/onec/troubleshooting/event-moved-to-dlq',
     '/docs/onec/case-studies/case-03-wms-stock-fact-to-1c', '/docs/onec/request-examples/request-03-two-lookups-order',
     '/docs/onec/error-playbooks/odata-empty-required',
     '/docs/onec/setup/connector-setup', '/docs/onec/tools/odata-chaining-fields', '/docs/onec/tools/visual-flow-builder',
@@ -397,20 +403,21 @@ async function runBrowserSmoke(apiBase, uiBase) {
   }
 
   const troubleshootingChecks = [
-    ['/docs/onec/troubleshooting/onec-returned-401', ['Симптом: 1C вернула 401', 'Что вы видите', 'Что это означает', 'Что проверить', 'Как исправить', 'Где смотреть в OMH', 'Связанные страницы', 'X-OMH-Token']],
-    ['/docs/onec/troubleshooting/odata-resource-not-found', ['Симптом: OData resource не найден', 'metadata', 'OData Explorer', 'resource name', 'Связанные страницы']],
-    ['/docs/onec/troubleshooting/contractor-not-found-by-inn', ['Симптом: контрагент не найден по ИНН', 'value', 'request.body.inn', 'remove spaces', 'odata.contractor.response.json']],
-    ['/docs/onec/troubleshooting/product-not-found', ['Симптом: товар не найден по артикулу', 'product_code', 'uppercase', 'OData WMS', 'odata.product.response.json']],
-    ['/docs/onec/troubleshooting/target-api-returned-error', ['Симптом: target API вернул ошибку', 'Invalid token', 'target.request.json', 'target.response.json', 'External error tab']],
-    ['/docs/onec/troubleshooting/xml-parse-error', ['Симптом: XML не парсится', 'raw_forward', 'parse_and_forward', 'XML Tools', 'incoming.request.xml']],
-    ['/docs/onec/troubleshooting/printer-unavailable', ['Симптом: принтер недоступен', 'Connection refused 192.168.1.50:9100', 'zpl.rendered.txt', 'printer.response.json', 'retry']],
-    ['/docs/onec/troubleshooting/event-moved-to-dlq', ['Симптом: событие попало в DLQ', 'Retry attempts are exhausted', 'Edit & Retry', 'Replay from DLQ', 'Force complete']],
+    ['/docs/onec/troubleshooting', ['Troubleshooting по симптомам', 'Connection/OData', 'Endpoint/Request', 'Pipeline', 'Runtime', 'Printer', 'OData query returns empty result', '1C receives 404 from OMH']],
+    ['/docs/onec/troubleshooting/odata-empty-result', ['Symptom: OData query returns empty result', 'What you see', 'What it means', 'Quick fix', 'Full checklist', 'Where to look in OMH', 'Example', 'Related lessons', 'ODATA_LOOKUP_NOT_FOUND', 'Artifact odata_query_request', 'Artifact odata_query_response']],
+    ['/docs/onec/troubleshooting/omh-404-from-1c', ['Symptom: 1C receives 404 from OMH', 'frontend URL instead of backend API URL', '/api/bus/in/{slug}', 'Integration Bus', 'Test Console']],
+    ['/docs/onec/troubleshooting/onec-returned-401', ['Symptom: 1C returned 401 Unauthorized', 'X-OMH-Token', 'odata_query_request', 'OData Connections', 'Test metadata']],
+    ['/docs/onec/troubleshooting/json-builder-variable-missing', ['Symptom: JSON Builder variable missing', 'contractor.Ref_Key', 'target_payload.json', 'Собираем целевой JSON']],
+    ['/docs/onec/troubleshooting/worker-not-processing', ['Symptom: Worker is not processing', 'Worker heartbeat', 'Transaction Monitor', 'Queue status']],
+    ['/docs/onec/troubleshooting/printer-unavailable', ['Symptom: Printer unavailable', 'Connection refused 192.168.1.50:9100', 'zpl.rendered.txt', 'Printing page']],
+    ['/docs/onec/troubleshooting/zpl-label-wrong', ['Symptom: ZPL sent but label wrong', '^XA', 'barcode', 'printer DPI']],
+    ['/docs/onec/troubleshooting/event-moved-to-dlq', ['Symptom: Event moved to DLQ', 'Replay from DLQ', 'Queue attempt history', 'Audit log']],
   ];
   for (const [route, requiredItems] of troubleshootingChecks) {
     await gotoRoute(page, uiBase, route);
     const troubleshootingText = await page.locator('body').innerText();
     for (const required of requiredItems) {
-      if (!troubleshootingText.includes(required)) fail('TASK_042_TROUBLESHOOTING', `${route}: ${required}`);
+      if (!troubleshootingText.includes(required)) fail('TASK_047_TROUBLESHOOTING', `${route}: ${required}`);
     }
   }
 
