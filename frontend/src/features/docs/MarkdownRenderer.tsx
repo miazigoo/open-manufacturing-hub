@@ -1,5 +1,8 @@
 import type { ReactElement } from 'react';
 import { CodeBlockWithCopy } from './CodeBlockWithCopy';
+import { ExampleBlock } from './ExampleBlock';
+import { OpenPageLink } from './OpenPageLink';
+import { Screenshot } from './Screenshot';
 import { ScreenshotPlaceholder } from './ScreenshotPlaceholder';
 import type { TocItem } from './types';
 
@@ -65,6 +68,28 @@ function parseMarkdown(markdown: string) {
     }
     if (code !== null) { code.push(rawLine); continue; }
 
+    const screenshotShortcode = /^::screenshot\{(.+)\}$/.exec(line.trim());
+    if (screenshotShortcode) {
+      flushAll();
+      const attrs = parseShortcodeAttrs(screenshotShortcode[1]);
+      nodes.push(<Screenshot key={`shot-${nodes.length}`} assetId={attrs.assetId ?? attrs.id ?? ''} label={attrs.label} />);
+      continue;
+    }
+    const exampleShortcode = /^::example\{(.+)\}$/.exec(line.trim());
+    if (exampleShortcode) {
+      flushAll();
+      const attrs = parseShortcodeAttrs(exampleShortcode[1]);
+      nodes.push(<ExampleBlock key={`example-${nodes.length}`} exampleId={attrs.exampleId ?? attrs.id ?? ''} />);
+      continue;
+    }
+    const openPageShortcode = /^::open-page\{(.+)\}$/.exec(line.trim());
+    if (openPageShortcode) {
+      flushAll();
+      const attrs = parseShortcodeAttrs(openPageShortcode[1]);
+      nodes.push(<OpenPageLink key={`open-${nodes.length}`} route={attrs.route ?? '/'} label={attrs.label ?? attrs.route ?? 'Open page'} />);
+      continue;
+    }
+
     const screenshot = /^\{\{screenshot:(.+)\}\}$/.exec(line.trim());
     if (screenshot) { flushAll(); nodes.push(<ScreenshotPlaceholder key={`shot-${nodes.length}`} label={screenshot[1].trim()} />); continue; }
 
@@ -110,4 +135,10 @@ function renderInline(value: string) {
     if (part.startsWith('**') && part.endsWith('**')) return <strong key={index}>{part.slice(2, -2)}</strong>;
     return <span key={index}>{part}</span>;
   });
+}
+
+function parseShortcodeAttrs(value: string) {
+  const attrs: Record<string, string> = {};
+  for (const match of value.matchAll(/(\w+)="([^"]*)"/g)) attrs[match[1]] = match[2];
+  return attrs;
 }

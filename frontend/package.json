@@ -11,7 +11,9 @@
     "smoke:ui:live": "UI_SMOKE_API_BASE_URL=http://localhost:8000 UI_SMOKE_BASE_URL=http://localhost:5173 node scripts/ui-smoke.mjs",
     "smoke:ui:deep": "node scripts/ui-deep-smoke.mjs",
     "smoke:ui:deep:live": "UI_DEEP_API_BASE_URL=http://localhost:8000 UI_DEEP_BASE_URL=http://localhost:5173 node scripts/ui-deep-smoke.mjs",
-    "check:docs": "node scripts/docs-content-check.mjs"
+    "check:docs": "node scripts/docs-content-check.mjs",
+    "docs:screenshots": "node scripts/capture-doc-screenshots.mjs",
+    "docs:examples-check": "cd .. && backend/.venv/bin/python backend/scripts/check_docs_examples.py"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.83.0",
@@ -23,6 +25,7 @@
     "vite": "^6.0.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
     "playwright": "^1.61.1"

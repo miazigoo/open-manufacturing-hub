@@ -7,33 +7,18 @@ const frontendDir = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(frontendDir, '..');
 
 const requiredPages = [
-  'overview/overview',
-  'setup/connector-setup',
-  'setup/auth-secrets-static-token',
-  'tools/connector',
-  'tools/odata-explorer',
-  'tools/xml-tools',
-  'tools/cockpit',
-  'tools/visual-flow-builder',
-  'scenarios/onec-to-external-api',
-  'scenarios/onec-post-two-odata-json-endpoint',
-  'scenarios/xml-raw-forward',
-  'scenarios/xml-inn-lookup',
-  'scenarios/onec-to-printer',
-  'scenarios/website-api-to-1c',
-  'scenarios/odata-polling-to-target',
-  'scenarios/wms-api-to-1c',
-  'support/errors-timeline-artifacts',
-  'support/queue-retry-dlq',
+  'overview/overview', 'setup/connector-setup', 'setup/auth-secrets-static-token',
+  'tools/connector', 'tools/odata-explorer', 'tools/xml-tools', 'tools/cockpit', 'tools/visual-flow-builder',
+  'scenarios/onec-to-external-api', 'scenarios/onec-post-two-odata-json-endpoint', 'scenarios/xml-raw-forward',
+  'scenarios/xml-inn-lookup', 'scenarios/onec-to-printer', 'scenarios/website-api-to-1c',
+  'scenarios/odata-polling-to-target', 'scenarios/wms-api-to-1c', 'support/errors-timeline-artifacts', 'support/queue-retry-dlq',
 ];
+const requiredExamples = ['onec.marking_pool_to_api', 'onec.two_odata_to_json_endpoint', 'onec.xml_raw_forward', 'onec.print_label'];
+const requiredAssets = ['onec.odata-explorer.overview', 'onec.flow.odata-block', 'onec.flow.json-builder', 'events.timeline.onec-error', 'printer.page.overview'];
 
-function read(relativePath) {
-  return readFileSync(path.join(repoRoot, relativePath), 'utf8');
-}
-
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
-}
+function read(relativePath) { return readFileSync(path.join(repoRoot, relativePath), 'utf8'); }
+function readJson(relativePath) { return JSON.parse(read(relativePath)); }
+function assert(condition, message) { if (!condition) throw new Error(message); }
 
 const onecContent = read('frontend/src/features/docs/onecContent.ts');
 const content = read('frontend/src/features/docs/content.ts');
@@ -41,28 +26,35 @@ const docLinks = read('frontend/src/features/docs/docLinks.ts');
 const renderer = read('frontend/src/features/docs/MarkdownRenderer.tsx');
 const codeBlock = read('frontend/src/features/docs/CodeBlockWithCopy.tsx');
 const service = read('backend/app/docs_portal/service.py');
+const assets = readJson('frontend/src/docs/assets/index.json');
+const annotations = readJson('frontend/src/docs/assets/annotations.json');
+const examples = readJson('frontend/src/docs/examples/index.json');
 
 for (const route of requiredPages) {
   const [section, slug] = route.split('/');
   assert(onecContent.includes(`'${section}'`) && onecContent.includes(`'${slug}'`), `frontend docs missing ${route}`);
   assert(service.includes(`"id": "${section}"`) && service.includes(`"slug": "${slug}"`), `backend docs API missing ${route}`);
 }
+for (const link of ['onec.troubleshooting', 'timeline.errors', 'integration-flows', 'test-console']) assert(docLinks.includes(link), `docLinks missing ${link}`);
+for (const id of requiredExamples) assert(examples[id], `required docs example missing: ${id}`);
+for (const id of requiredAssets) assert(assets[id], `required screenshot asset missing: ${id}`);
 
-for (const link of ['onec.troubleshooting', 'timeline.errors', 'integration-flows', 'test-console']) {
-  assert(docLinks.includes(link), `docLinks missing ${link}`);
-}
+const assetRefs = new Set([...onecContent.matchAll(/::screenshot\{assetId="([^"]+)"/g)].map((m) => m[1]).filter((id) => !id.includes('$')));
+const legacyScreenshots = (onecContent.match(/\{\{screenshot:/g) ?? []).length + (content.match(/\{\{screenshot:/g) ?? []).length;
+for (const assetId of assetRefs) assert(assets[assetId], `missing screenshot asset registry entry: ${assetId}`);
+for (const assetId of Object.keys(annotations)) assert(assets[assetId], `annotation references missing asset: ${assetId}`);
+assert(assetRefs.size >= 13, `expected at least 13 screenshot asset refs, got ${assetRefs.size}`);
+assert(assetRefs.size + legacyScreenshots >= 18, `expected at least 18 total screenshots, got ${assetRefs.size + legacyScreenshots}`);
 
-const screenshotCount = (onecContent.match(/\{\{screenshot:/g) ?? []).length;
-assert(screenshotCount >= 16, `expected at least 16 screenshot placeholders, got ${screenshotCount}`);
+const exampleRefs = new Set([...onecContent.matchAll(/exampleId:\s*'([^']+)'/g)].map((m) => m[1]));
+for (const exampleId of exampleRefs) assert(examples[exampleId], `missing docs example registry entry: ${exampleId}`);
+assert(exampleRefs.size >= 5, `expected at least 5 docs example refs, got ${exampleRefs.size}`);
 
-for (const fence of ['```json', '```xml', '```1c', '```text']) {
-  assert(onecContent.includes(fence), `missing ${fence} code fence`);
-}
-
+for (const fence of ['```json', '```xml', '```1c', '```text']) assert(onecContent.includes(fence), `missing ${fence} code fence`);
 assert(content.includes('onecPackageSeed,'), 'content.ts must use onecPackageSeed instead of inline stale 1C content');
 assert(content.includes('Translation in progress') && content.includes('翻译正在进行中'), 'language fallback notes are missing');
-assert(renderer.includes('href=') && renderer.includes('target={external'), 'MarkdownRenderer must render markdown links safely');
+assert(renderer.includes('ExampleBlock') && renderer.includes('::example') && renderer.includes('::open-page') && renderer.includes('Screenshot'), 'MarkdownRenderer must support docs assets/examples/actions');
 assert(codeBlock.includes('CopyButton'), 'Code blocks must expose copy controls');
 assert(existsSync(path.join(repoRoot, 'docs/documentation-quality-checklist.md')), 'documentation-quality-checklist.md is missing');
 
-console.log(`[docs-check] ${requiredPages.length} 1C routes, ${screenshotCount} screenshots, code copy and backend API metadata verified`);
+console.log(`[docs-check] ${requiredPages.length} 1C routes, ${assetRefs.size} asset screenshots, ${exampleRefs.size} examples and docs actions verified`);

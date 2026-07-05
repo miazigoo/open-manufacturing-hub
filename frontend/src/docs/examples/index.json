@@ -1,0 +1,62 @@
+{
+  "onec.marking_pool_to_api": {
+    "title": { "ru": "1C отправляет пул кодов в DNP API", "en": "1C sends a marking code pool to DNP API", "zh": "1C 发送标记码池到 DNP API" },
+    "description": { "ru": "Минимальный production-like JSON для маршрута 1C -> внешний API.", "en": "Minimal production-like JSON for a 1C -> external API route.", "zh": "用于 1C -> 外部 API 路由的最小生产式 JSON。" },
+    "endpoint_slug": "marking-pool",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": { "Content-Type": "application/json", "X-OMH-Source": "1c" },
+    "body": { "pool_type": "DNP", "order_id": "ORD-123", "inn": "7707083893", "product_code": "ABC-123", "codes": ["010464615169738421ABC", "010464615169738421DEF"] },
+    "expected": { "status": "accepted_or_success" },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.two_odata_to_json_endpoint": {
+    "title": { "ru": "1C POST -> две OData выборки -> JSON -> endpoint", "en": "1C POST -> two OData lookups -> JSON -> endpoint", "zh": "1C POST -> 两次 OData 查询 -> JSON -> 端点" },
+    "description": { "ru": "Payload содержит только ключи. OMH должен обогатить его контрагентом и номенклатурой через OData.", "en": "The payload contains only keys. OMH enriches it with partner and product through OData.", "zh": "载荷仅包含键，OMH 通过 OData 补充客户和商品。" },
+    "endpoint_slug": "onec-enrich-order",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": { "Content-Type": "application/json", "X-OMH-Source": "1c" },
+    "body": { "inn": "7707083893", "product_code": "A-100", "quantity": 12, "external_order_id": "SO-1001" },
+    "expected": { "status": "sent", "lookups": 2 },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.xml_raw_forward": {
+    "title": { "ru": "1C XML -> OMH -> 1C raw forwarding", "en": "1C XML -> OMH -> 1C raw forwarding", "zh": "1C XML -> OMH -> 1C 原样转发" },
+    "description": { "ru": "Raw XML пример для проверки hash preservation и пересылки без изменения тела.", "en": "Raw XML example for hash preservation and forwarding without body mutation.", "zh": "用于哈希保持和不修改正文转发的原始 XML 示例。" },
+    "endpoint_slug": "onec-xml-raw-forward",
+    "method": "POST",
+    "input_mode": "xml",
+    "headers": { "Content-Type": "application/xml", "X-OMH-Source": "1c" },
+    "body_text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Document>\n  <Number>UPD-1001</Number>\n  <INN>7707083893</INN>\n</Document>",
+    "expected": { "status": "forwarded", "artifact": "raw_xml_sha256" },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.print_label": {
+    "title": { "ru": "1C отправляет этикетку на принтер", "en": "1C sends a label to a printer", "zh": "1C 向打印机发送标签" },
+    "description": { "ru": "JSON print job для Printer Package с template variables и SSCC.", "en": "JSON print job for Printer Package with template variables and SSCC.", "zh": "包含模板变量和 SSCC 的打印软件包 JSON 任务。" },
+    "endpoint_slug": "onec-print-label",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": { "Content-Type": "application/json", "X-OMH-Source": "1c" },
+    "body": { "printer_id": "zebra-warehouse-1", "template": "pallet-label-v1", "variables": { "sscc": "046012345678901234", "order": "SO-1001" } },
+    "expected": { "status": "printed_or_queued" },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.website_to_onec": {
+    "title": { "ru": "Website/API создает заказ в 1C", "en": "Website/API creates an order in 1C", "zh": "网站/API 在 1C 创建订单" },
+    "description": { "ru": "Внешний сайт отправляет заказ в OMH, OMH вызывает 1C HTTP service.", "en": "An external site sends an order to OMH, OMH calls a 1C HTTP service.", "zh": "外部网站向 OMH 发送订单，OMH 调用 1C HTTP 服务。" },
+    "endpoint_slug": "site-create-order",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": { "Content-Type": "application/json", "X-OMH-Source": "site" },
+    "body": { "external_order_id": "WEB-9001", "customer": { "inn": "7707083893" }, "items": [{ "sku": "A-100", "qty": 2 }] },
+    "expected": { "status": "accepted" },
+    "runnable": true,
+    "requires_setup": true
+  }
+}

@@ -3,6 +3,7 @@ import { DocsSearch } from './DocsSearch';
 import { DocsSidebar } from './DocsSidebar';
 import { DocsToc } from './DocsToc';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { DocsPrintButton } from './DocsPrintButton';
 import { findDocPage, getDocsBundle, pagePath } from './content';
 import { extractToc, MarkdownRenderer } from './MarkdownRenderer';
 import { useI18n } from '../../i18n/useI18n';
@@ -13,7 +14,7 @@ const copy = {
     title: 'Документация, которая помогает внедрять, а не угадывать.',
     subtitle: 'Пакетные инструкции, 1C OData/XML маршруты, печать, авторизация, секреты и troubleshooting живут внутри продукта и переключаются вместе с языком UI.',
     open: 'Открыть текущий раздел',
-    pdf: 'PDF экспорт скоро',
+    pdf: 'Печать / PDF',
     updated: 'Обновлено 2026-07-04',
     packages: 'пакетов',
     languages: 'языка',
@@ -25,7 +26,7 @@ const copy = {
     title: 'Documentation built for implementation work.',
     subtitle: 'Package guides, 1C OData/XML routes, printing, auth, secrets and troubleshooting live inside the product.',
     open: 'Open current guide',
-    pdf: 'Export PDF soon',
+    pdf: 'Print / PDF',
     updated: 'Updated 2026-07-04',
     packages: 'packages',
     languages: 'languages',
@@ -37,7 +38,7 @@ const copy = {
     title: '面向实施工作的产品文档。',
     subtitle: '软件包指南、1C OData/XML 路由、打印、认证、密钥与故障排查都在产品内部。',
     open: '打开当前指南',
-    pdf: 'PDF 导出即将推出',
+    pdf: '打印 / PDF',
     updated: '更新于 2026-07-04',
     packages: '软件包',
     languages: '语言',
@@ -65,7 +66,7 @@ export function DocumentationPage() {
           <p>{texts.subtitle}</p>
           <div className="hero-meta">
             <Link className="primary-link" to={pagePath(page)}>{texts.open}</Link>
-            <button className="ghost-button" type="button" disabled>{texts.pdf}</button>
+            <DocsPrintButton label={texts.pdf} />
             <span className="microcopy">{texts.updated}</span>
           </div>
         </div>

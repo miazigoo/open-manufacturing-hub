@@ -222,7 +222,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/integration-bus', '/integration-flows', flowId ? `/integration-flows/${flowId}/builder` : null,
     '/business-objects', '/resolvers', resolverId ? `/resolvers/${resolverId}` : null, '/resolvers/cache',
     '/transforms', '/business-rules', ruleId ? `/business-rules/${ruleId}` : null,
-    '/test-console', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
+    '/test-console', '/test-console?exampleId=onec.two_odata_to_json_endpoint', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
     '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
     '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
     '/docs/onec/setup/connector-setup', '/docs/onec/tools/visual-flow-builder',

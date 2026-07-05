@@ -1,4 +1,4 @@
-.PHONY: install-backend install-frontend check-test-env test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke ui-smoke-live ui-deep-smoke-live openapi-export openapi-check route-inventory-check check-official-packages release-fixtures e2e-release release-check release-check-local release-check-docker doctor snapshot backup backup-config backup-db export-config pre-update-check post-update-check rollback-info restore-db packages-list package-install-onec package-install-printer docker-up docker-down docker-prod-up docker-prod-down
+.PHONY: install-backend install-frontend check-test-env test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke ui-smoke-live ui-deep-smoke-live docs-check docs-examples-check docs-screenshots openapi-export openapi-check route-inventory-check check-official-packages release-fixtures e2e-release release-check release-check-local release-check-docker doctor snapshot backup backup-config backup-db export-config pre-update-check post-update-check rollback-info restore-db packages-list package-install-onec package-install-printer docker-up docker-down docker-prod-up docker-prod-down
 
 install-backend:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[test]"
@@ -44,6 +44,15 @@ ui-smoke-live:
 
 ui-deep-smoke-live:
 	cd frontend && npm run smoke:ui:deep:live
+
+docs-check:
+	cd frontend && npm run check:docs
+
+docs-examples-check:
+	cd backend && . .venv/bin/activate && python scripts/check_docs_examples.py
+
+docs-screenshots:
+	cd frontend && npm run docs:screenshots
 
 openapi-export: openapi-check
 

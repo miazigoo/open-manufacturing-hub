@@ -3657,6 +3657,171 @@
         "title": "DesignerCreated",
         "type": "object"
       },
+      "DocsExampleRead": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "body_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Text"
+          },
+          "description": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "endpoint_slug": {
+            "title": "Endpoint Slug",
+            "type": "string"
+          },
+          "expected": {
+            "additionalProperties": true,
+            "title": "Expected",
+            "type": "object"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Headers",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input_mode": {
+            "default": "json",
+            "title": "Input Mode",
+            "type": "string"
+          },
+          "method": {
+            "default": "POST",
+            "title": "Method",
+            "type": "string"
+          },
+          "requires_setup": {
+            "default": true,
+            "title": "Requires Setup",
+            "type": "boolean"
+          },
+          "runnable": {
+            "default": false,
+            "title": "Runnable",
+            "type": "boolean"
+          },
+          "title": {
+            "$ref": "#/components/schemas/LocalizedText"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "endpoint_slug"
+        ],
+        "title": "DocsExampleRead",
+        "type": "object"
+      },
+      "DocsExampleRunResponse": {
+        "properties": {
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "example_id": {
+            "title": "Example Id",
+            "type": "string"
+          },
+          "external_error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Error"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "requires_setup": {
+            "title": "Requires Setup",
+            "type": "boolean"
+          },
+          "response": {
+            "additionalProperties": true,
+            "title": "Response",
+            "type": "object"
+          },
+          "runnable": {
+            "title": "Runnable",
+            "type": "boolean"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "timeline_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline Url"
+          }
+        },
+        "required": [
+          "success",
+          "example_id",
+          "runnable",
+          "requires_setup",
+          "response"
+        ],
+        "title": "DocsExampleRunResponse",
+        "type": "object"
+      },
       "DocsIndexRead": {
         "properties": {
           "fallback_language": {
@@ -8701,6 +8866,29 @@
           "value"
         ],
         "title": "JsonFieldMapping",
+        "type": "object"
+      },
+      "LocalizedText": {
+        "properties": {
+          "en": {
+            "title": "En",
+            "type": "string"
+          },
+          "ru": {
+            "title": "Ru",
+            "type": "string"
+          },
+          "zh": {
+            "title": "Zh",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ru",
+          "en",
+          "zh"
+        ],
+        "title": "LocalizedText",
         "type": "object"
       },
       "LoginRequest": {
@@ -22065,6 +22253,115 @@
         "summary": "Dlq Retry Alias",
         "tags": [
           "dlq"
+        ]
+      }
+    },
+    "/api/docs/examples": {
+      "get": {
+        "operationId": "list_examples_api_docs_examples_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DocsExampleRead"
+                  },
+                  "title": "Response List Examples Api Docs Examples Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Examples",
+        "tags": [
+          "docs-examples"
+        ]
+      }
+    },
+    "/api/docs/examples/{example_id}": {
+      "get": {
+        "operationId": "get_example_api_docs_examples__example_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "example_id",
+            "required": true,
+            "schema": {
+              "title": "Example Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocsExampleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Example",
+        "tags": [
+          "docs-examples"
+        ]
+      }
+    },
+    "/api/docs/examples/{example_id}/run": {
+      "post": {
+        "operationId": "run_example_api_docs_examples__example_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "example_id",
+            "required": true,
+            "schema": {
+              "title": "Example Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocsExampleRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Example",
+        "tags": [
+          "docs-examples"
         ]
       }
     },

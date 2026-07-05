@@ -1,5 +1,5 @@
-import { FormEvent, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { FormEvent, useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { integrationBusApi } from '../api/integrationBus';
@@ -25,7 +25,10 @@ function normalizeTimelineUrl(url: string) {
 }
 
 export function TestConsolePage() {
+  const [searchParams] = useSearchParams();
+  const exampleId = searchParams.get('exampleId');
   const endpoints = useQuery({ queryKey: ['bus-endpoints'], queryFn: integrationBusApi.endpoints });
+  const docsExample = useQuery({ queryKey: ['docs-example', exampleId], queryFn: () => testConsoleApi.docsExample(exampleId!), enabled: Boolean(exampleId) });
   const [form, setForm] = useState({ endpoint_id: '', input_mode: 'json', headers_json: '{}', body: jsonSample });
   const [formError, setFormError] = useState<string | null>(null);
   const send = useMutation({
@@ -39,6 +42,17 @@ export function TestConsolePage() {
         dry_run: payload.dry_run,
       }),
   });
+
+  useEffect(() => {
+    if (!docsExample.data || endpoints.isLoading) return;
+    const endpoint = endpoints.data?.find((item) => item.slug === docsExample.data.endpoint_slug);
+    setForm({
+      endpoint_id: endpoint?.id ?? '',
+      input_mode: docsExample.data.input_mode,
+      headers_json: JSON.stringify(docsExample.data.headers ?? {}, null, 2),
+      body: docsExample.data.input_mode === 'json' ? JSON.stringify(docsExample.data.body ?? {}, null, 2) : docsExample.data.body_text ?? '',
+    });
+  }, [docsExample.data, endpoints.data, endpoints.isLoading]);
 
   if (endpoints.isLoading) return <LoadingState label="Loading test console" />;
   if (endpoints.error) return <ErrorState error={endpoints.error} />;
@@ -81,6 +95,14 @@ export function TestConsolePage() {
       <form className="panel form-panel stack-form" onSubmit={submit}>
         <span className="eyebrow">Test Console</span>
         <h1>Send integration requests</h1>
+        {docsExample.data && (
+          <div className="docs-example-loaded">
+            <strong>Loaded docs example: {docsExample.data.title.en ?? docsExample.data.id}</strong>
+            <span>Endpoint slug: /api/bus/in/{docsExample.data.endpoint_slug}</span>
+            {!form.endpoint_id && <small>Create or install this endpoint before sending. Payload is still ready to copy and edit.</small>}
+          </div>
+        )}
+        {docsExample.error instanceof Error && <div className="error-state compact">{docsExample.error.message}</div>}
         <label className="field-label" data-tour="test-endpoint">
           Endpoint
           <select

@@ -7,6 +7,7 @@ import { AuthGate } from './features/auth/AuthGate';
 import { TourProvider } from './features/tours/TourProvider';
 import { I18nProvider } from './i18n/I18nProvider';
 import './styles/global.css';
+import './styles/docs-print.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

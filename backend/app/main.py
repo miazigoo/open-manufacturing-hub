@@ -18,6 +18,7 @@ from app.config_versions.router import router as config_versions_router
 from app.core.errors import BadRequestError, NotFoundError
 from app.demo.router import router as demo_router
 from app.docs_portal.router import router as docs_portal_router
+from app.docs_examples.router import router as docs_examples_router
 from app.events.router import router as events_router
 from app.environments.router import router as environments_router
 from app.enterprise_runtime.router import dlq_router, queue_router, router as enterprise_runtime_router
@@ -138,6 +139,7 @@ app.include_router(odata_explorer_router, dependencies=[Depends(require_package_
 app.include_router(xml_tools_router)
 app.include_router(test_console_router)
 app.include_router(docs_portal_router)
+app.include_router(docs_examples_router)
 app.include_router(ui_router)
 app.include_router(notifications_router)
 app.include_router(auth_router)

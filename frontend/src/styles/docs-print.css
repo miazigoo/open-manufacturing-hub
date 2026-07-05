@@ -1,0 +1,15 @@
+@media print {
+  body { background: #fff !important; color: #111 !important; }
+  .app-shell, .layout-shell, .docs-hero, .docs-sidebar-panel, .docs-toc-panel, .docs-search-panel, .topbar, .sidebar, .docs-print-button, .docs-example-actions, .docs-screenshot-toolbar { display: none !important; }
+  .docs-portal-page, .docs-layout-grid, .docs-main-panel, .docs-markdown { display: block !important; }
+  .docs-main-panel { box-shadow: none !important; border: 0 !important; background: #fff !important; padding: 0 !important; }
+  .docs-page-header { border-bottom: 1px solid #999 !important; margin-bottom: 18px !important; }
+  .docs-page-header h1, .docs-markdown h1, .docs-markdown h2, .docs-markdown h3, .docs-markdown p, .docs-markdown li, .docs-markdown td, .docs-markdown th { color: #111 !important; }
+  .docs-markdown h2 { break-before: auto; page-break-before: auto; border-top: 1px solid #aaa !important; }
+  .docs-code-block, .docs-example-card, .docs-screenshot-block, .docs-screenshot-placeholder { break-inside: avoid; page-break-inside: avoid; border: 1px solid #999 !important; background: #fff !important; color: #111 !important; }
+  .docs-code-toolbar { background: #eee !important; border-bottom: 1px solid #aaa !important; }
+  .docs-code-toolbar button { display: none !important; }
+  .docs-code-block pre { color: #111 !important; background: #f8f8f8 !important; white-space: pre-wrap !important; }
+  .docs-screenshot-stage, .docs-screenshot-frame { background: #f8f8f8 !important; border-color: #999 !important; }
+  a { color: #000 !important; text-decoration: underline !important; }
+}
