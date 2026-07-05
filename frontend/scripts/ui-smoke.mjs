@@ -250,6 +250,10 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/docs/onec/case-studies/case-03-wms-stock-fact-to-1c', '/docs/onec/request-examples/request-03-two-lookups-order',
     '/docs/onec/error-playbooks/odata-empty-required',
     '/docs/onec/setup/connector-setup', '/docs/onec/tools/odata-chaining-fields', '/docs/onec/tools/visual-flow-builder',
+    '/docs/onec/odata-course/what-is-odata-for-omh', '/docs/onec/odata-course/multiple-connections',
+    '/docs/onec/odata-course/select-connection-in-flow', '/docs/onec/odata-course/filter-basics',
+    '/docs/onec/odata-course/select-top-orderby', '/docs/onec/odata-course/use-result-json-builder',
+    '/docs/onec/odata-course/empty-result-debugging', '/docs/onec/odata-course/odata-artifacts',
     '/docs/onec/scenarios/onec-post-two-odata-json-endpoint', '/docs/onec/scenarios/onec-to-printer',
     '/docs/onec/support/errors-timeline-artifacts', '/docs/onec/support/queue-retry-dlq',
   ].filter(Boolean);
@@ -405,6 +409,24 @@ async function runBrowserSmoke(apiBase, uiBase) {
   const glossaryText = await page.locator('body').innerText();
   for (const term of ['Глоссарий терминов для 1C', 'Входная точка', 'OData-подключение', 'Очередь ручного разбора', 'Dry Run']) {
     if (!glossaryText.includes(term)) fail('DOCS_GLOSSARY_MISSING', term);
+  }
+
+  const odataCourseChecks = [
+    ['/docs/onec/odata-course/what-is-odata-for-omh', ['Что такое OData в 1C', 'Catalog_Контрагенты', 'Document_ЗаказКлиента', 'Ref_Key']],
+    ['/docs/onec/odata-course/multiple-connections', ['OData ERP', 'OData УСП', 'OData WMS', 'secret_erp_odata_password']],
+    ['/docs/onec/odata-course/select-connection-in-flow', ['Flow Builder -> Add Step -> OData Query', 'Save result as: contractor', 'OData: найти контрагента по ИНН']],
+    ['/docs/onec/odata-course/filter-basics', ['ИНН eq', 'DeletionMark eq false', 'contains(Description', 'value']],
+    ['/docs/onec/odata-course/select-top-orderby', ['$select=Ref_Key,Description,ИНН', '$top=1', '$orderby=Description', 'OData: найти заказ по номеру']],
+    ['/docs/onec/odata-course/use-result-json-builder', ['contractor_uuid <- contractor.Ref_Key', 'product_uuid', 'JSON Builder']],
+    ['/docs/onec/odata-course/empty-result-debugging', ['Пустой результат OData', 'wrong OData connection', 'Пробелы в ИНН', 'OData: ошибка авторизации 401']],
+    ['/docs/onec/odata-course/odata-artifacts', ['odata_query_request', 'odata_query_response', 'odata_query_result', 'Открыть Event Timeline']],
+  ];
+  for (const [route, requiredItems] of odataCourseChecks) {
+    await gotoRoute(page, uiBase, route);
+    const odataCourseText = await page.locator('body').innerText();
+    for (const required of requiredItems) {
+      if (!odataCourseText.includes(required)) fail('TASK_045_ODATA_COURSE', `${route}: ${required}`);
+    }
   }
 
   await gotoRoute(page, uiBase, '/test-console');

@@ -33,9 +33,12 @@ const requiredPages = [
   'scenarios/onec-to-external-api', 'scenarios/onec-post-two-odata-json-endpoint', 'scenarios/xml-raw-forward',
   'scenarios/xml-inn-lookup', 'scenarios/onec-to-printer', 'scenarios/website-api-to-1c',
   'scenarios/odata-polling-to-target', 'scenarios/wms-api-to-1c', 'support/errors-timeline-artifacts', 'support/queue-retry-dlq',
+  'odata-course/what-is-odata-for-omh', 'odata-course/multiple-connections', 'odata-course/select-connection-in-flow',
+  'odata-course/filter-basics', 'odata-course/select-top-orderby', 'odata-course/use-result-json-builder',
+  'odata-course/empty-result-debugging', 'odata-course/odata-artifacts',
 ];
 const requiredExamples = ['onec.marking_pool_to_api', 'onec.two_odata_to_json_endpoint', 'onec.xml_raw_forward', 'onec.print_label', 'onec.golden_scenario'];
-const requiredLearningExamples = ['onec.customer_lookup_by_inn', 'onec.product_lookup_by_article', 'onec.stock_balance_update', 'onec.order_status_to_1c', 'onec.odata_polling_delta', 'onec.xml_inn_to_api', 'onec.printer_sscc_label', 'onec.error_missing_contractor'];
+const requiredLearningExamples = ['onec.customer_lookup_by_inn', 'onec.product_lookup_by_article', 'onec.stock_balance_update', 'onec.order_status_to_1c', 'onec.odata_polling_delta', 'onec.xml_inn_to_api', 'onec.printer_sscc_label', 'onec.error_missing_contractor', 'onec.odata.find_contractor_by_inn', 'onec.odata.find_product_by_article', 'onec.odata.find_order_by_number', 'onec.odata.empty_result', 'onec.odata.unauthorized'];
 const requiredAssets = ['onec.odata-explorer.overview', 'onec.flow.odata-block', 'onec.flow.json-builder', 'events.timeline.onec-error', 'printer.page.overview'];
 
 function read(relativePath) { return readFileSync(path.join(repoRoot, relativePath), 'utf8'); }
@@ -168,6 +171,43 @@ for (const packBRequired of [
   'handle_response',
   '| Шаг | Artifact | Что проверить |',
 ]) assert(onecDocsContent.includes(packBRequired), `Pack B docs missing: ${packBRequired}`);
+for (const odataCourseRequired of [
+  'Что такое OData в 1C и зачем оно OMH',
+  'Catalog_Контрагенты',
+  'Catalog_Номенклатура',
+  'Document_ЗаказКлиента',
+  'InformationRegister_ПулКодовМаркировкиСУЗ',
+  '`Ref_Key` — внутренняя ссылка/UUID объекта в 1C',
+  'OData ERP',
+  'OData УСП',
+  'OData WMS',
+  'secret_erp_odata_password',
+  'secret_usp_odata_password',
+  'Flow Builder -> Add Step -> OData Query',
+  'Save result as: contractor',
+  'Save result as: product',
+  '| Равно | `ИНН eq',
+  '| По артикулу | `Артикул eq',
+  '| Не помечено на удаление | `DeletionMark eq false`',
+  '| Содержит текст | `contains(Description',
+  '| Дата больше или равна | `Date ge datetime',
+  "Description eq \\'ООО Ромашка O\\'\\'Brien\\'",
+  '$select=Ref_Key,Description,ИНН',
+  '$top=1',
+  '$orderby=Description',
+  'contractor_uuid <- contractor.Ref_Key',
+  'contractor_name <- contractor.Description',
+  '{ "value": [] }',
+  'wrong OData connection',
+  'Пробелы в ИНН',
+  'odata_query_request',
+  'odata_query_response',
+  'odata_query_result',
+]) assert(onecDocsContent.includes(odataCourseRequired), `Task 045 OData deep course missing: ${odataCourseRequired}`);
+for (const exampleId of ['onec.odata.find_contractor_by_inn', 'onec.odata.find_product_by_article', 'onec.odata.find_order_by_number', 'onec.odata.empty_result', 'onec.odata.unauthorized']) {
+  assert(examples[exampleId], `Task 045 OData example missing: ${exampleId}`);
+  assert(onecDocsContent.includes(`exampleId="${exampleId}"`), `Task 045 OData course must reference example: ${exampleId}`);
+}
 for (const placeholder of [
   '[SCREENSHOT: Flow Builder inbound endpoint form]',
   '[SCREENSHOT: Endpoint URL copy action]',

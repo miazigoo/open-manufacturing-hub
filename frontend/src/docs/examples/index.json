@@ -408,6 +408,200 @@
     "runnable": true,
     "requires_setup": true
   },
+  "onec.odata.find_contractor_by_inn": {
+    "title": {
+      "ru": "OData: найти контрагента по ИНН",
+      "en": "OData: find contractor by INN",
+      "zh": "OData：按 INN 查找客户"
+    },
+    "description": {
+      "ru": "Учебный пример запроса в Catalog_Контрагенты с $filter, $select и $top=1.",
+      "en": "Training example for querying Catalog_Контрагенты with $filter, $select and $top=1.",
+      "zh": "使用 $filter、$select 和 $top=1 查询 Catalog_Контрагенты 的训练示例。"
+    },
+    "endpoint_slug": "odata-explorer",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "docs"
+    },
+    "body": {
+      "connection": "OData ERP",
+      "resource": "Catalog_Контрагенты",
+      "filter": "ИНН eq '7707083893' and DeletionMark eq false",
+      "select": [
+        "Ref_Key",
+        "Description",
+        "ИНН"
+      ],
+      "top": 1,
+      "save_as": "contractor"
+    },
+    "expected": {
+      "Ref_Key": "contractor-uuid",
+      "Description": "ООО Ромашка",
+      "ИНН": "7707083893"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.odata.find_product_by_article": {
+    "title": {
+      "ru": "OData: найти товар по артикулу",
+      "en": "OData: find product by article",
+      "zh": "OData：按货号查找商品"
+    },
+    "description": {
+      "ru": "Пример второго OData Query step: другая connection, resource номенклатуры и save_as product.",
+      "en": "Second OData Query step example: another connection, product resource and save_as product.",
+      "zh": "第二个 OData 查询步骤示例：另一个连接、商品资源和 save_as product。"
+    },
+    "endpoint_slug": "odata-explorer",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "docs"
+    },
+    "body": {
+      "connection": "OData WMS",
+      "resource": "Catalog_Номенклатура",
+      "filter": "Артикул eq 'ABC-123' and DeletionMark eq false",
+      "select": [
+        "Ref_Key",
+        "Description",
+        "Артикул"
+      ],
+      "top": 1,
+      "save_as": "product"
+    },
+    "expected": {
+      "Ref_Key": "product-uuid",
+      "Description": "Плата ABC",
+      "Артикул": "ABC-123"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.odata.find_order_by_number": {
+    "title": {
+      "ru": "OData: найти заказ по номеру",
+      "en": "OData: find order by number",
+      "zh": "OData：按编号查找订单"
+    },
+    "description": {
+      "ru": "Пример запроса к Document_ЗаказКлиента с Number, Date и Контрагент_Key.",
+      "en": "Example query for Document_ЗаказКлиента with Number, Date and Контрагент_Key.",
+      "zh": "查询 Document_ЗаказКлиента 的示例，包含 Number、Date 和 Контрагент_Key。"
+    },
+    "endpoint_slug": "odata-explorer",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "docs"
+    },
+    "body": {
+      "connection": "OData ERP",
+      "resource": "Document_ЗаказКлиента",
+      "filter": "Number eq 'SO-1001'",
+      "select": [
+        "Ref_Key",
+        "Number",
+        "Date",
+        "Контрагент_Key"
+      ],
+      "top": 1,
+      "save_as": "last_order"
+    },
+    "expected": {
+      "Ref_Key": "order-uuid",
+      "Number": "SO-1001",
+      "Контрагент_Key": "contractor-uuid"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.odata.empty_result": {
+    "title": {
+      "ru": "OData: пустой результат",
+      "en": "OData: empty result",
+      "zh": "OData：空结果"
+    },
+    "description": {
+      "ru": "Отрицательный пример value: [] для тренировки диагностики filter/resource/connection.",
+      "en": "Negative value: [] example for diagnosing filter/resource/connection issues.",
+      "zh": "用于诊断过滤器/资源/连接问题的 value: [] 负面示例。"
+    },
+    "endpoint_slug": "odata-explorer",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "docs"
+    },
+    "body": {
+      "connection": "OData ERP",
+      "resource": "Catalog_Контрагенты",
+      "filter": "ИНН eq '0000000000' and DeletionMark eq false",
+      "select": [
+        "Ref_Key",
+        "Description",
+        "ИНН"
+      ],
+      "top": 1
+    },
+    "expected": {
+      "value": [],
+      "debug": [
+        "wrong OData connection",
+        "wrong field name",
+        "spaces in INN",
+        "object is deleted"
+      ]
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.odata.unauthorized": {
+    "title": {
+      "ru": "OData: ошибка авторизации 401",
+      "en": "OData: unauthorized 401",
+      "zh": "OData：401 未授权"
+    },
+    "description": {
+      "ru": "Пример ошибки доступа: неверный secret, пароль или права пользователя 1C.",
+      "en": "Access error example: wrong secret, password or 1C user permissions.",
+      "zh": "访问错误示例：密钥、密码或 1C 用户权限错误。"
+    },
+    "endpoint_slug": "odata-explorer",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "docs"
+    },
+    "body": {
+      "connection": "OData ERP",
+      "resource": "Catalog_Контрагенты",
+      "filter": "ИНН eq '7707083893'",
+      "select": [
+        "Ref_Key",
+        "Description",
+        "ИНН"
+      ],
+      "top": 1,
+      "simulate_error": "401"
+    },
+    "expected": {
+      "status": 401,
+      "error": "Unauthorized",
+      "fix": "check username/password/secret and 1C read permissions"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
   "onec.golden_scenario": {
     "title": {
       "ru": "Golden Scenario: 1C POST -> two OData lookups -> JSON -> external endpoint",

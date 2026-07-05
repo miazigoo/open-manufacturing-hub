@@ -43,10 +43,15 @@ const requiredTroubleshooting = [
   'onec-returned-401', 'odata-resource-not-found', 'contractor-not-found-by-inn', 'product-not-found',
   'target-api-returned-error', 'xml-parse-error', 'printer-unavailable', 'event-moved-to-dlq',
 ];
+const requiredODataCourse = [
+  'what-is-odata-for-omh', 'multiple-connections', 'select-connection-in-flow', 'filter-basics',
+  'select-top-orderby', 'use-result-json-builder', 'empty-result-debugging', 'odata-artifacts',
+];
 
 for (const slug of requiredAcademy) assert(onecAcademyContent.includes(`'${slug}'`) || onecAcademyContent.includes(`"${slug}"`), `required academy page missing: ${slug}`);
 for (const slug of requiredRecipes) assert(onecAcademyContent.includes(`"${slug}"`) || onecAcademyContent.includes(`'${slug}'`), `required recipe page missing: ${slug}`);
 for (const slug of requiredTroubleshooting) assert(onecAcademyContent.includes(`"${slug}"`) || onecAcademyContent.includes(`'${slug}'`), `required troubleshooting page missing: ${slug}`);
+for (const slug of requiredODataCourse) assert(onecContent.includes(`'${slug}'`) || onecContent.includes(`"${slug}"`), `required OData course page missing: ${slug}`);
 
 for (const forbidden of ['lorem ipsum', 'СКРИНШОТ ОТСУТСТВУЕТ']) {
   assert(!allDocsSource.toLowerCase().includes(forbidden.toLowerCase()), `forbidden placeholder text remains: ${forbidden}`);
@@ -102,6 +107,10 @@ assert(renderer.includes('[SCREENSHOT:') && renderer.includes('ScreenshotPlaceho
 assert(makefile.includes('docs-quality-check') && packageJson.scripts['docs:quality-check'], 'make docs-quality-check command is missing');
 assert(makefile.includes('docs-ru-language-check') && packageJson.scripts['docs:ru-language-check'], 'make docs-ru-language-check command is missing');
 assert(onecContent.includes("page('start-here', 'glossary'") && onecContent.includes('Глоссарий терминов для 1C'), 'Russian 1C glossary page is missing');
+assert(onecContent.includes("id: 'odata-course'") && onecContent.includes('Глубокий курс OData'), 'Task 045 OData deep course section is missing');
+for (const exampleId of ['onec.odata.find_contractor_by_inn', 'onec.odata.find_product_by_article', 'onec.odata.find_order_by_number', 'onec.odata.empty_result', 'onec.odata.unauthorized']) {
+  assert(examples[exampleId], `Task 045 OData example missing: ${exampleId}`);
+}
 for (const forbidden of ['## What you will build', '## Before you start', '## Что вы соберете', '## Перед началом']) {
   assert(!onecAcademyContent.includes(forbidden), `forbidden lesson heading remains: ${forbidden}`);
 }
