@@ -100,6 +100,11 @@ assert(search.includes('sectionTitle') && search.includes('snippet') && search.i
 assert(screenshotPlaceholder.includes('screenshotPending') && screenshotPlaceholder.includes('openSourcePage') && screenshotPlaceholder.includes('captureLater'), 'Screenshot placeholder copy/actions are incomplete');
 assert(renderer.includes('[SCREENSHOT:') && renderer.includes('ScreenshotPlaceholder'), 'MarkdownRenderer must render bracket screenshot placeholders');
 assert(makefile.includes('docs-quality-check') && packageJson.scripts['docs:quality-check'], 'make docs-quality-check command is missing');
+assert(makefile.includes('docs-ru-language-check') && packageJson.scripts['docs:ru-language-check'], 'make docs-ru-language-check command is missing');
+assert(onecContent.includes("page('start-here', 'glossary'") && onecContent.includes('Глоссарий терминов для 1C'), 'Russian 1C glossary page is missing');
+for (const forbidden of ['## What you will build', '## Before you start', '## Что вы соберете', '## Перед началом']) {
+  assert(!onecAcademyContent.includes(forbidden), `forbidden lesson heading remains: ${forbidden}`);
+}
 assert(existsSync(path.join(repoRoot, 'docs/documentation-quality-checklist.md')), 'documentation quality checklist file is missing');
 
 console.log(`[docs-quality-check] ${requiredAcademy.length} academy pages, ${requiredRecipes.length} recipes, ${requiredTroubleshooting.length} troubleshooting playbooks, ${docsLinks.size} docs links and ${assetRefs.size} screenshot assets verified`);

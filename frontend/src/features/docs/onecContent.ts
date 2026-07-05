@@ -135,7 +135,7 @@ const beginnerPath = page('start-here', 'beginner-path', 'Начните зде�
   '',
   'Главное правило: **не начинайте с большого pipeline**. Сначала сделайте один маленький обмен, убедитесь что он виден в Timeline, и только потом добавляйте lookup, правила, печать или production retry.',
   '',
-  '## Что вы соберете за 20-30 минут',
+  '## Что вы настроите за 20-30 минут',
   '',
   '```text',
   '1C отправляет JSON в OMH',
@@ -233,7 +233,7 @@ const beginnerPath = page('start-here', 'beginner-path', 'Начните зде�
   '::checklist{id="onec-beginner-path" items="Понял endpoint и token|Создал OData profile|Проверил metadata|Проверил resource в Explorer|Запустил пример в Test Console|Открыл Timeline|Нашел artifacts"}',
 ));
 
-const startIn15Minutes = page('start-here', 'start-in-15-minutes', 'Start in 15 minutes', 'Короткий маршрут: что открыть, что создать и какой тест увидеть первым.', 5, md(
+const startIn15Minutes = page('start-here', 'start-in-15-minutes', 'Старт за 15 минут', 'Короткий маршрут: что открыть, что создать и какой тест увидеть первым.', 5, md(
   '# Старт за 15 минут',
   '',
   'Цель этой страницы — получить первый рабочий результат без разработчика: 1C-style JSON попадает в OMH, OMH читает данные из 1C OData, собирает target JSON, а пользователь видит Timeline и artifacts.',
@@ -241,12 +241,12 @@ const startIn15Minutes = page('start-here', 'start-in-15-minutes', 'Start in 15 
   'Не пытайтесь сразу строить весь production pipeline. За 15 минут нужен короткий proof: OMH умеет достучаться до 1C, найти контрагента и показать результат выполнения.',
   '',
   '## Что вы создадите',
-  '1. OData ERP connection.',
-  '2. Integration endpoint.',
-  '3. One OData lookup.',
-  '4. Target JSON.',
-  '5. Test request.',
-  '6. Timeline result.',
+  '1. OData-подключение `OData ERP`.',
+  '2. Входную точку интеграции.',
+  '3. Одну выборку OData.',
+  '4. Целевой JSON.',
+  '5. Тестовый запрос.',
+  '6. Результат в Timeline.',
   '',
   '## Учебный payload',
   '```json',
@@ -298,8 +298,8 @@ const startIn15Minutes = page('start-here', 'start-in-15-minutes', 'Start in 15 
   '::next-lesson{label="Создать OData Connection" href="/docs/onec/academy/create-odata-connection"}',
 ));
 
-const whatYouWillBuild = page('start-here', 'what-you-will-build', 'Что вы соберете', 'Один общий Golden Scenario, который повторяется во всей академии.', 6, md(
-  '# Что вы соберете',
+const whatYouWillBuild = page('start-here', 'what-you-will-build', 'Что вы настроите в учебном сценарии', 'Один общий Golden Scenario, который повторяется во всей академии.', 6, md(
+  '# Что вы настроите в учебном сценарии',
   '',
   'Вся 1C Integration Academy построена вокруг одного сценария, чтобы пользователь не учил разрозненные примеры.',
   '',
@@ -354,7 +354,7 @@ const whatYouWillBuild = page('start-here', 'what-you-will-build', 'Что вы 
   '::next-lesson{label="Базовые понятия для пользователей 1C" href="/docs/onec/start-here/concepts"}',
 ));
 
-const onecConcepts = page('start-here', 'concepts', 'Basic concepts for 1C users', 'Endpoint, OData Connection, Connector, Flow, Step, Variable, Timeline, Artifact и DLQ простыми словами.', 7, md(
+const onecConcepts = page('start-here', 'concepts', 'Базовые понятия для пользователя 1C', 'Endpoint, OData Connection, Connector, Flow, Step, Variable, Timeline, Artifact и DLQ простыми словами.', 7, md(
   '# Базовые понятия для пользователей 1C',
   '',
   'Эта страница нужна, чтобы пользователь 1C одинаково понимал слова в UI, уроках и Timeline.',
@@ -428,7 +428,56 @@ const onecConcepts = page('start-here', 'concepts', 'Basic concepts for 1C users
   '## DLQ',
   'DLQ — Dead Letter Queue. Это место, куда попадает событие, если OMH не смог обработать его после retry или ошибка требует ручного исправления.',
   '',
-  '::next-lesson{label="Урок 01 — Что такое OMH для пользователей 1C" href="/docs/onec/academy/lesson-01-what-is-omh-for-1c-users"}',
+  '::next-lesson{label="Урок 01 — Разбираемся, как OMH помогает пользователю 1С" href="/docs/onec/academy/lesson-01-what-is-omh-for-1c-users"}',
+));
+
+const terminologyGlossary = page('start-here', 'glossary', 'Глоссарий терминов для 1C', 'Перевод продуктовых терминов OMH на язык пользователя 1C.', 8, md(
+  '# Глоссарий терминов для 1C',
+  '',
+  'Эта страница нужна, чтобы пользователь видел в UI английский продуктовый термин и сразу понимал, что он означает в настройке обмена с 1C. Термины вроде OData, JSON, XML, Timeline, Dry Run, Replay и Endpoint остаются в продукте, но ниже объяснены человеческим языком.',
+  '',
+  '## Как пользоваться глоссарием',
+  '1. Найдите слово, которое видите в интерфейсе OMH.',
+  '2. Посмотрите русскую метку — так этот объект лучше называть в проектной документации клиента.',
+  '3. Прочитайте пример, чтобы понять, где термин встречается в реальном обмене.',
+  '',
+  '| Термин в продукте | Русская метка | Простое объяснение | Пример в 1C-интеграции |',
+  '| --- | --- | --- | --- |',
+  '| Endpoint | Входная точка | URL, куда 1C отправляет запрос | `POST /api/bus/in/onec-pool-to-dnp` |',
+  '| Integration Flow | Интеграционный поток | Настроенный сценарий обмена | Принять JSON, найти контрагента, собрать ответ |',
+  '| OData Connection | OData-подключение | Сохранённое подключение к конкретной базе 1C | `OData ERP` с URL `/odata/standard.odata` |',
+  '| Lookup | Выборка / поиск | Запрос в 1C для поиска объекта | Найти контрагента по ИНН |',
+  '| Resolver | Резолвер | Переиспользуемый бизнес-поиск | Единое правило поиска номенклатуры по SKU, GTIN или артикулу |',
+  '| Artifact | Артефакт | Сохранённый request/response шага | `odata.contractor.response.json` в Timeline |',
+  '| Timeline | Timeline / история события | Последовательность шагов обработки | Входной запрос, OData, сборка JSON, вызов API |',
+  '| DLQ | Очередь ручного разбора | События, которые автоматом не обработались | Ошибка не исправилась после retry, событие ждёт человека |',
+  '',
+  '## Термины, которые не переводим в UI',
+  '- **OData** — стандартный HTTP-интерфейс 1C для чтения справочников, документов и регистров. В OMH пользователь выбирает OData-подключение, ресурс и фильтр.',
+  '- **JSON** — текстовый формат данных. Чаще всего 1C отправляет JSON в OMH, а OMH собирает целевой JSON для внешнего API.',
+  '- **XML** — формат обмена, который часто встречается в старых 1C-интеграциях. OMH умеет сохранять raw XML и разбирать поля.',
+  '- **Timeline** — история обработки одного события. Если обмен не работает, сначала открывайте Timeline.',
+  '- **Dry Run** — безопасный пробный запуск без реального вызова внешней системы, когда нужно проверить фильтры и JSON.',
+  '- **Replay** — повтор события после исправления данных или настройки.',
+  '- **Endpoint** — входная точка. Термин оставлен в UI, потому что он совпадает с API-документацией и URL-контрактом.',
+  '',
+  '## Мини-пример на одном обмене',
+  '```text',
+  '1C отправляет JSON в Endpoint',
+  'OMH запускает Integration Flow',
+  'Flow делает OData Lookup контрагента',
+  'Flow сохраняет Artifact с ответом OData',
+  'Timeline показывает все шаги',
+  'Если ошибка не исправилась автоматически, событие попадает в DLQ',
+  '```',
+  '',
+  '## Как говорить с заказчиком',
+  '- Вместо “создаём endpoint” можно говорить “создаём входную точку, куда 1C будет отправлять запрос”.',
+  '- Вместо “добавляем lookup” можно говорить “добавляем поиск контрагента в 1C по ИНН”.',
+  '- Вместо “смотрим artifacts” можно говорить “открываем сохранённые запросы и ответы каждого шага”.',
+  '- Вместо “делаем replay” можно говорить “повторяем событие после исправления данных”.',
+  '',
+  '::next-lesson{label="Начать первый понятный обмен с 1C" href="/docs/onec/start-here/beginner-path"}',
 ));
 
 const overview = page('overview', 'overview', 'Обзор 1C Package', 'OData, HTTP-сервисы, XML, печать, Flow Builder и diagnostics.', 10, md(
@@ -961,7 +1010,7 @@ export const onecPackageSeed: PackageSeed = {
   order: 20,
   accent: 'green',
   sections: [
-    { id: 'start-here', title: 'Start Here', description: 'Первый понятный маршрут для пользователя без опыта интеграций.', order: 5, pages: [startIn15Minutes, whatYouWillBuild, onecConcepts, beginnerPath] },
+    { id: 'start-here', title: 'Начните здесь', description: 'Первый понятный маршрут для пользователя без опыта интеграций.', order: 5, pages: [startIn15Minutes, whatYouWillBuild, onecConcepts, terminologyGlossary, beginnerPath] },
     { id: 'overview', title: 'Обзор 1C', description: 'Что дает 1C package и где он заканчивается.', order: 10, pages: [overview] },
     { id: 'academy', title: 'Академия интеграции 1C', description: 'Пошаговое обучение: от OData profile до production checklist.', order: 15, pages: [...academyPackAPages, ...academyPackBPages, ...academyPages] },
     { id: 'recipes', title: 'Practical Recipes', description: 'Практические рецепты с endpoints, payload, UI-настройкой и диагностикой.', order: 17, pages: recipePages },

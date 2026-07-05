@@ -7,7 +7,7 @@ const frontendDir = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(frontendDir, '..');
 
 const requiredPages = [
-  'start-here/start-in-15-minutes', 'start-here/what-you-will-build', 'start-here/concepts', 'start-here/beginner-path',
+  'start-here/start-in-15-minutes', 'start-here/what-you-will-build', 'start-here/concepts', 'start-here/glossary', 'start-here/beginner-path',
   'academy/create-odata-connection', 'academy/test-odata-explorer', 'academy/find-contractor-by-inn',
   'academy/lesson-01-what-is-omh-for-1c-users', 'academy/lesson-02-create-odata-connection',
   'academy/lesson-03-test-odata-in-odata-explorer', 'academy/lesson-04-create-inbound-endpoint-for-1c-post',
@@ -66,6 +66,8 @@ const odataConnectionsPage = read('frontend/src/pages/ODataConnectionsPage.tsx')
 const odataExplorerPage = read('frontend/src/pages/ODataExplorerPage.tsx');
 const odataLookupBlockEditor = read('frontend/src/components/integration/ODataLookupBlockEditor.tsx');
 const service = read('backend/app/docs_portal/service.py');
+const makefile = read('Makefile');
+const packageJson = readJson('frontend/package.json');
 const assets = readJson('frontend/src/docs/assets/index.json');
 const annotations = readJson('frontend/src/docs/assets/annotations.json');
 const examples = readJson('frontend/src/docs/examples/index.json');
@@ -109,13 +111,21 @@ assert(docsSearch.includes('sectionTitle') && docsSearch.includes('snippet') && 
 assert(screenshotPlaceholder.includes('screenshotPending') && screenshotPlaceholder.includes('openSourcePage') && screenshotPlaceholder.includes('captureLater'), 'Task 043 screenshot placeholder must be user-friendly');
 assert(testConsolePage.includes('responseEmptyTitle') && testConsolePage.includes('endpointDisplayName') && !testConsolePage.includes('Not Found'), 'Task 043 Test Console empty state and endpoint labels are incomplete');
 assert(onecContent.includes('Endpoint | URL в OMH') && onecContent.includes('Первый тестовый запрос'), '1C beginner path must explain basics in plain language');
+assert(onecContent.includes("page('start-here', 'glossary'") && onecContent.includes('| Endpoint | Входная точка | URL, куда 1C отправляет запрос |'), '1C glossary page must explain product terms in Russian');
 assert(onecContent.includes('OData filters, field selection and chaining') && onecContent.includes('{{contractor.Ref_Key}}') && onecContent.includes('steps.get_contractor.first.Ref_Key'), '1C docs must explain OData field selection and chaining');
-for (const heading of ['## Что вы соберете', '## Зачем это нужно', '## Перед началом', '## Пошаговая настройка', '## Пример значений', '## Что должно получиться', '## Проверьте себя', '## Частые ошибки', '## Следующий урок']) {
+for (const heading of ['## Что вы настроите', '## Зачем это нужно', '## Что нужно заранее', '## Пошаговая настройка', '## Пример значений', '## Что должно получиться', '## Проверьте себя', '## Частые ошибки', '## Следующий урок']) {
   assert(onecAcademyContent.includes(heading), `academy lesson template missing heading: ${heading}`);
+}
+for (const forbidden of ['## Что вы соберете', '## Перед началом', '## What you will build', '## Before you start']) {
+  assert(!onecAcademyContent.includes(forbidden), `academy lesson template contains forbidden heading: ${forbidden}`);
 }
 for (const concept of ['## Endpoint', '## OData Connection', '## Connector', '## Integration Flow', '## Шаг', '## Variable', '## Timeline', '## Artifact', '## DLQ']) {
   assert(onecContent.includes(concept), `1C glossary missing concept: ${concept}`);
 }
+for (const lessonTitle of ['Урок 02 — Создаём OData-подключение к 1С', 'Урок 06 — Первая выборка OData: ищем контрагента по ИНН']) {
+  assert(onecAcademyContent.includes(lessonTitle) && service.includes(lessonTitle), `localized lesson title missing: ${lessonTitle}`);
+}
+assert(makefile.includes('docs-ru-language-check') && packageJson.scripts['docs:ru-language-check'], 'make docs-ru-language-check command is missing');
 assert(onecDocsContent.includes('Golden Scenario') && onecDocsContent.includes('1C POST -> two OData lookups -> JSON -> external endpoint'), 'Golden Scenario must be defined in docs');
 assert(onecDocsContent.includes('7707083893') && onecDocsContent.includes('POOL-001') && onecDocsContent.includes('contractor-ref-key'), 'Golden Scenario payload and target JSON must be present');
 assert(onecContent.includes('"codes": [') && onecContent.includes('"code1"') && onecContent.includes('"code2"'), 'Start in 15 minutes must include exact task 040 training payload');

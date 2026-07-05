@@ -226,7 +226,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/test-console', '/test-console?exampleId=onec.two_odata_to_json_endpoint', '/odata-connections', '/odata-explorer', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
     '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
     '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
-    '/docs/onec/start-here/start-in-15-minutes', '/docs/onec/start-here/what-you-will-build', '/docs/onec/start-here/concepts', '/docs/onec/start-here/beginner-path',
+    '/docs/onec/start-here/start-in-15-minutes', '/docs/onec/start-here/what-you-will-build', '/docs/onec/start-here/concepts', '/docs/onec/start-here/glossary', '/docs/onec/start-here/beginner-path',
     '/docs/onec/academy/create-odata-connection', '/docs/onec/academy/test-odata-explorer', '/docs/onec/academy/find-contractor-by-inn',
     '/docs/onec/academy/create-inbound-endpoint', '/docs/onec/academy/read-request-fields',
     '/docs/onec/academy/first-odata-query-contractor', '/docs/onec/academy/second-odata-query-product',
@@ -283,7 +283,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
 
   await gotoRoute(page, uiBase, '/docs/onec/start-here/start-in-15-minutes');
   const start15Text = await page.locator('body').innerText();
-  for (const required of ['OData ERP connection', 'Integration endpoint', 'One OData lookup', 'Target JSON', 'code1', 'code2', 'Timeline opened']) {
+  for (const required of ['OData-подключение OData ERP', 'Входную точку интеграции', 'Одну выборку OData', 'Целевой JSON', 'code1', 'code2', 'Timeline opened']) {
     if (!start15Text.includes(required)) fail('PACK_A_START_15', required);
   }
 
@@ -393,12 +393,18 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (!(await page.locator('.docs-next-lesson').count())) fail('ACADEMY_NEXT_LESSON', 'Academy next lesson block is missing');
   if (!(await page.locator('.docs-checklist-score').count()) || !(await page.locator('.docs-checklist-progress').count())) fail('ACADEMY_CHECKLIST_PROGRESS', 'Academy checklist percent/progress is missing');
   const academyText = await page.locator('body').innerText();
-  if (!academyText.includes('Golden Scenario') || !academyText.includes('Пошаговая настройка')) fail('ACADEMY_TEMPLATE_COPY', 'Academy lesson does not render required curriculum structure');
+  if (!academyText.includes('Golden Scenario') || !academyText.includes('Что вы настроите') || !academyText.includes('Что нужно заранее') || !academyText.includes('Пошаговая настройка')) fail('ACADEMY_TEMPLATE_COPY', 'Academy lesson does not render required curriculum structure');
 
   await gotoRoute(page, uiBase, '/docs/onec/start-here/concepts');
   const conceptsText = await page.locator('body').innerText();
   for (const concept of ['Endpoint', 'OData Connection', 'Connector', 'Integration Flow', 'Variable', 'Timeline', 'Artifact', 'DLQ']) {
     if (!conceptsText.includes(concept)) fail('DOCS_CONCEPT_MISSING', concept);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/start-here/glossary');
+  const glossaryText = await page.locator('body').innerText();
+  for (const term of ['Глоссарий терминов для 1C', 'Входная точка', 'OData-подключение', 'Очередь ручного разбора', 'Dry Run']) {
+    if (!glossaryText.includes(term)) fail('DOCS_GLOSSARY_MISSING', term);
   }
 
   await gotoRoute(page, uiBase, '/test-console');

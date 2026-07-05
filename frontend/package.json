@@ -16,7 +16,8 @@
     "docs:examples-check": "cd .. && backend/.venv/bin/python backend/scripts/check_docs_examples.py",
     "i18n:missing": "node scripts/i18n-missing-check.mjs",
     "i18n:check": "node scripts/check-hardcoded-text.mjs",
-    "docs:quality-check": "node scripts/docs-quality-check.mjs"
+    "docs:quality-check": "node scripts/docs-quality-check.mjs",
+    "docs:ru-language-check": "node scripts/docs-ru-language-check.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.83.0",

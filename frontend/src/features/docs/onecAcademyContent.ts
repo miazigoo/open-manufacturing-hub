@@ -67,13 +67,13 @@ function lesson(config: LessonConfig): PageSeed {
 
 ::concept-callout{title="Golden Scenario" body="${goldenScenarioIntro.replace(/"/g, '&quot;').replace(/\n/g, ' ')}"}
 
-## Что вы соберете
+## Что вы настроите
 ${config.build}
 
 ## Зачем это нужно
 ${config.why}
 
-## Перед началом
+## Что нужно заранее
 ${config.before.map((item) => `- ${item}`).join('\n')}
 
 ## Пошаговая настройка
@@ -103,12 +103,12 @@ const defaultBefore = [
 ];
 
 export const academyPackAPages: PageSeed[] = [
-  page('academy', 'create-odata-connection', 'Создание OData Connection', 'Подробный урок: создать OData ERP connection, понять поля формы, secrets и healthcheck.', 21, mdLines(
-    '# Создание OData Connection',
+  page('academy', 'create-odata-connection', 'Создаём OData-подключение к 1С', 'Подробный урок: создать OData ERP connection, понять поля формы, secrets и healthcheck.', 21, mdLines(
+    '# Создаём OData-подключение к 1С',
     '',
     '::lesson-page{label="Пакет уроков A · Основы OData"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы создадите OData Connection `OData ERP`. Это сохраненное подключение к конкретной базе 1C, через которое OMH будет читать контрагентов, товары и документы.',
     '',
     '## Зачем это нужно',
@@ -116,7 +116,7 @@ export const academyPackAPages: PageSeed[] = [
     '',
     'OData Connection — это не generic Connector. Generic Connector может описывать REST API, принтер или другой внешний сервис. OData Connection всегда отвечает на вопрос: **в какую базу 1C OMH идет за данными**. В Golden Scenario OMH выбирает `OData ERP`, ищет контрагента по ИНН, потом ищет товар по артикулу.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Пакет 1C установлен и enabled.',
     '- Администратор 1C опубликовал OData: обычно URL заканчивается на `/odata/standard.odata`.',
     '- У вас есть пользователь 1C для обмена, например `exchange_user`.',
@@ -182,18 +182,18 @@ export const academyPackAPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Проверить OData в OData Explorer" href="/docs/onec/academy/test-odata-explorer"}',
   )),
-  page('academy', 'test-odata-explorer', 'Проверка OData в OData Explorer', 'Подробный урок: выбрать OData ERP, загрузить resources и выполнить первый безопасный query.', 31, mdLines(
-    '# Проверка OData в OData Explorer',
+  page('academy', 'test-odata-explorer', 'Проверяем OData-запрос в OData Explorer', 'Подробный урок: выбрать OData ERP, загрузить resources и выполнить первый безопасный query.', 31, mdLines(
+    '# Проверяем OData-запрос в OData Explorer',
     '',
     '::lesson-page{label="Пакет уроков A · Основы OData"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы проверите, что OMH действительно может читать данные из 1C через созданную connection `OData ERP`.',
     '',
     '## Зачем это нужно',
     'Если простой запрос `Catalog_Контрагенты?$top=5` не работает в OData Explorer, не нужно строить pipeline. Сначала чините connection, публикацию OData, права пользователя или имя ресурса.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Создана OData Connection `OData ERP`.',
     '- `Test $metadata` возвращает OK.',
     '- В 1C есть хотя бы несколько контрагентов, доступных пользователю `exchange_user`.',
@@ -242,18 +242,18 @@ export const academyPackAPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Найти контрагента по ИНН" href="/docs/onec/academy/find-contractor-by-inn"}',
   )),
-  page('academy', 'find-contractor-by-inn', 'Поиск контрагента по ИНН', 'Подробный урок: найти контрагента по ИНН, понять Ref_Key и подготовить lookup для pipeline.', 41, mdLines(
-    '# Поиск контрагента по ИНН',
+  page('academy', 'find-contractor-by-inn', 'Ищем контрагента по ИНН', 'Подробный урок: найти контрагента по ИНН, понять Ref_Key и подготовить lookup для pipeline.', 41, mdLines(
+    '# Ищем контрагента по ИНН',
     '',
     '::lesson-page{label="Пакет уроков A · Основы OData"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы выполните конкретный lookup: OMH берет ИНН `7707083893`, отправляет OData filter в `Catalog_Контрагенты` и получает `Ref_Key`, `Description`, `ИНН`.',
     '',
     '## Зачем это нужно',
     'В 1C человек видит контрагента по названию и ИНН, но внутренние операции часто требуют `Ref_Key`. `Ref_Key` — это UUID, которым 1C обычно идентифицирует объект внутри базы. Именно его часто нужно передавать в следующий OData запрос, HTTP-сервис 1C или внешний API.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Запрос `Catalog_Контрагенты?$top=5` уже работает.',
     '- Вы знаете точное имя поля ИНН в вашей 1C publication. В типовом учебном примере это `ИНН`.',
     '- В базе есть контрагент с ИНН `7707083893` или вы заменили значение на реальный ИНН из вашей базы.',
@@ -321,23 +321,23 @@ export const academyPackAPages: PageSeed[] = [
     '::common-mistakes{items="INN содержит пробелы или невидимые символы|Неверное имя поля: в вашей базе это может быть ИНН, INN или другое metadata name|Выбран wrong catalog или wrong OData base|Контрагент находится в другой 1C базе|OData user не имеет прав видеть справочник|Ищут по Description, хотя в Golden Scenario входной ключ — INN"}',
     '',
     '## Следующий урок',
-    '::next-lesson{label="Создать входящий endpoint для 1C POST" href="/docs/onec/academy/lesson-04-create-inbound-endpoint-for-1c-post"}',
+    '::next-lesson{label="Создать входную точку для POST-запроса из 1С" href="/docs/onec/academy/lesson-04-create-inbound-endpoint-for-1c-post"}',
   )),
 ];
 
 export const academyPackBPages: PageSeed[] = [
-  page('academy', 'create-inbound-endpoint', 'Создание входящего endpoint для 1C POST', 'Создать URL, куда 1C отправляет Golden Scenario payload.', 51, mdLines(
-    '# Создание входящего endpoint для 1C POST',
+  page('academy', 'create-inbound-endpoint', 'Создаём входную точку для POST-запроса из 1С', 'Создать URL, куда 1C отправляет Golden Scenario payload.', 51, mdLines(
+    '# Создаём входную точку для POST-запроса из 1С',
     '',
     '::lesson-page{label="Пакет уроков B · Flow Builder"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы создадите inbound endpoint `onec-pool-to-dnp`. Это URL в OMH, куда 1C отправляет POST request с `inn`, `product_code`, `pool_id` и `codes`.',
     '',
     '## Зачем это нужно',
     'Endpoint is the URL where 1C sends request. Без endpoint у 1C нет стабильного адреса, а у OMH нет понятного контракта: какой метод, какой body type, какой response mode и нужна ли защита token.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Пакет 1C установлен и enabled.',
     '- Вы понимаете training payload из Start in 15 minutes.',
     '- Для production решено, нужен ли static token.',
@@ -409,18 +409,18 @@ export const academyPackBPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Прочитать значения из входящего запроса" href="/docs/onec/academy/read-request-fields"}',
   )),
-  page('academy', 'read-request-fields', 'Чтение значений из входящего запроса', 'Прочитать inn, product_code, pool_id и codes из request.body.', 61, mdLines(
-    '# Чтение значений из входящего запроса',
+  page('academy', 'read-request-fields', 'Читаем значения из входящего запроса', 'Прочитать inn, product_code, pool_id и codes из request.body.', 61, mdLines(
+    '# Читаем значения из входящего запроса',
     '',
     '::lesson-page{label="Пакет уроков B · Flow Builder"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы добавите read-field шаги, чтобы flow получил named values: `inn`, `product_code`, `pool_id`, `codes`.',
     '',
     '## Зачем это нужно',
     'OData query и JSON Builder не должны каждый раз разбирать сырой request. Flow сначала читает значения из `request.body`, дает им понятные имена и только потом использует их в OData filters и target JSON.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Endpoint `onec-pool-to-dnp` создан.',
     '- В Visual Flow Builder открыт sample request.',
     '- Вы знаете, что request body является JSON object.',
@@ -477,18 +477,18 @@ export const academyPackBPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Добавить первый OData-запрос" href="/docs/onec/academy/first-odata-query-contractor"}',
   )),
-  page('academy', 'first-odata-query-contractor', 'Первый OData-запрос: контрагент по ИНН', 'Настроить первый OData Query step и сохранить результат как contractor.', 71, mdLines(
-    '# Первый OData-запрос: контрагент по ИНН',
+  page('academy', 'first-odata-query-contractor', 'Первая выборка OData: контрагент по ИНН', 'Настроить первый OData Query step и сохранить результат как contractor.', 71, mdLines(
+    '# Первая выборка OData: контрагент по ИНН',
     '',
     '::lesson-page{label="Пакет уроков B · Flow Builder"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы добавите OData query #1: OMH берет `request.body.inn`, ищет контрагента в `Catalog_Контрагенты` и сохраняет найденную строку как `contractor`.',
     '',
     '## Зачем это нужно',
     '`Save result as` превращает ответ OData в named variable. После этого JSON Builder сможет взять `contractor.Ref_Key` и `contractor.Description`, не обращаясь снова к raw OData response.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Создана OData Connection `OData ERP`.',
     '- В OData Explorer работает query contractor by INN.',
     '- В flow уже прочитан `inn` из `request.body.inn`.',
@@ -563,18 +563,18 @@ export const academyPackBPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Добавить второй OData-запрос" href="/docs/onec/academy/second-odata-query-product"}',
   )),
-  page('academy', 'second-odata-query-product', 'Второй OData-запрос: товар по артикулу', 'Настроить второй OData Query step и сохранить результат как product.', 81, mdLines(
-    '# Второй OData-запрос: товар по артикулу',
+  page('academy', 'second-odata-query-product', 'Вторая выборка OData: товар по артикулу', 'Настроить второй OData Query step и сохранить результат как product.', 81, mdLines(
+    '# Вторая выборка OData: товар по артикулу',
     '',
     '::lesson-page{label="Пакет уроков B · Flow Builder"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы добавите OData query #2: OMH берет `request.body.product_code`, ищет товар в `Catalog_Номенклатура` и сохраняет найденную строку как `product`.',
     '',
     '## Зачем это нужно',
     'Second OData connection can be different. Например, contractor может жить в ERP, а product — в WMS или УСП. Поэтому второй OData step должен явно показывать, какую базу он использует.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Первый OData query сохраняет `contractor`.',
     '- В flow уже есть `product_code`.',
     '- В OData Explorer проверен resource номенклатуры и field `Артикул`.',
@@ -641,20 +641,20 @@ export const academyPackBPages: PageSeed[] = [
     '::common-mistakes{items="Случайно сохранить второй результат как contractor и перезаписать первый lookup|Искать product в ERP, хотя он лежит в WMS|Использовать field Code вместо Артикул без проверки metadata|Не включить Required|Не ограничить $select"}',
     '',
     '## Следующий урок',
-    '::next-lesson{label="Собрать target JSON" href="/docs/onec/academy/build-target-json"}',
+    '::next-lesson{label="Собрать целевой JSON" href="/docs/onec/academy/build-target-json"}',
   )),
-  page('academy', 'build-target-json', 'Сборка target JSON', 'Собрать target_payload из request fields, contractor и product.', 91, mdLines(
-    '# Сборка target JSON',
+  page('academy', 'build-target-json', 'Собираем целевой JSON', 'Собрать target_payload из request fields, contractor и product.', 91, mdLines(
+    '# Собираем целевой JSON',
     '',
     '::lesson-page{label="Пакет уроков B · Flow Builder"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы соберете `target_payload` для DNP API. В нем `pool_id` и `codes` приходят из 1C request, contractor fields приходят из первого OData query, product fields — из второго OData query.',
     '',
     '## Зачем это нужно',
     'JSON Builder фиксирует contract внешнего API. Он не должен отправлять наружу весь raw request или весь raw OData response. Он должен собрать ровно те поля, которые target API ожидает.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Есть variables `contractor` и `product`.',
     '- Есть request fields `pool_id` и `codes`.',
     '- Известна схема target API.',
@@ -717,18 +717,18 @@ export const academyPackBPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Отправить во внешний API" href="/docs/onec/academy/send-to-external-api"}',
   )),
-  page('academy', 'send-to-external-api', 'Отправка во внешний API', 'Отправить target_payload во внешний DNP/API endpoint.', 101, mdLines(
-    '# Отправка во внешний API',
+  page('academy', 'send-to-external-api', 'Отправляем JSON во внешний API', 'Отправить target_payload во внешний DNP/API endpoint.', 101, mdLines(
+    '# Отправляем JSON во внешний API',
     '',
     '::lesson-page{label="Пакет уроков B · Flow Builder"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы добавите target step: OMH отправляет `target_payload` методом POST во внешний сервис `DNP Service`.',
     '',
     '## Зачем это нужно',
     'Flow должен не только собрать JSON, но и отправить его контролируемо: с base URL, headers, token secret, timeout, target.request artifact и target.response artifact.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Создан REST connector или target connector `DNP Service`.',
     '- Target API path известен: `/api/marking/pools`.',
     '- Secret для token создан, если API требует Authorization.',
@@ -793,20 +793,20 @@ export const academyPackBPages: PageSeed[] = [
     '::common-mistakes{items="Хранить target token raw в flow config|Отправлять request.body вместо target_payload|Не указывать Content-Type application/json|Слишком длинный sync timeout для 1C пользователя|Не сохранять target.response artifact"}',
     '',
     '## Следующий урок',
-    '::next-lesson{label="Проверить весь flow" href="/docs/onec/academy/test-full-flow"}',
+    '::next-lesson{label="Проверить весь интеграционный поток" href="/docs/onec/academy/test-full-flow"}',
   )),
-  page('academy', 'test-full-flow', 'Проверка всего flow', 'Прогнать весь flow: Test Console, Dry Run, Send и Timeline.', 111, mdLines(
-    '# Проверка всего flow',
+  page('academy', 'test-full-flow', 'Проверяем весь интеграционный поток', 'Прогнать весь flow: Test Console, Dry Run, Send и Timeline.', 111, mdLines(
+    '# Проверяем весь интеграционный поток',
     '',
     '::lesson-page{label="Пакет уроков B · Flow Builder"}',
     '',
-    '## Что вы соберете',
+    '## Что вы настроите',
     'Вы выполните end-to-end test Golden Scenario: 1C POST payload проходит read fields, two OData queries, JSON Builder, target API call и Timeline.',
     '',
     '## Зачем это нужно',
     'Настройка считается понятной только когда пользователь может сам отправить test request, увидеть target JSON preview, открыть Timeline и объяснить artifacts каждого шага.',
     '',
-    '## Перед началом',
+    '## Что нужно заранее',
     '- Endpoint создан.',
     '- Read fields настроены.',
     '- Contractor OData query настроен.',
@@ -870,7 +870,7 @@ export const academyPackBPages: PageSeed[] = [
     '::common-mistakes{items="Нажать Send без Dry Run|Проверить только HTTP response и не открыть Timeline|Не проверить target_payload artifact|Не проверить оба OData response|Делать retry, не поняв failed step"}',
     '',
     '## Следующий урок',
-    '::next-lesson{label="Прочитать Timeline и artifacts" href="/docs/onec/academy/lesson-11-read-timeline-and-artifacts"}',
+    '::next-lesson{label="Прочитать Timeline и артефакты" href="/docs/onec/academy/lesson-11-read-timeline-and-artifacts"}',
   )),
 ];
 
@@ -878,7 +878,7 @@ export const academyPages: PageSeed[] = [
   lesson({
     slug: 'lesson-01-what-is-omh-for-1c-users',
     order: 10,
-    title: 'Урок 01 — Что такое OMH для пользователей 1C',
+    title: 'Урок 01 — Разбираемся, как OMH помогает пользователю 1С',
     description: 'Карта продукта для 1C пользователя: endpoint, OData connection, flow, timeline и artifact.',
     build: 'Вы соберете понятную карту: где 1C отправляет POST, где OMH читает поля, где выполняются два OData lookup, где собирается JSON и где смотреть результат.',
     why: 'Новичок должен сначала понять роли экранов. OData Connection не равен endpoint, endpoint не равен Flow, а Timeline не просто лог. Это рабочая карта внедрения.',
@@ -911,12 +911,12 @@ export const academyPages: PageSeed[] = [
       'Путать входной token endpoint с логином/паролем OData.'
     ],
     checklist: ['Понял Endpoint', 'Понял OData Connection', 'Понял Integration Flow', 'Понял Timeline', 'Понял Artifact'],
-    next: '[Урок 02 — Создание OData connection](/docs/onec/academy/lesson-02-create-odata-connection).'
+    next: '[Урок 02 — Создаём OData-подключение к 1С](/docs/onec/academy/lesson-02-create-odata-connection).'
   }),
   lesson({
     slug: 'lesson-02-create-odata-connection',
     order: 20,
-    title: 'Урок 02 — Создание OData connection',
+    title: 'Урок 02 — Создаём OData-подключение к 1С',
     description: 'Создание named OData profile для ERP, WMS или УСП.',
     build: 'Вы создадите saved connection `OData ERP training`, которую следующие уроки будут выбирать из списка, а не вводить руками каждый раз.',
     why: 'Named connection делает интеграцию предсказуемой. В flow видно, в какую базу идет lookup, кто владелец credentials и где проверять metadata.',
@@ -953,12 +953,12 @@ export const academyPages: PageSeed[] = [
       'Оставлять пароль `123` в production вместо Secrets Store.'
     ],
     checklist: ['Создал OData connection', 'Проверил base URL', 'Проверил $metadata', 'Понял где хранить пароль'],
-    next: '[Урок 03 — Проверка OData в OData Explorer](/docs/onec/academy/lesson-03-test-odata-in-odata-explorer).'
+    next: '[Урок 03 — Проверяем OData-запрос в OData Explorer](/docs/onec/academy/lesson-03-test-odata-in-odata-explorer).'
   }),
   lesson({
     slug: 'lesson-03-test-odata-in-odata-explorer',
     order: 30,
-    title: 'Урок 03 — Проверка OData в OData Explorer',
+    title: 'Урок 03 — Проверяем OData-запрос в OData Explorer',
     description: 'Проверка resource, filter, select и sample response до настройки flow.',
     build: 'Вы выполните первый запрос к `Catalog_Контрагенты` и сохраните точные поля, которые потом нужны для contractor lookup.',
     why: 'Flow не должен быть местом угадывания имен ресурсов. Сначала пользователь проверяет запрос в Explorer и только потом переносит его в builder.',
@@ -992,12 +992,12 @@ $top: 1
       'Делать широкий запрос без `$top` и `$select`.'
     ],
     checklist: ['Выбрал connection', 'Нашел resource', 'Проверил filter', 'Проверил select', 'Сохранил lookup idea'],
-    next: '[Урок 04 — Создание входящего endpoint для 1C POST](/docs/onec/academy/lesson-04-create-inbound-endpoint-for-1c-post).'
+    next: '[Урок 04 — Создаём входную точку для POST-запроса из 1С](/docs/onec/academy/lesson-04-create-inbound-endpoint-for-1c-post).'
   }),
   lesson({
     slug: 'lesson-04-create-inbound-endpoint-for-1c-post',
     order: 40,
-    title: 'Урок 04 — Создание входящего endpoint для 1C POST',
+    title: 'Урок 04 — Создаём входную точку для POST-запроса из 1С',
     description: 'Создание входной точки, куда 1C отправит Golden Scenario payload.',
     build: 'Вы создадите endpoint `/api/bus/in/onec-pool-to-dnp` с JSON input и optional static token.',
     why: 'Endpoint фиксирует контракт между 1C и OMH: URL, method, headers, content type и поведение при ошибке auth.',
@@ -1028,12 +1028,12 @@ curl -X POST http://localhost:8000/api/bus/in/onec-pool-to-dnp \\
       'Не документировать \`X-OMH-Token\` для разработчика 1C.'
     ],
     checklist: ['Создал endpoint', 'Скопировал URL', 'Проверил headers', 'Понял token auth'],
-    next: '[Урок 05 — Чтение значений из входящего запроса](/docs/onec/academy/lesson-05-read-values-from-incoming-request).'
+    next: '[Урок 05 — Читаем значения из входящего запроса](/docs/onec/academy/lesson-05-read-values-from-incoming-request).'
   }),
   lesson({
     slug: 'lesson-05-read-values-from-incoming-request',
     order: 50,
-    title: 'Урок 05 — Чтение значений из входящего запроса',
+    title: 'Урок 05 — Читаем значения из входящего запроса',
     description: 'Извлечение INN, product_code, pool_id и codes из входного JSON.',
     build: 'Вы настроите первые шаги flow: прочитать поля из \`request.body\` и сохранить их как понятные variables.',
     why: 'Следующие OData lookup не должны читать сырой JSON руками. Им нужны named variables: \`inn\`, \`product_code\`, `pool_id`, `codes`.',
@@ -1072,12 +1072,12 @@ Variables after read:
       'Сохранять `codes` как строку, хотя target JSON ожидает массив.'
     ],
     checklist: ['Добавил inn', 'Добавил product_code', 'Добавил pool_id', 'Добавил codes', 'Проверил Preview'],
-    next: '[Урок 06 — Первый OData lookup: контрагент по ИНН](/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn).'
+    next: '[Урок 06 — Первая выборка OData: ищем контрагента по ИНН](/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn).'
   }),
   lesson({
     slug: 'lesson-06-first-odata-lookup-contractor-by-inn',
     order: 60,
-    title: 'Урок 06 — Первый OData lookup: контрагент по ИНН',
+    title: 'Урок 06 — Первая выборка OData: ищем контрагента по ИНН',
     description: 'Первый lookup Golden Scenario: найти контрагента в 1C ERP по ИНН.',
     build: 'Вы добавите OData step, который берет variable \`inn\`, ищет контрагента и сохраняет результат как `contractor`.',
     why: 'DNP API не должен получать только ИНН, если ему нужен UUID/Ref_Key контрагента. OMH дочитывает данные из 1C и сохраняет artifact запроса.',
@@ -1114,12 +1114,12 @@ Variables after read:
       'Писать filter вручную иначе, чем он прошел в OData Explorer.'
     ],
     checklist: ['Выбрал connection', 'Настроил resource', 'Настроил filter by INN', 'Сохранил as contractor', 'Включил Required'],
-    next: '[Урок 07 — Второй OData lookup: товар по артикулу](/docs/onec/academy/lesson-07-second-odata-lookup-product-by-article).'
+    next: '[Урок 07 — Вторая выборка OData: ищем товар по артикулу](/docs/onec/academy/lesson-07-second-odata-lookup-product-by-article).'
   }),
   lesson({
     slug: 'lesson-07-second-odata-lookup-product-by-article',
     order: 70,
-    title: 'Урок 07 — Второй OData lookup: товар по артикулу',
+    title: 'Урок 07 — Вторая выборка OData: ищем товар по артикулу',
     description: 'Второй lookup Golden Scenario: найти товар по product_code.',
     build: 'Вы добавите второй OData lookup, который ищет номенклатуру в ERP или WMS и сохраняет результат как `product`.',
     why: 'Один flow может использовать несколько OData sources. Главное — явно назвать connection и save_as, чтобы следующий step не перепутал contractor и product.',
@@ -1155,12 +1155,12 @@ Variables after read:
       'Не ограничить `$select` и тащить весь справочник.'
     ],
     checklist: ['Добавил второй lookup', 'Выбрал правильную базу', 'Сохранил as product', 'Проверил два artifacts'],
-    next: '[Урок 08 — Сборка target JSON](/docs/onec/academy/lesson-08-build-target-json).'
+    next: '[Урок 08 — Собираем целевой JSON](/docs/onec/academy/lesson-08-build-target-json).'
   }),
   lesson({
     slug: 'lesson-08-build-target-json',
     order: 80,
-    title: 'Урок 08 — Сборка target JSON',
+    title: 'Урок 08 — Собираем целевой JSON',
     description: 'Сборка финального JSON для DNP API из входных данных и OData результатов.',
     build: 'Вы соберете `target_payload`, где pool_id и codes приходят из 1C, а contractor/product UUID и names приходят из OData.',
     why: 'Целевой API должен получить стабильную схему, а не случайный сырой ответ 1C OData. JSON Builder делает контракт явным и тестируемым.',
@@ -1190,12 +1190,12 @@ ${goldenScenarioTargetJson}
       'Не зафиксировать target schema в документации flow.'
     ],
     checklist: ['Собрал pool_id', 'Собрал contractor fields', 'Собрал product fields', 'Сохранил codes массивом', 'Проверил target_payload'],
-    next: '[Урок 09 — Отправка JSON во внешний API](/docs/onec/academy/lesson-09-send-json-to-external-api).'
+    next: '[Урок 09 — Отправляем JSON во внешний API](/docs/onec/academy/lesson-09-send-json-to-external-api).'
   }),
   lesson({
     slug: 'lesson-09-send-json-to-external-api',
     order: 90,
-    title: 'Урок 09 — Отправка JSON во внешний API',
+    title: 'Урок 09 — Отправляем JSON во внешний API',
     description: 'Отправка target_payload во внешний DNP/internal API.',
     build: 'Вы добавите target call: POST JSON на внутренний DNP API с timeout, headers и response handling.',
     why: 'Интеграция заканчивается не сборкой JSON, а контролируемым вызовом внешней системы с artifacts, timeout и понятной ошибкой.',
@@ -1227,12 +1227,12 @@ curl -X POST https://dnp.internal/api/v1/marking/pools \\
       'Держать production bearer token в flow JSON вместо Secrets Store.'
     ],
     checklist: ['Выбрал target connector', 'Настроил POST', 'Передал target_payload', 'Проверил timeout', 'Проверил artifacts'],
-    next: '[Урок 10 — Проверка всего flow](/docs/onec/academy/lesson-10-test-full-flow).'
+    next: '[Урок 10 — Проверяем весь интеграционный поток](/docs/onec/academy/lesson-10-test-full-flow).'
   }),
   lesson({
     slug: 'lesson-10-test-full-flow',
     order: 100,
-    title: 'Урок 10 — Проверка всего flow',
+    title: 'Урок 10 — Проверяем весь интеграционный поток',
     description: 'Полный прогон Golden Scenario через Test Console и curl.',
     build: 'Вы отправите учебный POST, проверите response, event id и убедитесь, что все шаги flow прошли в правильном порядке.',
     why: 'Настройка считается рабочей только после полного end-to-end теста. Отдельный OData success не доказывает, что target JSON и DNP call настроены правильно.',
@@ -1260,12 +1260,12 @@ ${goldenScenarioPayload}
       'Не сохранять curl пример для 1C разработчика.'
     ],
     checklist: ['Отправил Test Console', 'Получил event id', 'Повторил curl', 'Проверил success и controlled error'],
-    next: '[Урок 11 — Чтение Timeline и artifacts](/docs/onec/academy/lesson-11-read-timeline-and-artifacts).'
+    next: '[Урок 11 — Читаем Timeline и артефакты](/docs/onec/academy/lesson-11-read-timeline-and-artifacts).'
   }),
   lesson({
     slug: 'lesson-11-read-timeline-and-artifacts',
     order: 110,
-    title: 'Урок 11 — Чтение Timeline и artifacts',
+    title: 'Урок 11 — Читаем Timeline и артефакты',
     description: 'Как читать результат выполнения без доступа к коду.',
     build: 'Вы откроете event Timeline и научитесь находить входной JSON, OData requests, OData responses, target JSON и ошибку внешней системы.',
     why: 'Timeline превращает “не работает” в конкретный факт: какой шаг упал, какой request ушел, какой response вернулся и что можно повторить.',
@@ -1304,12 +1304,12 @@ Artifacts to read:
       'Делать retry до понимания root cause.'
     ],
     checklist: ['Открыл incoming.request', 'Открыл оба OData artifacts', 'Открыл target_payload', 'Открыл target.response', 'Понял failed step'],
-    next: '[Урок 12 — Исправление частых ошибок](/docs/onec/academy/lesson-12-fix-common-errors).'
+    next: '[Урок 12 — Исправляем частые ошибки](/docs/onec/academy/lesson-12-fix-common-errors).'
   }),
   lesson({
     slug: 'lesson-12-fix-common-errors',
     order: 120,
-    title: 'Урок 12 — Исправление частых ошибок',
+    title: 'Урок 12 — Исправляем частые ошибки',
     description: 'Первые действия при 401, resource not found, empty lookup, target error и DLQ.',
     build: 'Вы получите короткий алгоритм исправления Golden Scenario без паники: где смотреть, что менять и когда делать replay.',
     why: 'В production важна не только настройка happy path. Пользователь должен понимать, какие ошибки исправляются данными, какие конфигурацией, а какие retry.',
@@ -1507,7 +1507,7 @@ export const troubleshootingPages: PageSeed[] = [
     "",
     "## Связанные страницы",
     "- [Справочник OData Connection](/docs/onec/reference/odata-connection)",
-    "- [Создание OData Connection](/docs/onec/academy/create-odata-connection)",
+    "- [Создаём OData-подключение к 1С](/docs/onec/academy/create-odata-connection)",
     "- [Справочник Timeline](/docs/onec/reference/timeline)"
   )),
   page("troubleshooting", "odata-resource-not-found", "Симптом: OData resource не найден", "Resource отсутствует в metadata или выбран не тот OData profile.", 20, mdLines(
@@ -1592,7 +1592,7 @@ export const troubleshootingPages: PageSeed[] = [
     "- Transform output before OData step.",
     "",
     "## Связанные страницы",
-    "- [Поиск контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)",
+    "- [Ищем контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)",
     "- [Первый OData-запрос контрагента](/docs/onec/academy/first-odata-query-contractor)",
     "- [Recipe 2 two OData queries](/docs/onec/recipes/recipe-02-onec-post-two-odata-lookups)"
   )),
@@ -1685,7 +1685,7 @@ export const troubleshootingPages: PageSeed[] = [
     "- Secrets Store for target token reference.",
     "",
     "## Связанные страницы",
-    "- [Отправка во внешний API](/docs/onec/academy/send-to-external-api)",
+    "- [Отправляем JSON во внешний API](/docs/onec/academy/send-to-external-api)",
     "- [Queue / DLQ reference](/docs/onec/reference/queue-dlq)",
     "- [Recipe 1 marking pool external API](/docs/onec/recipes/recipe-01-onec-marking-pool-to-external-api)"
   )),
@@ -1918,8 +1918,8 @@ export const recipePages: PageSeed[] = [
     "- Target 422: target JSON misses `pool_id` or `codes` is not an array.",
     "",
     "## Связанные страницы",
-    "- [Сборка target JSON](/docs/onec/academy/build-target-json)",
-    "- [Отправка во внешний API](/docs/onec/academy/send-to-external-api)",
+    "- [Собираем целевой JSON](/docs/onec/academy/build-target-json)",
+    "- [Отправляем JSON во внешний API](/docs/onec/academy/send-to-external-api)",
     "- [Диагностика ошибки target API](/docs/onec/troubleshooting/target-api-returned-error)",
     "- [Справочник Timeline](/docs/onec/reference/timeline)"
   )),
@@ -2197,7 +2197,7 @@ export const recipePages: PageSeed[] = [
     "",
     "## Связанные страницы",
     "- [XML Tools](/docs/onec/tools/xml-tools)",
-    "- [Поиск контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)",
+    "- [Ищем контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)",
     "- [Диагностика: контрагент не найден](/docs/onec/troubleshooting/contractor-not-found-by-inn)"
   )),
   page("recipes", "recipe-05-onec-print-request-to-zebra", "Рецепт 5. 1C отправляет запрос печати на Zebra", "Принять JSON из 1C, создать print job, сохранить ZPL artifact и диагностировать printer errors.", 50, mdLines(
