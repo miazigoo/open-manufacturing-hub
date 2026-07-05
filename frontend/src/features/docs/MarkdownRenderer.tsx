@@ -54,7 +54,7 @@ function parseMarkdown(markdown: string) {
 
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
-    const fence = /^```(\w+|1c)?\s*$/.exec(line.trim());
+    const fence = /^(?:```|~~~)(\w+|1c)?\s*$/.exec(line.trim());
     if (fence) {
       if (code !== null) {
         nodes.push(<CodeBlockWithCopy key={`code-${nodes.length}`} language={codeLanguage} code={code.join('\n')} />);

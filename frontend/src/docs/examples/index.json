@@ -1,61 +1,410 @@
 {
   "onec.marking_pool_to_api": {
-    "title": { "ru": "1C отправляет пул кодов в DNP API", "en": "1C sends a marking code pool to DNP API", "zh": "1C 发送标记码池到 DNP API" },
-    "description": { "ru": "Минимальный production-like JSON для маршрута 1C -> внешний API.", "en": "Minimal production-like JSON for a 1C -> external API route.", "zh": "用于 1C -> 外部 API 路由的最小生产式 JSON。" },
+    "title": {
+      "ru": "1C отправляет пул кодов в DNP API",
+      "en": "1C sends a marking code pool to DNP API",
+      "zh": "1C 发送标记码池到 DNP API"
+    },
+    "description": {
+      "ru": "Минимальный production-like JSON для маршрута 1C -> внешний API.",
+      "en": "Minimal production-like JSON for a 1C -> external API route.",
+      "zh": "用于 1C -> 外部 API 路由的最小生产式 JSON。"
+    },
     "endpoint_slug": "marking-pool",
     "method": "POST",
     "input_mode": "json",
-    "headers": { "Content-Type": "application/json", "X-OMH-Source": "1c" },
-    "body": { "pool_type": "DNP", "order_id": "ORD-123", "inn": "7707083893", "product_code": "ABC-123", "codes": ["010464615169738421ABC", "010464615169738421DEF"] },
-    "expected": { "status": "accepted_or_success" },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "1c"
+    },
+    "body": {
+      "pool_type": "DNP",
+      "order_id": "ORD-123",
+      "inn": "7707083893",
+      "product_code": "ABC-123",
+      "codes": [
+        "010464615169738421ABC",
+        "010464615169738421DEF"
+      ]
+    },
+    "expected": {
+      "status": "accepted_or_success"
+    },
     "runnable": true,
     "requires_setup": true
   },
   "onec.two_odata_to_json_endpoint": {
-    "title": { "ru": "1C POST -> две OData выборки -> JSON -> endpoint", "en": "1C POST -> two OData lookups -> JSON -> endpoint", "zh": "1C POST -> 两次 OData 查询 -> JSON -> 端点" },
-    "description": { "ru": "Payload содержит только ключи. OMH должен обогатить его контрагентом и номенклатурой через OData.", "en": "The payload contains only keys. OMH enriches it with partner and product through OData.", "zh": "载荷仅包含键，OMH 通过 OData 补充客户和商品。" },
+    "title": {
+      "ru": "1C POST -> две OData выборки -> JSON -> endpoint",
+      "en": "1C POST -> two OData lookups -> JSON -> endpoint",
+      "zh": "1C POST -> 两次 OData 查询 -> JSON -> 端点"
+    },
+    "description": {
+      "ru": "Payload содержит только ключи. OMH должен обогатить его контрагентом и номенклатурой через OData.",
+      "en": "The payload contains only keys. OMH enriches it with partner and product through OData.",
+      "zh": "载荷仅包含键，OMH 通过 OData 补充客户和商品。"
+    },
     "endpoint_slug": "onec-enrich-order",
     "method": "POST",
     "input_mode": "json",
-    "headers": { "Content-Type": "application/json", "X-OMH-Source": "1c" },
-    "body": { "inn": "7707083893", "product_code": "A-100", "quantity": 12, "external_order_id": "SO-1001" },
-    "expected": { "status": "sent", "lookups": 2 },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "1c"
+    },
+    "body": {
+      "inn": "7707083893",
+      "product_code": "A-100",
+      "quantity": 12,
+      "external_order_id": "SO-1001"
+    },
+    "expected": {
+      "status": "sent",
+      "lookups": 2
+    },
     "runnable": true,
     "requires_setup": true
   },
   "onec.xml_raw_forward": {
-    "title": { "ru": "1C XML -> OMH -> 1C raw forwarding", "en": "1C XML -> OMH -> 1C raw forwarding", "zh": "1C XML -> OMH -> 1C 原样转发" },
-    "description": { "ru": "Raw XML пример для проверки hash preservation и пересылки без изменения тела.", "en": "Raw XML example for hash preservation and forwarding without body mutation.", "zh": "用于哈希保持和不修改正文转发的原始 XML 示例。" },
+    "title": {
+      "ru": "1C XML -> OMH -> 1C raw forwarding",
+      "en": "1C XML -> OMH -> 1C raw forwarding",
+      "zh": "1C XML -> OMH -> 1C 原样转发"
+    },
+    "description": {
+      "ru": "Raw XML пример для проверки hash preservation и пересылки без изменения тела.",
+      "en": "Raw XML example for hash preservation and forwarding without body mutation.",
+      "zh": "用于哈希保持和不修改正文转发的原始 XML 示例。"
+    },
     "endpoint_slug": "onec-xml-raw-forward",
     "method": "POST",
     "input_mode": "xml",
-    "headers": { "Content-Type": "application/xml", "X-OMH-Source": "1c" },
+    "headers": {
+      "Content-Type": "application/xml",
+      "X-OMH-Source": "1c"
+    },
     "body_text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Document>\n  <Number>UPD-1001</Number>\n  <INN>7707083893</INN>\n</Document>",
-    "expected": { "status": "forwarded", "artifact": "raw_xml_sha256" },
+    "expected": {
+      "status": "forwarded",
+      "artifact": "raw_xml_sha256"
+    },
     "runnable": true,
     "requires_setup": true
   },
   "onec.print_label": {
-    "title": { "ru": "1C отправляет этикетку на принтер", "en": "1C sends a label to a printer", "zh": "1C 向打印机发送标签" },
-    "description": { "ru": "JSON print job для Printer Package с template variables и SSCC.", "en": "JSON print job for Printer Package with template variables and SSCC.", "zh": "包含模板变量和 SSCC 的打印软件包 JSON 任务。" },
+    "title": {
+      "ru": "1C отправляет этикетку на принтер",
+      "en": "1C sends a label to a printer",
+      "zh": "1C 向打印机发送标签"
+    },
+    "description": {
+      "ru": "JSON print job для Printer Package с template variables и SSCC.",
+      "en": "JSON print job for Printer Package with template variables and SSCC.",
+      "zh": "包含模板变量和 SSCC 的打印软件包 JSON 任务。"
+    },
     "endpoint_slug": "onec-print-label",
     "method": "POST",
     "input_mode": "json",
-    "headers": { "Content-Type": "application/json", "X-OMH-Source": "1c" },
-    "body": { "printer_id": "zebra-warehouse-1", "template": "pallet-label-v1", "variables": { "sscc": "046012345678901234", "order": "SO-1001" } },
-    "expected": { "status": "printed_or_queued" },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "1c"
+    },
+    "body": {
+      "printer_id": "zebra-warehouse-1",
+      "template": "pallet-label-v1",
+      "variables": {
+        "sscc": "046012345678901234",
+        "order": "SO-1001"
+      }
+    },
+    "expected": {
+      "status": "printed_or_queued"
+    },
     "runnable": true,
     "requires_setup": true
   },
   "onec.website_to_onec": {
-    "title": { "ru": "Website/API создает заказ в 1C", "en": "Website/API creates an order in 1C", "zh": "网站/API 在 1C 创建订单" },
-    "description": { "ru": "Внешний сайт отправляет заказ в OMH, OMH вызывает 1C HTTP service.", "en": "An external site sends an order to OMH, OMH calls a 1C HTTP service.", "zh": "外部网站向 OMH 发送订单，OMH 调用 1C HTTP 服务。" },
+    "title": {
+      "ru": "Website/API создает заказ в 1C",
+      "en": "Website/API creates an order in 1C",
+      "zh": "网站/API 在 1C 创建订单"
+    },
+    "description": {
+      "ru": "Внешний сайт отправляет заказ в OMH, OMH вызывает 1C HTTP service.",
+      "en": "An external site sends an order to OMH, OMH calls a 1C HTTP service.",
+      "zh": "外部网站向 OMH 发送订单，OMH 调用 1C HTTP 服务。"
+    },
     "endpoint_slug": "site-create-order",
     "method": "POST",
     "input_mode": "json",
-    "headers": { "Content-Type": "application/json", "X-OMH-Source": "site" },
-    "body": { "external_order_id": "WEB-9001", "customer": { "inn": "7707083893" }, "items": [{ "sku": "A-100", "qty": 2 }] },
-    "expected": { "status": "accepted" },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "site"
+    },
+    "body": {
+      "external_order_id": "WEB-9001",
+      "customer": {
+        "inn": "7707083893"
+      },
+      "items": [
+        {
+          "sku": "A-100",
+          "qty": 2
+        }
+      ]
+    },
+    "expected": {
+      "status": "accepted"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.customer_lookup_by_inn": {
+    "title": {
+      "ru": "OData lookup контрагента по ИНН",
+      "en": "OData customer lookup by tax id",
+      "zh": "按税号查询客户 OData"
+    },
+    "description": {
+      "ru": "Минимальный payload для проверки поиска контрагента перед сборкой flow.",
+      "en": "Minimal payload for checking a customer lookup before building a flow.",
+      "zh": "构建流程前检查客户查询的最小载荷。"
+    },
+    "endpoint_slug": "onec-customer-lookup",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "1c"
+    },
+    "body": {
+      "inn": "7707083893",
+      "source_document": "Order SO-1001"
+    },
+    "expected": {
+      "lookup": "Catalog_Контрагенты",
+      "required_fields": [
+        "Ref_Key",
+        "Description",
+        "ИНН"
+      ]
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.product_lookup_by_article": {
+    "title": {
+      "ru": "OData lookup номенклатуры по артикулу",
+      "en": "OData product lookup by article",
+      "zh": "按货号查询商品 OData"
+    },
+    "description": {
+      "ru": "Пример для проверки Catalog_Номенклатура и передачи product_uuid дальше.",
+      "en": "Example for checking Catalog_Номенклатура and passing product_uuid forward.",
+      "zh": "检查 Catalog_Номенклатура 并传递 product_uuid 的示例。"
+    },
+    "endpoint_slug": "onec-product-lookup",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "1c"
+    },
+    "body": {
+      "article": "A-100",
+      "barcode": "04601234567890",
+      "warehouse": "MAIN"
+    },
+    "expected": {
+      "lookup": "Catalog_Номенклатура",
+      "select": [
+        "Ref_Key",
+        "Description",
+        "Артикул"
+      ]
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.stock_balance_update": {
+    "title": {
+      "ru": "WMS отправляет остаток в 1C",
+      "en": "WMS sends stock balance to 1C",
+      "zh": "WMS 向 1C 发送库存余额"
+    },
+    "description": {
+      "ru": "Складская система передает факт остатка, OMH резолвит товар/склад и вызывает 1C HTTP service.",
+      "en": "Warehouse system sends stock balance, OMH resolves product/warehouse and calls 1C HTTP service.",
+      "zh": "仓储系统发送库存余额，OMH 解析商品/仓库并调用 1C HTTP 服务。"
+    },
+    "endpoint_slug": "wms-stock-balance-to-1c",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "wms"
+    },
+    "body": {
+      "sku": "A-100",
+      "warehouse_code": "MAIN",
+      "quantity": 125.5,
+      "moment": "2026-07-05T10:00:00Z"
+    },
+    "expected": {
+      "target": "1C HTTP service",
+      "operation": "update_stock_balance"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.order_status_to_1c": {
+    "title": {
+      "ru": "Сайт отправляет статус заказа в 1C",
+      "en": "Website sends order status to 1C",
+      "zh": "网站向 1C 发送订单状态"
+    },
+    "description": {
+      "ru": "Внешний сайт передает оплату/отгрузку, OMH нормализует статус и вызывает 1C.",
+      "en": "External website sends payment/shipment status, OMH normalizes status and calls 1C.",
+      "zh": "外部网站发送付款/发货状态，OMH 规范化状态并调用 1C。"
+    },
+    "endpoint_slug": "site-order-status-to-1c",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "site"
+    },
+    "body": {
+      "external_order_id": "WEB-9001",
+      "status": "paid",
+      "paid_at": "2026-07-05T11:10:00Z",
+      "amount": 12990
+    },
+    "expected": {
+      "target": "1C HTTP service",
+      "response_mode": "accepted_event"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.odata_polling_delta": {
+    "title": {
+      "ru": "Polling новых документов из 1C OData",
+      "en": "Polling new documents from 1C OData",
+      "zh": "从 1C OData 轮询新文档"
+    },
+    "description": {
+      "ru": "Пример delta-запроса, когда 1C сама не отправляет POST.",
+      "en": "Delta request example when 1C cannot send POST itself.",
+      "zh": "当 1C 无法主动 POST 时的增量请求示例。"
+    },
+    "endpoint_slug": "poll-onec-orders-delta",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "scheduler"
+    },
+    "body": {
+      "resource": "Document_ЗаказПокупателя",
+      "since": "2026-07-05T00:00:00Z",
+      "top": 100
+    },
+    "expected": {
+      "polling": true,
+      "cursor": "Date or Ref_Key"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.xml_inn_to_api": {
+    "title": {
+      "ru": "1C XML с INN -> OData -> API",
+      "en": "1C XML with INN -> OData -> API",
+      "zh": "包含 INN 的 1C XML -> OData -> API"
+    },
+    "description": {
+      "ru": "XML обмен, где OMH извлекает INN, ищет контрагента и отправляет JSON во внешний API.",
+      "en": "XML exchange where OMH extracts INN, finds customer and sends JSON to external API.",
+      "zh": "OMH 从 XML 提取 INN、查询客户并向外部 API 发送 JSON。"
+    },
+    "endpoint_slug": "onec-xml-inn-to-api",
+    "method": "POST",
+    "input_mode": "xml",
+    "headers": {
+      "Content-Type": "application/xml",
+      "X-OMH-Source": "1c"
+    },
+    "body_text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Request>\n  <INN>7707083893</INN>\n  <Document>UPD-1001</Document>\n</Request>",
+    "expected": {
+      "extracted": [
+        "INN",
+        "Document"
+      ],
+      "target": "external API"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.printer_sscc_label": {
+    "title": {
+      "ru": "1C печатает SSCC этикетку",
+      "en": "1C prints SSCC label",
+      "zh": "1C 打印 SSCC 标签"
+    },
+    "description": {
+      "ru": "Пример задания печати с SSCC, заказом и выбором принтера.",
+      "en": "Print job example with SSCC, order and selected printer.",
+      "zh": "包含 SSCC、订单和打印机选择的打印任务示例。"
+    },
+    "endpoint_slug": "onec-print-sscc-label",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "1c"
+    },
+    "body": {
+      "printer_id": "zebra-warehouse-1",
+      "template": "sscc-pallet-v1",
+      "variables": {
+        "sscc": "046012345678901234",
+        "order": "SO-1001",
+        "pallet": "PAL-07"
+      }
+    },
+    "expected": {
+      "print_job": "queued_or_printed"
+    },
+    "runnable": true,
+    "requires_setup": true
+  },
+  "onec.error_missing_contractor": {
+    "title": {
+      "ru": "Ошибка: контрагент не найден в OData",
+      "en": "Error: customer not found in OData",
+      "zh": "错误：OData 中找不到客户"
+    },
+    "description": {
+      "ru": "Отрицательный пример для проверки Required lookup, понятной ошибки и DLQ/replay.",
+      "en": "Negative example for checking Required lookup, readable error and DLQ/replay.",
+      "zh": "用于检查必需查询、可读错误和 DLQ/重放的负面示例。"
+    },
+    "endpoint_slug": "onec-customer-lookup",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-OMH-Source": "1c"
+    },
+    "body": {
+      "inn": "0000000000",
+      "source_document": "Bad document"
+    },
+    "expected": {
+      "status": "failed_or_dlq",
+      "error_code": "ODATA_RESULT_EMPTY"
+    },
     "runnable": true,
     "requires_setup": true
   }

@@ -1,5 +1,5 @@
 import type { PackageSeed, PageSeed } from './content';
-import { academyPages, decisionPages, recipePages } from './onecAcademyContent';
+import { academyPages, caseStudyPages, decisionPages, errorPlaybookPages, recipePages, requestExamplePages } from './onecAcademyContent';
 
 function md(...lines: string[]) {
   return lines.join('\n').trim();
@@ -544,8 +544,11 @@ export const onecPackageSeed: PackageSeed = {
     { id: 'overview', title: 'Обзор 1C', description: 'Что дает 1C package и где он заканчивается.', order: 10, pages: [overview] },
     { id: 'academy', title: '1C Integration Academy', description: 'Пошаговое обучение: от OData profile до production checklist.', order: 15, pages: academyPages },
     { id: 'recipes', title: '1C Recipes', description: 'Практические рецепты с endpoints, payload, UI-настройкой и диагностикой.', order: 17, pages: recipePages },
-    { id: 'decisions', title: 'Как выбрать подход', description: 'Input mode, response mode, lookup/resolver и Flow/Workflow.', order: 18, pages: decisionPages },
-    { id: 'setup', title: 'Настройка 1C', description: 'Connector, secrets, endpoint auth и проверка соединения.', order: 20, pages: [connectorSetup, secretsToken] },
+    { id: 'case-studies', title: 'Production Case Studies', description: 'Разборы реальных промышленных сценариев: цель, actors, flow, OData, Timeline и риски.', order: 18, pages: caseStudyPages },
+    { id: 'request-examples', title: 'Request Examples', description: 'Готовые HTTP/1C/OData примеры для Test Console и разработчика 1C.', order: 19, pages: requestExamplePages },
+    { id: 'error-playbooks', title: 'Error Playbooks', description: 'Диагностика по симптомам: где смотреть, как исправить и как предотвратить.', order: 20, pages: errorPlaybookPages },
+    { id: 'decisions', title: 'Как выбрать подход', description: 'Input mode, response mode, lookup/resolver и Flow/Workflow.', order: 21, pages: decisionPages },
+    { id: 'setup', title: 'Настройка 1C', description: 'Connector, secrets, endpoint auth и проверка соединения.', order: 25, pages: [connectorSetup, secretsToken] },
     { id: 'tools', title: 'Инструменты 1C', description: 'Connector, OData Explorer, XML Tools, Cockpit, Flow Builder.', order: 30, pages: toolPages },
     { id: 'scenarios', title: 'Практические сценарии 1C', description: 'Полные payload, endpoints, 1C code, artifacts и troubleshooting.', order: 40, pages: scenarios },
     { id: 'support', title: 'Ошибки, Timeline и очередь', description: 'External error fidelity, artifacts, retry и DLQ.', order: 50, pages: supportPages },

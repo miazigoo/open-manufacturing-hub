@@ -227,6 +227,8 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
     '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
     '/docs/onec/academy/lesson-02-create-odata-connection', '/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint',
+    '/docs/onec/case-studies/case-03-wms-stock-fact-to-1c', '/docs/onec/request-examples/request-03-two-lookups-order',
+    '/docs/onec/error-playbooks/odata-empty-required',
     '/docs/onec/setup/connector-setup', '/docs/onec/tools/visual-flow-builder',
     '/docs/onec/scenarios/onec-post-two-odata-json-endpoint', '/docs/onec/scenarios/onec-to-printer',
     '/docs/onec/support/errors-timeline-artifacts', '/docs/onec/support/queue-retry-dlq',
