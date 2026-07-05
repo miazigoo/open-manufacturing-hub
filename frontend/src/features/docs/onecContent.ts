@@ -799,7 +799,7 @@ const scenarios: PageSeed[] = [
     payload: ['<?xml version="1.0" encoding="UTF-8"?>', '<Document>', '  <Number>UPD-1001</Number>', '  <INN>7707083893</INN>', '</Document>'],
     target: ['POST https://onec-b.example/hs/omh/AcceptXml', 'Content-Type: application/xml', 'Body: original raw XML bytes'],
     success: ['{ "status": "forwarded", "event_id": "evt_...", "sha256": "..." }'],
-    errors: ['Hash mismatch: проверьте, что transform отключен и `preserve_body=true`.', '415 Unsupported Media Type: отправляйте `application/xml`.', '1C B вернула XML parsing error: смотрите `target.response` без сокращения текста.'],
+    errors: ['Hash mismatch: проверьте, что transform отключен и `preserve_body=true`.', '415 Unsupported Media Type: отправляйте `application/xml`.', '1C B вернула XML parsing failure: смотрите `target.response` без сокращения текста.'],
     related: ['`/docs/onec/tools/xml-tools`', '`/docs/onec/support/errors-timeline-artifacts`'],
     screenshots: ['onec.xml-tools.raw', 'events.artifacts.drawer'],
     exampleId: 'onec.xml_raw_forward',

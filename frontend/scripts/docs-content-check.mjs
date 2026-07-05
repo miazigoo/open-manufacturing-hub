@@ -24,6 +24,10 @@ const requiredPages = [
   'troubleshooting/contractor-not-found-by-inn', 'troubleshooting/product-not-found',
   'troubleshooting/target-api-returned-error', 'troubleshooting/xml-parse-error',
   'troubleshooting/printer-unavailable', 'troubleshooting/event-moved-to-dlq',
+  'recipes/recipe-01-onec-marking-pool-to-external-api', 'recipes/recipe-02-onec-post-two-odata-lookups',
+  'recipes/recipe-03-onec-xml-raw-forwarding', 'recipes/recipe-04-onec-xml-inn-lookup',
+  'recipes/recipe-05-onec-print-request-to-zebra', 'recipes/recipe-06-website-api-query-onec-odata',
+  'recipes/recipe-07-wms-shipment-fact-to-onec', 'recipes/recipe-08-route-by-key-phrase-value',
   'overview/overview', 'setup/connector-setup', 'setup/auth-secrets-static-token',
   'tools/connector', 'tools/odata-explorer', 'tools/odata-chaining-fields', 'tools/xml-tools', 'tools/cockpit', 'tools/visual-flow-builder',
   'scenarios/onec-to-external-api', 'scenarios/onec-post-two-odata-json-endpoint', 'scenarios/xml-raw-forward',
@@ -61,7 +65,9 @@ const examples = readJson('frontend/src/docs/examples/index.json');
 
 for (const route of requiredPages) {
   const [section, slug] = route.split('/');
-  assert(onecDocsContent.includes(`'${section}'`) && onecDocsContent.includes(`'${slug}'`), `frontend docs missing ${route}`);
+  const hasFrontendRoute = (onecDocsContent.includes(`'${section}'`) || onecDocsContent.includes(`"${section}"`))
+    && (onecDocsContent.includes(`'${slug}'`) || onecDocsContent.includes(`"${slug}"`));
+  assert(hasFrontendRoute, `frontend docs missing ${route}`);
   assert(service.includes(`"id": "${section}"`) && service.includes(`"slug": "${slug}"`), `backend docs API missing ${route}`);
 }
 for (const link of ['onec.start', 'onec.odata-chaining', 'onec.troubleshooting', 'timeline.errors', 'integration-flows', 'test-console']) assert(docLinks.includes(link), `docLinks missing ${link}`);
@@ -155,6 +161,73 @@ for (const placeholder of [
   '[SCREENSHOT: Test Console dry run Golden Scenario]',
   '[SCREENSHOT: Timeline two OData JSON endpoint flow]',
 ]) assert(onecDocsContent.includes(placeholder), `Pack B screenshot placeholder missing: ${placeholder}`);
+for (const recipeRequired of [
+  '1C sends marking code pool to external API',
+  'POST http://omh-server:8000/api/bus/in/onec-marking-pool',
+  'pool_type == DNP',
+  'Connector: DNP Service',
+  'target.response.json',
+  '1C sends pool, OMH enriches via two OData queries',
+  'contractor_uuid',
+  'product_uuid',
+  '1C XML raw forwarding to another 1C',
+  'raw_forward',
+  'incoming.sha256',
+  'forwarded.sha256',
+  '1C XML with INN lookup',
+  '/Envelope/Customer/INN',
+  'contractor_uuid',
+  '1C sends print request to Zebra',
+  'Connection refused 192.168.1.50:9100',
+  'zpl.rendered.txt',
+  'Website/API asks OMH to query 1C OData',
+  'sync_response',
+  'return_response.json',
+  'WMS sends shipment fact to 1C',
+  'ORDER_NOT_FOUND',
+  'Route by key phrase/value',
+  'UNSUPPORTED_POOL_TYPE',
+]) assert(onecDocsContent.includes(recipeRequired), `Task 042 recipe docs missing: ${recipeRequired}`);
+for (const placeholder of [
+  '[SCREENSHOT: Recipe 1 marking pool endpoint and target JSON]',
+  '[SCREENSHOT: Recipe 2 two OData queries recipe]',
+  '[SCREENSHOT: Recipe 3 XML raw forward artifacts]',
+  '[SCREENSHOT: Recipe 4 XML INN lookup path picker]',
+  '[SCREENSHOT: Recipe 5 Zebra print job timeline]',
+  '[SCREENSHOT: Recipe 6 website API OData proxy]',
+  '[SCREENSHOT: Recipe 7 WMS to 1C mapping]',
+  '[SCREENSHOT: Recipe 8 business rules route by value]',
+]) assert(onecDocsContent.includes(placeholder), `Task 042 recipe screenshot placeholder missing: ${placeholder}`);
+for (const troubleshootingRequired of [
+  '# Symptom: 1C returned 401',
+  '# Symptom: OData resource not found',
+  '# Symptom: Contractor not found by INN',
+  '# Symptom: Product not found by article',
+  '# Symptom: Target API returned error',
+  '# Symptom: XML parse failed',
+  '# Symptom: Printer unavailable',
+  '# Symptom: Event moved to DLQ',
+  '## What you see',
+  '## What it means',
+  '## What to check',
+  '## How to fix',
+  '## Where to look in OMH',
+  '## Related pages',
+  '\\"value\\": []',
+  '\\"error\\": \\"Invalid token\\"',
+  'Connection refused 192.168.1.50:9100',
+  'Retry attempts are exhausted',
+]) assert(onecDocsContent.includes(troubleshootingRequired), `Task 042 troubleshooting docs missing: ${troubleshootingRequired}`);
+for (const placeholder of [
+  '[SCREENSHOT: Troubleshooting 1C returned 401 timeline]',
+  '[SCREENSHOT: Troubleshooting OData resource not found]',
+  '[SCREENSHOT: Troubleshooting contractor not found by INN]',
+  '[SCREENSHOT: Troubleshooting product not found by article]',
+  '[SCREENSHOT: Troubleshooting target API returned error]',
+  '[SCREENSHOT: Troubleshooting XML parse failed]',
+  '[SCREENSHOT: Troubleshooting printer unavailable]',
+  '[SCREENSHOT: Troubleshooting event moved to DLQ]',
+]) assert(onecDocsContent.includes(placeholder), `Task 042 troubleshooting screenshot placeholder missing: ${placeholder}`);
 assert(odataConnectionsPage.includes('Create OData Connection') && odataConnectionsPage.includes('Choose the 1C base where OMH will search data.'), 'OData Connections UI wording must guide users to OData Connection');
 assert(odataExplorerPage.includes('Create OData Connection') && odataExplorerPage.includes('Choose the 1C base where OMH will search data.') && odataExplorerPage.includes('/docs/onec/academy/test-odata-explorer'), 'OData Explorer UI wording must guide users to OData Connection and lesson');
 assert(odataLookupBlockEditor.includes('OData Connection') && odataLookupBlockEditor.includes('Select OData Connection'), 'OData lookup builder must say OData Connection, not generic connector');

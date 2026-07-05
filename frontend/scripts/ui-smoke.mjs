@@ -234,9 +234,19 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/docs/onec/academy/test-full-flow',
     '/docs/onec/academy/lesson-01-what-is-omh-for-1c-users', '/docs/onec/academy/lesson-02-create-odata-connection',
     '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn', '/docs/onec/academy/lesson-12-fix-common-errors',
-    '/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint',
+    '/docs/onec/recipes/recipe-01-onec-marking-pool-to-external-api',
+    '/docs/onec/recipes/recipe-02-onec-post-two-odata-lookups',
+    '/docs/onec/recipes/recipe-03-onec-xml-raw-forwarding',
+    '/docs/onec/recipes/recipe-04-onec-xml-inn-lookup',
+    '/docs/onec/recipes/recipe-05-onec-print-request-to-zebra',
+    '/docs/onec/recipes/recipe-06-website-api-query-onec-odata',
+    '/docs/onec/recipes/recipe-07-wms-shipment-fact-to-onec',
+    '/docs/onec/recipes/recipe-08-route-by-key-phrase-value',
     '/docs/onec/reference/odata-connection', '/docs/onec/reference/timeline',
-    '/docs/onec/troubleshooting/contractor-not-found-by-inn', '/docs/onec/troubleshooting/event-moved-to-dlq',
+    '/docs/onec/troubleshooting/onec-returned-401', '/docs/onec/troubleshooting/odata-resource-not-found',
+    '/docs/onec/troubleshooting/contractor-not-found-by-inn', '/docs/onec/troubleshooting/product-not-found',
+    '/docs/onec/troubleshooting/target-api-returned-error', '/docs/onec/troubleshooting/xml-parse-error',
+    '/docs/onec/troubleshooting/printer-unavailable', '/docs/onec/troubleshooting/event-moved-to-dlq',
     '/docs/onec/case-studies/case-03-wms-stock-fact-to-1c', '/docs/onec/request-examples/request-03-two-lookups-order',
     '/docs/onec/error-playbooks/odata-empty-required',
     '/docs/onec/setup/connector-setup', '/docs/onec/tools/odata-chaining-fields', '/docs/onec/tools/visual-flow-builder',
@@ -324,6 +334,42 @@ async function runBrowserSmoke(apiBase, uiBase) {
   const fullFlowText = await page.locator('body').innerText();
   for (const required of ['Dry Run', 'match_route', 'odata_query contractor', 'odata_query product', 'target.response.json', '[SCREENSHOT: Timeline two OData JSON endpoint flow]']) {
     if (!fullFlowText.includes(required)) fail('PACK_B_FULL_FLOW', required);
+  }
+
+  const recipeChecks = [
+    ['/docs/onec/recipes/recipe-01-onec-marking-pool-to-external-api', ['1C sends marking code pool to external API', 'onec-marking-pool', 'pool_type == DNP', 'DNP Service', 'target.response.json']],
+    ['/docs/onec/recipes/recipe-02-onec-post-two-odata-lookups', ['two OData queries', 'contractor_uuid', 'product_uuid', 'odata.contractor.request.json', 'target_payload.json']],
+    ['/docs/onec/recipes/recipe-03-onec-xml-raw-forwarding', ['raw forwarding', 'raw_forward', 'SHA256', 'incoming.request.xml', 'target.request.xml']],
+    ['/docs/onec/recipes/recipe-04-onec-xml-inn-lookup', ['XML with INN lookup', '/Envelope/Customer/INN', 'contractor_uuid', 'ORDER_NOT_FOUND', 'target.response.json']],
+    ['/docs/onec/recipes/recipe-05-onec-print-request-to-zebra', ['print request to Zebra', 'Zebra-01', 'zpl.rendered.txt', 'Connection refused 192.168.1.50:9100', 'print_job_id']],
+    ['/docs/onec/recipes/recipe-06-website-api-query-onec-odata', ['query 1C OData', 'sync_response', 'return_response.json', 'AccumulationRegister', 'website-token']],
+    ['/docs/onec/recipes/recipe-07-wms-shipment-fact-to-onec', ['WMS sends shipment fact to 1C', 'SHIP-404', 'ORDER_NOT_FOUND', 'mapping.output.json', '/hs/wms/shipment-fact']],
+    ['/docs/onec/recipes/recipe-08-route-by-key-phrase-value', ['Route by key phrase/value', 'pool_type == DNP', 'pool_type == PRINT', 'UNSUPPORTED_POOL_TYPE', 'business_rule.result.json']],
+  ];
+  for (const [route, requiredItems] of recipeChecks) {
+    await gotoRoute(page, uiBase, route);
+    const recipeText = await page.locator('body').innerText();
+    for (const required of requiredItems) {
+      if (!recipeText.includes(required)) fail('TASK_042_RECIPE', `${route}: ${required}`);
+    }
+  }
+
+  const troubleshootingChecks = [
+    ['/docs/onec/troubleshooting/onec-returned-401', ['Symptom: 1C returned 401', 'What you see', 'What it means', 'What to check', 'How to fix', 'Where to look in OMH', 'Related pages', 'X-OMH-Token']],
+    ['/docs/onec/troubleshooting/odata-resource-not-found', ['Symptom: OData resource not found', 'metadata', 'OData Explorer', 'resource name', 'Related pages']],
+    ['/docs/onec/troubleshooting/contractor-not-found-by-inn', ['Symptom: Contractor not found by INN', 'value', 'request.body.inn', 'remove spaces', 'odata.contractor.response.json']],
+    ['/docs/onec/troubleshooting/product-not-found', ['Symptom: Product not found by article', 'product_code', 'uppercase', 'OData WMS', 'odata.product.response.json']],
+    ['/docs/onec/troubleshooting/target-api-returned-error', ['Symptom: Target API returned error', 'Invalid token', 'target.request.json', 'target.response.json', 'External error tab']],
+    ['/docs/onec/troubleshooting/xml-parse-error', ['Symptom: XML parse failed', 'raw_forward', 'parse_and_forward', 'XML Tools', 'incoming.request.xml']],
+    ['/docs/onec/troubleshooting/printer-unavailable', ['Symptom: Printer unavailable', 'Connection refused 192.168.1.50:9100', 'zpl.rendered.txt', 'printer.response.json', 'retry']],
+    ['/docs/onec/troubleshooting/event-moved-to-dlq', ['Symptom: Event moved to DLQ', 'Retry attempts are exhausted', 'Edit & Retry', 'Replay from DLQ', 'Force complete']],
+  ];
+  for (const [route, requiredItems] of troubleshootingChecks) {
+    await gotoRoute(page, uiBase, route);
+    const troubleshootingText = await page.locator('body').innerText();
+    for (const required of requiredItems) {
+      if (!troubleshootingText.includes(required)) fail('TASK_042_TROUBLESHOOTING', `${route}: ${required}`);
+    }
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn');
