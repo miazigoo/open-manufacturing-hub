@@ -228,6 +228,10 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
     '/docs/onec/start-here/start-in-15-minutes', '/docs/onec/start-here/what-you-will-build', '/docs/onec/start-here/concepts', '/docs/onec/start-here/beginner-path',
     '/docs/onec/academy/create-odata-connection', '/docs/onec/academy/test-odata-explorer', '/docs/onec/academy/find-contractor-by-inn',
+    '/docs/onec/academy/create-inbound-endpoint', '/docs/onec/academy/read-request-fields',
+    '/docs/onec/academy/first-odata-query-contractor', '/docs/onec/academy/second-odata-query-product',
+    '/docs/onec/academy/build-target-json', '/docs/onec/academy/send-to-external-api',
+    '/docs/onec/academy/test-full-flow',
     '/docs/onec/academy/lesson-01-what-is-omh-for-1c-users', '/docs/onec/academy/lesson-02-create-odata-connection',
     '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn', '/docs/onec/academy/lesson-12-fix-common-errors',
     '/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint',
@@ -278,6 +282,48 @@ async function runBrowserSmoke(apiBase, uiBase) {
   const contractorByInnText = await page.locator('body').innerText();
   for (const required of ['Ref_Key', 'ООО Ромашка', "ИНН eq '7707083893'", '[SCREENSHOT: OData query result with Ref_Key]']) {
     if (!contractorByInnText.includes(required)) fail('PACK_A_FIND_CONTRACTOR', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/create-inbound-endpoint');
+  const inboundEndpointText = await page.locator('body').innerText();
+  for (const required of ['POST http://omh-server:8000/api/bus/in/onec-pool-to-dnp', 'HTTPСоединение', 'accepted_event', 'timeline_url', '[SCREENSHOT: Flow Builder inbound endpoint form]']) {
+    if (!inboundEndpointText.includes(required)) fail('PACK_B_INBOUND_ENDPOINT', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/read-request-fields');
+  const readFieldsText = await page.locator('body').innerText();
+  for (const required of ['request.body.inn', 'request.body.product_code', 'request.body.pool_id', 'request.body.codes', 'code1', 'code2', '[SCREENSHOT: Flow Builder read request fields]']) {
+    if (!readFieldsText.includes(required)) fail('PACK_B_READ_FIELDS', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/first-odata-query-contractor');
+  const firstOdataText = await page.locator('body').innerText();
+  for (const required of ['Save result as: contractor', 'Required: yes', 'contractor-uuid', "Catalog_Контрагенты?$filter=ИНН eq '7707083893'&$top=1", '[SCREENSHOT: Flow Builder first OData contractor query]']) {
+    if (!firstOdataText.includes(required)) fail('PACK_B_FIRST_ODATA', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/second-odata-query-product');
+  const secondOdataText = await page.locator('body').innerText();
+  for (const required of ['Save result as: product', 'product-uuid', 'OData ERP or OData WMS', 'Catalog_Номенклатура', '[SCREENSHOT: Flow Builder second OData product query]']) {
+    if (!secondOdataText.includes(required)) fail('PACK_B_SECOND_ODATA', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/build-target-json');
+  const buildJsonText = await page.locator('body').innerText();
+  for (const required of ['pool_id', 'contractor_uuid', 'product_uuid', 'source_system', 'code1', '[SCREENSHOT: JSON Builder field mapping table]']) {
+    if (!buildJsonText.includes(required)) fail('PACK_B_BUILD_JSON', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/send-to-external-api');
+  const sendTargetText = await page.locator('body').innerText();
+  for (const required of ['DNP Service', 'POST http://dnp.local/api/marking/pools', 'target.request', 'target.response', '[SCREENSHOT: Call endpoint step settings]']) {
+    if (!sendTargetText.includes(required)) fail('PACK_B_SEND_TARGET', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/test-full-flow');
+  const fullFlowText = await page.locator('body').innerText();
+  for (const required of ['Dry Run', 'match_route', 'odata_query contractor', 'odata_query product', 'target.response.json', '[SCREENSHOT: Timeline two OData JSON endpoint flow]']) {
+    if (!fullFlowText.includes(required)) fail('PACK_B_FULL_FLOW', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn');

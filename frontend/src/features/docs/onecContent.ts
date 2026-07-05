@@ -1,5 +1,5 @@
 import type { PackageSeed, PageSeed } from './content';
-import { academyPackAPages, academyPages, caseStudyPages, decisionPages, errorPlaybookPages, recipePages, requestExamplePages, referencePages, troubleshootingPages } from './onecAcademyContent';
+import { academyPackAPages, academyPackBPages, academyPages, caseStudyPages, decisionPages, errorPlaybookPages, recipePages, requestExamplePages, referencePages, troubleshootingPages } from './onecAcademyContent';
 
 function md(...lines: string[]) {
   return lines.join('\n').trim();
@@ -963,7 +963,7 @@ export const onecPackageSeed: PackageSeed = {
   sections: [
     { id: 'start-here', title: 'Start Here', description: 'Первый понятный маршрут для пользователя без опыта интеграций.', order: 5, pages: [startIn15Minutes, whatYouWillBuild, onecConcepts, beginnerPath] },
     { id: 'overview', title: 'Обзор 1C', description: 'Что дает 1C package и где он заканчивается.', order: 10, pages: [overview] },
-    { id: 'academy', title: '1C Integration Academy', description: 'Пошаговое обучение: от OData profile до production checklist.', order: 15, pages: [...academyPackAPages, ...academyPages] },
+    { id: 'academy', title: '1C Integration Academy', description: 'Пошаговое обучение: от OData profile до production checklist.', order: 15, pages: [...academyPackAPages, ...academyPackBPages, ...academyPages] },
     { id: 'recipes', title: 'Practical Recipes', description: 'Практические рецепты с endpoints, payload, UI-настройкой и диагностикой.', order: 17, pages: recipePages },
     { id: 'case-studies', title: 'Production Case Studies', description: 'Разборы реальных промышленных сценариев: цель, actors, flow, OData, Timeline и риски.', order: 18, pages: caseStudyPages },
     { id: 'request-examples', title: 'Request Examples', description: 'Готовые HTTP/1C/OData примеры для Test Console и разработчика 1C.', order: 19, pages: requestExamplePages },
