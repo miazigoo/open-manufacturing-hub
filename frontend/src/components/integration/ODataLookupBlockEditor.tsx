@@ -37,7 +37,7 @@ export function ODataLookupBlockEditor({ lookup, index, connectors, templates, o
       </div>
       <div className="form-grid form-grid-3">
         <label className="field-label">Name<input value={lookup.name} onChange={(event) => onChange({ ...lookup, name: event.target.value })} title="Human-readable step name shown in Timeline." /></label>
-        <ConnectorSelect label="1C connector" value={lookup.connection} options={connectors} onChange={(value) => onChange({ ...lookup, connection: value })} />
+        <ConnectorSelect label="OData Connection" value={lookup.connection} options={connectors} onChange={(value) => onChange({ ...lookup, connection: value })} placeholder="Select OData Connection" />
         <ODataResourceSelect value="" templates={templates} onChange={(_, template) => onChange({ ...lookup, resource: String(template?.meta.resource ?? lookup.resource), name: template?.label ?? lookup.name })} />
         <label className="field-label">Resource<input value={lookup.resource} onChange={(event) => onChange({ ...lookup, resource: event.target.value })} placeholder="Catalog_ContrAgents" title="Use the exact technical resource name from OData Explorer, not a guessed Russian UI name." /></label>
         <label className="field-label">Field<input value={lookup.field} onChange={(event) => onChange({ ...lookup, field: event.target.value })} placeholder="INN" title="OData field used in $filter. Check spelling in OData Explorer first." /></label>

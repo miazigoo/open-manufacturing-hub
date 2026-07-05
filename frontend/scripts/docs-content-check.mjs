@@ -8,6 +8,7 @@ const repoRoot = path.resolve(frontendDir, '..');
 
 const requiredPages = [
   'start-here/start-in-15-minutes', 'start-here/what-you-will-build', 'start-here/concepts', 'start-here/beginner-path',
+  'academy/create-odata-connection', 'academy/test-odata-explorer', 'academy/find-contractor-by-inn',
   'academy/lesson-01-what-is-omh-for-1c-users', 'academy/lesson-02-create-odata-connection',
   'academy/lesson-03-test-odata-in-odata-explorer', 'academy/lesson-04-create-inbound-endpoint-for-1c-post',
   'academy/lesson-05-read-values-from-incoming-request', 'academy/lesson-06-first-odata-lookup-contractor-by-inn',
@@ -47,6 +48,9 @@ const conceptCallout = read('frontend/src/features/docs/DocsConceptCallout.tsx')
 const expectedResult = read('frontend/src/features/docs/DocsExpectedResult.tsx');
 const commonMistakes = read('frontend/src/features/docs/DocsCommonMistakes.tsx');
 const nextLesson = read('frontend/src/features/docs/DocsNextLesson.tsx');
+const odataConnectionsPage = read('frontend/src/pages/ODataConnectionsPage.tsx');
+const odataExplorerPage = read('frontend/src/pages/ODataExplorerPage.tsx');
+const odataLookupBlockEditor = read('frontend/src/components/integration/ODataLookupBlockEditor.tsx');
 const service = read('backend/app/docs_portal/service.py');
 const assets = readJson('frontend/src/docs/assets/index.json');
 const annotations = readJson('frontend/src/docs/assets/annotations.json');
@@ -92,6 +96,27 @@ for (const concept of ['## Endpoint', '## OData Connection', '## Connector', '##
 }
 assert(onecDocsContent.includes('Golden Scenario') && onecDocsContent.includes('1C POST -> two OData lookups -> JSON -> external endpoint'), 'Golden Scenario must be defined in docs');
 assert(onecDocsContent.includes('7707083893') && onecDocsContent.includes('POOL-001') && onecDocsContent.includes('contractor-ref-key'), 'Golden Scenario payload and target JSON must be present');
+assert(onecContent.includes('"codes": [') && onecContent.includes('"code1"') && onecContent.includes('"code2"'), 'Start in 15 minutes must include exact task 040 training payload');
+for (const packARequired of [
+  'OData connection is a saved connection to a concrete 1C base',
+  'OData Connection — это не generic Connector',
+  '| Field | Example | Meaning | Where to get |',
+  'secret_1c_erp_password',
+  'Catalog_Контрагенты?$top=5',
+  'Resource: Catalog_Контрагенты',
+  "Filter: ИНН eq '7707083893'",
+  '"Ref_Key": "b19c0e6e-0000-0000-0000-000000000001"',
+  'Ref_Key — это внутренний UUID объекта 1C',
+]) assert(onecDocsContent.includes(packARequired), `Pack A docs missing: ${packARequired}`);
+for (const placeholder of [
+  '[SCREENSHOT: OData Connection creation form]',
+  '[SCREENSHOT: OData Explorer connector selector]',
+  '[SCREENSHOT: OData Explorer resources list]',
+  '[SCREENSHOT: OData query result with Ref_Key]',
+]) assert(onecDocsContent.includes(placeholder), `Pack A screenshot placeholder missing: ${placeholder}`);
+assert(odataConnectionsPage.includes('Create OData Connection') && odataConnectionsPage.includes('Choose the 1C base where OMH will search data.'), 'OData Connections UI wording must guide users to OData Connection');
+assert(odataExplorerPage.includes('Create OData Connection') && odataExplorerPage.includes('Choose the 1C base where OMH will search data.') && odataExplorerPage.includes('/docs/onec/academy/test-odata-explorer'), 'OData Explorer UI wording must guide users to OData Connection and lesson');
+assert(odataLookupBlockEditor.includes('OData Connection') && odataLookupBlockEditor.includes('Select OData Connection'), 'OData lookup builder must say OData Connection, not generic connector');
 for (const section of ['case-studies', 'request-examples', 'error-playbooks']) assert(onecContent.includes(`id: '${section}'`), `1C docs missing ${section} section`);
 for (const section of ['academy', 'recipes', 'reference', 'troubleshooting']) assert(onecContent.includes(`id: '${section}'`), `1C docs missing ${section} section`);
 assert(onecContent.includes('caseStudyPages') && onecContent.includes('requestExamplePages') && onecContent.includes('errorPlaybookPages'), '1C docs must include expanded learning sections');

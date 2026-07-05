@@ -51,12 +51,12 @@ export function ODataConnectionsPage() {
           <h1>OData connection catalog</h1>
           <p>Create named OData profiles such as OData ERP, OData УСП and OData WMS. Pipeline steps then select a clear business connection instead of a generic connector JSON.</p>
         </div>
-        <div className="product-header-actions"><Link className="primary-button" to="/docs/onec/academy/lesson-02-create-odata-connection">Open Academy lesson</Link><Link className="ghost-button" to="/odata-explorer">Test in OData Explorer</Link></div>
+        <div className="product-header-actions"><Link className="primary-button" to="/docs/onec/academy/create-odata-connection">Open Academy lesson</Link><Link className="ghost-button" to="/odata-explorer">Test in OData Explorer</Link></div>
       </section>
 
       <section className="flow-layout">
         <form className="panel stack-form" onSubmit={submit}>
-          <div className="panel-toolbar"><div><span className="eyebrow">Create</span><h2>New OData connection</h2></div><button className="primary-button" disabled={create.isPending}>Create connection</button></div>
+          <div className="panel-toolbar"><div><span className="eyebrow">Create</span><h2>New OData Connection</h2><p>Choose the 1C base where OMH will search data.</p></div><button className="primary-button" disabled={create.isPending}>Create OData Connection</button></div>
           <div className="component-strip package-capabilities">{presets.map((preset) => <button type="button" className="ghost-button" key={preset.name} onClick={() => loadPreset(preset)}>{preset.name}</button>)}</div>
           <label className="field-label">Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
           <label className="field-label">Description<input value={form.description ?? ''} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>

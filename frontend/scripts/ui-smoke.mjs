@@ -227,6 +227,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
     '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
     '/docs/onec/start-here/start-in-15-minutes', '/docs/onec/start-here/what-you-will-build', '/docs/onec/start-here/concepts', '/docs/onec/start-here/beginner-path',
+    '/docs/onec/academy/create-odata-connection', '/docs/onec/academy/test-odata-explorer', '/docs/onec/academy/find-contractor-by-inn',
     '/docs/onec/academy/lesson-01-what-is-omh-for-1c-users', '/docs/onec/academy/lesson-02-create-odata-connection',
     '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn', '/docs/onec/academy/lesson-12-fix-common-errors',
     '/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint',
@@ -255,6 +256,30 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (!(await page.locator('.code-panel').count())) fail('CODE_BLOCK_DOCS', 'Documentation code blocks do not use highlighted code panels');
   if (!(await page.locator('.code-panel .tok-string, .code-panel .tok-key, .code-panel .tok-command').count())) fail('CODE_BLOCK_TOKENS', 'Documentation code block syntax tokens are missing');
 
+  await gotoRoute(page, uiBase, '/docs/onec/start-here/start-in-15-minutes');
+  const start15Text = await page.locator('body').innerText();
+  for (const required of ['OData ERP connection', 'Integration endpoint', 'One OData lookup', 'Target JSON', 'code1', 'code2', 'Timeline opened']) {
+    if (!start15Text.includes(required)) fail('PACK_A_START_15', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/create-odata-connection');
+  const createOdataText = await page.locator('body').innerText();
+  for (const required of ['OData connection is a saved connection to a concrete 1C base', 'Field', 'Base URL', 'secret_1c_erp_password', '[SCREENSHOT: OData Connection creation form]']) {
+    if (!createOdataText.includes(required)) fail('PACK_A_CREATE_ODATA', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/test-odata-explorer');
+  const testOdataText = await page.locator('body').innerText();
+  for (const required of ['Catalog_Контрагенты?$top=5', '[SCREENSHOT: OData Explorer connector selector]', '[SCREENSHOT: OData Explorer resources list]']) {
+    if (!testOdataText.includes(required)) fail('PACK_A_TEST_ODATA', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/find-contractor-by-inn');
+  const contractorByInnText = await page.locator('body').innerText();
+  for (const required of ['Ref_Key', 'ООО Ромашка', "ИНН eq '7707083893'", '[SCREENSHOT: OData query result with Ref_Key]']) {
+    if (!contractorByInnText.includes(required)) fail('PACK_A_FIND_CONTRACTOR', required);
+  }
+
   await gotoRoute(page, uiBase, '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn');
   if (!(await page.locator('.docs-lesson-shell').count())) fail('ACADEMY_LESSON_SHELL', 'Academy lesson page shell is missing');
   if (!(await page.locator('.docs-concept-callout').count())) fail('ACADEMY_CONCEPT_CALLOUT', 'Academy Golden Scenario callout is missing');
@@ -279,6 +304,11 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if ((await page.locator('.hint-chip').count()) < 3) fail('ODATA_HINT_CHIPS', 'OData Explorer field/select hint chips are missing');
   const odataText = await page.locator('body').innerText();
   if (!/Safe OData workflow|Filter builder|\$select/i.test(odataText)) fail('ODATA_EXPLAINER_COPY', 'OData Explorer does not explain filter/select workflow');
+  if (!odataText.includes('Choose the 1C base where OMH will search data.')) fail('ODATA_CONNECTION_HELPER', 'OData Explorer is missing the OData Connection helper text');
+
+  await gotoRoute(page, uiBase, '/odata-connections');
+  const odataConnectionsText = await page.locator('body').innerText();
+  if (!odataConnectionsText.includes('New OData Connection') || !odataConnectionsText.includes('Choose the 1C base where OMH will search data.')) fail('ODATA_CONNECTIONS_WORDING', 'OData Connections page wording is not explicit enough');
 
   if (flowId) {
     await gotoRoute(page, uiBase, `/integration-flows/${flowId}/builder`);

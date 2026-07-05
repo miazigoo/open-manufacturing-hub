@@ -80,11 +80,11 @@ export function ODataExplorerPage() {
           <div>
             <span className="eyebrow">OData Explorer</span>
             <h1>Query 1C OData safely</h1>
-            <p className="microcopy">Use a named OData connection profile, test the exact resource/filter, then save a lookup template for a pipeline.</p>
+            <p className="microcopy">Choose the 1C base where OMH will search data. Use a named OData Connection, test the exact resource/filter, then save a lookup template for a pipeline.</p>
           </div>
           <div className="toolbar-actions">
             <Link className="primary-link" to="/odata-connections">Create OData Connection</Link>
-            <Link className="primary-link" to="/docs/onec/academy/lesson-03-odata-explorer-first-query">Lesson</Link>
+            <Link className="primary-link" to="/docs/onec/academy/test-odata-explorer">Lesson</Link>
           </div>
         </div>
         <form className="stack-form" onSubmit={submit} data-tour="odata-query">
@@ -94,6 +94,7 @@ export function ODataExplorerPage() {
               <option value="">Select OData connection</option>
               {enabledConnections.map((connection) => <option key={connection.id} value={connection.id}>{connection.name} · {connection.base_url}</option>)}
             </select>
+            <span className="microcopy">Choose the 1C base where OMH will search data.</span>
           </label>
           {enabledConnections.length === 0 && <div className="success-note">Create a profile first<span>Open OData Connections, add OData ERP/УСП/WMS, then return here.</span></div>}
           <label className="field-label">
