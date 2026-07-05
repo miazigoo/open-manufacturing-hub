@@ -102,18 +102,18 @@ assert(renderer.includes('~~~'), 'MarkdownRenderer must support tilde code fence
 assert(renderer.includes('<ol') && renderer.includes('orderedList'), 'MarkdownRenderer must support numbered step lists');
 assert(codeBlock.includes('CodeBlock') && sharedCodeBlock.includes('CopyButton'), 'Code blocks must expose copy controls');
 assert(lessonPage.includes('Учебный формат') && conceptCallout.includes('docs-concept-callout') && expectedResult.includes('docs-expected-result') && commonMistakes.includes('docs-common-mistakes') && nextLesson.includes('docs-next-lesson'), 'academy support components are incomplete');
-assert(actionBar.includes('Open 1C Cockpit') && actionBar.includes('Copy endpoint') && docsPage.includes('DocsActionBar'), 'Task 043 DocsActionBar must be mounted on practical docs pages');
-assert(lessonNavigation.includes('Previous lesson') && lessonNavigation.includes('Lesson') && docsPage.includes('academyIndex'), 'Task 043 academy previous/next navigation is missing');
+assert(actionBar.includes('Открыть 1C Cockpit') && actionBar.includes('Скопировать endpoint') && actionBar.includes('Open 1C Cockpit') && docsPage.includes('DocsActionBar'), 'Task 043 DocsActionBar must be mounted on practical docs pages');
+assert(lessonNavigation.includes('Предыдущий урок') && lessonNavigation.includes('Урок') && lessonNavigation.includes('Previous lesson') && docsPage.includes('academyIndex'), 'Task 043 academy previous/next navigation is missing');
 assert(checklistComponent.includes('localStorage') && checklistComponent.includes('percent') && checklistComponent.includes('docs-checklist-progress'), 'Task 043 checklist progress must persist and show percent');
-assert(docsSearch.includes('sectionTitle') && docsSearch.includes('snippet') && docsSearch.includes('matched term') && docsSearch.includes('language'), 'Task 043 search result metadata is incomplete');
+assert(docsSearch.includes('sectionTitle') && docsSearch.includes('snippet') && docsSearch.includes('совпадение') && docsSearch.includes('язык'), 'Task 043 search result metadata is incomplete');
 assert(screenshotPlaceholder.includes('screenshotPending') && screenshotPlaceholder.includes('openSourcePage') && screenshotPlaceholder.includes('captureLater'), 'Task 043 screenshot placeholder must be user-friendly');
 assert(testConsolePage.includes('responseEmptyTitle') && testConsolePage.includes('endpointDisplayName') && !testConsolePage.includes('Not Found'), 'Task 043 Test Console empty state and endpoint labels are incomplete');
 assert(onecContent.includes('Endpoint | URL в OMH') && onecContent.includes('Первый тестовый запрос'), '1C beginner path must explain basics in plain language');
 assert(onecContent.includes('OData filters, field selection and chaining') && onecContent.includes('{{contractor.Ref_Key}}') && onecContent.includes('steps.get_contractor.first.Ref_Key'), '1C docs must explain OData field selection and chaining');
-for (const heading of ['## What you will build', '## Why this matters', '## Before you start', '## Step-by-step', '## Example values', '## What should happen', '## Check yourself', '## Common mistakes', '## Next lesson']) {
+for (const heading of ['## Что вы соберете', '## Зачем это нужно', '## Перед началом', '## Пошаговая настройка', '## Пример значений', '## Что должно получиться', '## Проверьте себя', '## Частые ошибки', '## Следующий урок']) {
   assert(onecAcademyContent.includes(heading), `academy lesson template missing heading: ${heading}`);
 }
-for (const concept of ['## Endpoint', '## OData Connection', '## Connector', '## Integration Flow', '## Step', '## Variable', '## Timeline', '## Artifact', '## DLQ']) {
+for (const concept of ['## Endpoint', '## OData Connection', '## Connector', '## Integration Flow', '## Шаг', '## Variable', '## Timeline', '## Artifact', '## DLQ']) {
   assert(onecContent.includes(concept), `1C glossary missing concept: ${concept}`);
 }
 assert(onecDocsContent.includes('Golden Scenario') && onecDocsContent.includes('1C POST -> two OData lookups -> JSON -> external endpoint'), 'Golden Scenario must be defined in docs');
@@ -122,7 +122,7 @@ assert(onecContent.includes('"codes": [') && onecContent.includes('"code1"') && 
 for (const packARequired of [
   'OData connection is a saved connection to a concrete 1C base',
   'OData Connection — это не generic Connector',
-  '| Field | Example | Meaning | Where to get |',
+  '| Поле | Пример | Что означает | Где взять |',
   'secret_1c_erp_password',
   'Catalog_Контрагенты?$top=5',
   'Resource: Catalog_Контрагенты',
@@ -156,7 +156,7 @@ for (const packBRequired of [
   'build_json',
   'call_endpoint',
   'handle_response',
-  '| Step | Artifact | What to check |',
+  '| Шаг | Artifact | Что проверить |',
 ]) assert(onecDocsContent.includes(packBRequired), `Pack B docs missing: ${packBRequired}`);
 for (const placeholder of [
   '[SCREENSHOT: Flow Builder inbound endpoint form]',
@@ -175,30 +175,30 @@ for (const placeholder of [
   '[SCREENSHOT: Timeline two OData JSON endpoint flow]',
 ]) assert(onecDocsContent.includes(placeholder), `Pack B screenshot placeholder missing: ${placeholder}`);
 for (const recipeRequired of [
-  '1C sends marking code pool to external API',
+  '1C отправляет пул кодов маркировки во внешний API',
   'POST http://omh-server:8000/api/bus/in/onec-marking-pool',
   'pool_type == DNP',
   'Connector: DNP Service',
   'target.response.json',
-  '1C sends pool, OMH enriches via two OData queries',
+  '1C отправляет пул, OMH обогащает его двумя OData-запросами',
   'contractor_uuid',
   'product_uuid',
-  '1C XML raw forwarding to another 1C',
+  'Raw-forwarding XML из одной 1C в другую 1C',
   'raw_forward',
   'incoming.sha256',
   'forwarded.sha256',
-  '1C XML with INN lookup',
+  'XML из 1C с поиском по ИНН',
   '/Envelope/Customer/INN',
   'contractor_uuid',
-  '1C sends print request to Zebra',
+  '1C отправляет запрос печати на Zebra',
   'Connection refused 192.168.1.50:9100',
   'zpl.rendered.txt',
-  'Website/API asks OMH to query 1C OData',
+  'Сайт/API просит OMH запросить 1C OData',
   'sync_response',
   'return_response.json',
-  'WMS sends shipment fact to 1C',
+  'WMS отправляет факт отгрузки в 1C',
   'ORDER_NOT_FOUND',
-  'Route by key phrase/value',
+  'Маршрутизация по ключевому phrase/value',
   'UNSUPPORTED_POOL_TYPE',
 ]) assert(onecDocsContent.includes(recipeRequired), `Task 042 recipe docs missing: ${recipeRequired}`);
 for (const placeholder of [
@@ -212,20 +212,20 @@ for (const placeholder of [
   '[SCREENSHOT: Recipe 8 business rules route by value]',
 ]) assert(onecDocsContent.includes(placeholder), `Task 042 recipe screenshot placeholder missing: ${placeholder}`);
 for (const troubleshootingRequired of [
-  '# Symptom: 1C returned 401',
-  '# Symptom: OData resource not found',
-  '# Symptom: Contractor not found by INN',
-  '# Symptom: Product not found by article',
-  '# Symptom: Target API returned error',
-  '# Symptom: XML parse failed',
-  '# Symptom: Printer unavailable',
-  '# Symptom: Event moved to DLQ',
-  '## What you see',
-  '## What it means',
-  '## What to check',
-  '## How to fix',
-  '## Where to look in OMH',
-  '## Related pages',
+  '# Симптом: 1C вернула 401',
+  '# Симптом: OData resource не найден',
+  '# Симптом: контрагент не найден по ИНН',
+  '# Симптом: товар не найден по артикулу',
+  '# Симптом: target API вернул ошибку',
+  '# Симптом: XML не парсится',
+  '# Симптом: принтер недоступен',
+  '# Симптом: событие попало в DLQ',
+  '## Что вы видите',
+  '## Что это означает',
+  '## Что проверить',
+  '## Как исправить',
+  '## Где смотреть в OMH',
+  '## Связанные страницы',
   '\\"value\\": []',
   '\\"error\\": \\"Invalid token\\"',
   'Connection refused 192.168.1.50:9100',

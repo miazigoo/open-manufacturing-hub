@@ -143,7 +143,7 @@ function parseMarkdown(markdown: string) {
     if (nextLessonShortcode) {
       flushAll();
       const attrs = parseShortcodeAttrs(nextLessonShortcode[1]);
-      nodes.push(<DocsNextLesson key={`next-${nodes.length}`} label={attrs.label ?? 'Next lesson'} href={attrs.href} />);
+      nodes.push(<DocsNextLesson key={`next-${nodes.length}`} label={attrs.label} href={attrs.href} />);
       continue;
     }
 

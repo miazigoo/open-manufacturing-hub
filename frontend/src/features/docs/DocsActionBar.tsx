@@ -4,16 +4,18 @@ import { CopyButton } from '../../components/product/CopyButton';
 
 const labels = {
   ru: {
+    eyebrow: 'Действия в продукте',
     title: 'Действия по этой инструкции',
     subtitle: 'Откройте нужный экран продукта или скопируйте endpoint без поиска по меню.',
-    cockpit: 'Open 1C Cockpit',
-    explorer: 'Open OData Explorer',
-    console: 'Open Test Console',
-    builder: 'Open Integration Flow Builder',
-    journal: 'Open Event Journal',
-    copyEndpoint: 'Copy endpoint',
+    cockpit: 'Открыть 1C Cockpit',
+    explorer: 'Открыть OData Explorer',
+    console: 'Открыть Test Console',
+    builder: 'Открыть Integration Flow Builder',
+    journal: 'Открыть Event Journal',
+    copyEndpoint: 'Скопировать endpoint',
   },
   en: {
+    eyebrow: 'Product actions',
     title: 'Actions for this guide',
     subtitle: 'Open the right product screen or copy the endpoint without searching the menu.',
     cockpit: 'Open 1C Cockpit',
@@ -24,6 +26,7 @@ const labels = {
     copyEndpoint: 'Copy endpoint',
   },
   zh: {
+    eyebrow: '产品操作',
     title: '本指南操作',
     subtitle: '直接打开相关产品页面或复制端点。',
     cockpit: '打开 1C Cockpit',
@@ -45,7 +48,7 @@ export function DocsActionBar({ endpointUrl }: DocsActionBarProps) {
   return (
     <section className="docs-action-bar" aria-label={copy.title}>
       <div>
-        <span className="eyebrow">Product actions</span>
+        <span className="eyebrow">{copy.eyebrow}</span>
         <strong>{copy.title}</strong>
         <p>{copy.subtitle}</p>
       </div>

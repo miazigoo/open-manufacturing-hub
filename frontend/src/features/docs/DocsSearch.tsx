@@ -4,7 +4,7 @@ import { flattenDocs, pagePath } from './content';
 import type { DocsLanguageBundle } from './types';
 
 const labels = {
-  ru: { search: 'Поиск', title: 'Поиск по документации', results: 'Результаты', matches: 'совпадений', empty: 'По этому запросу ничего не найдено.', matched: 'matched term', language: 'language' },
+  ru: { search: 'Поиск', title: 'Поиск по документации', results: 'Результаты', matches: 'совпадений', empty: 'По этому запросу ничего не найдено.', matched: 'совпадение', language: 'язык' },
   en: { search: 'Search', title: 'Search documentation', results: 'Results', matches: 'matches', empty: 'No documentation pages matched this query.', matched: 'matched term', language: 'language' },
   zh: { search: '搜索', title: '搜索文档', results: '搜索结果', matches: '条匹配', empty: '没有找到匹配的文档页面。', matched: '匹配词', language: '语言' },
 };

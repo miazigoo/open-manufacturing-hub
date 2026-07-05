@@ -1,11 +1,20 @@
 import { useMemo, useState } from 'react';
+import { useI18n } from '../../i18n/useI18n';
 
 type DocsChecklistProps = {
   id: string;
   items: string[];
 };
 
+const labels = {
+  ru: { eyebrow: 'Чеклист', title: 'Проверьте себя', progress: 'Прогресс чеклиста' },
+  en: { eyebrow: 'Checklist', title: 'Check yourself', progress: 'Checklist progress' },
+  zh: { eyebrow: '检查清单', title: '自我检查', progress: '检查清单进度' },
+};
+
 export function DocsChecklist({ id, items }: DocsChecklistProps) {
+  const { language } = useI18n();
+  const copy = labels[language];
   const storageKey = `omh.docs.checklist.${id}`;
   const [checked, setChecked] = useState<Record<string, boolean>>(() => {
     try {
@@ -28,12 +37,12 @@ export function DocsChecklist({ id, items }: DocsChecklistProps) {
     <section className="docs-checklist">
       <div className="panel-toolbar">
         <div>
-          <span className="eyebrow">Checklist</span>
-          <h3>Проверьте себя</h3>
+          <span className="eyebrow">{copy.eyebrow}</span>
+          <h3>{copy.title}</h3>
         </div>
         <span className="docs-checklist-score">{percent}% · {completed}/{items.length}</span>
       </div>
-      <div className="docs-checklist-progress" aria-label={`Checklist progress ${percent}%`}>
+      <div className="docs-checklist-progress" aria-label={`${copy.progress} ${percent}%`}>
         <span style={{ width: `${percent}%` }} />
       </div>
       <div className="docs-checklist-items">

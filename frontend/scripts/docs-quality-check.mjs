@@ -93,10 +93,10 @@ for (const link of docsLinks) {
   assert(knownRoutes.has(link), `documentation link points to unknown page: ${link}`);
 }
 
-assert(actionBar.includes('Open 1C Cockpit') && actionBar.includes('Copy endpoint') && docsPage.includes('DocsActionBar'), 'DocsActionBar is missing or not mounted');
-assert(lessonNav.includes('Lesson') && docsPage.includes('DocsLessonNavigation') && docsPage.includes('academyIndex'), 'Academy previous/next lesson navigation is missing');
+assert(actionBar.includes('Открыть 1C Cockpit') && actionBar.includes('Скопировать endpoint') && actionBar.includes('Open 1C Cockpit') && docsPage.includes('DocsActionBar'), 'DocsActionBar is missing or not mounted');
+assert(lessonNav.includes('Урок') && lessonNav.includes('Lesson') && docsPage.includes('DocsLessonNavigation') && docsPage.includes('academyIndex'), 'Academy previous/next lesson navigation is missing');
 assert(checklist.includes('localStorage') && checklist.includes('percent') && checklist.includes('docs-checklist-progress'), 'Docs checklist must persist and show percent progress');
-assert(search.includes('sectionTitle') && search.includes('snippet') && search.includes('matched term') && search.includes('language'), 'Docs search result metadata is incomplete');
+assert(search.includes('sectionTitle') && search.includes('snippet') && search.includes('совпадение') && search.includes('язык'), 'Docs search result metadata is incomplete');
 assert(screenshotPlaceholder.includes('screenshotPending') && screenshotPlaceholder.includes('openSourcePage') && screenshotPlaceholder.includes('captureLater'), 'Screenshot placeholder copy/actions are incomplete');
 assert(renderer.includes('[SCREENSHOT:') && renderer.includes('ScreenshotPlaceholder'), 'MarkdownRenderer must render bracket screenshot placeholders');
 assert(makefile.includes('docs-quality-check') && packageJson.scripts['docs:quality-check'], 'make docs-quality-check command is missing');

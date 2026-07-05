@@ -4,9 +4,9 @@ import { pagePath } from './content';
 import { useI18n } from '../../i18n/useI18n';
 
 const labels = {
-  ru: { previous: '← Previous lesson', next: 'Next lesson →', here: 'You are here', lesson: 'Lesson' },
-  en: { previous: '← Previous lesson', next: 'Next lesson →', here: 'You are here', lesson: 'Lesson' },
-  zh: { previous: '← 上一课', next: '下一课 →', here: '当前位置', lesson: '课程' },
+  ru: { previous: '← Предыдущий урок', next: 'Следующий урок →', here: 'Вы здесь', lesson: 'Урок', of: 'из', academy: 'Академия' },
+  en: { previous: '← Previous lesson', next: 'Next lesson →', here: 'You are here', lesson: 'Lesson', of: 'of', academy: 'Academy' },
+  zh: { previous: '← 上一课', next: '下一课 →', here: '当前位置', lesson: '课程', of: '/', academy: '学院' },
 };
 
 type DocsLessonNavigationProps = {
@@ -21,10 +21,10 @@ export function DocsLessonNavigation({ current, previous, next, index, total }: 
   const { language } = useI18n();
   const copy = labels[language];
   return (
-    <nav className="docs-lesson-navigation" aria-label="Academy lesson navigation">
+    <nav className="docs-lesson-navigation" aria-label={`${copy.academy} lesson navigation`}>
       <div className="docs-lesson-position">
-        <span className="eyebrow">Academy</span>
-        <strong>{copy.here}: {copy.lesson} {index + 1} of {total}</strong>
+        <span className="eyebrow">{copy.academy}</span>
+        <strong>{copy.here}: {copy.lesson} {index + 1} {copy.of} {total}</strong>
         <small>{current.title}</small>
       </div>
       <div className="docs-lesson-nav-links">

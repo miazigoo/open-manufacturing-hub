@@ -22,6 +22,7 @@ const copy = {
     languages: 'языка',
     planned: 'запланирован',
     translation: 'Перевод страницы ещё дорабатывается. Структура стабильна и соответствует русскому оригиналу.',
+    startEyebrow: 'С чего начать',
     startTitle: 'Если вы здесь впервые, начните с понятного маршрута',
     startSubtitle: 'Не нужно читать все подряд. Выберите задачу, повторите пример в Test Console, затем откройте Timeline и проверьте результат.',
     paths: [
@@ -41,6 +42,7 @@ const copy = {
     languages: 'languages',
     planned: 'planned',
     translation: 'Translation is in progress. The structure is stable and follows the Russian source page.',
+    startEyebrow: 'Start here',
     startTitle: 'First time here? Start with a guided path',
     startSubtitle: 'Do not read everything in order. Pick the job, run the example in Test Console, then inspect Timeline.',
     paths: [
@@ -60,6 +62,7 @@ const copy = {
     languages: '语言',
     planned: '计划中',
     translation: '翻译正在完善中。页面结构稳定，并与俄文原版保持一致。',
+    startEyebrow: '从这里开始',
     startTitle: '第一次使用？从引导路径开始',
     startSubtitle: '无需按顺序阅读所有内容。选择任务，在 Test Console 运行示例，然后检查 Timeline。',
     paths: [
@@ -126,7 +129,7 @@ export function DocumentationPage() {
               {isLanding && (
                 <section className="docs-start-panel">
                   <div>
-                    <span className="eyebrow">Start here</span>
+                    <span className="eyebrow">{texts.startEyebrow}</span>
                     <h2>{texts.startTitle}</h2>
                     <p>{texts.startSubtitle}</p>
                   </div>

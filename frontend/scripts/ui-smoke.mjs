@@ -266,7 +266,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
   const orderedLists = await page.locator('.docs-markdown ol').count();
   if (orderedLists < 2) fail('DOCS_ORDERED_LISTS', `Expected beginner guide to render numbered steps, got ${orderedLists}`);
   if (!(await page.locator('.docs-action-bar').count())) fail('DOCS_ACTION_BAR', 'Practical docs page does not render DocsActionBar');
-  if (!(await page.getByText('Open Test Console').count())) fail('DOCS_ACTION_TEST_CONSOLE', 'DocsActionBar is missing Open Test Console action');
+  if (!(await page.getByText('Открыть Test Console').count())) fail('DOCS_ACTION_TEST_CONSOLE', 'DocsActionBar is missing localized Test Console action');
   if (!(await page.getByText('Мини-словарь простыми словами').count())) fail('DOCS_BEGINNER_GLOSSARY', 'Beginner guide glossary is missing');
   if (!(await page.locator('.docs-example-card').count())) fail('DOCS_BEGINNER_EXAMPLE', 'Beginner guide runnable example is missing');
   if (!(await page.locator('.code-panel').count())) fail('CODE_BLOCK_DOCS', 'Documentation code blocks do not use highlighted code panels');
@@ -274,7 +274,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
 
   await gotoRoute(page, uiBase, '/docs/search?q=OData');
   const searchText = await page.locator('body').innerText();
-  for (const required of ['matched term', 'language']) {
+  for (const required of ['совпадение', 'язык']) {
     if (!searchText.includes(required)) fail('DOCS_SEARCH_METADATA', required);
   }
   const firstResultMeta = await page.locator('.docs-result-card span').first().innerText().catch(() => '');
@@ -289,7 +289,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/create-odata-connection');
   const createOdataText = await page.locator('body').innerText();
-  for (const required of ['OData connection is a saved connection to a concrete 1C base', 'Field', 'Base URL', 'secret_1c_erp_password', 'OData Connection creation form']) {
+  for (const required of ['OData connection is a saved connection to a concrete 1C base', 'Таблица полей', 'Base URL', 'secret_1c_erp_password', 'OData Connection creation form']) {
     if (!createOdataText.includes(required)) fail('PACK_A_CREATE_ODATA', required);
   }
 
@@ -348,14 +348,14 @@ async function runBrowserSmoke(apiBase, uiBase) {
   }
 
   const recipeChecks = [
-    ['/docs/onec/recipes/recipe-01-onec-marking-pool-to-external-api', ['1C sends marking code pool to external API', 'onec-marking-pool', 'pool_type == DNP', 'DNP Service', 'target.response.json']],
+    ['/docs/onec/recipes/recipe-01-onec-marking-pool-to-external-api', ['1C отправляет пул кодов маркировки во внешний API', 'onec-marking-pool', 'pool_type == DNP', 'DNP Service', 'target.response.json']],
     ['/docs/onec/recipes/recipe-02-onec-post-two-odata-lookups', ['two OData queries', 'contractor_uuid', 'product_uuid', 'odata.contractor.request.json', 'target_payload.json']],
     ['/docs/onec/recipes/recipe-03-onec-xml-raw-forwarding', ['raw forwarding', 'raw_forward', 'SHA256', 'incoming.request.xml', 'target.request.xml']],
-    ['/docs/onec/recipes/recipe-04-onec-xml-inn-lookup', ['XML with INN lookup', '/Envelope/Customer/INN', 'contractor_uuid', 'ORDER_NOT_FOUND', 'target.response.json']],
-    ['/docs/onec/recipes/recipe-05-onec-print-request-to-zebra', ['print request to Zebra', 'Zebra-01', 'zpl.rendered.txt', 'Connection refused 192.168.1.50:9100', 'print_job_id']],
-    ['/docs/onec/recipes/recipe-06-website-api-query-onec-odata', ['query 1C OData', 'sync_response', 'return_response.json', 'AccumulationRegister', 'website-token']],
-    ['/docs/onec/recipes/recipe-07-wms-shipment-fact-to-onec', ['WMS sends shipment fact to 1C', 'SHIP-404', 'ORDER_NOT_FOUND', 'mapping.output.json', '/hs/wms/shipment-fact']],
-    ['/docs/onec/recipes/recipe-08-route-by-key-phrase-value', ['Route by key phrase/value', 'pool_type == DNP', 'pool_type == PRINT', 'UNSUPPORTED_POOL_TYPE', 'business_rule.result.json']],
+    ['/docs/onec/recipes/recipe-04-onec-xml-inn-lookup', ['XML из 1C с поиском по ИНН', '/Envelope/Customer/INN', 'contractor_uuid', 'ORDER_NOT_FOUND', 'target.response.json']],
+    ['/docs/onec/recipes/recipe-05-onec-print-request-to-zebra', ['запрос печати на Zebra', 'Zebra-01', 'zpl.rendered.txt', 'Connection refused 192.168.1.50:9100', 'print_job_id']],
+    ['/docs/onec/recipes/recipe-06-website-api-query-onec-odata', ['запросить 1C OData', 'sync_response', 'return_response.json', 'AccumulationRegister', 'website-token']],
+    ['/docs/onec/recipes/recipe-07-wms-shipment-fact-to-onec', ['WMS отправляет факт отгрузки в 1C', 'SHIP-404', 'ORDER_NOT_FOUND', 'mapping.output.json', '/hs/wms/shipment-fact']],
+    ['/docs/onec/recipes/recipe-08-route-by-key-phrase-value', ['Маршрутизация по ключевому phrase/value', 'pool_type == DNP', 'pool_type == PRINT', 'UNSUPPORTED_POOL_TYPE', 'business_rule.result.json']],
   ];
   for (const [route, requiredItems] of recipeChecks) {
     await gotoRoute(page, uiBase, route);
@@ -366,14 +366,14 @@ async function runBrowserSmoke(apiBase, uiBase) {
   }
 
   const troubleshootingChecks = [
-    ['/docs/onec/troubleshooting/onec-returned-401', ['Symptom: 1C returned 401', 'What you see', 'What it means', 'What to check', 'How to fix', 'Where to look in OMH', 'Related pages', 'X-OMH-Token']],
-    ['/docs/onec/troubleshooting/odata-resource-not-found', ['Symptom: OData resource not found', 'metadata', 'OData Explorer', 'resource name', 'Related pages']],
-    ['/docs/onec/troubleshooting/contractor-not-found-by-inn', ['Symptom: Contractor not found by INN', 'value', 'request.body.inn', 'remove spaces', 'odata.contractor.response.json']],
-    ['/docs/onec/troubleshooting/product-not-found', ['Symptom: Product not found by article', 'product_code', 'uppercase', 'OData WMS', 'odata.product.response.json']],
-    ['/docs/onec/troubleshooting/target-api-returned-error', ['Symptom: Target API returned error', 'Invalid token', 'target.request.json', 'target.response.json', 'External error tab']],
-    ['/docs/onec/troubleshooting/xml-parse-error', ['Symptom: XML parse failed', 'raw_forward', 'parse_and_forward', 'XML Tools', 'incoming.request.xml']],
-    ['/docs/onec/troubleshooting/printer-unavailable', ['Symptom: Printer unavailable', 'Connection refused 192.168.1.50:9100', 'zpl.rendered.txt', 'printer.response.json', 'retry']],
-    ['/docs/onec/troubleshooting/event-moved-to-dlq', ['Symptom: Event moved to DLQ', 'Retry attempts are exhausted', 'Edit & Retry', 'Replay from DLQ', 'Force complete']],
+    ['/docs/onec/troubleshooting/onec-returned-401', ['Симптом: 1C вернула 401', 'Что вы видите', 'Что это означает', 'Что проверить', 'Как исправить', 'Где смотреть в OMH', 'Связанные страницы', 'X-OMH-Token']],
+    ['/docs/onec/troubleshooting/odata-resource-not-found', ['Симптом: OData resource не найден', 'metadata', 'OData Explorer', 'resource name', 'Связанные страницы']],
+    ['/docs/onec/troubleshooting/contractor-not-found-by-inn', ['Симптом: контрагент не найден по ИНН', 'value', 'request.body.inn', 'remove spaces', 'odata.contractor.response.json']],
+    ['/docs/onec/troubleshooting/product-not-found', ['Симптом: товар не найден по артикулу', 'product_code', 'uppercase', 'OData WMS', 'odata.product.response.json']],
+    ['/docs/onec/troubleshooting/target-api-returned-error', ['Симптом: target API вернул ошибку', 'Invalid token', 'target.request.json', 'target.response.json', 'External error tab']],
+    ['/docs/onec/troubleshooting/xml-parse-error', ['Симптом: XML не парсится', 'raw_forward', 'parse_and_forward', 'XML Tools', 'incoming.request.xml']],
+    ['/docs/onec/troubleshooting/printer-unavailable', ['Симптом: принтер недоступен', 'Connection refused 192.168.1.50:9100', 'zpl.rendered.txt', 'printer.response.json', 'retry']],
+    ['/docs/onec/troubleshooting/event-moved-to-dlq', ['Симптом: событие попало в DLQ', 'Retry attempts are exhausted', 'Edit & Retry', 'Replay from DLQ', 'Force complete']],
   ];
   for (const [route, requiredItems] of troubleshootingChecks) {
     await gotoRoute(page, uiBase, route);
@@ -385,7 +385,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn');
   if (!(await page.locator('.docs-lesson-navigation').count())) fail('ACADEMY_LESSON_NAVIGATION', 'Academy previous/next navigation is missing');
-  if (!((await page.locator('.docs-lesson-navigation').first().innerText()).includes('Lesson'))) fail('ACADEMY_LESSON_POSITION', 'Academy lesson position is missing');
+  if (!((await page.locator('.docs-lesson-navigation').first().innerText()).includes('Урок'))) fail('ACADEMY_LESSON_POSITION', 'Academy lesson position is missing');
   if (!(await page.locator('.docs-lesson-shell').count())) fail('ACADEMY_LESSON_SHELL', 'Academy lesson page shell is missing');
   if (!(await page.locator('.docs-concept-callout').count())) fail('ACADEMY_CONCEPT_CALLOUT', 'Academy Golden Scenario callout is missing');
   if (!(await page.locator('.docs-expected-result').count())) fail('ACADEMY_EXPECTED_RESULT', 'Academy expected-result block is missing');
@@ -393,7 +393,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (!(await page.locator('.docs-next-lesson').count())) fail('ACADEMY_NEXT_LESSON', 'Academy next lesson block is missing');
   if (!(await page.locator('.docs-checklist-score').count()) || !(await page.locator('.docs-checklist-progress').count())) fail('ACADEMY_CHECKLIST_PROGRESS', 'Academy checklist percent/progress is missing');
   const academyText = await page.locator('body').innerText();
-  if (!academyText.includes('Golden Scenario') || !academyText.includes('Step-by-step')) fail('ACADEMY_TEMPLATE_COPY', 'Academy lesson does not render required curriculum structure');
+  if (!academyText.includes('Golden Scenario') || !academyText.includes('Пошаговая настройка')) fail('ACADEMY_TEMPLATE_COPY', 'Academy lesson does not render required curriculum structure');
 
   await gotoRoute(page, uiBase, '/docs/onec/start-here/concepts');
   const conceptsText = await page.locator('body').innerText();
