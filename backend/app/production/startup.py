@@ -41,7 +41,7 @@ async def log_startup_banner(session: AsyncSession) -> None:
     logger.warning(
         "\n".join(
             [
-                "OMH Production Startup",
+                "OMH Production Startup" if production_mode else "OMH Development Startup",
                 f"App version: {settings.app_version}",
                 f"DB revision: {await database_revision(session) or 'unknown'}",
                 f"Installed packages: {', '.join(item.package_id for item in packages) or 'none'}",

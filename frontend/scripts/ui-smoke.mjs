@@ -28,6 +28,10 @@ function fail(kind, detail) {
   console.error(`[ui-smoke] ${line}`);
 }
 
+function includesAny(text, variants) {
+  return variants.some((variant) => text.includes(variant));
+}
+
 async function fileExists(file) {
   try {
     await access(file, constants.X_OK);
@@ -552,12 +556,23 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (!(await page.locator('.odata-filter-builder').count())) fail('ODATA_FILTER_BUILDER', 'OData Explorer filter builder is missing');
   if ((await page.locator('.hint-chip').count()) < 3) fail('ODATA_HINT_CHIPS', 'OData Explorer field/select hint chips are missing');
   const odataText = await page.locator('body').innerText();
-  if (!/Safe OData workflow|Filter builder|\$select/i.test(odataText)) fail('ODATA_EXPLAINER_COPY', 'OData Explorer does not explain filter/select workflow');
-  if (!odataText.includes('Choose the 1C base where OMH will search data.')) fail('ODATA_CONNECTION_HELPER', 'OData Explorer is missing the OData Connection helper text');
+  if (!/Safe OData workflow|Безопасный OData workflow|安全 OData 工作流|Filter builder|Конструктор фильтра|过滤器构建器|\$select/i.test(odataText)) fail('ODATA_EXPLAINER_COPY', 'OData Explorer does not explain filter/select workflow');
+  if (!includesAny(odataText, [
+    'Choose the 1C base where OMH will search data.',
+    'Выберите базу 1С, где OMH будет искать данные.',
+    '选择 OMH 查询数据的 1C 基础库。',
+  ])) fail('ODATA_CONNECTION_HELPER', 'OData Explorer is missing the OData Connection helper text');
 
   await gotoRoute(page, uiBase, '/odata-connections');
   const odataConnectionsText = await page.locator('body').innerText();
-  if (!odataConnectionsText.includes('New OData Connection') || !odataConnectionsText.includes('Choose the 1C base where OMH will search data.')) fail('ODATA_CONNECTIONS_WORDING', 'OData Connections page wording is not explicit enough');
+  if (
+    !includesAny(odataConnectionsText, ['New OData Connection', 'Новое OData-подключение', '新建 OData 连接']) ||
+    !includesAny(odataConnectionsText, [
+      'Choose the 1C base where OMH will search data.',
+      'Выберите базу 1С, где OMH будет искать данные.',
+      '选择 OMH 查询数据的 1C 基础库。',
+    ])
+  ) fail('ODATA_CONNECTIONS_WORDING', 'OData Connections page wording is not explicit enough');
 
   if (flowId) {
     await gotoRoute(page, uiBase, `/integration-flows/${flowId}/builder`);
