@@ -32,8 +32,10 @@ export function TestConsolePage() {
   const { language, t } = useI18n();
   const [searchParams] = useSearchParams();
   const exampleId = searchParams.get('exampleId');
+  const trainingExampleId = searchParams.get('trainingExampleId');
   const endpoints = useQuery({ queryKey: ['bus-endpoints'], queryFn: integrationBusApi.endpoints });
   const docsExample = useQuery({ queryKey: ['docs-example', exampleId], queryFn: () => testConsoleApi.docsExample(exampleId!), enabled: Boolean(exampleId) });
+  const trainingExample = useQuery({ queryKey: ['training-example', trainingExampleId], queryFn: () => testConsoleApi.trainingExample(trainingExampleId!), enabled: Boolean(trainingExampleId) });
   const [form, setForm] = useState({ endpoint_id: '', input_mode: 'json', headers_json: '{}', body: jsonSample });
   const [formError, setFormError] = useState<string | null>(null);
   const send = useMutation({
@@ -49,15 +51,16 @@ export function TestConsolePage() {
   });
 
   useEffect(() => {
-    if (!docsExample.data || endpoints.isLoading) return;
-    const endpoint = endpoints.data?.find((item) => item.slug === docsExample.data.endpoint_slug);
+    const loadedExample = trainingExample.data ?? docsExample.data;
+    if (!loadedExample || endpoints.isLoading) return;
+    const endpoint = endpoints.data?.find((item) => item.slug === loadedExample.endpoint_slug);
     setForm({
       endpoint_id: endpoint?.id ?? '',
-      input_mode: docsExample.data.input_mode,
-      headers_json: JSON.stringify(docsExample.data.headers ?? {}, null, 2),
-      body: docsExample.data.input_mode === 'json' ? JSON.stringify(docsExample.data.body ?? {}, null, 2) : docsExample.data.body_text ?? '',
+      input_mode: loadedExample.input_mode,
+      headers_json: JSON.stringify(loadedExample.headers ?? {}, null, 2),
+      body: loadedExample.input_mode === 'json' ? JSON.stringify(loadedExample.body ?? {}, null, 2) : loadedExample.body_text ?? '',
     });
-  }, [docsExample.data, endpoints.data, endpoints.isLoading]);
+  }, [docsExample.data, trainingExample.data, endpoints.data, endpoints.isLoading]);
 
   if (endpoints.isLoading) return <LoadingState label={t('integration.testConsoleLoading')} />;
   if (endpoints.error) return <ErrorState error={endpoints.error} />;
@@ -97,20 +100,22 @@ export function TestConsolePage() {
   const externalError = send.data?.external_error as { code?: string } | undefined;
   const translatedError = externalError ? getExternalErrorTranslation(externalError.code, t) : null;
   const selectedEndpoint = endpoints.data?.find((item) => item.id === form.endpoint_id) ?? null;
+  const loadedExample = trainingExample.data ?? docsExample.data;
 
   return (
     <div className="page-stack two-column-page">
       <form className="panel form-panel stack-form" onSubmit={submit}>
         <span className="eyebrow">{t('integration.testConsole')}</span>
         <h1>{t('integration.sendRequests')}</h1>
-        {docsExample.data && (
+        {loadedExample && (
           <div className="docs-example-loaded">
-            <strong>{t('integration.loadedDocsExample', { title: docsExample.data.title[language] ?? docsExample.data.title.en ?? docsExample.data.id })}</strong>
-            <span>{t('integration.endpointSlug', { slug: docsExample.data.endpoint_slug })}</span>
+            <strong>{t(trainingExample.data ? 'integration.loadedTrainingExample' : 'integration.loadedDocsExample', { title: loadedExample.title[language] ?? loadedExample.title.en ?? loadedExample.id })}</strong>
+            <span>{t('integration.endpointSlug', { slug: loadedExample.endpoint_slug })}</span>
             {!form.endpoint_id && <small>{t('integration.endpointMissing')}</small>}
           </div>
         )}
         {docsExample.error instanceof Error && <div className="error-state compact">{docsExample.error.message}</div>}
+        {trainingExample.error instanceof Error && <div className="error-state compact">{trainingExample.error.message}</div>}
         <label className="field-label" data-tour="test-endpoint">
           {t('integration.endpoint')}
           <select

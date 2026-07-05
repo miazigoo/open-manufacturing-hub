@@ -44,6 +44,17 @@
     "planned_capabilities": ["Secret references", "Masked reads", "Credential rotation", "Production checks"]
   },
   {
+    "package_id": "omh-package-training",
+    "name": "Training Sandbox Package",
+    "version": "0.1.0",
+    "official": true,
+    "category": "Training",
+    "description": "Executable 1C/OData/API/printer training sandbox with mock systems, demo flows and runnable documentation examples.",
+    "status": "available",
+    "installable": true,
+    "planned_capabilities": ["Training sandbox", "Mock OData ERP/WMS", "Mock DNP API", "Mock printer", "Demo flows", "Runnable docs examples"]
+  },
+  {
     "package_id": "omh-package-mqtt",
     "name": "MQTT Package",
     "version": "0.1.0",

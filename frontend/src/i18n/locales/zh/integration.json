@@ -11,6 +11,7 @@
   "testConsole": "测试控制台",
   "sendRequests": "发送集成请求",
   "loadedDocsExample": "已加载文档示例：{title}",
+  "loadedTrainingExample": "已加载训练示例：{title}",
   "endpointSlug": "端点 slug：/api/bus/in/{slug}",
   "endpointMissing": "发送前请创建或安装此端点。Payload 仍可复制和编辑。",
   "selectEndpoint": "选择端点",
@@ -26,5 +27,27 @@
   "invalidBody": "Body JSON 无效。切换到 XML/raw_text 或修复 JSON payload。",
   "testConsoleLoading": "正在加载测试控制台",
   "responseEmptyTitle": "选择端点并发送测试请求。",
-  "responseEmptyDetail": "点击 Send 或 Dry Run 后结果会显示在这里。只有真实运行失败后才显示错误。"
+  "responseEmptyDetail": "点击 Send 或 Dry Run 后结果会显示在这里。只有真实运行失败后才显示错误。",
+  "training": {
+    "loading": "正在加载训练沙盒",
+    "eyebrow": "训练实验室",
+    "title": "面向 1C、OData、DNP 和打印的可执行沙盒",
+    "subtitle": "安装模拟 ERP/WMS、DNP API、打印机、演示流和测试用例。课程可像真实集成一样运行并生成 Timeline。",
+    "install": "安装训练沙盒",
+    "reinstall": "重新安装训练沙盒",
+    "reset": "重置训练数据",
+    "openDocs": "打开学习文档",
+    "package": "包",
+    "connectors": "连接器",
+    "flows": "流程",
+    "examples": "示例",
+    "executableLessons": "可执行课程",
+    "examplesHint": "每个示例都可在 Test Console 打开或直接运行。错误示例会故意失败，用于学习诊断。",
+    "run": "运行",
+    "openLastTimeline": "打开最后的 Timeline",
+    "lastRun": "最后运行",
+    "runHint": "运行示例后可查看结果和 Timeline 链接。",
+    "installedConnectors": "已安装训练连接器",
+    "installedFlows": "已安装训练流程"
+  }
 }

@@ -31,6 +31,13 @@ REQUIRED_OFFICIAL_PACKAGES = {
     "omh-package-secrets": {
         "backend_manifest": "backend/app/packages_secrets/manifest.py",
     },
+    "omh-package-training": {
+        "backend_manifest": "backend/app/packages_training/manifest.py",
+        "frontend_entries": [
+            "frontend/src/pages/TrainingPage.tsx",
+            "frontend/src/api/training.ts",
+        ],
+    },
 }
 
 

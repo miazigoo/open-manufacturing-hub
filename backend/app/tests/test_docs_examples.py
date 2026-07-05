@@ -5,6 +5,7 @@ async def test_docs_examples_list_get_and_safe_run(client):
     ids = {item["id"] for item in examples}
     assert "onec.two_odata_to_json_endpoint" in ids
     assert "onec.print_label" in ids
+    assert "training.onec.post_two_odata_to_dnp" in ids
 
     get_response = await client.get("/api/docs/examples/onec.two_odata_to_json_endpoint")
     assert get_response.status_code == 200, get_response.text

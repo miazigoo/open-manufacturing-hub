@@ -14,6 +14,7 @@ from app.connectors.schemas import ConnectorInstanceCreate, ConnectorInstancePat
 from app.core.enums import ConnectorDirection
 from app.core.errors import BadRequestError, NotFoundError
 from app.odata_connections.schemas import ODataConnectionCreate, ODataConnectionPatch, ODataConnectionRead, ODataConnectionTestRequest
+from app.packages_training.mock_odata import metadata_xml, query_mock_odata
 from app.secrets.service import SecretResolver
 
 
@@ -159,6 +160,16 @@ async def test_connection(session: AsyncSession, connection_id: UUID, request: O
     if connector is None or not _is_odata_connection(connector):
         raise NotFoundError("OData connection not found")
     config = await SecretResolver(session).resolve_config(connector.config_json)
+    mock_odata = config.get("mock_odata") if isinstance(config.get("mock_odata"), dict) else None
+    if mock_odata:
+        if request.resource == "$metadata":
+            return {"success": True, "status": "ok", "message": "Training mock OData metadata is available", "connector_id": connector.id, "request": {"mock": True, "resource": "$metadata"}, "response": {"status_code": 200, "body_preview": metadata_xml(mock_odata)[:1000]}, "sample_items": []}
+        params: dict[str, Any] = {"$top": request.top or 5}
+        if request.filter:
+            params["$filter"] = request.filter
+        response = query_mock_odata(mock_odata, request.resource, params)
+        items = response.get("value") if isinstance(response.get("value"), list) else []
+        return {"success": True, "status": "ok", "message": "Training mock OData query succeeded", "connector_id": connector.id, "request": {"mock": True, "resource": request.resource, "params": params}, "response": response, "sample_items": items[:5]}
     if request.resource == "$metadata":
         client = OneCHTTPClient(config)
         response, request_payload, error_code, error_message = await client.request("GET", join_url(str(config.get("base_url") or ""), "$metadata"))

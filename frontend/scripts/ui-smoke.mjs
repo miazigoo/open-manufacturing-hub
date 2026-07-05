@@ -145,6 +145,7 @@ async function prepareDatabase(databaseUrl) {
 async function seedApi(apiBase) {
   await requestJson(`${apiBase}/api/packages/omh-package-onec/install`, { method: 'POST', body: JSON.stringify({ install_demo_data: true }), headers: { 'Content-Type': 'application/json' } });
   await requestJson(`${apiBase}/api/packages/omh-package-printer/install`, { method: 'POST' });
+  await requestJson(`${apiBase}/api/training/install`, { method: 'POST' });
   await requestJson(`${apiBase}/api/scenario-library/onec-post-two-odata-to-endpoint/install`, { method: 'POST' });
   await requestJson(`${apiBase}/api/resolvers/install-presets`, { method: 'POST' });
   await requestJson(`${apiBase}/api/business-rules/install-presets`, { method: 'POST' });
@@ -161,7 +162,7 @@ async function assertHealthy(page, route) {
   if (/Loading page|Loading |Загрузка|正在加载/i.test(body)) await page.waitForTimeout(1500);
   const later = await page.locator('body').innerText({ timeout: timeoutMs });
   if (/Loading page|Loading |Загрузка|正在加载/i.test(later)) fail('STUCK_LOADING', route);
-  if (/API request failed|Failed to fetch|Error:/i.test(later)) fail('VISIBLE_ERROR', `${route}: ${later.slice(0, 280).replace(/\s+/g, ' ')}`);
+  if (/API request failed|Failed to fetch|Unhandled|Page crashed|Ошибка загрузки|Не удалось загрузить/i.test(later)) fail('VISIBLE_ERROR', `${route}: ${later.slice(0, 280).replace(/\s+/g, ' ')}`);
   const h1 = await page.locator('h1').first().textContent({ timeout: 5000 }).catch(() => 'NO_H1');
   routeSummaries.push(`${route} -> ${String(h1).trim()}`);
 }
@@ -225,10 +226,11 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/integration-bus', '/integration-flows', flowId ? `/integration-flows/${flowId}/builder` : null,
     '/business-objects', '/resolvers', resolverId ? `/resolvers/${resolverId}` : null, '/resolvers/cache',
     '/transforms', '/business-rules', ruleId ? `/business-rules/${ruleId}` : null,
-    '/test-console', '/test-console?exampleId=onec.two_odata_to_json_endpoint', '/odata-connections', '/odata-explorer', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
+    '/training', '/test-console', '/test-console?exampleId=onec.two_odata_to_json_endpoint', '/test-console?trainingExampleId=training.onec.post_two_odata_to_dnp', '/odata-connections', '/odata-explorer', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
     '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
     '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
     '/docs/onec/start-here/start-in-15-minutes', '/docs/onec/start-here/what-you-will-build', '/docs/onec/start-here/concepts', '/docs/onec/start-here/glossary', '/docs/onec/start-here/beginner-path',
+    '/docs/onec/academy/training-sandbox-executable-docs',
     '/docs/onec/academy/create-odata-connection', '/docs/onec/academy/test-odata-explorer', '/docs/onec/academy/find-contractor-by-inn',
     '/docs/onec/academy/create-inbound-endpoint', '/docs/onec/academy/read-request-fields',
     '/docs/onec/academy/first-odata-query-contractor', '/docs/onec/academy/second-odata-query-product',
@@ -517,6 +519,33 @@ async function runBrowserSmoke(apiBase, uiBase) {
     await endpointSelect.selectOption({ index: 1 }).catch(() => undefined);
     await page.waitForTimeout(250);
     if (!(await page.locator('.endpoint-select-preview').count())) fail('TEST_CONSOLE_ENDPOINT_PREVIEW', 'Endpoint dropdown does not show readable endpoint preview');
+  }
+
+  await gotoRoute(page, uiBase, '/training');
+  const trainingText = await page.locator('body').innerText();
+  for (const required of ['Исполняемая песочница', 'Training OData ERP', 'Запустить']) {
+    if (!trainingText.includes(required)) fail('TRAINING_PAGE', required);
+  }
+  const trainingExampleCard = page.locator('article').filter({ hasText: 'training.onec.post_two_odata_to_dnp' }).first();
+  if (await trainingExampleCard.count()) {
+    await trainingExampleCard.getByRole('button', { name: 'Запустить' }).click().catch((error) => fail('TRAINING_RUN', error.message));
+    await page.waitForTimeout(1000);
+    const afterRunText = await page.locator('body').innerText();
+    if (!afterRunText.includes('Открыть последнюю Timeline')) fail('TRAINING_RUN_TIMELINE', 'Timeline link did not appear after running a training example');
+  } else {
+    fail('TRAINING_PAGE', 'training example card not found');
+  }
+
+  await gotoRoute(page, uiBase, '/test-console?trainingExampleId=training.onec.post_two_odata_to_dnp');
+  const trainingConsoleText = await page.locator('body').innerText();
+  for (const required of ['Загружен учебный пример', 'training-onec-two-odata-dnp', 'POOL-001']) {
+    if (!trainingConsoleText.includes(required)) fail('TRAINING_TEST_CONSOLE', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/training-sandbox-executable-docs');
+  const trainingDocsText = await page.locator('body').innerText();
+  for (const required of ['Учебный sandbox', 'Training OData ERP', 'training.onec.post_two_odata_to_dnp', 'DNP_POOL_REJECTED']) {
+    if (!trainingDocsText.includes(required)) fail('TRAINING_DOCS', required);
   }
 
   await gotoRoute(page, uiBase, '/odata-explorer');

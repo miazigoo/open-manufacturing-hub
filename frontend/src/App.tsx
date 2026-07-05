@@ -25,6 +25,7 @@ const ODataConnectionsPage = lazy(() => import('./pages/ODataConnectionsPage').t
 const ODataExplorerPage = lazy(() => import('./pages/ODataExplorerPage').then((m) => ({ default: m.ODataExplorerPage })));
 const XmlToolsPage = lazy(() => import('./pages/XmlToolsPage').then((m) => ({ default: m.XmlToolsPage })));
 const TestConsolePage = lazy(() => import('./pages/TestConsolePage').then((m) => ({ default: m.TestConsolePage })));
+const TrainingPage = lazy(() => import('./pages/TrainingPage').then((m) => ({ default: m.TrainingPage })));
 const SavedTestCasesPage = lazy(() => import('./pages/SavedTestCasesPage').then((m) => ({ default: m.SavedTestCasesPage })));
 const OneCQuickSetupPage = lazy(() => import('./pages/OneCQuickSetupPage').then((m) => ({ default: m.OneCQuickSetupPage })));
 const ExecutionStepsPage = lazy(() => import('./pages/ExecutionStepsPage').then((m) => ({ default: m.ExecutionStepsPage })));
@@ -113,6 +114,7 @@ export function App() {
           <Route path="odata-explorer" element={onec(<ODataExplorerPage />)} />
           <Route path="xml-tools" element={onec(<XmlToolsPage />)} />
           <Route path="test-console" element={<TestConsolePage />} />
+          <Route path="training" element={<TrainingPage />} />
           <Route path="test-cases" element={<SavedTestCasesPage />} />
           <Route path="onec-quick-setup" element={onec(<OneCQuickSetupPage />)} />
           <Route path="execution/steps" element={<ExecutionStepsPage />} />

@@ -52,6 +52,7 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
         ("Build", [
             ("1C Integration Cockpit", "/onec-cockpit", ONEC_PACKAGE, False),
             ("Integration Flows", "/integration-flows", None, False),
+            ("Training Sandbox", "/training", "omh-package-training", False),
             ("Test Console", "/test-console", None, False),
             ("Saved Test Cases", "/test-cases", None, False),
         ]),
@@ -71,6 +72,7 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
             ("Plugin Store", "/plugin-store", None, False),
             ("1C Package", "/packages/omh-package-onec", ONEC_PACKAGE, False),
             ("Printer Package", "/packages/omh-package-printer", "omh-package-printer", False),
+            ("Training Package", "/packages/omh-package-training", "omh-package-training", False),
         ]),
         ("Advanced", [
             ("Connectors", "/connectors", None, True),

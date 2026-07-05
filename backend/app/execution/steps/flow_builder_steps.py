@@ -9,6 +9,9 @@ from app.core.enums import ArtifactType
 from app.execution.context import PipelineContext
 from app.execution.result import ArtifactCreate, StepResult
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
+from app.packages_training.mock_dnp import submit_marking_pool
+from app.packages_training.mock_odata import query_mock_odata
+from app.packages_training.mock_printer import print_label
 from app.sdk.types import ConnectorContext
 from app.secrets.service import SecretResolver
 from app.variables.paths import PathResolutionError, resolve_path
@@ -53,7 +56,7 @@ class FlowODataQueryStep:
         if connector.connector_type != "onec":
             return _failed("ODATA_CONNECTION_NOT_FOUND", f"Connector {connector_name} is not a 1C/OData connector", config, "Select connector_type=onec.", [request_artifact])
         connector_config = await SecretResolver(context.session).resolve_config(connector.config_json)
-        mock_items = _mock_odata_items(config, connector_config)
+        mock_items = _mock_odata_items(config, connector_config, query)
         if mock_items is not None:
             items = mock_items
             response_payload = {"mock": True, "value": items}
@@ -128,6 +131,17 @@ class FlowCallEndpointStep:
         connector = await connector_repository.get_by_name(context.session, connector_name)
         if connector is None:
             return _failed("TARGET_CONNECTOR_NOT_FOUND", f"Target connector {connector_name} not found", config, "Create the target connector or select another one.", [request_artifact])
+        training_response = _training_target_response(connector.config_json or {}, payload)
+        if training_response is not None:
+            status_code, response_body = training_response
+            response = {"status_code": status_code, "body": response_body, "mock": True}
+            variables = _variables_with_step(context, config["step_id"], {"request": request_payload, "response": response})
+            variables["response"] = response
+            artifacts = [request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", response)]
+            if status_code >= 400:
+                artifacts.append(ArtifactCreate(ArtifactType.EXTERNAL_ERROR.value, "external_error.json", response_body))
+                return _failed(str(response_body.get("error") or "TRAINING_TARGET_FAILED"), str(response_body.get("message") or "Training target failed"), config, str(response_body.get("hint") or "Open timeline artifacts for the mock target response."), artifacts)
+            return StepResult.success("Training mock call complete", artifacts=artifacts, variables_update=variables)
         mock_response = (connector.config_json or {}).get("mock_response_json") or config.get("mock_response_json")
         if mock_response is not None:
             response = {"status_code": 200, "body": mock_response, "mock": True}
@@ -203,17 +217,30 @@ def _compile_filter_builder(conditions: list[dict[str, Any]], scope: dict[str, A
         value = str(raw_value).replace("'", "''")
         if operator in {"contains", "startswith", "endswith"}:
             chunks.append(f"{operator}({field}, '{value}')")
+        elif value.lower() in {"true", "false"}:
+            chunks.append(f"{field} {operator} {value.lower()}")
         else:
             chunks.append(f"{field} {operator} '{value}'")
     return " and ".join(chunks)
 
 
-def _mock_odata_items(config: dict[str, Any], connector_config: dict[str, Any]) -> list[dict[str, Any]] | None:
+def _mock_odata_items(config: dict[str, Any], connector_config: dict[str, Any], query: dict[str, Any]) -> list[dict[str, Any]] | None:
     if isinstance(config.get("mock_items"), list):
         return [item for item in config["mock_items"] if isinstance(item, dict)]
     mock_odata = (connector_config or {}).get("mock_odata") or {}
-    items = mock_odata.get(config.get("resource")) if isinstance(mock_odata, dict) else None
+    if not isinstance(mock_odata, dict):
+        return None
+    response = query_mock_odata(mock_odata, str(config.get("resource") or ""), query)
+    items = response.get("value")
     return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else None
+
+
+def _training_target_response(connector_config: dict[str, Any], payload: dict[str, Any]) -> tuple[int, dict[str, Any]] | None:
+    if connector_config.get("training_mock_dnp"):
+        return submit_marking_pool(payload)
+    if connector_config.get("training_mock_printer"):
+        return print_label(payload)
+    return None
 
 
 def _evaluate_condition(expression: str, scope: dict[str, Any]) -> bool:

@@ -1,17 +1,20 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { odataConnectionsApi } from '../api/odataConnections';
 import { odataExplorerApi } from '../api/odataExplorer';
+import { trainingApi } from '../api/training';
 import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 
 export function ODataExplorerPage() {
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const requestedConnection = searchParams.get('connection') ?? '';
   const connections = useQuery({ queryKey: ['odata-connections'], queryFn: odataConnectionsApi.list });
+  const training = useQuery({ queryKey: ['training-status'], queryFn: trainingApi.status, retry: false });
   const enabledConnections = useMemo(() => (connections.data ?? []).filter((item) => item.enabled), [connections.data]);
   const [connectorId, setConnectorId] = useState(requestedConnection);
   const [formError, setFormError] = useState<string | null>(null);
@@ -21,6 +24,13 @@ export function ODataExplorerPage() {
   const resources = useQuery({ queryKey: ['odata-resources', connectorId], queryFn: () => odataExplorerApi.resources(connectorId), enabled: Boolean(connectorId) });
   const run = useMutation({ mutationFn: () => odataExplorerApi.query(connectorId, { resource: query.resource, top: Number(query.top) || 10, filter: query.filter || null, select: query.select || null, orderby: query.orderby || null }) });
   const createLookup = useMutation({ mutationFn: (extractJson: Record<string, string>) => odataExplorerApi.createLookup(connectorId, { name: lookup.name, resource: query.resource, filter_template: lookup.filter_template, extract_json: extractJson }) });
+  const installTraining = useMutation({
+    mutationFn: trainingApi.install,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-status'] });
+      queryClient.invalidateQueries({ queryKey: ['odata-connections'] });
+    },
+  });
 
   useEffect(() => {
     if (requestedConnection) setConnectorId(requestedConnection);
@@ -71,7 +81,22 @@ export function ODataExplorerPage() {
     setFilters(filters.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   }
 
-  const runtimeError = resources.error ?? run.error ?? createLookup.error;
+  function useTrainingConnection(name: string) {
+    const connection = enabledConnections.find((item) => item.name === name);
+    if (!connection) return;
+    setConnectorId(connection.id);
+    if (name.includes('ERP')) {
+      setQuery({ resource: 'Catalog_Контрагенты', top: '10', filter: "ИНН eq '7707083893' and DeletionMark eq false", select: 'Ref_Key,Description,ИНН', orderby: 'Description asc' });
+      setFilters([{ field: 'ИНН', operator: 'eq', value: '7707083893' }, { field: 'DeletionMark', operator: 'eq', value: 'false' }]);
+    } else {
+      setQuery({ resource: 'InformationRegister_Остатки', top: '10', filter: '', select: 'Склад_Key,Ячейка_Key,Номенклатура_Key,Количество', orderby: '' });
+      setFilters([{ field: 'Склад_Key', operator: 'eq', value: 'wms-main' }]);
+    }
+  }
+
+  const runtimeError = resources.error ?? run.error ?? createLookup.error ?? installTraining.error;
+  const trainingErp = enabledConnections.find((item) => item.name === 'Training OData ERP');
+  const trainingWms = enabledConnections.find((item) => item.name === 'Training OData WMS');
 
   return (
     <div className="page-stack two-column-page">
@@ -85,6 +110,16 @@ export function ODataExplorerPage() {
           <div className="toolbar-actions">
             <Link className="primary-link" to="/odata-connections">Create OData Connection</Link>
             <Link className="primary-link" to="/docs/onec/academy/test-odata-explorer">Lesson</Link>
+          </div>
+        </div>
+        <div className="builder-help-card training-quickstart">
+          <strong>Training OData sandbox</strong>
+          <span>Use mock ERP/WMS to learn filters, `$select` and JSON extraction before connecting real 1C.</span>
+          <div className="action-row wrap-actions">
+            {trainingErp ? <button type="button" className="ghost-button" onClick={() => useTrainingConnection('Training OData ERP')}>Use Training OData ERP</button> : null}
+            {trainingWms ? <button type="button" className="ghost-button" onClick={() => useTrainingConnection('Training OData WMS')}>Use Training OData WMS</button> : null}
+            {!trainingErp && !trainingWms && <button type="button" className="primary-button" onClick={() => installTraining.mutate()} disabled={installTraining.isPending}>Install Training Sandbox</button>}
+            {training.data?.sandbox_installed && <Link className="primary-link" to="/training">Open Training</Link>}
           </div>
         </div>
         <form className="stack-form" onSubmit={submit} data-tour="odata-query">

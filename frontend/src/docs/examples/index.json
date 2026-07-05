@@ -644,5 +644,101 @@
     },
     "runnable": true,
     "requires_setup": true
+  },
+  "training.onec.find_contractor_by_inn": {
+    "title": {"ru": "Найти контрагента по ИНН", "en": "Find contractor by INN", "zh": "按 INN 查找客户"},
+    "description": {"ru": "Исполняемый sandbox-пример: Training OData ERP ищет контрагента через фильтр `ИНН eq '7707083893'`.", "en": "Executable sandbox example: Training OData ERP finds a contractor by INN.", "zh": "可执行沙盒示例：Training OData ERP 按 INN 查找客户。"},
+    "endpoint_slug": "training-onec-two-odata-dnp",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+    "body": {"pool_id": "POOL-001", "order_id": "SO-1001", "inn": "7707083893", "product_code": "A-100", "codes": ["010464615169738421ABC"]},
+    "expected": {"status": "success", "lookup": "contractor"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.onec.find_product_by_article": {
+    "title": {"ru": "Найти номенклатуру по артикулу", "en": "Find product by article", "zh": "按货号查找商品"},
+    "description": {"ru": "Исполняемый пример выбора товара по `Артикул eq 'A-100'` и передачи только нужных полей дальше.", "en": "Executable example for product lookup by article and field selection.", "zh": "按货号查找商品并选择字段的可执行示例。"},
+    "endpoint_slug": "training-onec-two-odata-dnp",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+    "body": {"pool_id": "POOL-001", "order_id": "SO-1001", "inn": "7707083893", "product_code": "A-100", "codes": ["010464615169738421ABC"]},
+    "expected": {"status": "success", "lookup": "product"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.onec.post_two_odata_to_dnp": {
+    "title": {"ru": "1C POST -> две OData выборки -> JSON -> DNP", "en": "1C POST -> two OData lookups -> JSON -> DNP", "zh": "1C POST -> 两次 OData 查询 -> JSON -> DNP"},
+    "description": {"ru": "Главный учебный сценарий: 1С присылает ключи, OMH ищет контрагента и товар, собирает JSON и отправляет mock DNP API.", "en": "Golden training scenario with two OData lookups, JSON mapping and mock DNP call.", "zh": "核心训练场景：两次 OData 查询、JSON 映射和模拟 DNP 调用。"},
+    "endpoint_slug": "training-onec-two-odata-dnp",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+    "body": {"pool_id": "POOL-001", "order_id": "SO-1001", "inn": "7707083893", "product_code": "A-100", "codes": ["010464615169738421ABC", "010464615169738421DEF"]},
+    "expected": {"status": "success", "lookups": 2, "target": "Training DNP API"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.onec.xml_raw_bridge": {
+    "title": {"ru": "1C XML raw bridge", "en": "1C XML raw bridge", "zh": "1C XML 原样桥接"},
+    "description": {"ru": "Исполняемый пример приема XML от 1С без мутации тела.", "en": "Executable example for accepting raw 1C XML without body mutation.", "zh": "接收未修改 1C XML 的可执行示例。"},
+    "endpoint_slug": "training-onec-xml-raw-bridge",
+    "method": "POST",
+    "input_mode": "xml",
+    "headers": {"Content-Type": "application/xml", "X-OMH-Source": "training-docs"},
+    "body_text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Документ>\n  <Номер>SO-1001</Номер>\n  <ИНН>7707083893</ИНН>\n</Документ>",
+    "expected": {"status": "forwarded"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.onec.print_label": {
+    "title": {"ru": "1C отправляет этикетку на принтер", "en": "1C sends a label to printer", "zh": "1C 向打印机发送标签"},
+    "description": {"ru": "Исполняемый пример печати через mock Training Printer.", "en": "Executable mock print example.", "zh": "可执行模拟打印示例。"},
+    "endpoint_slug": "training-onec-printer",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+    "body": {"printer": "TRAINING-PRINTER-01", "template": "pallet-label-v1", "variables": {"sscc": "046012345678901234", "order": "SO-1001"}},
+    "expected": {"status": "printed"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.errors.contractor_not_found": {
+    "title": {"ru": "Ошибка: контрагент не найден", "en": "Error: contractor not found", "zh": "错误：未找到客户"},
+    "description": {"ru": "Негативный пример: обязательная OData-выборка возвращает пустой результат.", "en": "Negative example: required OData lookup returns no rows.", "zh": "负面示例：必需 OData 查询为空。"},
+    "endpoint_slug": "training-error-contractor-not-found",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+    "body": {"pool_id": "POOL-001", "order_id": "SO-1001", "inn": "9999999999", "product_code": "A-100", "codes": ["010464615169738421ABC"]},
+    "expected": {"status": "failed", "error": "ODATA_RESULT_EMPTY"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.errors.dnp_rejected": {
+    "title": {"ru": "Ошибка: DNP отклонил пул", "en": "Error: DNP rejected pool", "zh": "错误：DNP 拒绝池"},
+    "description": {"ru": "Негативный пример: `POOL-ERROR` возвращает `DNP_POOL_REJECTED`.", "en": "Negative example: POOL-ERROR returns DNP_POOL_REJECTED.", "zh": "负面示例：POOL-ERROR 返回 DNP_POOL_REJECTED。"},
+    "endpoint_slug": "training-error-dnp-rejected",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+    "body": {"pool_id": "POOL-ERROR", "order_id": "SO-1001", "inn": "7707083893", "product_code": "A-100", "codes": ["010464615169738421ABC"]},
+    "expected": {"status": "failed", "error": "DNP_POOL_REJECTED"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.errors.printer_offline": {
+    "title": {"ru": "Ошибка: принтер offline", "en": "Error: printer offline", "zh": "错误：打印机离线"},
+    "description": {"ru": "Негативный пример: `TRAINING-OFFLINE` возвращает ошибку mock printer.", "en": "Negative example: TRAINING-OFFLINE returns a mock printer error.", "zh": "负面示例：TRAINING-OFFLINE 返回模拟打印机错误。"},
+    "endpoint_slug": "training-error-printer-offline",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+    "body": {"printer": "TRAINING-OFFLINE", "template": "pallet-label-v1", "variables": {"sscc": "046012345678901234", "order": "SO-1001"}},
+    "expected": {"status": "failed", "error": "TRAINING_PRINTER_OFFLINE"},
+    "runnable": true,
+    "requires_setup": false
   }
 }

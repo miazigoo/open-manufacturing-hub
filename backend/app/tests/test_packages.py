@@ -30,7 +30,7 @@ async def test_package_registry_has_builtin_boundaries():
 async def test_package_installer_lifecycle_navigation_and_plugin_store(client):
     available = await client.get("/api/packages/available")
     assert available.status_code == 200, available.text
-    assert {item["manifest"]["package_id"] for item in available.json()} >= {"omh-package-onec", "omh-package-printer", "omh-package-auth", "omh-package-secrets", "omh-package-sap"}
+    assert {item["manifest"]["package_id"] for item in available.json()} >= {"omh-package-onec", "omh-package-printer", "omh-package-auth", "omh-package-secrets", "omh-package-training", "omh-package-sap"}
     onec_available = next(item for item in available.json() if item["manifest"]["package_id"] == "omh-package-onec")
     assert onec_available["registered"] is True
     assert onec_available["available"] is True

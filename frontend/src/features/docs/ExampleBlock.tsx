@@ -9,14 +9,15 @@ import { exampleBodyText, getDocsExample } from './DocsExampleRegistry';
 export function ExampleBlock({ exampleId }: { exampleId: string }) {
   const { language, t } = useI18n();
   const example = getDocsExample(exampleId);
-  const run = useMutation({ mutationFn: () => request<Record<string, unknown>>(`/api/docs/examples/${encodeURIComponent(exampleId)}/run`, { method: 'POST' }) });
+  const trainingExample = exampleId.startsWith('training.');
+  const run = useMutation({ mutationFn: () => request<Record<string, unknown>>(`${trainingExample ? '/api/training/examples' : '/api/docs/examples'}/${encodeURIComponent(exampleId)}/run`, { method: 'POST' }) });
 
   if (!example) return <div className="error-state compact">{t('docs.exampleMissing', { exampleId })}</div>;
 
   const body = exampleBodyText(example);
   const title = example.title[language] ?? example.title.ru;
   const description = example.description[language] ?? example.description.ru;
-  const testConsoleUrl = `/test-console?exampleId=${encodeURIComponent(exampleId)}`;
+  const testConsoleUrl = trainingExample ? `/test-console?trainingExampleId=${encodeURIComponent(exampleId)}` : `/test-console?exampleId=${encodeURIComponent(exampleId)}`;
 
   return (
     <section className="docs-example-card">

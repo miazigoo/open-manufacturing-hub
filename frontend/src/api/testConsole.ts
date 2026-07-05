@@ -9,6 +9,7 @@ export const testConsoleApi = {
   send: (payload: { endpoint_id?: string | null; slug?: string | null; input_mode: string; headers_json: Record<string, string>; body_text?: string | null; body_json?: Record<string, unknown> | null; dry_run?: boolean }) =>
     request<TestConsoleSendResponse>('/api/test-console/send', { method: 'POST', body: JSON.stringify(payload) }),
   docsExample: (id: string) => request<DocsExample>(`/api/docs/examples/${encodeURIComponent(id)}`),
+  trainingExample: (id: string) => request<DocsExample>(`/api/training/examples/${encodeURIComponent(id)}`),
   runDocsExample: (id: string) => request<Record<string, unknown>>(`/api/docs/examples/${encodeURIComponent(id)}/run`, { method: 'POST' }),
   listCases: () => request<SavedTestCase[]>('/api/test-cases'),
   createCase: (payload: SavedTestCasePayload) => request<SavedTestCase>('/api/test-cases', { method: 'POST', body: JSON.stringify(payload) }),

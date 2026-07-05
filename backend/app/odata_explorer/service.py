@@ -9,6 +9,7 @@ from app.connectors.models import ConnectorInstance
 from app.core.errors import BadRequestError, NotFoundError
 from app.integration_bus.models import ODataLookupTemplate
 from app.odata_explorer.schemas import ODataLookupCreateRequest, ODataQueryRequest
+from app.packages_training.mock_odata import metadata_xml, query_mock_odata
 from app.secrets.service import SecretResolver
 
 DEFAULT_RESOURCES = ["Catalog_Контрагенты", "Catalog_Номенклатура", "Document_ЗаказКлиента", "InformationRegister_ПулКодовМаркировкиСУЗ"]
@@ -16,6 +17,9 @@ DEFAULT_RESOURCES = ["Catalog_Контрагенты", "Catalog_Номенкла
 async def resources(session: AsyncSession, connector_id: UUID) -> dict[str, Any]:
     connector = await _onec_connector(session, connector_id)
     config = await SecretResolver(session).resolve_config(connector.config_json)
+    mock_odata = config.get("mock_odata") if isinstance(config.get("mock_odata"), dict) else None
+    if mock_odata:
+        return {"connector_id": connector_id, "resources": sorted(mock_odata.keys()), "metadata_preview": metadata_xml(mock_odata)[:4000], "fallback": False}
     base_url = str(config.get("base_url") or "")
     if not base_url:
         return {"connector_id": connector_id, "resources": DEFAULT_RESOURCES, "metadata_preview": None, "fallback": True}
@@ -39,6 +43,11 @@ async def query(session: AsyncSession, connector_id: UUID, request: ODataQueryRe
     if request.orderby:
         params["$orderby"] = request.orderby
     config = await SecretResolver(session).resolve_config(connector.config_json)
+    mock_odata = config.get("mock_odata") if isinstance(config.get("mock_odata"), dict) else None
+    if mock_odata:
+        response = query_mock_odata(mock_odata, request.resource, params)
+        items = response.get("value") if isinstance(response.get("value"), list) else []
+        return {"request_url": f"mock://training-odata/{request.resource}", "request": {"resource": request.resource, "params": params}, "response": response, "items": items, "count": len(items), "artifact_ids": {}}
     result = await read_odata(config, request.resource, params)
     if not result.success:
         raise BadRequestError(result.error_message or result.error_code or "ODATA_QUERY_FAILED")

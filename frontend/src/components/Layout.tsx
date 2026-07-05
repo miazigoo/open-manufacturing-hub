@@ -58,6 +58,7 @@ const routeKey: Record<string, string> = {
   '/health': 'nav.health',
   '/onec-cockpit': 'nav.onecCockpit',
   '/integration-flows': 'nav.integrationFlows',
+  '/training': 'nav.training',
   '/test-console': 'nav.testConsole',
   '/test-cases': 'nav.savedTestCases',
   '/odata-connections': 'onec.odataConnections',
@@ -76,6 +77,7 @@ const routeKey: Record<string, string> = {
   '/plugin-store': 'nav.pluginStore',
   '/packages/omh-package-onec': 'nav.onecPackage',
   '/packages/omh-package-printer': 'nav.printerPackage',
+  '/packages/omh-package-training': 'nav.trainingPackage',
   '/connectors': 'nav.connectors',
   '/secrets': 'nav.secrets',
   '/integration-bus': 'nav.integrationBus',
@@ -94,7 +96,7 @@ const routeKey: Record<string, string> = {
 
 const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Settings', 'Advanced', 'Developer'];
 const modeRank: Record<UIMode, number> = { simple: 0, advanced: 1, developer: 2 };
-const simpleRoutes = new Set(['/docs', '/onboarding', '/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/test-console', '/packages', '/plugin-store']);
+const simpleRoutes = new Set(['/docs', '/onboarding', '/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/training', '/test-console', '/packages', '/plugin-store']);
 const developerRoutes = new Set(['/workflows', '/execution/steps', '/i18n-debug']);
 
 export function Layout() {

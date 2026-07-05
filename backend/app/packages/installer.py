@@ -110,6 +110,11 @@ async def install_demo_data_for_package(session: AsyncSession, package_id: str) 
         return [_log("install_demo_data", "ok", "Installed 1C bus presets and visual OData flow preset")]
     if package_id == "omh-package-printer":
         return [_log("install_demo_data", "ok", "Printer package has no destructive demo data; printing scenarios remain available in Scenario Library")]
+    if package_id == "omh-package-training":
+        from app.packages_training.service import install_training_sandbox
+
+        result = await install_training_sandbox(session)
+        return [_log("install_demo_data", "ok", f"Installed Training Sandbox with {len(result['examples'])} executable examples")]
     return [_log("install_demo_data", "skipped", "No demo data installer registered")]
 
 

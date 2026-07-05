@@ -11,6 +11,7 @@
   "testConsole": "Test Console",
   "sendRequests": "Отправка интеграционных запросов",
   "loadedDocsExample": "Загружен пример документации: {title}",
+  "loadedTrainingExample": "Загружен учебный пример: {title}",
   "endpointSlug": "Endpoint slug: /api/bus/in/{slug}",
   "endpointMissing": "Создайте или установите этот endpoint перед отправкой. Payload уже можно копировать и редактировать.",
   "selectEndpoint": "Выберите endpoint",
@@ -26,5 +27,27 @@
   "invalidBody": "Body JSON невалиден. Переключитесь на XML/raw_text или исправьте JSON payload.",
   "testConsoleLoading": "Загрузка Test Console",
   "responseEmptyTitle": "Выберите endpoint и отправьте тестовый запрос.",
-  "responseEmptyDetail": "Результат появится здесь после Send или Dry Run. Ошибка будет показана только после реального запуска."
+  "responseEmptyDetail": "Результат появится здесь после Send или Dry Run. Ошибка будет показана только после реального запуска.",
+  "training": {
+    "loading": "Загрузка учебного sandbox",
+    "eyebrow": "Учебный стенд",
+    "title": "Исполняемая песочница для 1С, OData, DNP и печати",
+    "subtitle": "Установите mock ERP/WMS, DNP API, принтер, готовые потоки и test cases. После этого уроки можно запускать как рабочие интеграции и смотреть timeline.",
+    "install": "Установить Training Sandbox",
+    "reinstall": "Переустановить Training Sandbox",
+    "reset": "Сбросить учебные данные",
+    "openDocs": "Открыть обучение",
+    "package": "Пакет",
+    "connectors": "Коннекторы",
+    "flows": "Потоки",
+    "examples": "Примеры",
+    "executableLessons": "Исполняемые уроки",
+    "examplesHint": "Каждый пример можно открыть в Test Console или запустить сразу. Ошибочные примеры специально падают, чтобы показать диагностику.",
+    "run": "Запустить",
+    "openLastTimeline": "Открыть последнюю Timeline",
+    "lastRun": "Последний запуск",
+    "runHint": "Запустите пример, чтобы увидеть результат и ссылку на Timeline.",
+    "installedConnectors": "Установленные учебные коннекторы",
+    "installedFlows": "Установленные учебные потоки"
+  }
 }

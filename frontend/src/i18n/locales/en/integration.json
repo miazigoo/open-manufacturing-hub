@@ -11,6 +11,7 @@
   "testConsole": "Test Console",
   "sendRequests": "Send integration requests",
   "loadedDocsExample": "Loaded docs example: {title}",
+  "loadedTrainingExample": "Loaded training example: {title}",
   "endpointSlug": "Endpoint slug: /api/bus/in/{slug}",
   "endpointMissing": "Create or install this endpoint before sending. Payload is still ready to copy and edit.",
   "selectEndpoint": "Select endpoint",
@@ -26,5 +27,27 @@
   "invalidBody": "Body JSON is invalid. Switch to XML/raw_text or fix the JSON payload.",
   "testConsoleLoading": "Loading test console",
   "responseEmptyTitle": "Choose an endpoint and send a test request.",
-  "responseEmptyDetail": "The result will appear here after Send or Dry Run. Errors are shown only after an actual run."
+  "responseEmptyDetail": "The result will appear here after Send or Dry Run. Errors are shown only after an actual run.",
+  "training": {
+    "loading": "Loading Training Sandbox",
+    "eyebrow": "Training lab",
+    "title": "Executable sandbox for 1C, OData, DNP and printing",
+    "subtitle": "Install mock ERP/WMS, DNP API, printer, demo flows and test cases. Lessons run like real integrations and produce timelines.",
+    "install": "Install Training Sandbox",
+    "reinstall": "Reinstall Training Sandbox",
+    "reset": "Reset training data",
+    "openDocs": "Open learning docs",
+    "package": "Package",
+    "connectors": "Connectors",
+    "flows": "Flows",
+    "examples": "Examples",
+    "executableLessons": "Executable lessons",
+    "examplesHint": "Open each example in Test Console or run it directly. Error examples fail by design to teach diagnostics.",
+    "run": "Run",
+    "openLastTimeline": "Open last Timeline",
+    "lastRun": "Last run",
+    "runHint": "Run an example to see the result and Timeline link.",
+    "installedConnectors": "Installed training connectors",
+    "installedFlows": "Installed training flows"
+  }
 }

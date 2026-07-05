@@ -63,6 +63,7 @@ from app.packages.service import startup_package_check
 from app.packages_onec.router import router as packages_onec_router
 from app.packages_printer.router import router as packages_printer_router
 from app.packages_auth.router import router as auth_router
+from app.packages_training.router import router as training_router
 from app.production.router import router as production_router
 
 
@@ -151,6 +152,7 @@ app.include_router(audit_router)
 app.include_router(packages_router)
 app.include_router(packages_onec_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(packages_printer_router, dependencies=[Depends(require_package_enabled("omh-package-printer"))])
+app.include_router(training_router)
 app.include_router(plugin_store_router)
 app.include_router(maintenance_router)
 app.include_router(retention_router)
