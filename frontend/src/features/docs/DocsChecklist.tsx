@@ -16,6 +16,7 @@ export function DocsChecklist({ id, items }: DocsChecklistProps) {
     }
   });
   const completed = useMemo(() => items.filter((item) => checked[item]).length, [checked, items]);
+  const percent = items.length ? Math.round((completed / items.length) * 100) : 0;
 
   function toggle(item: string) {
     const next = { ...checked, [item]: !checked[item] };
@@ -30,11 +31,14 @@ export function DocsChecklist({ id, items }: DocsChecklistProps) {
           <span className="eyebrow">Checklist</span>
           <h3>Проверьте себя</h3>
         </div>
-        <span className="microcopy">{completed}/{items.length}</span>
+        <span className="docs-checklist-score">{percent}% · {completed}/{items.length}</span>
+      </div>
+      <div className="docs-checklist-progress" aria-label={`Checklist progress ${percent}%`}>
+        <span style={{ width: `${percent}%` }} />
       </div>
       <div className="docs-checklist-items">
         {items.map((item) => (
-          <label className="check-row" key={item}>
+          <label className={`check-row ${checked[item] ? 'done' : ''}`} key={item}>
             <input type="checkbox" checked={Boolean(checked[item])} onChange={() => toggle(item)} />
             <span>{item}</span>
           </label>

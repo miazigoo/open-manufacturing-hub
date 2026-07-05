@@ -149,6 +149,8 @@ function parseMarkdown(markdown: string) {
 
     const screenshot = /^\{\{screenshot:(.+)\}\}$/.exec(line.trim());
     if (screenshot) { flushAll(); nodes.push(<ScreenshotPlaceholder key={`shot-${nodes.length}`} label={screenshot[1].trim()} />); continue; }
+    const bracketScreenshot = /^\[SCREENSHOT:\s*(.+)\]$/.exec(line.trim());
+    if (bracketScreenshot) { flushAll(); nodes.push(<ScreenshotPlaceholder key={`shot-${nodes.length}`} label={bracketScreenshot[1].trim()} />); continue; }
 
     if (!line.trim()) { flushAll(); continue; }
     if (line.startsWith('|')) { flushParagraph(); flushList(); flushOrderedList(); table.push(line); continue; }

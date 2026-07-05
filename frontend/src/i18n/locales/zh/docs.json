@@ -7,7 +7,7 @@
   "expected": "预期结果",
   "runResult": "运行结果",
   "copyUnavailable": "无法复制",
-  "screenshotMissing": "缺少截图",
+  "screenshotMissing": "截图稍后添加",
   "openFullSize": "打开原图",
   "sourcePage": "打开来源页面",
   "printPdf": "打印 / PDF",
@@ -21,10 +21,14 @@
   "annotated": "带标注",
   "sourceRoute": "源路由 {route}",
   "screenshot": "截图",
-  "screenshotMissingDetail": "Asset {assetId} 已注册，但生成图像尚未捕获。",
-  "screenshotPlaceholderDetail": "标注图片将在此处添加。",
+  "screenshotMissingDetail": "Asset {assetId} 已注册，可稍后截图。",
+  "screenshotPlaceholderDetail": "产品截图预留位置，不影响阅读指南。",
   "onThisPage": "本页内容",
   "noSections": "无章节",
   "exampleMissing": "文档示例缺失：{exampleId}",
-  "missingScreenshotAsset": "缺少截图资源：{assetId}"
+  "missingScreenshotAsset": "缺少截图资源：{assetId}",
+  "screenshotPending": "截图稍后添加",
+  "openSourcePage": "打开来源页面",
+  "captureLater": "稍后捕获：真实截图完成前允许显示此占位。",
+  "captureLaterAsset": "稍后捕获：asset {assetId} 已注册，可稍后截图。"
 }

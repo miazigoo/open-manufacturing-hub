@@ -15,7 +15,8 @@
     "docs:screenshots": "node scripts/capture-doc-screenshots.mjs",
     "docs:examples-check": "cd .. && backend/.venv/bin/python backend/scripts/check_docs_examples.py",
     "i18n:missing": "node scripts/i18n-missing-check.mjs",
-    "i18n:check": "node scripts/check-hardcoded-text.mjs"
+    "i18n:check": "node scripts/check-hardcoded-text.mjs",
+    "docs:quality-check": "node scripts/docs-quality-check.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.83.0",

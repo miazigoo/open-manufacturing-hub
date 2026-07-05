@@ -4,6 +4,8 @@ import { DocsSidebar } from './DocsSidebar';
 import { DocsToc } from './DocsToc';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { DocsPrintButton } from './DocsPrintButton';
+import { DocsActionBar } from './DocsActionBar';
+import { DocsLessonNavigation } from './DocsLessonNavigation';
 import { findDocPage, getDocsBundle, pagePath } from './content';
 import { extractToc, MarkdownRenderer } from './MarkdownRenderer';
 import { useI18n } from '../../i18n/useI18n';
@@ -78,6 +80,17 @@ export function DocumentationPage() {
   const isLanding = !isSearch && !params.packageId;
   const page = findDocPage(bundle, params.packageId, params.sectionId, params.pageId);
   const toc = extractToc(page.markdown);
+  const practicalSections = new Set(['start-here', 'academy', 'recipes', 'troubleshooting', 'tools', 'scenarios', 'request-examples', 'error-playbooks', 'setup', 'support']);
+  const showActionBar = page.packageId === 'onec' && practicalSections.has(page.sectionId);
+  const endpointUrl = extractEndpointUrl(page.markdown);
+  const academyPages = bundle.packages.find((pkg) => pkg.id === 'onec')?.sections.find((section) => section.id === 'academy')?.pages ?? [];
+  const academyIndex = academyPages.findIndex((item) => item.id === page.id);
+  const academyNavigation = academyIndex >= 0 ? {
+    index: academyIndex,
+    total: academyPages.length,
+    previous: academyPages[academyIndex - 1],
+    next: academyPages[academyIndex + 1],
+  } : null;
 
   return (
     <div className="docs-portal-page">
@@ -134,7 +147,26 @@ export function DocumentationPage() {
                 <h1>{page.title}</h1>
                 <p>{page.description}</p>
               </div>
+              {showActionBar && <DocsActionBar endpointUrl={endpointUrl} />}
+              {academyNavigation && (
+                <DocsLessonNavigation
+                  current={page}
+                  previous={academyNavigation.previous}
+                  next={academyNavigation.next}
+                  index={academyNavigation.index}
+                  total={academyNavigation.total}
+                />
+              )}
               <MarkdownRenderer markdown={page.markdown} />
+              {academyNavigation && (
+                <DocsLessonNavigation
+                  current={page}
+                  previous={academyNavigation.previous}
+                  next={academyNavigation.next}
+                  index={academyNavigation.index}
+                  total={academyNavigation.total}
+                />
+              )}
             </>
           )}
         </main>
@@ -142,4 +174,8 @@ export function DocumentationPage() {
       </div>
     </div>
   );
+}
+
+function extractEndpointUrl(markdown: string) {
+  return markdown.match(/(?:https?:\/\/[^\s`"')]+)?\/api\/bus\/in\/[a-z0-9-]+/i)?.[0] ?? null;
 }

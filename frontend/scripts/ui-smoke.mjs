@@ -265,10 +265,21 @@ async function runBrowserSmoke(apiBase, uiBase) {
   await gotoRoute(page, uiBase, '/docs/onec/start-here/beginner-path');
   const orderedLists = await page.locator('.docs-markdown ol').count();
   if (orderedLists < 2) fail('DOCS_ORDERED_LISTS', `Expected beginner guide to render numbered steps, got ${orderedLists}`);
+  if (!(await page.locator('.docs-action-bar').count())) fail('DOCS_ACTION_BAR', 'Practical docs page does not render DocsActionBar');
+  if (!(await page.getByText('Open Test Console').count())) fail('DOCS_ACTION_TEST_CONSOLE', 'DocsActionBar is missing Open Test Console action');
   if (!(await page.getByText('Мини-словарь простыми словами').count())) fail('DOCS_BEGINNER_GLOSSARY', 'Beginner guide glossary is missing');
   if (!(await page.locator('.docs-example-card').count())) fail('DOCS_BEGINNER_EXAMPLE', 'Beginner guide runnable example is missing');
   if (!(await page.locator('.code-panel').count())) fail('CODE_BLOCK_DOCS', 'Documentation code blocks do not use highlighted code panels');
   if (!(await page.locator('.code-panel .tok-string, .code-panel .tok-key, .code-panel .tok-command').count())) fail('CODE_BLOCK_TOKENS', 'Documentation code block syntax tokens are missing');
+
+  await gotoRoute(page, uiBase, '/docs/search?q=OData');
+  const searchText = await page.locator('body').innerText();
+  for (const required of ['matched term', 'language']) {
+    if (!searchText.includes(required)) fail('DOCS_SEARCH_METADATA', required);
+  }
+  const firstResultMeta = await page.locator('.docs-result-card span').first().innerText().catch(() => '');
+  if (!firstResultMeta.includes('/')) fail('DOCS_SEARCH_SECTION_PACKAGE', 'Docs search result does not show package / section metadata');
+  if (!(await page.locator('.docs-result-meta mark').count())) fail('DOCS_SEARCH_MARK', 'Docs search does not highlight matched term metadata');
 
   await gotoRoute(page, uiBase, '/docs/onec/start-here/start-in-15-minutes');
   const start15Text = await page.locator('body').innerText();
@@ -278,61 +289,61 @@ async function runBrowserSmoke(apiBase, uiBase) {
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/create-odata-connection');
   const createOdataText = await page.locator('body').innerText();
-  for (const required of ['OData connection is a saved connection to a concrete 1C base', 'Field', 'Base URL', 'secret_1c_erp_password', '[SCREENSHOT: OData Connection creation form]']) {
+  for (const required of ['OData connection is a saved connection to a concrete 1C base', 'Field', 'Base URL', 'secret_1c_erp_password', 'OData Connection creation form']) {
     if (!createOdataText.includes(required)) fail('PACK_A_CREATE_ODATA', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/test-odata-explorer');
   const testOdataText = await page.locator('body').innerText();
-  for (const required of ['Catalog_Контрагенты?$top=5', '[SCREENSHOT: OData Explorer connector selector]', '[SCREENSHOT: OData Explorer resources list]']) {
+  for (const required of ['Catalog_Контрагенты?$top=5', 'OData Explorer connector selector', 'OData Explorer resources list']) {
     if (!testOdataText.includes(required)) fail('PACK_A_TEST_ODATA', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/find-contractor-by-inn');
   const contractorByInnText = await page.locator('body').innerText();
-  for (const required of ['Ref_Key', 'ООО Ромашка', "ИНН eq '7707083893'", '[SCREENSHOT: OData query result with Ref_Key]']) {
+  for (const required of ['Ref_Key', 'ООО Ромашка', "ИНН eq '7707083893'", 'OData query result with Ref_Key']) {
     if (!contractorByInnText.includes(required)) fail('PACK_A_FIND_CONTRACTOR', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/create-inbound-endpoint');
   const inboundEndpointText = await page.locator('body').innerText();
-  for (const required of ['POST http://omh-server:8000/api/bus/in/onec-pool-to-dnp', 'HTTPСоединение', 'accepted_event', 'timeline_url', '[SCREENSHOT: Flow Builder inbound endpoint form]']) {
+  for (const required of ['POST http://omh-server:8000/api/bus/in/onec-pool-to-dnp', 'HTTPСоединение', 'accepted_event', 'timeline_url', 'Flow Builder inbound endpoint form']) {
     if (!inboundEndpointText.includes(required)) fail('PACK_B_INBOUND_ENDPOINT', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/read-request-fields');
   const readFieldsText = await page.locator('body').innerText();
-  for (const required of ['request.body.inn', 'request.body.product_code', 'request.body.pool_id', 'request.body.codes', 'code1', 'code2', '[SCREENSHOT: Flow Builder read request fields]']) {
+  for (const required of ['request.body.inn', 'request.body.product_code', 'request.body.pool_id', 'request.body.codes', 'code1', 'code2', 'Flow Builder read request fields']) {
     if (!readFieldsText.includes(required)) fail('PACK_B_READ_FIELDS', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/first-odata-query-contractor');
   const firstOdataText = await page.locator('body').innerText();
-  for (const required of ['Save result as: contractor', 'Required: yes', 'contractor-uuid', "Catalog_Контрагенты?$filter=ИНН eq '7707083893'&$top=1", '[SCREENSHOT: Flow Builder first OData contractor query]']) {
+  for (const required of ['Save result as: contractor', 'Required: yes', 'contractor-uuid', "Catalog_Контрагенты?$filter=ИНН eq '7707083893'&$top=1", 'Flow Builder first OData contractor query']) {
     if (!firstOdataText.includes(required)) fail('PACK_B_FIRST_ODATA', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/second-odata-query-product');
   const secondOdataText = await page.locator('body').innerText();
-  for (const required of ['Save result as: product', 'product-uuid', 'OData ERP or OData WMS', 'Catalog_Номенклатура', '[SCREENSHOT: Flow Builder second OData product query]']) {
+  for (const required of ['Save result as: product', 'product-uuid', 'OData ERP or OData WMS', 'Catalog_Номенклатура', 'Flow Builder second OData product query']) {
     if (!secondOdataText.includes(required)) fail('PACK_B_SECOND_ODATA', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/build-target-json');
   const buildJsonText = await page.locator('body').innerText();
-  for (const required of ['pool_id', 'contractor_uuid', 'product_uuid', 'source_system', 'code1', '[SCREENSHOT: JSON Builder field mapping table]']) {
+  for (const required of ['pool_id', 'contractor_uuid', 'product_uuid', 'source_system', 'code1', 'JSON Builder field mapping table']) {
     if (!buildJsonText.includes(required)) fail('PACK_B_BUILD_JSON', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/send-to-external-api');
   const sendTargetText = await page.locator('body').innerText();
-  for (const required of ['DNP Service', 'POST http://dnp.local/api/marking/pools', 'target.request', 'target.response', '[SCREENSHOT: Call endpoint step settings]']) {
+  for (const required of ['DNP Service', 'POST http://dnp.local/api/marking/pools', 'target.request', 'target.response', 'Call endpoint step settings']) {
     if (!sendTargetText.includes(required)) fail('PACK_B_SEND_TARGET', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/test-full-flow');
   const fullFlowText = await page.locator('body').innerText();
-  for (const required of ['Dry Run', 'match_route', 'odata_query contractor', 'odata_query product', 'target.response.json', '[SCREENSHOT: Timeline two OData JSON endpoint flow]']) {
+  for (const required of ['Dry Run', 'match_route', 'odata_query contractor', 'odata_query product', 'target.response.json', 'Timeline two OData JSON endpoint flow']) {
     if (!fullFlowText.includes(required)) fail('PACK_B_FULL_FLOW', required);
   }
 
@@ -373,11 +384,14 @@ async function runBrowserSmoke(apiBase, uiBase) {
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn');
+  if (!(await page.locator('.docs-lesson-navigation').count())) fail('ACADEMY_LESSON_NAVIGATION', 'Academy previous/next navigation is missing');
+  if (!((await page.locator('.docs-lesson-navigation').first().innerText()).includes('Lesson'))) fail('ACADEMY_LESSON_POSITION', 'Academy lesson position is missing');
   if (!(await page.locator('.docs-lesson-shell').count())) fail('ACADEMY_LESSON_SHELL', 'Academy lesson page shell is missing');
   if (!(await page.locator('.docs-concept-callout').count())) fail('ACADEMY_CONCEPT_CALLOUT', 'Academy Golden Scenario callout is missing');
   if (!(await page.locator('.docs-expected-result').count())) fail('ACADEMY_EXPECTED_RESULT', 'Academy expected-result block is missing');
   if (!(await page.locator('.docs-common-mistakes').count())) fail('ACADEMY_COMMON_MISTAKES', 'Academy common mistakes block is missing');
   if (!(await page.locator('.docs-next-lesson').count())) fail('ACADEMY_NEXT_LESSON', 'Academy next lesson block is missing');
+  if (!(await page.locator('.docs-checklist-score').count()) || !(await page.locator('.docs-checklist-progress').count())) fail('ACADEMY_CHECKLIST_PROGRESS', 'Academy checklist percent/progress is missing');
   const academyText = await page.locator('body').innerText();
   if (!academyText.includes('Golden Scenario') || !academyText.includes('Step-by-step')) fail('ACADEMY_TEMPLATE_COPY', 'Academy lesson does not render required curriculum structure');
 
@@ -388,8 +402,16 @@ async function runBrowserSmoke(apiBase, uiBase) {
   }
 
   await gotoRoute(page, uiBase, '/test-console');
+  const testConsoleText = await page.locator('body').innerText();
+  if (!testConsoleText.includes('Выберите endpoint и отправьте тестовый запрос.')) fail('TEST_CONSOLE_EMPTY_STATE', 'Test Console does not show friendly empty response state');
   if ((await page.locator('.code-editor-shell').count()) < 2) fail('CODE_EDITOR_TEST_CONSOLE', 'Test Console JSON inputs do not use code editors');
   if (!(await page.locator('.code-editor-highlight .tok-key, .code-editor-highlight .tok-string').count())) fail('CODE_EDITOR_TOKENS', 'Code editor syntax tokens are missing');
+  const endpointSelect = page.locator('label[data-tour="test-endpoint"] select').first();
+  if (await endpointSelect.count()) {
+    await endpointSelect.selectOption({ index: 1 }).catch(() => undefined);
+    await page.waitForTimeout(250);
+    if (!(await page.locator('.endpoint-select-preview').count())) fail('TEST_CONSOLE_ENDPOINT_PREVIEW', 'Endpoint dropdown does not show readable endpoint preview');
+  }
 
   await gotoRoute(page, uiBase, '/odata-explorer');
   if (!(await page.locator('.odata-filter-builder').count())) fail('ODATA_FILTER_BUILDER', 'OData Explorer filter builder is missing');

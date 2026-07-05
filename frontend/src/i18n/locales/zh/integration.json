@@ -21,8 +21,10 @@
   "openLastTimeline": "打开最近 Timeline",
   "externalError": "外部错误",
   "response": "响应",
-  "responseHint": "发送或 dry-run 请求以查看响应。",
+  "responseHint": "选择端点并发送测试请求，结果将在这里显示。",
   "invalidHeaders": "Headers JSON 无效。发送前请修复对象。",
   "invalidBody": "Body JSON 无效。切换到 XML/raw_text 或修复 JSON payload。",
-  "testConsoleLoading": "正在加载测试控制台"
+  "testConsoleLoading": "正在加载测试控制台",
+  "responseEmptyTitle": "选择端点并发送测试请求。",
+  "responseEmptyDetail": "点击 Send 或 Dry Run 后结果会显示在这里。只有真实运行失败后才显示错误。"
 }

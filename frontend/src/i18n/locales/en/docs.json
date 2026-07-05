@@ -7,7 +7,7 @@
   "expected": "Expected",
   "runResult": "Run result",
   "copyUnavailable": "Copy unavailable",
-  "screenshotMissing": "Screenshot missing",
+  "screenshotMissing": "Screenshot will be added",
   "openFullSize": "Open full size",
   "sourcePage": "Open source page",
   "printPdf": "Print / PDF",
@@ -21,10 +21,14 @@
   "annotated": "Annotated",
   "sourceRoute": "source route {route}",
   "screenshot": "Screenshot",
-  "screenshotMissingDetail": "Asset {assetId} is registered, but the generated image is not captured yet.",
-  "screenshotPlaceholderDetail": "Annotated image will be added here.",
+  "screenshotMissingDetail": "Asset {assetId} is registered and can be captured later.",
+  "screenshotPlaceholderDetail": "Reserved space for a product screenshot. It does not block reading the guide.",
   "onThisPage": "On this page",
   "noSections": "No sections",
   "exampleMissing": "Documentation example is missing: {exampleId}",
-  "missingScreenshotAsset": "Missing screenshot asset: {assetId}"
+  "missingScreenshotAsset": "Missing screenshot asset: {assetId}",
+  "screenshotPending": "Screenshot will be added",
+  "openSourcePage": "Open source page",
+  "captureLater": "Capture later: this placeholder is allowed until the real screenshot is captured.",
+  "captureLaterAsset": "Capture later: asset {assetId} is registered and can be captured later."
 }

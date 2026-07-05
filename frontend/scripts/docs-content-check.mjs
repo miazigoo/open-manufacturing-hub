@@ -55,6 +55,13 @@ const conceptCallout = read('frontend/src/features/docs/DocsConceptCallout.tsx')
 const expectedResult = read('frontend/src/features/docs/DocsExpectedResult.tsx');
 const commonMistakes = read('frontend/src/features/docs/DocsCommonMistakes.tsx');
 const nextLesson = read('frontend/src/features/docs/DocsNextLesson.tsx');
+const actionBar = read('frontend/src/features/docs/DocsActionBar.tsx');
+const lessonNavigation = read('frontend/src/features/docs/DocsLessonNavigation.tsx');
+const checklistComponent = read('frontend/src/features/docs/DocsChecklist.tsx');
+const docsSearch = read('frontend/src/features/docs/DocsSearch.tsx');
+const docsPage = read('frontend/src/features/docs/DocumentationPage.tsx');
+const screenshotPlaceholder = read('frontend/src/features/docs/ScreenshotPlaceholder.tsx');
+const testConsolePage = read('frontend/src/pages/TestConsolePage.tsx');
 const odataConnectionsPage = read('frontend/src/pages/ODataConnectionsPage.tsx');
 const odataExplorerPage = read('frontend/src/pages/ODataExplorerPage.tsx');
 const odataLookupBlockEditor = read('frontend/src/components/integration/ODataLookupBlockEditor.tsx');
@@ -95,6 +102,12 @@ assert(renderer.includes('~~~'), 'MarkdownRenderer must support tilde code fence
 assert(renderer.includes('<ol') && renderer.includes('orderedList'), 'MarkdownRenderer must support numbered step lists');
 assert(codeBlock.includes('CodeBlock') && sharedCodeBlock.includes('CopyButton'), 'Code blocks must expose copy controls');
 assert(lessonPage.includes('Учебный формат') && conceptCallout.includes('docs-concept-callout') && expectedResult.includes('docs-expected-result') && commonMistakes.includes('docs-common-mistakes') && nextLesson.includes('docs-next-lesson'), 'academy support components are incomplete');
+assert(actionBar.includes('Open 1C Cockpit') && actionBar.includes('Copy endpoint') && docsPage.includes('DocsActionBar'), 'Task 043 DocsActionBar must be mounted on practical docs pages');
+assert(lessonNavigation.includes('Previous lesson') && lessonNavigation.includes('Lesson') && docsPage.includes('academyIndex'), 'Task 043 academy previous/next navigation is missing');
+assert(checklistComponent.includes('localStorage') && checklistComponent.includes('percent') && checklistComponent.includes('docs-checklist-progress'), 'Task 043 checklist progress must persist and show percent');
+assert(docsSearch.includes('sectionTitle') && docsSearch.includes('snippet') && docsSearch.includes('matched term') && docsSearch.includes('language'), 'Task 043 search result metadata is incomplete');
+assert(screenshotPlaceholder.includes('screenshotPending') && screenshotPlaceholder.includes('openSourcePage') && screenshotPlaceholder.includes('captureLater'), 'Task 043 screenshot placeholder must be user-friendly');
+assert(testConsolePage.includes('responseEmptyTitle') && testConsolePage.includes('endpointDisplayName') && !testConsolePage.includes('Not Found'), 'Task 043 Test Console empty state and endpoint labels are incomplete');
 assert(onecContent.includes('Endpoint | URL в OMH') && onecContent.includes('Первый тестовый запрос'), '1C beginner path must explain basics in plain language');
 assert(onecContent.includes('OData filters, field selection and chaining') && onecContent.includes('{{contractor.Ref_Key}}') && onecContent.includes('steps.get_contractor.first.Ref_Key'), '1C docs must explain OData field selection and chaining');
 for (const heading of ['## What you will build', '## Why this matters', '## Before you start', '## Step-by-step', '## Example values', '## What should happen', '## Check yourself', '## Common mistakes', '## Next lesson']) {

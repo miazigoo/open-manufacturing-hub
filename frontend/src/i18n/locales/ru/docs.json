@@ -7,7 +7,7 @@
   "expected": "Ожидаемый результат",
   "runResult": "Результат запуска",
   "copyUnavailable": "Копирование недоступно",
-  "screenshotMissing": "Скриншот отсутствует",
+  "screenshotMissing": "Скриншот будет добавлен",
   "openFullSize": "Открыть полностью",
   "sourcePage": "Открыть исходную страницу",
   "printPdf": "Печать / PDF",
@@ -21,10 +21,14 @@
   "annotated": "С аннотациями",
   "sourceRoute": "исходный route {route}",
   "screenshot": "Скриншот",
-  "screenshotMissingDetail": "Asset {assetId} зарегистрирован, но изображение еще не снято.",
-  "screenshotPlaceholderDetail": "Аннотированное изображение будет добавлено здесь.",
+  "screenshotMissingDetail": "Asset {assetId} зарегистрирован, изображение можно снять позже.",
+  "screenshotPlaceholderDetail": "Место для продуктового скриншота. Он не блокирует чтение инструкции.",
   "onThisPage": "На этой странице",
   "noSections": "Нет разделов",
   "exampleMissing": "Пример документации отсутствует: {exampleId}",
-  "missingScreenshotAsset": "Screenshot asset отсутствует: {assetId}"
+  "missingScreenshotAsset": "Screenshot asset отсутствует: {assetId}",
+  "screenshotPending": "Скриншот будет добавлен",
+  "openSourcePage": "Open source page",
+  "captureLater": "Capture later: placeholder разрешен до снятия реального скриншота.",
+  "captureLaterAsset": "Capture later: asset {assetId} зарегистрирован, изображение можно снять позже."
 }

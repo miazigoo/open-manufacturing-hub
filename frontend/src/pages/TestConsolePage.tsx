@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { integrationBusApi } from '../api/integrationBus';
+import type { IntegrationEndpoint } from '../api/integrationBus';
 import { testConsoleApi } from '../api/testConsole';
 import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
@@ -95,6 +96,7 @@ export function TestConsolePage() {
   const timelineUrl = send.data?.timeline_url ? normalizeTimelineUrl(send.data.timeline_url) : null;
   const externalError = send.data?.external_error as { code?: string } | undefined;
   const translatedError = externalError ? getExternalErrorTranslation(externalError.code, t) : null;
+  const selectedEndpoint = endpoints.data?.find((item) => item.id === form.endpoint_id) ?? null;
 
   return (
     <div className="page-stack two-column-page">
@@ -121,10 +123,17 @@ export function TestConsolePage() {
           >
             <option value="">{t('integration.selectEndpoint')}</option>
             {(endpoints.data ?? []).map((endpoint) => (
-              <option key={endpoint.id} value={endpoint.id}>{endpoint.name} · /api/bus/in/{endpoint.slug}</option>
+              <option key={endpoint.id} value={endpoint.id}>{endpointLabel(endpoint)}</option>
             ))}
           </select>
         </label>
+        {selectedEndpoint && (
+          <div className="endpoint-select-preview">
+            <strong>{endpointDisplayName(selectedEndpoint)}</strong>
+            <span>/api/bus/in/{selectedEndpoint.slug}</span>
+            <small>{selectedEndpoint.input_mode.toUpperCase()} · {responseModeLabel(selectedEndpoint.response_mode)} · {selectedEndpoint.auth_mode === 'static_token' ? 'token protected' : 'no UI auth required'}</small>
+          </div>
+        )}
         <label className="field-label">
           {t('integration.inputMode')}
           <select value={form.input_mode} onChange={(event) => setForm({ ...form, input_mode: event.target.value, body: sampleForMode(event.target.value) })}>
@@ -146,8 +155,36 @@ export function TestConsolePage() {
         {timelineUrl && <Link className="primary-link" to={timelineUrl}>{t('integration.openLastTimeline')}</Link>}
         {translatedError && <div className="error-state compact"><strong>{translatedError.title}</strong><span>{translatedError.hint}</span></div>}
         {send.data?.external_error && <JsonBlock title={t('integration.externalError')} value={send.data.external_error} searchable={false} />}
-        <JsonBlock title={t('integration.response')} value={send.data ?? { hint: t('integration.responseHint') }} searchable />
+        {send.data ? (
+          <JsonBlock title={t('integration.response')} value={send.data} searchable />
+        ) : (
+          <div className="test-console-empty-response">
+            <span className="eyebrow">{t('integration.response')}</span>
+            <strong>{t('integration.responseEmptyTitle')}</strong>
+            <p>{t('integration.responseEmptyDetail')}</p>
+          </div>
+        )}
       </section>
     </div>
   );
+}
+
+function endpointLabel(endpoint: IntegrationEndpoint) {
+  return `${endpointDisplayName(endpoint)} — /api/bus/in/${endpoint.slug}`;
+}
+
+function endpointDisplayName(endpoint: IntegrationEndpoint) {
+  const name = endpoint.name.replace(/\s*\[[^\]]+\]\s*/g, '').replace(/\s*Endpoint:\s*\/api\/.*$/i, '').trim();
+  if (/xml/i.test(endpoint.input_mode) && /raw/i.test(endpoint.response_mode + endpoint.name)) return '1C XML → 1C raw bridge';
+  if (/print|zebra/i.test(endpoint.name + endpoint.slug)) return '1C print request → Zebra';
+  if (/wms/i.test(endpoint.name + endpoint.slug)) return 'WMS shipment fact → 1C';
+  if (/website|site/i.test(endpoint.name + endpoint.slug)) return 'Website/API → 1C OData';
+  return name || endpoint.slug;
+}
+
+function responseModeLabel(mode: string) {
+  if (mode === 'sync_response') return 'sync response';
+  if (mode === 'proxy_response') return 'proxy target response';
+  if (mode === 'accepted_message') return 'accepted message';
+  return 'accepted event';
 }

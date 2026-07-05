@@ -21,8 +21,10 @@
   "openLastTimeline": "Open Last Timeline",
   "externalError": "External Error",
   "response": "Response",
-  "responseHint": "Send or dry-run a request to inspect the response.",
+  "responseHint": "Choose an endpoint and send a test request. The result will appear here.",
   "invalidHeaders": "Headers JSON is invalid. Fix the object before sending the request.",
   "invalidBody": "Body JSON is invalid. Switch to XML/raw_text or fix the JSON payload.",
-  "testConsoleLoading": "Loading test console"
+  "testConsoleLoading": "Loading test console",
+  "responseEmptyTitle": "Choose an endpoint and send a test request.",
+  "responseEmptyDetail": "The result will appear here after Send or Dry Run. Errors are shown only after an actual run."
 }
