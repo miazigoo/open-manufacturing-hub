@@ -60,6 +60,7 @@ from app.ui.router import router as ui_router
 from app.workflows.router import router as workflows_router
 from app.xml_tools.router import router as xml_tools_router
 from app.packages.service import startup_package_check
+from app.production.startup import log_startup_banner
 from app.packages_onec.router import router as packages_onec_router
 from app.packages_printer.router import router as packages_printer_router
 from app.packages_auth.router import router as auth_router
@@ -70,6 +71,7 @@ from app.production.router import router as production_router
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     async with async_session() as session:
+        await log_startup_banner(session)
         await startup_package_check(session)
         await session.commit()
     yield

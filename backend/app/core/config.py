@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     )
     app_name: str = "Open Manufacturing Hub"
     app_env: str = Field(default="development", validation_alias=AliasChoices("APP_ENV", "OMH_APP_ENV"))
+    app_version: str = Field(default="0.1.0", validation_alias=AliasChoices("OMH_APP_VERSION", "APP_VERSION"))
+    public_base_url: str | None = Field(default=None, validation_alias=AliasChoices("PUBLIC_BASE_URL", "OMH_PUBLIC_BASE_URL"))
+    production_profile: bool = Field(default=False, validation_alias=AliasChoices("OMH_PRODUCTION_PROFILE", "PRODUCTION_PROFILE"))
     auto_install_packages: str = Field(default="", validation_alias=AliasChoices("OMH_AUTO_INSTALL_PACKAGES", "AUTO_INSTALL_PACKAGES"))
     allow_demo_seed_in_production: bool = Field(default=False, validation_alias=AliasChoices("ALLOW_DEMO_SEED_IN_PRODUCTION", "OMH_ALLOW_DEMO_SEED_IN_PRODUCTION"))
     notification_webhook_timeout_seconds: float = 3.0
@@ -18,7 +21,11 @@ class Settings(BaseSettings):
     sync_processing_timeout_seconds: float = 30.0
     queue_lock_seconds: int = 300
     queue_worker_batch_size: int = 10
+    queue_worker_loop_interval_seconds: float = Field(default=5.0, validation_alias=AliasChoices("QUEUE_WORKER_LOOP_INTERVAL_SECONDS", "OMH_QUEUE_WORKER_LOOP_INTERVAL_SECONDS"))
     audit_retention_days: int = Field(default=180, validation_alias=AliasChoices("AUDIT_RETENTION_DAYS", "OMH_AUDIT_RETENTION_DAYS"))
+    xml_max_bytes: int = Field(default=10485760, validation_alias=AliasChoices("XML_MAX_BYTES", "OMH_XML_MAX_BYTES"))
+    xml_full_artifact_max_bytes: int = Field(default=1048576, validation_alias=AliasChoices("XML_FULL_ARTIFACT_MAX_BYTES", "OMH_XML_FULL_ARTIFACT_MAX_BYTES"))
+    require_worker_heartbeat: bool = Field(default=False, validation_alias=AliasChoices("OMH_REQUIRE_WORKER_HEARTBEAT", "REQUIRE_WORKER_HEARTBEAT"))
     secret_key: str | None = Field(default=None, validation_alias=AliasChoices("OMH_SECRET_KEY", "SECRET_KEY"))
     config_require_test_before_publish: bool | None = Field(default=None, validation_alias=AliasChoices("REQUIRE_TEST_BEFORE_PUBLISH", "OMH_REQUIRE_TEST_BEFORE_PUBLISH"))
     config_require_comment_on_publish: bool | None = Field(default=None, validation_alias=AliasChoices("REQUIRE_COMMENT_ON_PUBLISH", "OMH_REQUIRE_COMMENT_ON_PUBLISH"))

@@ -1,4 +1,8 @@
 import json
+import os
+from pathlib import Path
+import subprocess
+import sys
 
 from app.core.config import get_settings
 
@@ -136,6 +140,9 @@ async def test_production_doctor_and_first_run_checklist(client):
     items = {item["code"]: item for item in checklist.json()["items"]}
     assert items["release_check"]["status"] == "manual"
     assert "onec_package" in items
+    assert "env_production" in items
+    assert "worker_heartbeat" in items
+    assert "secrets_store" in items
 
 
 async def test_route_inventory_gate_api(client):
@@ -144,3 +151,72 @@ async def test_route_inventory_gate_api(client):
     paths = {item["path"]: item for item in inventory.json()}
     assert paths["/api/bus/in/{slug}"]["source"] == "core"
     assert paths["/api/printing/*"]["guarded"] is True
+
+
+def test_factory_production_profile_files_contract():
+    repo = Path(__file__).resolve().parents[3]
+    compose = (repo / "docker-compose.production.yml").read_text(encoding="utf-8")
+    env = (repo / ".env.production.example").read_text(encoding="utf-8")
+    frontend_env = (repo / "frontend/.env.production.example").read_text(encoding="utf-8")
+    makefile = (repo / "Makefile").read_text(encoding="utf-8")
+    nginx = (repo / "deploy/nginx/omh.conf").read_text(encoding="utf-8")
+
+    for service in ["postgres:", "backend:", "worker:", "frontend:", "nginx:"]:
+        assert service in compose
+    assert "python -m app.workers.queue_worker" in compose
+    assert "/api/health/ready" in compose
+    assert "./backups:/app/backups" in compose
+    assert "profiles: [\"backup\"]" in compose
+
+    for name in ["APP_ENV=production", "OMH_SECRET_KEY=", "DATABASE_URL=", "POSTGRES_PASSWORD=", "VITE_API_BASE_URL=/api", "OMH_PRODUCTION_PROFILE=true"]:
+        assert name in env
+    assert "VITE_API_BASE_URL=/api" in frontend_env
+
+    for target in ["prod-up", "prod-down", "prod-logs", "prod-migrate", "prod-backup", "prod-restore", "prod-doctor", "prod-release-check", "prod-update-mode-on", "prod-update-mode-off"]:
+        assert f"{target}:" in makefile
+
+    assert "location /api/" in nginx
+    assert "proxy_pass http://omh_backend" in nginx
+    assert "proxy_pass http://omh_frontend" in nginx
+
+
+async def test_factory_deployment_checks_exposed_in_doctor(monkeypatch, client):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("OMH_PRODUCTION_PROFILE", "true")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "change-me-long-random-db-password")
+    monkeypatch.setenv("PUBLIC_BASE_URL", "http://factory.local")
+    monkeypatch.delenv("OMH_SECRET_KEY", raising=False)
+    get_settings.cache_clear()
+    try:
+        doctor = await client.get("/api/production/doctor")
+        assert doctor.status_code == 200, doctor.text
+        checks = {item["name"]: item for item in doctor.json()["checks"]}
+        assert checks[".env.production loaded"]["status"] == "ok"
+        assert checks["Postgres password changed"]["status"] == "warning"
+        assert checks["Nginx/reverse proxy configured"]["status"] == "warning"
+        assert checks["Backup volume exists"]["status"] in {"ok", "error"}
+        assert "Worker heartbeat OK" in checks
+    finally:
+        monkeypatch.setenv("APP_ENV", "development")
+        monkeypatch.delenv("OMH_PRODUCTION_PROFILE", raising=False)
+        monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
+        monkeypatch.delenv("PUBLIC_BASE_URL", raising=False)
+        get_settings.cache_clear()
+
+
+def test_queue_worker_entrypoint_imports_and_help_runs():
+    repo = Path(__file__).resolve().parents[3]
+    from app.workers import queue_worker
+
+    assert callable(queue_worker.main)
+    result = subprocess.run(
+        [sys.executable, "-m", "app.workers.queue_worker", "--help"],
+        cwd=repo / "backend",
+        env={**os.environ, "OMH_DATABASE_URL": "sqlite+aiosqlite:///:memory:"},
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--healthcheck" in result.stdout

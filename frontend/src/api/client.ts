@@ -24,7 +24,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   const headers = new Headers(init.headers);
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers, credentials: 'include' });
+  const response = await fetch(apiUrl(path), { ...init, headers, credentials: 'include' });
   if (response.status === 204) return undefined as T;
 
   const text = await response.text();
@@ -43,4 +43,11 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 
 export function asJson(value: unknown): string {
   return JSON.stringify(value, null, 2);
+}
+
+export function apiUrl(path: string): string {
+  const base = String(API_BASE_URL || '').replace(/\/$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (base.endsWith('/api') && normalizedPath.startsWith('/api/')) return `${base}${normalizedPath.slice(4)}`;
+  return `${base}${normalizedPath}`;
 }

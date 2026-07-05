@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import shutil
+import os
+from pathlib import Path
 
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.models import ConnectorInstance
 from app.core.config import get_settings
-from app.core.enums import BackupType, EnterpriseQueueStatus, IntegrationPackageStatus
+from app.core.enums import BackupType, EnterpriseQueueStatus, HealthComponentType, IntegrationPackageStatus
 from app.enterprise_runtime.models import DeadLetterQueueItem, IntegrationQueueMessage
+from app.health.models import HealthCheck
 from app.integration_bus.models import IntegrationEndpoint
 from app.notifications.models import NotificationRule
 from app.packages.models import InstalledPackage
@@ -58,6 +61,7 @@ async def update_checks(session: AsyncSession, *, post_update: bool = False) -> 
 
     checks.extend(await _promotion_checks(session))
     checks.extend(await _secret_checks(session))
+    checks.extend(await deployment_checks(session))
 
     usage = shutil.disk_usage(".")
     free_gb = round(usage.free / 1024 / 1024 / 1024, 2)
@@ -67,6 +71,73 @@ async def update_checks(session: AsyncSession, *, post_update: bool = False) -> 
         checks.append(ProductionCheck(name="Backend startup", status="ok", message="Backend responded to post-update check."))
         checks.append(ProductionCheck(name="Package registry", status="ok", message=f"{len(package_registry.list_packages())} package manifests loaded."))
     return checks
+
+
+async def deployment_checks(session: AsyncSession) -> list[ProductionCheck]:
+    checks: list[ProductionCheck] = []
+    settings = get_settings()
+    production_mode = settings.app_env.lower() in {"production", "prod"}
+    env_loaded = bool(settings.production_profile or os.getenv("COMPOSE_PROFILES") == "production")
+    checks.append(
+        ProductionCheck(
+            name=".env.production loaded",
+            status="ok" if env_loaded or not production_mode else "warning",
+            message="OMH_PRODUCTION_PROFILE=true" if env_loaded else "Set OMH_PRODUCTION_PROFILE=true in .env.production.",
+        )
+    )
+    checks.append(
+        ProductionCheck(
+            name="No demo seed in production",
+            status="error" if production_mode and settings.allow_demo_seed_in_production else "ok",
+            message="Demo seed is disabled." if not settings.allow_demo_seed_in_production else "OMH_ALLOW_DEMO_SEED_IN_PRODUCTION is enabled.",
+        )
+    )
+    postgres_password = os.getenv("POSTGRES_PASSWORD", "")
+    checks.append(
+        ProductionCheck(
+            name="Postgres password changed",
+            status="warning" if production_mode and postgres_password in {"", "change-me", "change-me-long-random-db-password"} else "ok",
+            message="POSTGRES_PASSWORD is not a placeholder." if postgres_password and "change-me" not in postgres_password else "Change POSTGRES_PASSWORD before go-live.",
+        )
+    )
+    public_base_url = settings.public_base_url or ""
+    checks.append(
+        ProductionCheck(
+            name="Nginx/reverse proxy configured",
+            status="ok" if public_base_url.startswith("https://") or (public_base_url.startswith("http://") and not production_mode) else "warning",
+            message=public_base_url or "Set PUBLIC_BASE_URL to the public HTTPS URL served by nginx.",
+        )
+    )
+    backup_root = Path("backups")
+    backup_ok = backup_root.exists() and os.access(backup_root, os.W_OK)
+    checks.append(
+        ProductionCheck(
+            name="Backup volume exists",
+            status="ok" if backup_ok else "error" if production_mode or settings.production_profile else "warning",
+            message=f"{backup_root.resolve()} writable" if backup_ok else "Create/mount ./backups to /app/backups.",
+        )
+    )
+    checks.append(await _worker_deployment_check(session))
+    return checks
+
+
+async def _worker_deployment_check(session: AsyncSession) -> ProductionCheck:
+    result = await session.execute(
+        select(HealthCheck)
+        .where(HealthCheck.component_type == HealthComponentType.AGENT, HealthCheck.component_name == "queue-worker")
+        .order_by(HealthCheck.checked_at.desc())
+        .limit(1)
+    )
+    heartbeat = result.scalar_one_or_none()
+    processing = int(await session.scalar(select(func.count()).select_from(IntegrationQueueMessage).where(IntegrationQueueMessage.status == EnterpriseQueueStatus.PROCESSING)) or 0)
+    if heartbeat:
+        return ProductionCheck(name="Worker heartbeat OK", status="ok", message=f"Last queue-worker heartbeat: {heartbeat.checked_at.isoformat()}", details=heartbeat.details_json or {})
+    return ProductionCheck(
+        name="Worker heartbeat OK",
+        status="warning",
+        message="No queue-worker heartbeat yet. Start worker service or set OMH_REQUIRE_WORKER_HEARTBEAT=false only for single-process installs.",
+        details={"processing": processing},
+    )
 
 
 async def _promotion_checks(session: AsyncSession) -> list[ProductionCheck]:

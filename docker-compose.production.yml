@@ -1,24 +1,42 @@
 services:
   postgres:
+    image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-omh}
       POSTGRES_USER: ${POSTGRES_USER:-omh}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+    volumes:
+      - omh-postgres-production:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-omh} -d $${POSTGRES_DB:-omh}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   backend:
+    build: ./backend
     image: open-manufacturing-hub-backend:production
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
       APP_ENV: production
       OMH_APP_ENV: production
-      OMH_DATABASE_URL: ${OMH_DATABASE_URL:?Set OMH_DATABASE_URL in .env.production}
+      OMH_PRODUCTION_PROFILE: "true"
+      OMH_DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
       OMH_SECRET_KEY: ${OMH_SECRET_KEY:?Set OMH_SECRET_KEY in .env.production}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
       OMH_ALLOW_DEMO_SEED_IN_PRODUCTION: "false"
+      OMH_REQUIRE_WORKER_HEARTBEAT: ${OMH_REQUIRE_WORKER_HEARTBEAT:-false}
     volumes:
       - ./backups:/app/backups
       - ./backend/exports:/app/exports
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     command: >
       sh -c "i=0;
       until alembic upgrade head; do
@@ -28,10 +46,99 @@ services:
         sleep 2;
       done;
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=5)\""]
+      interval: 20s
+      timeout: 8s
+      retries: 10
+      start_period: 30s
+
+  worker:
+    build: ./backend
+    image: open-manufacturing-hub-backend:production
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      APP_ENV: production
+      OMH_APP_ENV: production
+      OMH_PRODUCTION_PROFILE: "true"
+      OMH_DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      OMH_SECRET_KEY: ${OMH_SECRET_KEY:?Set OMH_SECRET_KEY in .env.production}
+      OMH_ALLOW_DEMO_SEED_IN_PRODUCTION: "false"
+    volumes:
+      - ./backups:/app/backups
+      - ./backend/exports:/app/exports
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: python -m app.workers.queue_worker
+    healthcheck:
+      test: ["CMD-SHELL", "python -m app.workers.queue_worker --healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   frontend:
+    build: ./frontend
     image: open-manufacturing-hub-frontend:production
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_PUBLIC_BASE_URL: ${VITE_PUBLIC_BASE_URL:-${PUBLIC_BASE_URL:-https://omh.local}}
+    expose:
+      - "5173"
     command: sh -c "npm run build && npm run preview -- --port 5173 --host 0.0.0.0"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173 >/dev/null"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx/omh.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/api/health/live >/dev/null"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+
+  backup:
+    image: postgres:16-alpine
+    profiles: ["backup"]
+    env_file:
+      - .env.production
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "mkdir -p /backups/db &&
+      pg_dump -h postgres -U $${POSTGRES_USER:-omh} $${POSTGRES_DB:-omh}
+      > /backups/db/omh-db-$$(date +%Y%m%d-%H%M%S).sql"
+
+volumes:
+  omh-postgres-production:

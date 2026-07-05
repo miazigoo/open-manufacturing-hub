@@ -1,13 +1,15 @@
 # Production Backup and Restore
 
 This guide is for local Docker Compose deployments of Open Manufacturing Hub.
+For the supported factory production profile, use the detailed runbook in
+`docs/production/factory-install.md` and `docs/production/factory-restore.md`.
 
 ## Before Any Update
 
 1. Enable update mode from `/production` or `POST /api/production/update-mode/enable`.
-2. Create a config export: `make backup-config`.
-3. Create a database dump: `make backup-db`.
-4. Download/copy the generated files from `backups/` to a safe location outside the host.
+2. Create a production backup set: `make prod-backup`.
+3. For local development only, `make backup-config` and `make backup-db` are still available.
+4. Download/copy the generated files from `backups/db`, `backups/config` and `backups/snapshots` to a safe location outside the host.
 5. Run `make pre-update-check` and fix errors before changing code or images.
 
 ## Config Export
@@ -41,8 +43,8 @@ make backup-db
 Equivalent command:
 
 ```bash
-mkdir -p backups
-docker compose exec -T postgres pg_dump -U omh omh > backups/omh-db-$(date +%Y%m%d-%H%M%S).sql
+mkdir -p backups/db
+docker compose exec -T postgres pg_dump -U omh omh > backups/db/omh-db-$(date +%Y%m%d-%H%M%S).sql
 ```
 
 ## Config Import Restore
@@ -55,14 +57,14 @@ Stop workers/backend before restoring. For Compose deployments:
 
 ```bash
 docker compose stop backend frontend
-docker compose exec -T postgres psql -U omh -d omh < backups/omh-db-YYYYMMDD-HHMMSS.sql
+docker compose exec -T postgres psql -U omh -d omh < backups/db/omh-db-YYYYMMDD-HHMMSS.sql
 docker compose start backend frontend
 ```
 
 Or:
 
 ```bash
-make restore-db FILE=backups/omh-db-YYYYMMDD-HHMMSS.sql
+make prod-restore FILE=backups/db/omh-db-YYYYMMDD-HHMMSS.sql
 ```
 
 ## Verify Restore

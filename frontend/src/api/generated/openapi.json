@@ -26185,6 +26185,44 @@
         ]
       }
     },
+    "/api/health/live": {
+      "get": {
+        "operationId": "health_live_api_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Live",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/health/ready": {
+      "get": {
+        "operationId": "health_ready_api_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Ready",
+        "tags": [
+          "health"
+        ]
+      }
+    },
     "/api/incidents": {
       "get": {
         "operationId": "list_incidents_api_incidents_get",
@@ -33979,6 +34017,453 @@
         "summary": "Send Test",
         "tags": [
           "test-console"
+        ]
+      }
+    },
+    "/api/training/examples": {
+      "get": {
+        "operationId": "training_examples_api_training_examples_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Training Examples",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/examples/{example_id}": {
+      "get": {
+        "operationId": "training_example_api_training_examples__example_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "example_id",
+            "required": true,
+            "schema": {
+              "title": "Example Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Training Example",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/examples/{example_id}/open-test-console": {
+      "post": {
+        "operationId": "open_training_example_api_training_examples__example_id__open_test_console_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "example_id",
+            "required": true,
+            "schema": {
+              "title": "Example Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Open Training Example",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/examples/{example_id}/run": {
+      "post": {
+        "operationId": "run_training_example_api_training_examples__example_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "example_id",
+            "required": true,
+            "schema": {
+              "title": "Example Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Training Example",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/install": {
+      "post": {
+        "operationId": "install_training_api_training_install_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Install Training",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/mock-dnp/marking/pools": {
+      "post": {
+        "operationId": "mock_dnp_api_training_mock_dnp_marking_pools_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mock Dnp",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/mock-odata/{system}/odata/standard.odata/$metadata": {
+      "get": {
+        "operationId": "odata_metadata_api_training_mock_odata__system__odata_standard_odata__metadata_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "system",
+            "required": true,
+            "schema": {
+              "title": "System",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Odata Metadata",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/mock-odata/{system}/odata/standard.odata/{resource}": {
+      "get": {
+        "operationId": "odata_resource_api_training_mock_odata__system__odata_standard_odata__resource__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "system",
+            "required": true,
+            "schema": {
+              "title": "System",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "resource",
+            "required": true,
+            "schema": {
+              "title": "Resource",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "$top",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "$Top"
+            }
+          },
+          {
+            "in": "query",
+            "name": "$skip",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "$Skip"
+            }
+          },
+          {
+            "in": "query",
+            "name": "$filter",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "$Filter"
+            }
+          },
+          {
+            "in": "query",
+            "name": "$select",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "$Select"
+            }
+          },
+          {
+            "in": "query",
+            "name": "$orderby",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "$Orderby"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Odata Resource",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/mock-printer/print": {
+      "post": {
+        "operationId": "mock_printer_api_training_mock_printer_print_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mock Printer",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/reset": {
+      "post": {
+        "operationId": "reset_training_api_training_reset_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Reset Training",
+        "tags": [
+          "training"
+        ]
+      }
+    },
+    "/api/training/status": {
+      "get": {
+        "operationId": "training_status_api_training_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Training Status",
+        "tags": [
+          "training"
         ]
       }
     },

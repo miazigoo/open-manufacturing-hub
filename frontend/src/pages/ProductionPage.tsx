@@ -1,6 +1,6 @@
 import { ChangeEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { API_BASE_URL, asJson } from '../api/client';
+import { apiUrl, asJson } from '../api/client';
 import { productionApi, type ImportPreview, type UpdateCheck } from '../api/production';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -79,8 +79,8 @@ export function ProductionPage() {
         <article className="panel">
           <div className="panel-toolbar"><h2>Backups</h2><button className="primary-button" onClick={() => exportConfig.mutate()} disabled={exportConfig.isPending}>Create config export</button></div>
           <p className="microcopy">Exports mask passwords and tokens. After import, re-enter secret values.</p>
-          {exportConfig.data && <a className="primary-link" href={`${API_BASE_URL}${exportConfig.data.download_url}`}>Download {exportConfig.data.file_name}</a>}
-          <div className="compact-run-list">{exportsQuery.data?.slice(0, 8).map((item) => <div className="success-note" key={item.id}><strong>{item.backup_type} · {item.status}</strong><span>{new Date(item.created_at).toLocaleString()} · {item.size_bytes ?? 0} bytes</span>{item.status === 'success' && <a className="primary-link" href={`${API_BASE_URL}/api/production/exports/${item.id}/download`}>Download</a>}</div>)}</div>
+          {exportConfig.data && <a className="primary-link" href={apiUrl(exportConfig.data.download_url)}>Download {exportConfig.data.file_name}</a>}
+          <div className="compact-run-list">{exportsQuery.data?.slice(0, 8).map((item) => <div className="success-note" key={item.id}><strong>{item.backup_type} · {item.status}</strong><span>{new Date(item.created_at).toLocaleString()} · {item.size_bytes ?? 0} bytes</span>{item.status === 'success' && <a className="primary-link" href={apiUrl(`/api/production/exports/${item.id}/download`)}>Download</a>}</div>)}</div>
         </article>
 
         <article className="panel">

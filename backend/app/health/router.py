@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
-from app.health import repository, service
+from app.health import readiness, repository, service
 from app.health.schemas import AgentHeartbeatCreate, AgentHeartbeatHistoryItem, AgentHeartbeatRead, AgentHeartbeatSummary, HealthCheckCreate, HealthCheckRead
 
 router = APIRouter(prefix="/api/health", tags=["health"])
@@ -11,6 +11,16 @@ router = APIRouter(prefix="/api/health", tags=["health"])
 @router.get("")
 async def health_check():
     return {"status": "ok"}
+
+
+@router.get("/live")
+async def health_live():
+    return await readiness.live()
+
+
+@router.get("/ready")
+async def health_ready(session: AsyncSession = Depends(get_session)):
+    return await readiness.ready(session)
 
 
 @router.get("/dashboard")

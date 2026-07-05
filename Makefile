@@ -1,4 +1,7 @@
-.PHONY: install-backend install-frontend check-test-env test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke ui-smoke-live ui-deep-smoke-live i18n-check i18n-missing docs-check docs-quality-check docs-ru-language-check docs-examples-check docs-screenshots openapi-export openapi-check route-inventory-check check-official-packages release-fixtures e2e-release release-check release-check-local release-check-docker doctor snapshot backup backup-config backup-db export-config pre-update-check post-update-check rollback-info restore-db packages-list package-install-onec package-install-printer docker-up docker-down docker-prod-up docker-prod-down
+.PHONY: install-backend install-frontend check-test-env test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke ui-smoke-live ui-deep-smoke-live i18n-check i18n-missing docs-check docs-quality-check docs-ru-language-check docs-examples-check docs-screenshots openapi-export openapi-check route-inventory-check check-official-packages release-fixtures e2e-release release-check release-check-local release-check-docker doctor snapshot backup backup-config backup-db export-config pre-update-check post-update-check rollback-info restore-db packages-list package-install-onec package-install-printer docker-up docker-down docker-prod-up docker-prod-down prod-up prod-down prod-logs prod-migrate prod-backup prod-restore prod-doctor prod-release-check prod-update-mode-on prod-update-mode-off
+
+PROD_COMPOSE = docker compose --env-file .env.production -f docker-compose.production.yml
+PROD_HTTP_URL ?= http://localhost:$${HTTP_PORT:-80}
 
 install-backend:
 	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[test]"
@@ -142,10 +145,55 @@ docker-down:
 	docker compose down
 
 docker-prod-up:
-	docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production up -d --build
+	$(MAKE) prod-up
 
 docker-prod-down:
-	docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production down
+	$(MAKE) prod-down
+
+prod-up:
+	test -f .env.production || (echo "Copy .env.production.example to .env.production and replace secrets first." && exit 1)
+	mkdir -p backups/db backups/config backups/snapshots
+	$(PROD_COMPOSE) up -d --build
+
+prod-down:
+	$(PROD_COMPOSE) down
+
+prod-logs:
+	$(PROD_COMPOSE) logs -f --tail=200
+
+prod-migrate:
+	$(PROD_COMPOSE) run --rm backend alembic upgrade head
+
+prod-backup:
+	test -f .env.production || (echo "Missing .env.production" && exit 1)
+	mkdir -p backups/db backups/config backups/snapshots
+	$(PROD_COMPOSE) exec -T postgres sh -c 'pg_dump -U "$$POSTGRES_USER" "$$POSTGRES_DB"' > backups/db/omh-db-$$(date +%Y%m%d-%H%M%S).sql
+	$(PROD_COMPOSE) exec -T backend python -m app.cli.production export-config --json
+	$(PROD_COMPOSE) exec -T backend python -m app.cli.production snapshot > backups/snapshots/omh-snapshot-$$(date +%Y%m%d-%H%M%S).json
+
+prod-restore:
+	test -n "$(FILE)" || (echo "Usage: make prod-restore FILE=backups/db/omh-db-YYYYMMDD-HHMMSS.sql" && exit 1)
+	test -f "$(FILE)" || (echo "Restore file not found: $(FILE)" && exit 1)
+	$(PROD_COMPOSE) stop worker backend frontend nginx
+	$(PROD_COMPOSE) exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"' < "$(FILE)"
+	$(PROD_COMPOSE) up -d backend worker frontend nginx
+	$(MAKE) prod-doctor
+
+prod-doctor:
+	$(PROD_COMPOSE) exec -T backend python -m app.cli.production doctor
+
+prod-release-check:
+	$(PROD_COMPOSE) config >/dev/null
+	$(MAKE) prod-doctor
+	curl -fsS $(PROD_HTTP_URL)/api/health/live >/dev/null
+	curl -fsS $(PROD_HTTP_URL)/api/health/ready >/dev/null
+	@echo "prod-release-check OK"
+
+prod-update-mode-on:
+	curl -fsS -X POST $(PROD_HTTP_URL)/api/production/update-mode/enable -H 'Content-Type: application/json' -d '{"message":"Factory update mode enabled from make","enabled_by":"make"}' | python3 -m json.tool
+
+prod-update-mode-off:
+	curl -fsS -X POST $(PROD_HTTP_URL)/api/production/update-mode/disable | python3 -m json.tool
 
 packages-list:
 	curl -s http://localhost:8000/api/packages/available | python3 -m json.tool

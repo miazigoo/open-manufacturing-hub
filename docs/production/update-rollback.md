@@ -1,5 +1,8 @@
 # Production Update and Rollback Runbook
 
+For factory deployments, prefer `docs/production/factory-update.md`; it uses
+the production Compose profile, independent worker and nginx health checks.
+
 ## Safe Update Flow
 
 1. Open `/production`.
@@ -16,12 +19,12 @@
 ## Commands
 
 ```bash
-make pre-update-check
-make backup-config
-make backup-db
+make prod-update-mode-on
+make prod-backup
 git pull
-docker compose up -d --build
-make post-update-check
+make prod-up
+make prod-release-check
+make prod-update-mode-off
 ```
 
 ## Rollback If Post-Update Fails

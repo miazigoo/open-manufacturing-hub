@@ -73,6 +73,7 @@ async def doctor(session: AsyncSession) -> dict[str, Any]:
     items.append(ProductionCheck(name="Package compatibility", status="error" if package_errors else "ok", message="; ".join(package_errors) if package_errors else "registered packages compatible"))
 
     items.extend(await checks._secret_checks(session))
+    items.extend(await checks.deployment_checks(session))
 
     queue = await production_service.queue_counts(session)
     backlog = int(queue.get(EnterpriseQueueStatus.WAITING.value, 0) + queue.get(EnterpriseQueueStatus.RETRY_WAITING.value, 0))
@@ -110,9 +111,18 @@ async def first_run_checklist(session: AsyncSession) -> dict[str, Any]:
     printer = installed.get("omh-package-printer")
     auth = installed.get("omh-package-auth")
     secret_key_configured = bool(get_settings().secret_key)
+    deployment = {item.name: item for item in await checks.deployment_checks(session)}
+    secrets_package = installed.get("omh-package-secrets")
     items = [
+        _item("env_production", ".env.production loaded", _status_from_check(deployment.get(".env.production loaded"))),
         _item("auth", "Create first user or intentionally leave Auth Package disabled", "ok" if (auth and auth.enabled and await _count(session, AuthUser)) or not (auth and auth.enabled) else "action_required", {"auth_package_enabled": bool(auth and auth.enabled), "users": await _count(session, AuthUser)}),
         _item("secret_key", "Configure OMH_SECRET_KEY", "ok" if secret_key_configured else "warning", {"configured": secret_key_configured}),
+        _item("database_volume", "Database volume exists and is mounted by Docker Compose", "manual", {"compose_volume": "omh-postgres-production"}),
+        _item("backup_volume", "Backup volume exists", _status_from_check(deployment.get("Backup volume exists"))),
+        _item("worker_heartbeat", "Worker heartbeat OK", _status_from_check(deployment.get("Worker heartbeat OK"))),
+        _item("reverse_proxy", "Nginx/reverse proxy configured", _status_from_check(deployment.get("Nginx/reverse proxy configured"))),
+        _item("no_demo_seed", "No demo seed in production", _status_from_check(deployment.get("No demo seed in production"))),
+        _item("secrets_store", "Secrets Store ready", "ok" if secrets_package and secrets_package.enabled else "action_required"),
         _item("onec_package", "Install and enable 1C Package", "ok" if onec and onec.enabled else "action_required"),
         _item("onec_connector", "Configure 1C connector", "ok" if await _connector_count(session, "onec") else "action_required"),
         _item("odata", "Test OData lookup", "ok" if await _endpoint_slug_exists(session, "site-contractor-lookup") else "warning"),
@@ -158,3 +168,13 @@ async def _endpoint_slug_exists(session: AsyncSession, slug: str) -> bool:
 
 def _item(code: str, title: str, status: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
     return {"code": code, "title": title, "status": status, "details": details or {}}
+
+
+def _status_from_check(check: ProductionCheck | None) -> str:
+    if check is None:
+        return "warning"
+    if check.status == "ok":
+        return "ok"
+    if check.status == "error":
+        return "action_required"
+    return "warning"

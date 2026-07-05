@@ -14,7 +14,7 @@ from app.core.errors import NotFoundError
 from app.production.models import BackupRecord
 
 BACKUP_ROOT = Path("backups")
-EXPORT_DIR = BACKUP_ROOT / "exports"
+EXPORT_DIR = BACKUP_ROOT / "config"
 
 
 def utcnow() -> datetime:
@@ -72,7 +72,7 @@ async def recent_success_exists(session: AsyncSession, hours: int = 24) -> bool:
 
 
 def ensure_export_dir() -> Path:
-    for candidate in (EXPORT_DIR, Path(tempfile.gettempdir()) / "open-manufacturing-hub" / "backups" / "exports"):
+    for candidate in (EXPORT_DIR, Path(tempfile.gettempdir()) / "open-manufacturing-hub" / "backups" / "config"):
         try:
             candidate.mkdir(parents=True, exist_ok=True)
             if os.access(candidate, os.W_OK):

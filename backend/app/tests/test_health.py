@@ -132,3 +132,18 @@ async def test_connector_status_appears_in_dashboard(client):
 
     dashboard = (await client.get("/api/health/dashboard")).json()
     assert {component["name"]: component["status"] for component in dashboard["components"]}["Mock WMS"] == "warning"
+
+
+async def test_live_and_ready_health_endpoints(client):
+    live = await client.get("/api/health/live")
+    assert live.status_code == 200, live.text
+    assert live.json()["status"] == "ok"
+    assert live.json()["version"]
+
+    ready = await client.get("/api/health/ready")
+    assert ready.status_code == 200, ready.text
+    body = ready.json()
+    assert body["status"] in {"ok", "warning"}
+    checks = {item["name"]: item for item in body["checks"]}
+    assert checks["database"]["status"] == "ok"
+    assert "package_registry" in checks

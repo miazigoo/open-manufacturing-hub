@@ -144,7 +144,7 @@ async def export_config(session: AsyncSession, request: ExportConfigRequest) -> 
             "secrets_policy": request.secrets_policy,
             "warnings": warnings,
         }
-        file_name = f"omh-config-export-{utcnow().strftime('%Y%m%d-%H%M%S')}.json"
+        file_name = f"omh-config-{utcnow().strftime('%Y%m%d-%H%M%S')}.json"
         path = backups.ensure_export_dir() / file_name
         path.write_text(json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8")
         size = path.stat().st_size
