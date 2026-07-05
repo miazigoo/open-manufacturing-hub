@@ -13,6 +13,7 @@ import { LoadingState } from '../components/LoadingState';
 import { ReplayActions } from '../components/ReplayActions';
 import { StatusBadge } from '../components/StatusBadge';
 import { TimelineStep } from '../components/TimelineStep';
+import { errorHelp } from '../features/help/errorHelp';
 import { useT } from '../i18n/useI18n';
 import { formatDateTime, formatDuration } from '../utils';
 
@@ -66,6 +67,7 @@ export function EventTimelinePage() {
 
   const { event, runs } = timeline.data;
   const failedStep = selectedRun?.steps.find((step) => step.status === 'failed');
+  const selectedErrorHelp = errorHelp(selectedStep?.error_code ?? failedStep?.error_code);
 
   return (
     <div className="timeline-page">
@@ -100,7 +102,7 @@ export function EventTimelinePage() {
       )}
 
       <div className="timeline-layout">
-        <aside className="run-rail">
+        <aside className="run-rail" data-tour="timeline-runs">
           <h2>{t('timeline.runs')}</h2>
           {runs.map((run) => (
             <button key={run.id} className={`run-card ${run.id === selectedRun?.id ? 'selected' : ''}`} onClick={() => { setSelectedRunId(run.id); setSelectedStepId(null); setSelectedArtifactId(null); }}>
@@ -113,7 +115,7 @@ export function EventTimelinePage() {
           {selectedRun && <ReplayActions eventId={event.id} selectedRun={selectedRun} selectedStep={selectedStep} selectedArtifact={selectedArtifact} />}
         </aside>
 
-        <section className="timeline-main">
+        <section className="timeline-main" data-tour="timeline-steps">
           {selectedRun ? (
             <>
               <div className="run-header"><div><h2>{t('timeline.run', { number: selectedRun.run_number })} · {selectedRun.mode}</h2><p>{formatDateTime(selectedRun.started_at)} · {t('timeline.duration')} {formatDuration(selectedRun.started_at, selectedRun.finished_at)}</p><p>{selectedRun.workflow_name ? `${selectedRun.workflow_name} v${selectedRun.workflow_version ?? 1}` : t('timeline.legacyPipeline')} · {t('nav.mappings')} {Object.keys(selectedRun.mapping_versions_json ?? {}).length}</p></div><StatusBadge status={selectedRun.status} /></div>
@@ -152,6 +154,7 @@ export function EventTimelinePage() {
                         {requestArtifact && <JsonBlock title={t('timeline.request')} value={requestArtifact.content_json} searchable={false} />}
                         {responseArtifact && <JsonBlock title={t('timeline.response')} value={responseArtifact.content_json} searchable={false} />}
                       </div>
+                      {selectedErrorHelp && <div className="timeline-help-card"><h3>{selectedErrorHelp.title}</h3><ul>{selectedErrorHelp.checks.map((item) => <li key={item}>{item}</li>)}</ul><Link className="primary-link" to={selectedErrorHelp.docsUrl}>Open troubleshooting docs</Link></div>}
                     </section>
                   )}
                   <div className="artifact-tabs">
@@ -163,7 +166,7 @@ export function EventTimelinePage() {
           ) : <EmptyState title={t('timeline.noRuns')} detail={t('timeline.noRunsDetail')} />}
         </section>
 
-        <aside className="artifact-column">
+        <aside className="artifact-column" data-tour="timeline-artifacts">
           <ArtifactViewer artifact={selectedArtifact} onDiff={(artifact) => setDiffBase(artifact)} />
           {diffBase && (
             <section className="panel diff-selector">

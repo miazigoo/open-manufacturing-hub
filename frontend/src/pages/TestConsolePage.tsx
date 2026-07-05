@@ -81,7 +81,7 @@ export function TestConsolePage() {
       <form className="panel form-panel stack-form" onSubmit={submit}>
         <span className="eyebrow">Test Console</span>
         <h1>Send integration requests</h1>
-        <label className="field-label">
+        <label className="field-label" data-tour="test-endpoint">
           Endpoint
           <select
             value={form.endpoint_id}
@@ -106,10 +106,10 @@ export function TestConsolePage() {
           </select>
         </label>
         <label className="field-label">Headers JSON<textarea value={form.headers_json} onChange={(event) => setForm({ ...form, headers_json: event.target.value })} /></label>
-        <label className="field-label">Body<textarea value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label>
+        <label className="field-label" data-tour="test-body">Body<textarea value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label>
         {formError && <div className="error-state compact">{formError}</div>}
         {send.error instanceof Error && <div className="error-state compact">{send.error.message}</div>}
-        <div className="action-row">
+        <div className="action-row" data-tour="test-actions">
           <button className="primary-button" disabled={!form.endpoint_id || send.isPending}>Send</button>
           <button type="button" className="ghost-button" disabled={!form.endpoint_id || send.isPending} onClick={() => run(true)}>Dry Run</button>
         </div>

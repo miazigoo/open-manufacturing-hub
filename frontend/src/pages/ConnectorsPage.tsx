@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConnectorDirection, ConnectorInstance, ConnectorPayload, connectorsApi } from '../api/connectors';
 import { asJson } from '../api/client';
@@ -122,7 +123,7 @@ export function ConnectorsPage() {
               <button className="ghost-button danger" onClick={() => remove.mutate(connector.id)}>{t('connectors.delete')}</button>
             </div>
           </article>
-        )) : <EmptyState title={t('connectors.noInstances')} detail={t('connectors.noInstancesDetail')} />}
+        )) : <EmptyState title={t('connectors.noInstances')} detail={t('connectors.noInstancesDetail')} actions={<><Link className="primary-button" to="/onboarding">Open onboarding</Link><Link className="ghost-button" to="/docs/onec/tools/connector">1C connector docs</Link></>} />}
       </section>
     </div>
   );

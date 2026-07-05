@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../api/client';
 import { uiApi, type UINavigationItem } from '../api/ui';
 import { ProductionBanner } from './ProductionBanner';
 import { UserMenu } from '../features/auth/UserMenu';
+import { ContextHelpButton } from '../features/help/ContextHelpButton';
+import { helpForPath } from '../features/help/helpRegistry';
 import { useI18n, useT } from '../i18n/useI18n';
 import { languageMeta } from '../i18n/dictionary';
 import type { Language } from '../i18n/dictionary';
@@ -16,6 +18,7 @@ const uiModeStorageKey = 'omh.ui.mode.v1';
 
 const fallbackNavigation: UINavigationItem[] = [
   { group: 'Operate', title: 'Documentation', route: '/docs', package_id: null, enabled: true, advanced: false },
+  { group: 'Operate', title: 'Onboarding', route: '/onboarding', package_id: null, enabled: true, advanced: false },
   { group: 'Operate', title: 'Dashboard', route: '/', package_id: null, enabled: true, advanced: false },
   { group: 'Operate', title: 'Transaction Monitor', route: '/runtime/monitor', package_id: null, enabled: true, advanced: false },
   { group: 'Operate', title: 'Audit Log', route: '/audit', package_id: null, enabled: true, advanced: false },
@@ -40,6 +43,7 @@ const groupKey: Record<string, string> = {
 
 const routeKey: Record<string, string> = {
   '/docs': 'nav.documentation',
+  '/onboarding': 'nav.onboarding',
   '/': 'nav.dashboard',
   '/runtime/monitor': 'nav.transactionMonitor',
   '/runtime/queue': 'nav.integrationQueue',
@@ -82,7 +86,7 @@ const routeKey: Record<string, string> = {
 
 const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Settings', 'Advanced', 'Developer'];
 const modeRank: Record<UIMode, number> = { simple: 0, advanced: 1, developer: 2 };
-const simpleRoutes = new Set(['/docs', '/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/test-console', '/packages', '/plugin-store']);
+const simpleRoutes = new Set(['/docs', '/onboarding', '/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/test-console', '/packages', '/plugin-store']);
 const developerRoutes = new Set(['/workflows', '/execution/steps']);
 
 export function Layout() {
@@ -186,6 +190,8 @@ function modeAllows(item: UINavigationItem, mode: UIMode) {
 
 function TopBar() {
   const { language, setLanguage, t } = useI18n();
+  const location = useLocation();
+  const topic = helpForPath(location.pathname);
   return (
     <header className="topbar slim-topbar">
       <div className="topbar-product">
@@ -201,6 +207,7 @@ function TopBar() {
           </button>
         ))}
       </div>
+      <ContextHelpButton topic={topic} />
       <UserMenu />
     </header>
   );

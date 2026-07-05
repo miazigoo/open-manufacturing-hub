@@ -38,6 +38,7 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
     groups = [
         ("Operate", [
             ("Documentation", "/docs", None, False),
+            ("Onboarding", "/onboarding", None, False),
             ("Dashboard", "/", None, False),
             ("Transaction Monitor", "/runtime/monitor", None, False),
             ("Integration Queue", "/runtime/queue", None, False),

@@ -42,8 +42,8 @@ export function ODataExplorerPage() {
       <section className="panel form-panel">
         <span className="eyebrow">OData Explorer</span>
         <h1>Query 1C OData safely</h1>
-        <form className="stack-form" onSubmit={submit}>
-          <label className="field-label">
+        <form className="stack-form" onSubmit={submit} data-tour="odata-query">
+          <label className="field-label" data-tour="odata-connector">
             1C connector
             <select value={connectorId} onChange={(event) => setConnectorId(event.target.value)}>
               <option value="">Select connector</option>
@@ -64,7 +64,7 @@ export function ODataExplorerPage() {
           <button className="primary-button" disabled={!connectorId || run.isPending}>Run query</button>
         </form>
         <hr />
-        <div className="stack-form">
+        <div className="stack-form" data-tour="odata-lookup">
           <h2>Create lookup template</h2>
           <label className="field-label">Name<input value={lookup.name} onChange={(event) => setLookup({ ...lookup, name: event.target.value })} /></label>
           <label className="field-label">Filter template<input value={lookup.filter_template} onChange={(event) => setLookup({ ...lookup, filter_template: event.target.value })} /></label>

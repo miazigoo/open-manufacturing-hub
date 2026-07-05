@@ -8,6 +8,7 @@ import { ErrorState } from '../components/ErrorState';
 import { HealthCard } from '../components/HealthCard';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { OnboardingCard } from '../features/onboarding/OnboardingCard';
 import { useT } from '../i18n/useI18n';
 import { formatDateTime } from '../utils';
 
@@ -38,6 +39,8 @@ export function DashboardPage() {
         </div>
         <div className="hero-instrument"><span>{failed.length}</span><small>{t('dashboard.activeFailures')}</small></div>
       </header>
+
+      <OnboardingCard />
 
       <section className="metric-grid">
         <Metric label={t('dashboard.eventsToday')} value={eventRows.length} />

@@ -21,6 +21,7 @@ from app.maintenance.models import MaintenanceWindow  # noqa: F401
 from app.mappings.models import MappingDefinition, MappingVersion  # noqa: F401
 from app.notifications.models import NotificationDelivery, NotificationRule  # noqa: F401
 from app.onec_workbench.models import IntegrationMessage  # noqa: F401
+from app.onboarding.models import OnboardingState  # noqa: F401
 from app.operation_templates.models import OperationTemplate  # noqa: F401
 from app.packages.models import InstalledPackage, PackageRuntimeCapability  # noqa: F401
 from app.packages_auth.models import AuthRecoveryKey, AuthSession, AuthSettings, AuthUser  # noqa: F401

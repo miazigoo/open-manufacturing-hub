@@ -35,6 +35,7 @@ from app.notifications.router import router as notifications_router
 from app.onec_workbench.router import router as onec_workbench_router
 from app.onec_scenarios.router import router as onec_scenarios_router
 from app.onec_templates.router import router as onec_templates_router
+from app.onboarding.router import router as onboarding_router
 from app.operation_templates.router import router as operation_templates_router
 from app.odata_explorer.router import router as odata_explorer_router
 from app.packages.router import router as packages_router
@@ -149,4 +150,5 @@ app.include_router(onec_workbench_router, dependencies=[Depends(require_package_
 app.include_router(onec_scenarios_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(onec_templates_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(operation_templates_router)
+app.include_router(onboarding_router)
 app.include_router(mock_onec_router)

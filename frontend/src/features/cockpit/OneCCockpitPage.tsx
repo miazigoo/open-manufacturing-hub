@@ -69,7 +69,7 @@ export function OneCCockpitPage() {
 
       <section className="cockpit-command-grid">
         <SectionCard eyebrow="Fast Start" title="Common 1C routes" description="Start from a business scenario, then refine matchers, OData lookups and target payloads in the wizard.">
-          <div className="cockpit-action-grid">
+          <div className="cockpit-action-grid" data-tour="create-integration">
             {summary.data.quick_actions.map((action) => {
               const row = action as Row;
               return (
@@ -105,7 +105,7 @@ export function OneCCockpitPage() {
 
       <section className="cockpit-command-grid lower">
         <SectionCard eyebrow="Recent" title="1C related events">
-          {summary.data.recent_events.length === 0 ? <EmptyPanel title="No 1C events yet" detail="New XML/OData/print events will appear here with a direct timeline link." /> : <div className="cockpit-event-list">{summary.data.recent_events.map((item) => { const row = item as Row; return <article key={text(row, 'id')} className={bool(row, 'requires_attention') ? 'attention-row' : ''}><div><StatusBadge status={text(row, 'status', 'unknown')} compact /><strong>{text(row, 'title', text(row, 'id'))}</strong><p>{text(row, 'summary')}</p><small>{text(row, 'source')} {'->'} {text(row, 'target')}</small></div><TimelineLink to={text(row, 'timeline_url')} /></article>; })}</div>}
+          {summary.data.recent_events.length === 0 ? <EmptyPanel title="No 1C events yet" detail="New XML/OData/print events will appear here with a direct timeline link." /> : <div className="cockpit-event-list" data-tour="recent-events">{summary.data.recent_events.map((item) => { const row = item as Row; return <article key={text(row, 'id')} className={bool(row, 'requires_attention') ? 'attention-row' : ''}><div><StatusBadge status={text(row, 'status', 'unknown')} compact /><strong>{text(row, 'title', text(row, 'id'))}</strong><p>{text(row, 'summary')}</p><small>{text(row, 'source')} {'->'} {text(row, 'target')}</small></div><TimelineLink to={text(row, 'timeline_url')} /></article>; })}</div>}
         </SectionCard>
         <SectionCard eyebrow="Execution Result" title="Last action response">
           <ResultPanel result={testFlow.data ?? null} />

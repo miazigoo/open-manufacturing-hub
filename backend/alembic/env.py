@@ -15,6 +15,7 @@ from app.packages_auth.models import AuthRecoveryKey, AuthSession, AuthSettings,
 from app.production.models import BackupRecord, ProductionState  # noqa: F401
 from app.events.models import EventRun, EventStep, IntegrationEvent  # noqa: F401
 from app.notifications.models import NotificationDelivery, NotificationRule  # noqa: F401
+from app.onboarding.models import OnboardingState  # noqa: F401
 from app.maintenance.models import MaintenanceWindow  # noqa: F401
 from app.incidents.models import Incident, IncidentEvent  # noqa: F401
 from app.health.models import AgentHeartbeat, HealthCheck, Site  # noqa: F401
