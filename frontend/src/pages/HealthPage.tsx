@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { healthApi } from '../api/health';
+import { CodeBlock } from '../components/CodeBlock';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { HealthCard } from '../components/HealthCard';
@@ -65,7 +66,7 @@ export function HealthPage() {
           <span className="eyebrow">{t('health.contractEyebrow')}</span>
           <h2>{t('health.contractTitle')}</h2>
           <p>{t('health.contractDetail')}</p>
-          <pre className="json-block">{`curl -X POST "$OMH_URL/api/health/agent-heartbeat" \\
+          <CodeBlock title="curl heartbeat" language="bash" code={`curl -X POST "$OMH_URL/api/health/agent-heartbeat" \\
   -H "Content-Type: application/json" \\
   -d '{
     "site_name": "Main Warehouse",
@@ -77,7 +78,7 @@ export function HealthPage() {
     "can_reach_erp": true,
     "local_ip": "10.10.0.15",
     "details_json": { "version": "0.1.0" }
-  }'`}</pre>
+  }'`} />
         </div>
       </section>
       <section className="panel">

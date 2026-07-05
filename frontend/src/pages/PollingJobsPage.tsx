@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { connectorsApi } from '../api/connectors';
 import { PollingCursorType, PollingJobPayload, pollingApi } from '../api/polling';
+import { CodeEditor } from '../components/CodeEditor';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -100,7 +101,7 @@ export function PollingJobsPage() {
             <label className="field-label">{t('polling.correlationField')}<input value={form.correlation_id_field} onChange={(event) => setForm({ ...form, correlation_id_field: event.target.value })} /></label>
             <label className="field-label">{t('polling.updatedField')}<input value={form.updated_at_field} onChange={(event) => setForm({ ...form, updated_at_field: event.target.value })} /></label>
           </div>
-          <label className="field-label">{t('polling.odataQuery')}<textarea value={form.query_json} onChange={(event) => setForm({ ...form, query_json: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('polling.odataQuery')}<CodeEditor value={form.query_json} onChange={(value) => setForm({ ...form, query_json: value })} language="json" minRows={7} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           {create.error instanceof Error && <div className="error-state compact">{create.error.message}</div>}
           {message && <div className="success-note">{message}</div>}

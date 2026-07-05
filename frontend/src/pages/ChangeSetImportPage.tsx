@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { changeSetsApi, ChangeSetMapping } from '../api/changeSets';
+import { CodeEditor } from '../components/CodeEditor';
 import { JsonBlock } from '../components/JsonBlock';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -70,14 +71,14 @@ export function ChangeSetImportPage() {
         <section className="panel stack-form">
           <div className="panel-toolbar"><div><span className="eyebrow">Change Set JSON</span><h2>Reference-only package</h2></div><StatusBadge status={parsedPayload ? 'ok' : 'failed'} label={parsedPayload ? 'valid json' : 'invalid'} /></div>
           <input type="file" accept="application/json" onChange={loadFile} />
-          <label className="field-label">Payload<textarea className="large-json-input" value={payloadText} onChange={(event) => setPayloadText(event.target.value)} /></label>
+          <label className="field-label">Payload<CodeEditor className="large-json-input" value={payloadText} onChange={setPayloadText} language="json" minRows={16} /></label>
         </section>
 
         <section className="panel stack-form">
           <div className="panel-toolbar"><div><span className="eyebrow">Target Mapping</span><h2>Secrets, connectors, variables</h2></div></div>
-          <label className="field-label">Secret mapping<textarea value={secretMappingText} onChange={(event) => setSecretMappingText(event.target.value)} /></label>
-          <label className="field-label">Connector mapping<textarea value={connectorMappingText} onChange={(event) => setConnectorMappingText(event.target.value)} /></label>
-          <label className="field-label">Environment variables<textarea value={environmentVariablesText} onChange={(event) => setEnvironmentVariablesText(event.target.value)} /></label>
+          <label className="field-label">Secret mapping<CodeEditor value={secretMappingText} onChange={setSecretMappingText} language="json" minRows={5} /></label>
+          <label className="field-label">Connector mapping<CodeEditor value={connectorMappingText} onChange={setConnectorMappingText} language="json" minRows={5} /></label>
+          <label className="field-label">Environment variables<CodeEditor value={environmentVariablesText} onChange={setEnvironmentVariablesText} language="json" minRows={5} /></label>
           <label className="inline-check"><input type="checkbox" checked={allowConflicts} onChange={(event) => setAllowConflicts(event.target.checked)} /> Allow identity conflicts</label>
           <label className="inline-check"><input type="checkbox" checked={runSmokeTests} onChange={(event) => setRunSmokeTests(event.target.checked)} /> Run smoke tests after apply</label>
           <div className="action-row wrap-actions"><button className="ghost-button" onClick={runPreview} disabled={preview.isPending}>Preview import</button><button className="primary-button" onClick={runApply} disabled={apply.isPending || !result?.valid}>Apply to current environment</button></div>

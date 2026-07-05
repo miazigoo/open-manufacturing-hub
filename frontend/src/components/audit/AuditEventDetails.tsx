@@ -1,5 +1,5 @@
-import { asJson } from '../../api/client';
 import type { AuditEvent } from '../../api/audit';
+import { JsonBlock } from '../JsonBlock';
 import { StatusBadge } from '../StatusBadge';
 import { AuditDiffViewer } from './AuditDiffViewer';
 
@@ -22,9 +22,9 @@ export function AuditEventDetails({ event }: { event: AuditEvent | null }) {
       </div>
       <AuditDiffViewer diff={event.diff_json} />
       <div className="three-column-json">
-        <pre className="json-panel"><strong>Before</strong>{'\n'}{asJson(event.before_json ?? {})}</pre>
-        <pre className="json-panel"><strong>After</strong>{'\n'}{asJson(event.after_json ?? {})}</pre>
-        <pre className="json-panel"><strong>Details</strong>{'\n'}{asJson(event.details_json ?? {})}</pre>
+        <JsonBlock title="Before" value={event.before_json ?? {}} searchable={false} />
+        <JsonBlock title="After" value={event.after_json ?? {}} searchable={false} />
+        <JsonBlock title="Details" value={event.details_json ?? {}} searchable={false} />
       </div>
     </section>
   );

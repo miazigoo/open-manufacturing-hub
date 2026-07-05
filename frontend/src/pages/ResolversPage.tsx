@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { businessObjectsApi } from '../api/businessObjects';
 import { resolversApi, type ResolverDefinitionV2 } from '../api/resolvers';
+import { CodeEditor } from '../components/CodeEditor';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -52,7 +53,7 @@ function ResolverCard({ item }: { item: ResolverDefinitionV2 }) {
     setFormError(null);
     try { resolve.mutate(); } catch (error) { setFormError(error instanceof Error ? error.message : 'Invalid input'); }
   }
-  return <article className="panel runtime-card stack-form"><div className="panel-toolbar"><div><span className="eyebrow">{item.strategy}</span><h2>{item.name}</h2></div><StatusBadge status={item.enabled ? 'ok' : 'warning'} label={item.enabled ? 'enabled' : 'disabled'} /></div><p>{item.object_type} · <code>{item.resolver_code}</code></p><div className="action-row wrap-actions"><Link className="primary-link" to={`/resolvers/${item.id}`}>Details</Link><Link className="primary-link" to={`/resolvers/cache?resolver_code=${encodeURIComponent(item.resolver_code)}`}>Cache</Link></div><form className="stack-form" onSubmit={run}><label className="field-label">Test input<textarea value={input} onChange={(event) => setInput(event.target.value)} /></label><button className="primary-button" disabled={resolve.isPending}>Resolve</button></form>{formError && <div className="error-state compact">{formError}</div>}{resolve.error instanceof Error && <div className="error-state compact">{resolve.error.message}</div>}{resolve.data && <JsonBlock title="Resolve result" value={resolve.data} searchable={false} />}</article>;
+  return <article className="panel runtime-card stack-form"><div className="panel-toolbar"><div><span className="eyebrow">{item.strategy}</span><h2>{item.name}</h2></div><StatusBadge status={item.enabled ? 'ok' : 'warning'} label={item.enabled ? 'enabled' : 'disabled'} /></div><p>{item.object_type} · <code>{item.resolver_code}</code></p><div className="action-row wrap-actions"><Link className="primary-link" to={`/resolvers/${item.id}`}>Details</Link><Link className="primary-link" to={`/resolvers/cache?resolver_code=${encodeURIComponent(item.resolver_code)}`}>Cache</Link></div><form className="stack-form" onSubmit={run}><label className="field-label">Test input<CodeEditor value={input} onChange={setInput} language="json" minRows={6} /></label><button className="primary-button" disabled={resolve.isPending}>Resolve</button></form>{formError && <div className="error-state compact">{formError}</div>}{resolve.error instanceof Error && <div className="error-state compact">{resolve.error.message}</div>}{resolve.data && <JsonBlock title="Resolve result" value={resolve.data} searchable={false} />}</article>;
 }
 
 function sampleInput(objectType: string): Record<string, unknown> {

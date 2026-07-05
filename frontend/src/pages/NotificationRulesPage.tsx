@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { NotificationRulePayload, TriggerType, notificationsApi } from '../api/notifications';
+import { CodeEditor } from '../components/CodeEditor';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -52,8 +53,8 @@ export function NotificationRulesPage() {
           <label className="field-label">{t('connectors.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
           <label className="field-label">{t('notifications.trigger')}<select value={form.trigger_type} onChange={(event) => setForm({ ...form, trigger_type: event.target.value as TriggerType })}>{triggerTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
           <label className="field-label">{t('notifications.cooldown')}<input type="number" value={form.cooldown_seconds} onChange={(event) => setForm({ ...form, cooldown_seconds: Number(event.target.value) })} /></label>
-          <label className="field-label">{t('notifications.filtersJson')}<textarea value={form.filters} onChange={(event) => setForm({ ...form, filters: event.target.value })} spellCheck={false} /></label>
-          <label className="field-label">{t('notifications.channelsJson')}<textarea value={form.channels} onChange={(event) => setForm({ ...form, channels: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('notifications.filtersJson')}<CodeEditor value={form.filters} onChange={(value) => setForm({ ...form, filters: value })} language="json" minRows={6} /></label>
+          <label className="field-label">{t('notifications.channelsJson')}<CodeEditor value={form.channels} onChange={(value) => setForm({ ...form, channels: value })} language="json" minRows={6} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           <button className="primary-button" type="submit" disabled={createRule.isPending}>{t('notifications.create')}</button>
         </form>

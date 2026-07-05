@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConnectorDirection, ConnectorInstance, ConnectorPayload, connectorsApi } from '../api/connectors';
 import { asJson } from '../api/client';
 import { secretsApi, type SecretConfigValidation } from '../api/secrets';
+import { CodeEditor } from '../components/CodeEditor';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -91,7 +92,7 @@ export function ConnectorsPage() {
           <label className="field-label">{t('connectors.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
           <label className="field-label">{t('connectors.type')}<select value={form.connector_type} onChange={(event) => selectType(event.target.value)}>{(types.data ?? []).map((type) => <option key={type.connector_type} value={type.connector_type}>{type.display_name}</option>)}</select></label>
           <label className="field-label">{t('connectors.direction')}<select value={form.direction} onChange={(event) => setForm({ ...form, direction: event.target.value as ConnectorDirection })}><option value="source">source</option><option value="target">target</option><option value="bidirectional">bidirectional</option></select></label>
-          <label className="field-label">{t('connectors.configJson')}<textarea value={form.config_json} onChange={(event) => setForm({ ...form, config_json: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('connectors.configJson')}<CodeEditor value={form.config_json} onChange={(value) => setForm({ ...form, config_json: value })} language="json" minRows={10} /></label>
           <SecretConfigWarnings configText={form.config_json} />
           {formError && <div className="error-state compact">{formError}</div>}
           {create.error instanceof Error && <div className="error-state compact">{create.error.message}</div>}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { asJson } from '../api/client';
 import { useT } from '../i18n/useI18n';
+import { CodeBlock } from './CodeBlock';
 
 interface JsonBlockProps {
   value: unknown;
@@ -33,7 +34,7 @@ export function JsonBlock({ value, title, searchable = true }: JsonBlockProps) {
           <button className="ghost-button" onClick={copy}>{t('common.copy')}</button>
         </div>
       </div>
-      <pre className="json-block">{filtered}</pre>
+      <CodeBlock code={filtered} language="json" copyLabel={t('common.copy')} copiedLabel={t('common.copied')} failedLabel={t('docs.copyUnavailable')} showToolbar={false} />
     </section>
   );
 }

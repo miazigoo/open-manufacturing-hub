@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { xmlToolsApi } from '../api/xmlTools';
+import { CodeBlock } from '../components/CodeBlock';
+import { CodeEditor } from '../components/CodeEditor';
 import { JsonBlock } from '../components/JsonBlock';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -18,8 +20,8 @@ export function XmlToolsPage() {
       <section className="panel form-panel">
         <span className="eyebrow">XML Tools</span>
         <h1>Inspect XML safely</h1>
-        <label className="field-label">Original XML<textarea value={left} onChange={(event) => setLeft(event.target.value)} /></label>
-        <label className="field-label">Forwarded / comparison XML<textarea value={right} onChange={(event) => setRight(event.target.value)} /></label>
+        <label className="field-label">Original XML<CodeEditor value={left} onChange={setLeft} language="xml" minRows={9} /></label>
+        <label className="field-label">Forwarded / comparison XML<CodeEditor value={right} onChange={setRight} language="xml" minRows={9} /></label>
         {runtimeError instanceof Error && <div className="error-state compact">{runtimeError.message}</div>}
         <div className="action-row">
           <button className="primary-button" onClick={() => parse.mutate()} disabled={parse.isPending}>Parse XML</button>
@@ -31,7 +33,7 @@ export function XmlToolsPage() {
       <section className="page-stack">
         <JsonBlock title="Parsed XML / paths" value={parse.data ?? { hint: 'Parse XML to inspect normalized paths and metadata.' }} searchable />
         <JsonBlock title="Pretty XML" value={{ pretty_xml: parse.data?.pretty_xml ?? '' }} searchable={false} />
-        <pre className="json-block">{diff.data?.diff_text ?? 'Run XML diff to see changes'}</pre>
+        <CodeBlock code={diff.data?.diff_text ?? 'Run XML diff to see changes'} language="diff" title="Diff" />
       </section>
     </div>
   );

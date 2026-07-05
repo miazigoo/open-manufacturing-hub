@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { enterpriseRuntimeApi } from '../api/enterpriseRuntime';
 import type { QueueMessage, QueueStatus } from '../api/enterpriseRuntime';
+import { CodeEditor } from '../components/CodeEditor';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -119,7 +120,7 @@ function QueuePanel({ onResult }: { onResult: (value: unknown) => void }) {
         <label className="field-label">Business object<input value={form.business_object} onChange={(event) => setForm({ ...form, business_object: event.target.value })} /></label>
         <label className="field-label">Operation<input value={form.operation} onChange={(event) => setForm({ ...form, operation: event.target.value })} /></label>
         <label className="field-label">Priority<input value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} /></label>
-        <label className="field-label">Payload JSON<textarea value={form.payload_json} onChange={(event) => setForm({ ...form, payload_json: event.target.value })} /></label>
+        <label className="field-label">Payload JSON<CodeEditor value={form.payload_json} onChange={(value) => setForm({ ...form, payload_json: value })} language="json" minRows={7} /></label>
         {formError && <div className="error-state compact">{formError}</div>}
         {actionError instanceof Error && <div className="error-state compact">{actionError.message}</div>}
         <button className="primary-button" disabled={create.isPending}>Create message</button>
@@ -212,7 +213,7 @@ function ResolversPanel({ onResult }: { onResult: (value: unknown) => void }) {
   }
   return (
     <section className="runtime-grid">
-      <section className="panel stack-form runtime-control-card"><span className="eyebrow">Resolver input</span><h2>Resolve input</h2><textarea value={payload} onChange={(event) => setPayload(event.target.value)} />{formError && <div className="error-state compact">{formError}</div>}{resolve.error instanceof Error && <div className="error-state compact">{resolve.error.message}</div>}</section>
+      <section className="panel stack-form runtime-control-card"><span className="eyebrow">Resolver input</span><h2>Resolve input</h2><CodeEditor value={payload} onChange={setPayload} language="json" minRows={7} />{formError && <div className="error-state compact">{formError}</div>}{resolve.error instanceof Error && <div className="error-state compact">{resolve.error.message}</div>}</section>
       {rows.length === 0 ? <EmptyState title="No resolvers" detail="Install enterprise presets to add ResolveCustomer, ResolveProduct, ResolveWarehouse and other resolvers." /> : <section className="card-grid runtime-card-grid">{rows.map((item) => <article className="panel runtime-card" key={item.id}><span className="eyebrow">{item.resolver_type}</span><h2>{item.name}</h2><p>{item.business_object}</p><button className="primary-button" disabled={resolve.isPending} onClick={() => run(item.id)}>Resolve</button><JsonBlock title="Config" value={item.config_json} searchable={false} /></article>)}</section>}
     </section>
   );
@@ -247,7 +248,7 @@ function RulesPanel({ onResult }: { onResult: (value: unknown) => void }) {
   }
   return (
     <section className="runtime-grid">
-      <section className="panel stack-form runtime-control-card"><span className="eyebrow">Rule payload</span><h2>Run rule</h2><textarea value={payload} onChange={(event) => setPayload(event.target.value)} />{formError && <div className="error-state compact">{formError}</div>}{runRule.error instanceof Error && <div className="error-state compact">{runRule.error.message}</div>}</section>
+      <section className="panel stack-form runtime-control-card"><span className="eyebrow">Rule payload</span><h2>Run rule</h2><CodeEditor value={payload} onChange={setPayload} language="json" minRows={7} />{formError && <div className="error-state compact">{formError}</div>}{runRule.error instanceof Error && <div className="error-state compact">{runRule.error.message}</div>}</section>
       {rows.length === 0 ? <EmptyState title="No business rules" detail="Install enterprise presets to add the default operational rules." /> : <section className="card-grid runtime-card-grid">{rows.map((item) => <article className="panel runtime-card" key={item.id}><span className="eyebrow">{item.status}</span><h2>{item.name}</h2><p>{item.business_object ?? 'Any object'} · {item.operation ?? 'Any operation'}</p><button className="primary-button" disabled={runRule.isPending} onClick={() => run(item.id)}>Run rule</button><JsonBlock title="Rules" value={item.rules_json} searchable={false} /></article>)}</section>}
     </section>
   );

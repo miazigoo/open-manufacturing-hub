@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { IntegrationEndpoint, integrationBusApi } from '../api/integrationBus';
+import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
@@ -112,8 +113,8 @@ export function IntegrationBusPage() {
             const next = endpoints.data?.find((endpoint) => endpoint.slug === event.target.value);
             if (next) selectEndpoint(next); else setConsoleForm({ ...consoleForm, slug: event.target.value });
           }}><option value="">{t('bus.selectEndpoint')}</option>{(endpoints.data ?? []).map((endpoint) => <option key={endpoint.id} value={endpoint.slug}>{endpoint.name} · {endpoint.slug}</option>)}</select></label>
-          <label className="field-label">Headers JSON<textarea value={consoleForm.headers} onChange={(event) => setConsoleForm({ ...consoleForm, headers: event.target.value })} spellCheck={false} /></label>
-          <label className="field-label">Body<textarea value={consoleForm.body} onChange={(event) => setConsoleForm({ ...consoleForm, body: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">Headers JSON<CodeEditor value={consoleForm.headers} onChange={(value) => setConsoleForm({ ...consoleForm, headers: value })} language="json" minRows={5} /></label>
+          <label className="field-label">Body<CodeEditor value={consoleForm.body} onChange={(value) => setConsoleForm({ ...consoleForm, body: value })} language={consoleForm.input_mode === 'json' ? 'json' : consoleForm.input_mode === 'xml' ? 'xml' : 'text'} minRows={9} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           {sendTest.error instanceof Error && <div className="error-state compact">{sendTest.error.message}</div>}
           <button className="primary-button" disabled={!consoleForm.slug || sendTest.isPending}>{t('bus.sendTest')}</button>

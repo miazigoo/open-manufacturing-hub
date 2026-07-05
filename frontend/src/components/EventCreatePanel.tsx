@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { eventsApi, EventCreatePayload } from '../api/events';
 import { asJson } from '../api/client';
 import { useT } from '../i18n/useI18n';
+import { CodeEditor } from './CodeEditor';
 
 const successPreset: EventCreatePayload = {
   correlation_id: 'corr_success_demo',
@@ -89,7 +90,7 @@ export function EventCreatePanel() {
         <label className="field-label">{t('common.source')}<input value={form.source_system} onChange={(event) => setForm({ ...form, source_system: event.target.value })} /></label>
         <label className="field-label">{t('common.target')}<input value={form.target_system} onChange={(event) => setForm({ ...form, target_system: event.target.value })} /></label>
         <label className="field-label wide-field">{t('events.correlationId')}<input value={form.correlation_id} onChange={(event) => setForm({ ...form, correlation_id: event.target.value })} /></label>
-        <label className="field-label wide-field">{t('eventCreate.payloadJson')}<textarea value={form.payload} onChange={(event) => setForm({ ...form, payload: event.target.value })} spellCheck={false} /></label>
+        <label className="field-label wide-field">{t('eventCreate.payloadJson')}<CodeEditor value={form.payload} onChange={(value) => setForm({ ...form, payload: value })} language="json" minRows={8} /></label>
         {error && <div className="error-state compact wide-field">{error}</div>}
         {mutation.error instanceof Error && <div className="error-state compact wide-field">{mutation.error.message}</div>}
         <button className="primary-button wide-field" disabled={mutation.isPending}>{t('eventCreate.submit')}</button>

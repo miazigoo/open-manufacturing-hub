@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../../api/client';
 import { ConfigObjectType, ConfigVersion, configVersionQueryKey, configVersionsApi } from '../../api/configVersions';
+import { CodeEditor } from '../../components/CodeEditor';
 import { JsonBlock } from '../../components/JsonBlock';
 
 function parsePayload(value: string): Record<string, unknown> {
@@ -29,7 +30,7 @@ export function DraftTestPanel({ objectType, objectId, draft }: { objectType: Co
   return (
     <form className="config-test-panel" onSubmit={submit}>
       <div className="panel-toolbar"><div><span className="eyebrow">Draft test</span><h3>Run isolated validation</h3></div><button className="primary-button" disabled={test.isPending}>Run test</button></div>
-      <label className="field-label">Test envelope<textarea value={payload} onChange={(event) => setPayload(event.target.value)} spellCheck={false} /></label>
+      <label className="field-label">Test envelope<CodeEditor value={payload} onChange={setPayload} language="json" minRows={7} /></label>
       {formError && <div className="error-state compact">{formError}</div>}
       {test.error instanceof Error && <div className="error-state compact">{test.error.message}</div>}
       {test.data && <JsonBlock title="Draft test result" value={test.data} searchable={false} />}

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Artifact, EventRun, EventStep, asJson } from '../api/client';
 import { replayApi } from '../api/replay';
 import { useT } from '../i18n/useI18n';
+import { CodeEditor } from './CodeEditor';
 
 interface ReplayActionsProps {
   eventId: string;
@@ -67,7 +68,7 @@ export function ReplayActions({ eventId, selectedRun, selectedStep, selectedArti
             <button className="ghost-button" onClick={() => setEditorOpen(false)}>{t('replay.close')}</button>
           </div>
           <label className="field-label">{t('replay.startFromStep')}<input value={startStep} onChange={(event) => setStartStep(event.target.value)} /></label>
-          <textarea value={jsonDraft} onChange={(event) => setJsonDraft(event.target.value)} spellCheck={false} />
+          <CodeEditor value={jsonDraft} onChange={setJsonDraft} language="json" minRows={10} />
           <button className="primary-button" onClick={() => editReplay.mutate()} disabled={editReplay.isPending}>{t('replay.submitEdited')}</button>
         </div>
       )}

@@ -5,6 +5,7 @@ import { asJson } from '../api/client';
 import { configVersionsApi } from '../api/configVersions';
 import { executionApi } from '../api/execution';
 import { WorkflowDefinition, workflowsApi } from '../api/workflows';
+import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
@@ -124,7 +125,7 @@ export function PipelineEditorPage() {
                 <td>{index + 1}</td>
                 <td><select value={row.name} onChange={(event) => update(index, { name: event.target.value })}>{stepNames.map((name) => <option key={name} value={name}>{name}</option>)}</select></td>
                 <td><select value={row.on} onChange={(event) => update(index, { on: event.target.value })}><option value="always">always</option><option value="on_success">on_success</option><option value="failure">failure</option><option value="on_dry_run">on_dry_run</option></select></td>
-                <td><textarea value={row.config} onChange={(event) => update(index, { config: event.target.value })} /></td>
+                <td><CodeEditor value={row.config} onChange={(value) => update(index, { config: value })} language="json" minRows={5} /></td>
                 <td><input type="checkbox" checked={row.enabled} onChange={(event) => update(index, { enabled: event.target.checked })} /></td>
                 <td>
                   <div className="action-row">

@@ -248,6 +248,12 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (orderedLists < 2) fail('DOCS_ORDERED_LISTS', `Expected beginner guide to render numbered steps, got ${orderedLists}`);
   if (!(await page.getByText('Мини-словарь простыми словами').count())) fail('DOCS_BEGINNER_GLOSSARY', 'Beginner guide glossary is missing');
   if (!(await page.locator('.docs-example-card').count())) fail('DOCS_BEGINNER_EXAMPLE', 'Beginner guide runnable example is missing');
+  if (!(await page.locator('.code-panel').count())) fail('CODE_BLOCK_DOCS', 'Documentation code blocks do not use highlighted code panels');
+  if (!(await page.locator('.code-panel .tok-string, .code-panel .tok-key, .code-panel .tok-command').count())) fail('CODE_BLOCK_TOKENS', 'Documentation code block syntax tokens are missing');
+
+  await gotoRoute(page, uiBase, '/test-console');
+  if ((await page.locator('.code-editor-shell').count()) < 2) fail('CODE_EDITOR_TEST_CONSOLE', 'Test Console JSON inputs do not use code editors');
+  if (!(await page.locator('.code-editor-highlight .tok-key, .code-editor-highlight .tok-string').count())) fail('CODE_EDITOR_TOKENS', 'Code editor syntax tokens are missing');
 
   await gotoRoute(page, uiBase, '/odata-explorer');
   if (!(await page.locator('.odata-filter-builder').count())) fail('ODATA_FILTER_BUILDER', 'OData Explorer filter builder is missing');

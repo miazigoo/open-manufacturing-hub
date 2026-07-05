@@ -1,4 +1,4 @@
-import { asJson } from '../../api/client';
+import { JsonBlock } from '../JsonBlock';
 import type { AuditDiff } from '../../api/audit';
 
 export function AuditDiffViewer({ diff }: { diff: AuditDiff | null }) {
@@ -23,8 +23,8 @@ function DiffGroup({ title, tone, items }: { title: string; tone: string; items:
       {items.length === 0 ? <p className="microcopy">No entries</p> : items.map((item) => (
         <div className="audit-diff-row" key={`${title}:${item.path}`}>
           <strong>{item.path}</strong>
-          {'before' in item && <pre className="json-panel compact-json">{asJson(item.before)}</pre>}
-          {'after' in item && <pre className="json-panel compact-json">{asJson(item.after)}</pre>}
+          {'before' in item && <JsonBlock value={item.before} searchable={false} />}
+          {'after' in item && <JsonBlock value={item.after} searchable={false} />}
         </div>
       ))}
     </article>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { onecWorkbenchApi } from '../api/onecWorkbench';
+import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
@@ -81,7 +82,7 @@ export function OneCWorkbenchPage() {
             <label className="field-label">{t('common.type')}<input value={xmlForm.message_type} onChange={(event) => setXmlForm({ ...xmlForm, message_type: event.target.value })} /></label>
             <label className="field-label">{t('events.correlationId')}<input value={xmlForm.correlation_id} onChange={(event) => setXmlForm({ ...xmlForm, correlation_id: event.target.value })} /></label>
           </div>
-          <label className="field-label">XML<textarea value={xmlForm.xml} onChange={(event) => setXmlForm({ ...xmlForm, xml: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">XML<CodeEditor value={xmlForm.xml} onChange={(value) => setXmlForm({ ...xmlForm, xml: value })} language="xml" minRows={8} /></label>
           {sendXml.error instanceof Error && <div className="error-state compact">{sendXml.error.message}</div>}
           <button className="primary-button" disabled={sendXml.isPending}>{t('onecWorkbench.sendXml')}</button>
           {sendXml.data && <div className="success-note"><strong>{t('onecWorkbench.messageCreated')}</strong><span>{sendXml.data.message_id}</span><Link className="primary-link" to={`/events/${sendXml.data.event_id}`}>{t('onec.openTimeline')}</Link></div>}
@@ -93,8 +94,8 @@ export function OneCWorkbenchPage() {
           <label className="field-label">Resource<input value={lookupForm.resource} onChange={(event) => setLookupForm({ ...lookupForm, resource: event.target.value })} /></label>
           <label className="field-label">Filter template<input value={lookupForm.filter_template} onChange={(event) => setLookupForm({ ...lookupForm, filter_template: event.target.value })} /></label>
           <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">Input JSON<textarea value={lookupForm.input} onChange={(event) => setLookupForm({ ...lookupForm, input: event.target.value })} spellCheck={false} /></label>
-            <label className="field-label">Extract JSON<textarea value={lookupForm.extract} onChange={(event) => setLookupForm({ ...lookupForm, extract: event.target.value })} spellCheck={false} /></label>
+            <label className="field-label">Input JSON<CodeEditor value={lookupForm.input} onChange={(value) => setLookupForm({ ...lookupForm, input: value })} language="json" minRows={6} /></label>
+            <label className="field-label">Extract JSON<CodeEditor value={lookupForm.extract} onChange={(value) => setLookupForm({ ...lookupForm, extract: value })} language="json" minRows={6} /></label>
           </div>
           {formError && <div className="error-state compact">{formError}</div>}
           {lookup.error instanceof Error && <div className="error-state compact">{lookup.error.message}</div>}

@@ -5,6 +5,7 @@ import { asJson } from '../../api/client';
 import { integrationFlowsApi, type IntegrationFlow } from '../../api/integrationFlows';
 import { uiApi } from '../../api/ui';
 import { ErrorState } from '../../components/ErrorState';
+import { CodeEditor } from '../../components/CodeEditor';
 import { LoadingState } from '../../components/LoadingState';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ConnectorSelect } from '../../components/integration/ConnectorSelect';
@@ -204,7 +205,7 @@ export function OneCCockpitWizardPage() {
 
           <SectionCard eyebrow="03 Test Input" title="Sample request">
             <ConnectorSelect label="Default 1C connector" value={form.onecConnector} options={options.data.onec_connectors} onChange={(value) => setForm({ ...form, onecConnector: value })} />
-            <label className="field-label">Sample request<textarea value={form.sampleRequest} onChange={(event) => setForm({ ...form, sampleRequest: event.target.value })} /></label>
+            <label className="field-label">Sample request<CodeEditor value={form.sampleRequest} onChange={(value) => setForm({ ...form, sampleRequest: value })} language={form.inputMode === 'json' ? 'json' : form.inputMode === 'xml' ? 'xml' : 'text'} minRows={8} /></label>
             <div className="action-row"><button type="button" className="ghost-button" onClick={() => guarded(() => preview.mutate())} disabled={preview.isPending}>Preview</button>{selectedFlow && <button type="button" className="ghost-button" onClick={() => compile.mutate()} disabled={compile.isPending}>Compile</button>}{selectedFlow && <button type="button" className="primary-button" onClick={() => guarded(() => test.mutate())} disabled={test.isPending}>Test live route</button>}{selectedFlow && <CopyButton value={selectedFlow.onec_http_example} label="Copy 1C HTTP code" />}</div>
             {(builderState.error || formError || create.error || preview.error || compile.error || test.error) && <div className="error-state compact">{builderState.error ?? formError ?? ((create.error ?? preview.error ?? compile.error ?? test.error) as Error).message}</div>}
           </SectionCard>

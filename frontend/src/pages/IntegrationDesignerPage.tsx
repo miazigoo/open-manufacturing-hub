@@ -6,6 +6,8 @@ import { integrationDesignerApi } from '../api/integrationDesigner';
 import { scenarioLibraryApi } from '../api/scenarioLibrary';
 import type { ScenarioRead } from '../api/scenarioLibrary';
 import { ErrorState } from '../components/ErrorState';
+import { CodeBlock } from '../components/CodeBlock';
+import { CodeEditor } from '../components/CodeEditor';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 
@@ -140,7 +142,7 @@ export function IntegrationDesignerPage() {
               </select>
             </label>
           </div>
-          <label className="field-label">Sample payload<textarea value={form.test_payload} onChange={(event) => setForm({ ...form, test_payload: event.target.value })} /></label>
+          <label className="field-label">Sample payload<CodeEditor value={form.test_payload} onChange={(value) => setForm({ ...form, test_payload: value })} language={form.input_mode === 'json' ? 'json' : form.input_mode === 'xml' ? 'xml' : 'text'} minRows={8} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           {build.error instanceof Error && <div className="error-state compact">{build.error.message}</div>}
           <button className="primary-button" disabled={build.isPending}>Build integration</button>
@@ -151,8 +153,8 @@ export function IntegrationDesignerPage() {
         {build.data ? (
           <div className="page-stack">
             <div className="success-note"><strong>{build.data.endpoint_url}</strong><span>{build.data.next_steps.join(' · ')}</span></div>
-            <pre className="json-block">{build.data.curl_example}</pre>
-            <pre className="json-block">{build.data.onec_http_example}</pre>
+            <CodeBlock title="curl" code={build.data.curl_example} language="bash" />
+            <CodeBlock title="1C HTTP" code={build.data.onec_http_example} language="bash" />
             <JsonBlock title="Created objects" value={build.data.created} searchable={false} />
           </div>
         ) : (

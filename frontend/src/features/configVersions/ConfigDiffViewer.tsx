@@ -1,4 +1,5 @@
 import { asJson } from '../../api/client';
+import { CodeBlock } from '../../components/CodeBlock';
 import { ConfigDiffEntry, ConfigDiffResponse } from '../../api/configVersions';
 
 function DiffList({ title, items }: { title: string; items: ConfigDiffEntry[] }) {
@@ -8,7 +9,7 @@ function DiffList({ title, items }: { title: string; items: ConfigDiffEntry[] })
       {items.length === 0 ? <p className="microcopy">No changes</p> : items.map((item, index) => (
         <article key={`${title}-${item.path}-${index}`} className="config-diff-item">
           <strong>{item.path || '/'}</strong>
-          <pre>{asJson(item)}</pre>
+          <CodeBlock code={asJson(item)} language="json" showToolbar={false} />
         </article>
       ))}
     </section>

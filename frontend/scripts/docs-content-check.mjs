@@ -27,6 +27,7 @@ const content = read('frontend/src/features/docs/content.ts');
 const docLinks = read('frontend/src/features/docs/docLinks.ts');
 const renderer = read('frontend/src/features/docs/MarkdownRenderer.tsx');
 const codeBlock = read('frontend/src/features/docs/CodeBlockWithCopy.tsx');
+const sharedCodeBlock = read('frontend/src/components/CodeBlock.tsx');
 const service = read('backend/app/docs_portal/service.py');
 const assets = readJson('frontend/src/docs/assets/index.json');
 const annotations = readJson('frontend/src/docs/assets/annotations.json');
@@ -59,7 +60,7 @@ assert(content.includes('Translation in progress') && content.includes('翻译�
 assert(renderer.includes('ExampleBlock') && renderer.includes('::example') && renderer.includes('::open-page') && renderer.includes('Screenshot'), 'MarkdownRenderer must support docs assets/examples/actions');
 assert(renderer.includes('~~~'), 'MarkdownRenderer must support tilde code fences used by academy pages');
 assert(renderer.includes('<ol') && renderer.includes('orderedList'), 'MarkdownRenderer must support numbered step lists');
-assert(codeBlock.includes('CopyButton'), 'Code blocks must expose copy controls');
+assert(codeBlock.includes('CodeBlock') && sharedCodeBlock.includes('CopyButton'), 'Code blocks must expose copy controls');
 assert(onecContent.includes('Endpoint | URL в OMH') && onecContent.includes('Первый тестовый запрос'), '1C beginner path must explain basics in plain language');
 assert(onecContent.includes('OData filters, field selection and chaining') && onecContent.includes('{{contractor.Ref_Key}}') && onecContent.includes('steps.get_contractor.first.Ref_Key'), '1C docs must explain OData field selection and chaining');
 for (const section of ['case-studies', 'request-examples', 'error-playbooks']) assert(onecContent.includes(`id: '${section}'`), `1C docs missing ${section} section`);

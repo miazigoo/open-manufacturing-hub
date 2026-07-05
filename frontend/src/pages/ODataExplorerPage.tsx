@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { odataConnectionsApi } from '../api/odataConnections';
 import { odataExplorerApi } from '../api/odataExplorer';
+import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
@@ -132,7 +133,7 @@ export function ODataExplorerPage() {
           <h2>Create lookup template</h2>
           <label className="field-label">Name<input value={lookup.name} onChange={(event) => setLookup({ ...lookup, name: event.target.value })} /></label>
           <label className="field-label">Filter template<input value={lookup.filter_template} onChange={(event) => setLookup({ ...lookup, filter_template: event.target.value })} title="Template version of the filter. Example: ИНН eq '{inn}'." /></label>
-          <label className="field-label">Extract JSON<textarea value={lookup.extract_json} onChange={(event) => setLookup({ ...lookup, extract_json: event.target.value })} title={'Map output names to OData fields. Example: {"contractor_uuid":"Ref_Key"}.'} /></label>
+          <label className="field-label">Extract JSON<CodeEditor value={lookup.extract_json} onChange={(value) => setLookup({ ...lookup, extract_json: value })} language="json" minRows={5} title={'Map output names to OData fields. Example: {"contractor_uuid":"Ref_Key"}.'} /></label>
           <div className="hint-chip-row">
             <button type="button" className="hint-chip" onClick={() => setLookup({ ...lookup, extract_json: '{"contractor_uuid":"Ref_Key","contractor_name":"Description","inn":"ИНН"}' })}>Contractor extract</button>
             <button type="button" className="hint-chip" onClick={() => setLookup({ ...lookup, extract_json: '{"product_uuid":"Ref_Key","product_name":"Description","article":"Артикул"}' })}>Product extract</button>

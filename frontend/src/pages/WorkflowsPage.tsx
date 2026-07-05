@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { asJson } from '../api/client';
 import { mappingsApi } from '../api/mappings';
 import { WorkflowPayload, workflowsApi } from '../api/workflows';
+import { CodeEditor } from '../components/CodeEditor';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -91,9 +92,9 @@ export function WorkflowsPage() {
           </div>
           <label className="field-label">{t('workflows.sourceMapping')}<select value={form.source_mapping_version_id} onChange={(event) => setForm({ ...form, source_mapping_version_id: event.target.value })}><option value="">{t('common.none')}</option>{versions.map((version) => <option key={version.id} value={version.id}>{version.label}</option>)}</select></label>
           <label className="field-label">{t('workflows.targetMapping')}<select value={form.target_mapping_version_id} onChange={(event) => setForm({ ...form, target_mapping_version_id: event.target.value })}><option value="">{t('common.none')}</option>{versions.map((version) => <option key={version.id} value={version.id}>{version.label}</option>)}</select></label>
-          <label className="field-label">{t('workflows.stepsJson')}<textarea value={form.steps_json} onChange={(event) => setForm({ ...form, steps_json: event.target.value })} spellCheck={false} /></label>
-          <label className="field-label">{t('workflows.validationJson')}<textarea value={form.validation_json} onChange={(event) => setForm({ ...form, validation_json: event.target.value })} spellCheck={false} /></label>
-          <label className="field-label">{t('workflows.dryRunPayload')}<textarea value={form.dry_run_payload} onChange={(event) => setForm({ ...form, dry_run_payload: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('workflows.stepsJson')}<CodeEditor value={form.steps_json} onChange={(value) => setForm({ ...form, steps_json: value })} language="json" minRows={10} /></label>
+          <label className="field-label">{t('workflows.validationJson')}<CodeEditor value={form.validation_json} onChange={(value) => setForm({ ...form, validation_json: value })} language="json" minRows={6} /></label>
+          <label className="field-label">{t('workflows.dryRunPayload')}<CodeEditor value={form.dry_run_payload} onChange={(value) => setForm({ ...form, dry_run_payload: value })} language="json" minRows={7} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           {message && <div className="success-note">{message}</div>}
           <button className="primary-button" disabled={create.isPending}>{t('workflows.create')}</button>

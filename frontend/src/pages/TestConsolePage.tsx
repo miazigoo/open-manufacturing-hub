@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { integrationBusApi } from '../api/integrationBus';
 import { testConsoleApi } from '../api/testConsole';
+import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
@@ -132,8 +133,8 @@ export function TestConsolePage() {
             <option value="raw_text">raw_text</option>
           </select>
         </label>
-        <label className="field-label">{t('integration.headersJson')}<textarea value={form.headers_json} onChange={(event) => setForm({ ...form, headers_json: event.target.value })} /></label>
-        <label className="field-label" data-tour="test-body">{t('integration.body')}<textarea value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label>
+        <label className="field-label">{t('integration.headersJson')}<CodeEditor value={form.headers_json} onChange={(value) => setForm({ ...form, headers_json: value })} language="json" minRows={5} /></label>
+        <label className="field-label" data-tour="test-body">{t('integration.body')}<CodeEditor value={form.body} onChange={(value) => setForm({ ...form, body: value })} language={form.input_mode === 'json' ? 'json' : form.input_mode === 'xml' ? 'xml' : 'text'} minRows={11} /></label>
         {formError && <div className="error-state compact">{formError}</div>}
         {send.error instanceof Error && <div className="error-state compact">{send.error.message}</div>}
         <div className="action-row" data-tour="test-actions">

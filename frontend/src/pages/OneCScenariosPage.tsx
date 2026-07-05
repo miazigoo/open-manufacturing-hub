@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { InventoryResultTestPayload, onecScenariosApi, OneCScenarioPreset, ShipmentFactTestPayload, StockBalanceTestPayload } from '../api/onecScenarios';
+import { CodeEditor } from '../components/CodeEditor';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -118,14 +119,14 @@ export function OneCScenariosPage() {
                 <label className="field-label">{t('common.status')}<input value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} /></label>
               </div>
               <label className="field-label">{t('onec.warehouseId')}<input value={form.warehouse_id} onChange={(event) => setForm({ ...form, warehouse_id: event.target.value })} /></label>
-              <label className="field-label">{t('onec.itemsJson')}<textarea value={form.items} onChange={(event) => setForm({ ...form, items: event.target.value })} spellCheck={false} /></label>
+              <label className="field-label">{t('onec.itemsJson')}<CodeEditor value={form.items} onChange={(value) => setForm({ ...form, items: value })} language="json" minRows={6} /></label>
             </>}
             {testKind === 'stock' && <>
               <div className="metadata-grid compact-grid no-margin">
                 <label className="field-label">{t('onec.warehouseId')}<input value={stockForm.warehouse_id} onChange={(event) => setStockForm({ ...stockForm, warehouse_id: event.target.value })} /></label>
                 <label className="field-label">{t('onec.occurredAt')}<input value={stockForm.occurred_at} onChange={(event) => setStockForm({ ...stockForm, occurred_at: event.target.value })} /></label>
               </div>
-              <label className="field-label">{t('onec.itemsJson')}<textarea value={stockForm.items} onChange={(event) => setStockForm({ ...stockForm, items: event.target.value })} spellCheck={false} /></label>
+              <label className="field-label">{t('onec.itemsJson')}<CodeEditor value={stockForm.items} onChange={(value) => setStockForm({ ...stockForm, items: value })} language="json" minRows={6} /></label>
             </>}
             {testKind === 'inventory' && <>
               <div className="metadata-grid compact-grid no-margin">
@@ -133,7 +134,7 @@ export function OneCScenariosPage() {
                 <label className="field-label">{t('onec.warehouseId')}<input value={inventoryForm.warehouse_id} onChange={(event) => setInventoryForm({ ...inventoryForm, warehouse_id: event.target.value })} /></label>
                 <label className="field-label">{t('onec.completedAt')}<input value={inventoryForm.completed_at} onChange={(event) => setInventoryForm({ ...inventoryForm, completed_at: event.target.value })} /></label>
               </div>
-              <label className="field-label">{t('onec.itemsJson')}<textarea value={inventoryForm.items} onChange={(event) => setInventoryForm({ ...inventoryForm, items: event.target.value })} spellCheck={false} /></label>
+              <label className="field-label">{t('onec.itemsJson')}<CodeEditor value={inventoryForm.items} onChange={(value) => setInventoryForm({ ...inventoryForm, items: value })} language="json" minRows={6} /></label>
             </>}
             {formError && <div className="error-state compact">{formError}</div>}
             {testShipmentFact.error instanceof Error && <div className="error-state compact">{testShipmentFact.error.message}</div>}

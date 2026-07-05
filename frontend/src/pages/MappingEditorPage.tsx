@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { configVersionsApi } from '../api/configVersions';
 import { MappingPayload, mappingsApi } from '../api/mappings';
+import { CodeEditor } from '../components/CodeEditor';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -132,16 +133,16 @@ export function MappingEditorPage() {
         <form className="panel mapping-editor-panel" onSubmit={submit}>
           <div className="panel-toolbar"><h2>{t('mappings.editor')}</h2><div className="action-row"><button type="button" className="ghost-button" onClick={validateCurrent}>{t('mappings.validate')}</button><button type="button" className="ghost-button" disabled={!selected || saveDraft.isPending} onClick={draftCurrent}>Save Draft</button><button type="button" className="ghost-button" disabled={!selected} onClick={versionCurrent}>{t('mappings.createVersion')}</button><button className="primary-button">{t('mappings.createMapping')}</button></div></div>
           <div className="mapping-triptych">
-            <label className="field-label">{t('mappings.sourceSchema')}<textarea value={form.source_schema_json} onChange={(event) => setForm({ ...form, source_schema_json: event.target.value })} spellCheck={false} /></label>
-            <label className="field-label">{t('mappings.rulesJson')}<textarea value={form.rules_json} onChange={(event) => setForm({ ...form, rules_json: event.target.value })} spellCheck={false} /></label>
-            <label className="field-label">{t('mappings.targetSchema')}<textarea value={form.target_schema_json} onChange={(event) => setForm({ ...form, target_schema_json: event.target.value })} spellCheck={false} /></label>
+            <label className="field-label">{t('mappings.sourceSchema')}<CodeEditor value={form.source_schema_json} onChange={(value) => setForm({ ...form, source_schema_json: value })} language="json" minRows={10} /></label>
+            <label className="field-label">{t('mappings.rulesJson')}<CodeEditor value={form.rules_json} onChange={(value) => setForm({ ...form, rules_json: value })} language="json" minRows={10} /></label>
+            <label className="field-label">{t('mappings.targetSchema')}<CodeEditor value={form.target_schema_json} onChange={(value) => setForm({ ...form, target_schema_json: value })} language="json" minRows={10} /></label>
           </div>
           <div className="metadata-grid compact-grid">
             <label className="field-label">{t('connectors.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
             <label className="field-label">{t('mappings.sourceEntity')}<input value={form.source_entity} onChange={(event) => setForm({ ...form, source_entity: event.target.value })} /></label>
             <label className="field-label">{t('mappings.targetEntity')}<input value={form.target_entity} onChange={(event) => setForm({ ...form, target_entity: event.target.value })} /></label>
           </div>
-          <label className="field-label">{t('mappings.samplePayload')}<textarea value={form.sample_payload} onChange={(event) => setForm({ ...form, sample_payload: event.target.value })} spellCheck={false} /></label>
+          <label className="field-label">{t('mappings.samplePayload')}<CodeEditor value={form.sample_payload} onChange={(value) => setForm({ ...form, sample_payload: value })} language="json" minRows={8} /></label>
           {formError && <div className="error-state compact">{formError}</div>}
           {message && <div className="success-note">{message}</div>}
         </form>

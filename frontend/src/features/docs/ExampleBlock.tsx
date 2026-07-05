@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { request } from '../../api/client';
-import { CopyButton } from '../../components/product/CopyButton';
+import { CodeBlock } from '../../components/CodeBlock';
 import { JsonBlock } from '../../components/JsonBlock';
 import { useI18n } from '../../i18n/useI18n';
 import { exampleBodyText, getDocsExample } from './DocsExampleRegistry';
@@ -36,10 +36,7 @@ export function ExampleBlock({ exampleId }: { exampleId: string }) {
         <span>{t('docs.input')}<strong>{example.input_mode}</strong></span>
         <span>{t('docs.setup')}<strong>{example.requires_setup ? t('docs.required') : t('docs.ready')}</strong></span>
       </div>
-      <div className="docs-code-block">
-        <div className="docs-code-toolbar"><span>{example.input_mode}</span><CopyButton value={body} label={t('common.buttons.copy')} copiedLabel={t('common.copied')} failedLabel={t('docs.copyUnavailable')} /></div>
-        <pre><code>{body}</code></pre>
-      </div>
+      <CodeBlock code={body} language={example.input_mode} copyLabel={t('common.buttons.copy')} copiedLabel={t('common.copied')} failedLabel={t('docs.copyUnavailable')} />
       <JsonBlock title={t('docs.expected')} value={example.expected} searchable={false} />
       {run.error instanceof Error && <div className="error-state compact">{run.error.message}</div>}
       {run.data && <JsonBlock title={t('docs.runResult')} value={run.data} searchable={false} />}
