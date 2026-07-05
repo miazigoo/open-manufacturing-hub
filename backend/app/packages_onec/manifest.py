@@ -35,5 +35,6 @@ manifest = PackageManifest(
     },
     presets={"scenarios": "app.scenario_library.presets:SCENARIOS", "flow": "app.integration_flows.presets:TWO_ODATA_TO_ENDPOINT_PRESET"},
     docs={"readme": "app.packages_onec.docs:README", "quick_start": "app.packages_onec.docs:QUICK_START"},
+    i18n={"namespaces": ["onec"], "locales": {"ru": "i18n/ru/onec.json", "en": "i18n/en/onec.json", "zh": "i18n/zh/onec.json"}},
     extension_points=["Connector SDK", "Execution Step SDK", "Frontend Navigation metadata", "Scenario Preset Installer", "Operation Template Installer", "Mapping Preset Installer"],
 )

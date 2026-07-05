@@ -7,11 +7,11 @@ import { useI18n } from '../../i18n/useI18n';
 import { exampleBodyText, getDocsExample } from './DocsExampleRegistry';
 
 export function ExampleBlock({ exampleId }: { exampleId: string }) {
-  const { language } = useI18n();
+  const { language, t } = useI18n();
   const example = getDocsExample(exampleId);
   const run = useMutation({ mutationFn: () => request<Record<string, unknown>>(`/api/docs/examples/${encodeURIComponent(exampleId)}/run`, { method: 'POST' }) });
 
-  if (!example) return <div className="error-state compact">Documentation example is missing: {exampleId}</div>;
+  if (!example) return <div className="error-state compact">{t('docs.exampleMissing', { exampleId })}</div>;
 
   const body = exampleBodyText(example);
   const title = example.title[language] ?? example.title.ru;
@@ -22,27 +22,27 @@ export function ExampleBlock({ exampleId }: { exampleId: string }) {
     <section className="docs-example-card">
       <div className="docs-example-head">
         <div>
-          <span className="eyebrow">Verified example · {exampleId}</span>
+          <span className="eyebrow">{t('docs.verifiedExample')} · {exampleId}</span>
           <h3>{title}</h3>
           <p>{description}</p>
         </div>
         <div className="docs-example-actions">
-          <Link className="primary-button" to={testConsoleUrl}>Open in Test Console</Link>
-          <button className="ghost-button" type="button" onClick={() => run.mutate()} disabled={run.isPending}>Run Example</button>
+          <Link className="primary-button" to={testConsoleUrl}>{t('docs.openInTestConsole')}</Link>
+          <button className="ghost-button" type="button" onClick={() => run.mutate()} disabled={run.isPending}>{t('docs.runExample')}</button>
         </div>
       </div>
       <div className="metadata-grid compact-grid">
-        <span>Endpoint<strong>POST /api/bus/in/{example.endpoint_slug}</strong></span>
-        <span>Input<strong>{example.input_mode}</strong></span>
-        <span>Setup<strong>{example.requires_setup ? 'required' : 'ready'}</strong></span>
+        <span>{t('docs.endpoint')}<strong>POST /api/bus/in/{example.endpoint_slug}</strong></span>
+        <span>{t('docs.input')}<strong>{example.input_mode}</strong></span>
+        <span>{t('docs.setup')}<strong>{example.requires_setup ? t('docs.required') : t('docs.ready')}</strong></span>
       </div>
       <div className="docs-code-block">
-        <div className="docs-code-toolbar"><span>{example.input_mode}</span><CopyButton value={body} label="Copy" copiedLabel="Copied" failedLabel="Copy unavailable" /></div>
+        <div className="docs-code-toolbar"><span>{example.input_mode}</span><CopyButton value={body} label={t('common.buttons.copy')} copiedLabel={t('common.copied')} failedLabel={t('docs.copyUnavailable')} /></div>
         <pre><code>{body}</code></pre>
       </div>
-      <JsonBlock title="Expected" value={example.expected} searchable={false} />
+      <JsonBlock title={t('docs.expected')} value={example.expected} searchable={false} />
       {run.error instanceof Error && <div className="error-state compact">{run.error.message}</div>}
-      {run.data && <JsonBlock title="Run result" value={run.data} searchable={false} />}
+      {run.data && <JsonBlock title={t('docs.runResult')} value={run.data} searchable={false} />}
     </section>
   );
 }

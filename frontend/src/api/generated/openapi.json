@@ -12331,6 +12331,26 @@
         "title": "PackageFrontendPage",
         "type": "object"
       },
+      "PackageI18nManifest": {
+        "properties": {
+          "locales": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Locales",
+            "type": "object"
+          },
+          "namespaces": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Namespaces",
+            "type": "array"
+          }
+        },
+        "title": "PackageI18nManifest",
+        "type": "object"
+      },
       "PackageInstallRequest": {
         "properties": {
           "install_demo_data": {
@@ -12421,6 +12441,9 @@
           },
           "frontend": {
             "$ref": "#/components/schemas/PackageFrontendManifest"
+          },
+          "i18n": {
+            "$ref": "#/components/schemas/PackageI18nManifest"
           },
           "installable": {
             "default": true,

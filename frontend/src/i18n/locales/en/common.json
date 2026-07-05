@@ -1,0 +1,46 @@
+{
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "test": "Test",
+    "dryRun": "Dry Run",
+    "open": "Open",
+    "details": "Details",
+    "copy": "Copy",
+    "install": "Install",
+    "enable": "Enable",
+    "disable": "Disable",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish"
+  },
+  "labels": {
+    "name": "Name",
+    "status": "Status",
+    "version": "Version",
+    "category": "Category",
+    "actions": "Actions",
+    "official": "Official",
+    "community": "Community",
+    "ready": "Ready",
+    "unknown": "unknown"
+  },
+  "copied": "Copied",
+  "i18nDebug": {
+    "title": "i18n diagnostics",
+    "subtitle": "Runtime view of language, fallback chain, namespaces and missing keys.",
+    "runtime": "Runtime",
+    "currentLanguage": "Current language",
+    "fallbackChain": "Fallback chain",
+    "loadedNamespaces": "Loaded namespaces",
+    "packageNamespaces": "Package namespaces",
+    "catalog": "Translation catalog",
+    "language": "Language",
+    "flatKeys": "Flat keys",
+    "namespaces": "Namespaces",
+    "missingKeys": "Missing keys",
+    "noMissingKeys": "No missing keys captured in this session."
+  },
+  "loadingPage": "Loading page"
+}

@@ -34,6 +34,11 @@ class PackageDocsManifest(BaseModel):
     quick_start: str | None = None
 
 
+class PackageI18nManifest(BaseModel):
+    namespaces: list[str] = Field(default_factory=list)
+    locales: dict[str, str] = Field(default_factory=dict)
+
+
 class PackageDependency(BaseModel):
     package_id: str
     version_min: str | None = None
@@ -63,6 +68,7 @@ class PackageManifest(BaseModel):
     frontend: PackageFrontendManifest = Field(default_factory=PackageFrontendManifest)
     presets: dict[str, Any] = Field(default_factory=dict)
     docs: PackageDocsManifest = Field(default_factory=PackageDocsManifest)
+    i18n: PackageI18nManifest = Field(default_factory=PackageI18nManifest)
     extension_points: list[str] = Field(default_factory=list)
     dependencies: list[PackageDependency] = Field(default_factory=list)
 

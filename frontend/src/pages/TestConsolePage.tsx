@@ -7,6 +7,8 @@ import { testConsoleApi } from '../api/testConsole';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
+import { getExternalErrorTranslation } from '../i18n/errors';
+import { useI18n } from '../i18n/useI18n';
 
 const jsonSample = asJson({ warehouse_id: 'MAIN', target_order_id: 'SO-1001', items: [] });
 const xmlSample = '<Документ><Номер>UPD-1001</Номер><ИНН>1234567890</ИНН></Документ>';
@@ -25,6 +27,7 @@ function normalizeTimelineUrl(url: string) {
 }
 
 export function TestConsolePage() {
+  const { language, t } = useI18n();
   const [searchParams] = useSearchParams();
   const exampleId = searchParams.get('exampleId');
   const endpoints = useQuery({ queryKey: ['bus-endpoints'], queryFn: integrationBusApi.endpoints });
@@ -54,7 +57,7 @@ export function TestConsolePage() {
     });
   }, [docsExample.data, endpoints.data, endpoints.isLoading]);
 
-  if (endpoints.isLoading) return <LoadingState label="Loading test console" />;
+  if (endpoints.isLoading) return <LoadingState label={t('integration.testConsoleLoading')} />;
   if (endpoints.error) return <ErrorState error={endpoints.error} />;
 
   function parsePayload(dryRun: boolean) {
@@ -64,14 +67,14 @@ export function TestConsolePage() {
     try {
       headers = JSON.parse(form.headers_json || '{}') as Record<string, string>;
     } catch {
-      setFormError('Headers JSON is invalid. Fix the object before sending the request.');
+      setFormError(t('integration.invalidHeaders'));
       return null;
     }
     if (form.input_mode === 'json') {
       try {
         bodyJson = JSON.parse(form.body || '{}') as Record<string, unknown>;
       } catch {
-        setFormError('Body JSON is invalid. Switch to XML/raw_text or fix the JSON payload.');
+        setFormError(t('integration.invalidBody'));
         return null;
       }
     }
@@ -89,22 +92,24 @@ export function TestConsolePage() {
   }
 
   const timelineUrl = send.data?.timeline_url ? normalizeTimelineUrl(send.data.timeline_url) : null;
+  const externalError = send.data?.external_error as { code?: string } | undefined;
+  const translatedError = externalError ? getExternalErrorTranslation(externalError.code, t) : null;
 
   return (
     <div className="page-stack two-column-page">
       <form className="panel form-panel stack-form" onSubmit={submit}>
-        <span className="eyebrow">Test Console</span>
-        <h1>Send integration requests</h1>
+        <span className="eyebrow">{t('integration.testConsole')}</span>
+        <h1>{t('integration.sendRequests')}</h1>
         {docsExample.data && (
           <div className="docs-example-loaded">
-            <strong>Loaded docs example: {docsExample.data.title.en ?? docsExample.data.id}</strong>
-            <span>Endpoint slug: /api/bus/in/{docsExample.data.endpoint_slug}</span>
-            {!form.endpoint_id && <small>Create or install this endpoint before sending. Payload is still ready to copy and edit.</small>}
+            <strong>{t('integration.loadedDocsExample', { title: docsExample.data.title[language] ?? docsExample.data.title.en ?? docsExample.data.id })}</strong>
+            <span>{t('integration.endpointSlug', { slug: docsExample.data.endpoint_slug })}</span>
+            {!form.endpoint_id && <small>{t('integration.endpointMissing')}</small>}
           </div>
         )}
         {docsExample.error instanceof Error && <div className="error-state compact">{docsExample.error.message}</div>}
         <label className="field-label" data-tour="test-endpoint">
-          Endpoint
+          {t('integration.endpoint')}
           <select
             value={form.endpoint_id}
             onChange={(event) => {
@@ -113,33 +118,34 @@ export function TestConsolePage() {
               setForm({ ...form, endpoint_id: event.target.value, input_mode: nextMode, body: sampleForMode(nextMode) });
             }}
           >
-            <option value="">Select endpoint</option>
+            <option value="">{t('integration.selectEndpoint')}</option>
             {(endpoints.data ?? []).map((endpoint) => (
               <option key={endpoint.id} value={endpoint.id}>{endpoint.name} · /api/bus/in/{endpoint.slug}</option>
             ))}
           </select>
         </label>
         <label className="field-label">
-          Input mode
+          {t('integration.inputMode')}
           <select value={form.input_mode} onChange={(event) => setForm({ ...form, input_mode: event.target.value, body: sampleForMode(event.target.value) })}>
             <option value="json">json</option>
             <option value="xml">xml</option>
             <option value="raw_text">raw_text</option>
           </select>
         </label>
-        <label className="field-label">Headers JSON<textarea value={form.headers_json} onChange={(event) => setForm({ ...form, headers_json: event.target.value })} /></label>
-        <label className="field-label" data-tour="test-body">Body<textarea value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label>
+        <label className="field-label">{t('integration.headersJson')}<textarea value={form.headers_json} onChange={(event) => setForm({ ...form, headers_json: event.target.value })} /></label>
+        <label className="field-label" data-tour="test-body">{t('integration.body')}<textarea value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} /></label>
         {formError && <div className="error-state compact">{formError}</div>}
         {send.error instanceof Error && <div className="error-state compact">{send.error.message}</div>}
         <div className="action-row" data-tour="test-actions">
-          <button className="primary-button" disabled={!form.endpoint_id || send.isPending}>Send</button>
-          <button type="button" className="ghost-button" disabled={!form.endpoint_id || send.isPending} onClick={() => run(true)}>Dry Run</button>
+          <button className="primary-button" disabled={!form.endpoint_id || send.isPending}>{t('integration.send')}</button>
+          <button type="button" className="ghost-button" disabled={!form.endpoint_id || send.isPending} onClick={() => run(true)}>{t('common.buttons.dryRun')}</button>
         </div>
       </form>
       <section className="page-stack">
-        {timelineUrl && <Link className="primary-link" to={timelineUrl}>Open Last Timeline</Link>}
-        {send.data?.external_error && <JsonBlock title="External Error" value={send.data.external_error} searchable={false} />}
-        <JsonBlock title="Response" value={send.data ?? { hint: 'Send or dry-run a request to inspect the response.' }} searchable />
+        {timelineUrl && <Link className="primary-link" to={timelineUrl}>{t('integration.openLastTimeline')}</Link>}
+        {translatedError && <div className="error-state compact"><strong>{translatedError.title}</strong><span>{translatedError.hint}</span></div>}
+        {send.data?.external_error && <JsonBlock title={t('integration.externalError')} value={send.data.external_error} searchable={false} />}
+        <JsonBlock title={t('integration.response')} value={send.data ?? { hint: t('integration.responseHint') }} searchable />
       </section>
     </div>
   );

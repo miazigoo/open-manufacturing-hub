@@ -31,6 +31,7 @@ const fallbackNavigation: UINavigationItem[] = [
   { group: 'Advanced', title: 'Secrets', route: '/secrets', package_id: 'omh-package-secrets', enabled: false, installed: false, advanced: true },
   { group: 'Advanced', title: 'Environments', route: '/environments', package_id: null, enabled: true, advanced: true },
   { group: 'Advanced', title: 'Change Sets', route: '/change-sets', package_id: null, enabled: true, advanced: true },
+  { group: 'Developer', title: 'i18n Debug', route: '/i18n-debug', package_id: null, enabled: true, advanced: true },
 ];
 
 const groupKey: Record<string, string> = {
@@ -86,12 +87,13 @@ const routeKey: Record<string, string> = {
   '/notifications': 'nav.notifications',
   '/users': 'nav.users',
   '/auth-settings': 'nav.authSettings',
+  '/i18n-debug': 'navigation.i18nDebug',
 };
 
 const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Settings', 'Advanced', 'Developer'];
 const modeRank: Record<UIMode, number> = { simple: 0, advanced: 1, developer: 2 };
 const simpleRoutes = new Set(['/docs', '/onboarding', '/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/test-console', '/packages', '/plugin-store']);
-const developerRoutes = new Set(['/workflows', '/execution/steps']);
+const developerRoutes = new Set(['/workflows', '/execution/steps', '/i18n-debug']);
 
 export function Layout() {
   const t = useT();
@@ -129,7 +131,7 @@ export function Layout() {
           </div>
         </div>
         <nav className="main-nav compact-main-nav" aria-label={t('nav.primary')}>
-          <div className="ui-mode-switch" aria-label="UI mode">
+          <div className="ui-mode-switch" aria-label={t('nav.uiMode')}>
             <span>{t('nav.uiMode')}</span>
             <div>
               {uiModes.map((mode) => (
@@ -168,7 +170,7 @@ export function Layout() {
               </section>
             );
           })}
-          {navigation.error && <span className="microcopy nav-warning">Navigation BFF unavailable, using local fallback.</span>}
+          {navigation.error && <span className="microcopy nav-warning">{t('navigation.bffUnavailable')}</span>}
         </nav>
         <div className="sidebar-footer">
           <span className="microcopy">{t('app.apiEndpoint')}</span>

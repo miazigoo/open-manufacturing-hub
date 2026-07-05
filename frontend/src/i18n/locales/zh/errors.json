@@ -1,0 +1,14 @@
+{
+  "ONEC_AUTH_FAILED": {
+    "title": "1C 授权失败",
+    "hint": "检查登录名、密码和 1C 发布权限。"
+  },
+  "ODATA_LOOKUP_NOT_FOUND": {
+    "title": "OData 对象未找到",
+    "hint": "检查 OData 资源和查询过滤器。"
+  },
+  "unknown": {
+    "title": "原始外部错误",
+    "hint": "未知错误代码。保留外部系统的原始消息。"
+  }
+}

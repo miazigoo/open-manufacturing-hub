@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { LoadingState } from './components/LoadingState';
 import { PackageGate } from './components/product/PackageGate';
+import { useT } from './i18n/useI18n';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const EventJournalPage = lazy(() => import('./pages/EventJournalPage').then((m) => ({ default: m.EventJournalPage })));
@@ -67,6 +68,7 @@ const EnvironmentsPage = lazy(() => import('./pages/EnvironmentsPage').then((m) 
 const ChangeSetsPage = lazy(() => import('./pages/ChangeSetsPage').then((m) => ({ default: m.ChangeSetsPage })));
 const ChangeSetDetailsPage = lazy(() => import('./pages/ChangeSetDetailsPage').then((m) => ({ default: m.ChangeSetDetailsPage })));
 const ChangeSetImportPage = lazy(() => import('./pages/ChangeSetImportPage').then((m) => ({ default: m.ChangeSetImportPage })));
+const I18nDebugPage = lazy(() => import('./pages/I18nDebugPage').then((m) => ({ default: m.I18nDebugPage })));
 
 function onec(element: React.ReactNode) {
   return <PackageGate packageId="omh-package-onec">{element}</PackageGate>;
@@ -78,7 +80,7 @@ function printer(element: React.ReactNode) {
 
 export function App() {
   return (
-    <Suspense fallback={<LoadingState label="Loading page" />}>
+    <Suspense fallback={<PageLoading />}>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />
@@ -148,9 +150,15 @@ export function App() {
           <Route path="change-sets" element={<ChangeSetsPage />} />
           <Route path="change-sets/import" element={<ChangeSetImportPage />} />
           <Route path="change-sets/:id" element={<ChangeSetDetailsPage />} />
+          <Route path="i18n-debug" element={<I18nDebugPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </Suspense>
   );
+}
+
+function PageLoading() {
+  const t = useT();
+  return <LoadingState label={t('common.loadingPage')} />;
 }

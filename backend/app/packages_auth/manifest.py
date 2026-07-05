@@ -25,4 +25,5 @@ manifest = PackageManifest(
         ],
     ),
     docs=PackageDocsManifest(readme="app.packages_auth.docs:README", quick_start="app.packages_auth.docs:QUICK_START"),
+    i18n={"namespaces": ["auth"], "locales": {"ru": "i18n/ru/auth.json", "en": "i18n/en/auth.json", "zh": "i18n/zh/auth.json"}},
 )

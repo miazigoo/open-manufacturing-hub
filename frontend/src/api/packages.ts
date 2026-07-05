@@ -22,6 +22,7 @@ export interface PackageManifest {
   frontend: { pages?: Array<{ route: string; title: string; component?: string | null }>; navigation?: Array<{ group: string; title: string; route: string }> };
   presets: Record<string, unknown>;
   docs: { readme?: string | null; quick_start?: string | null };
+  i18n: { namespaces?: string[]; locales?: Record<string, string> };
   extension_points: string[];
   dependencies: Array<{ package_id: string; version_min?: string | null; optional: boolean; reason?: string | null }>;
 }

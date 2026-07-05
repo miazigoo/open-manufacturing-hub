@@ -1,0 +1,14 @@
+{
+  "ONEC_AUTH_FAILED": {
+    "title": "1C authorization failed",
+    "hint": "Check login, password and 1C publication permissions."
+  },
+  "ODATA_LOOKUP_NOT_FOUND": {
+    "title": "OData object not found",
+    "hint": "Check OData resource and lookup filter."
+  },
+  "unknown": {
+    "title": "Original external error",
+    "hint": "Unknown error code. Keep original external message visible."
+  }
+}

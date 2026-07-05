@@ -17,5 +17,6 @@ manifest = PackageManifest(
         navigation=[PackageNavigationItem(group="Settings", title="Secrets", route="/secrets")],
     ),
     docs=PackageDocsManifest(readme="app.packages_secrets.docs:README", quick_start="app.packages_secrets.docs:QUICK_START"),
+    i18n={"namespaces": ["secrets"], "locales": {"ru": "i18n/ru/secrets.json", "en": "i18n/en/secrets.json", "zh": "i18n/zh/secrets.json"}},
     extension_points=["Secure Config References", "Production Readiness Check"],
 )

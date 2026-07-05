@@ -1,0 +1,12 @@
+{
+  "event": "Audit Event",
+  "time": "Time",
+  "actor": "Actor",
+  "category": "Category",
+  "object": "Object",
+  "requestId": "Request ID",
+  "correlation": "Correlation",
+  "changed": "Changed",
+  "added": "Added",
+  "removed": "Removed"
+}

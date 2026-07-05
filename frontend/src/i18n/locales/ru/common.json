@@ -1,0 +1,46 @@
+{
+  "buttons": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "test": "Тестировать",
+    "dryRun": "Dry Run",
+    "open": "Открыть",
+    "details": "Детали",
+    "copy": "Копировать",
+    "install": "Установить",
+    "enable": "Включить",
+    "disable": "Выключить",
+    "close": "Закрыть",
+    "back": "Назад",
+    "next": "Далее",
+    "finish": "Готово"
+  },
+  "labels": {
+    "name": "Название",
+    "status": "Статус",
+    "version": "Версия",
+    "category": "Категория",
+    "actions": "Действия",
+    "official": "Официальный",
+    "community": "Community",
+    "ready": "Готово",
+    "unknown": "неизвестно"
+  },
+  "copied": "Скопировано",
+  "i18nDebug": {
+    "title": "Диагностика i18n",
+    "subtitle": "Runtime-срез языка, fallback-chain, namespaces и отсутствующих ключей.",
+    "runtime": "Runtime",
+    "currentLanguage": "Текущий язык",
+    "fallbackChain": "Fallback chain",
+    "loadedNamespaces": "Загруженные namespaces",
+    "packageNamespaces": "Namespaces пакетов",
+    "catalog": "Каталог переводов",
+    "language": "Язык",
+    "flatKeys": "Flat keys",
+    "namespaces": "Namespaces",
+    "missingKeys": "Отсутствующие ключи",
+    "noMissingKeys": "В этой сессии отсутствующие ключи не зафиксированы."
+  },
+  "loadingPage": "Загрузка страницы"
+}

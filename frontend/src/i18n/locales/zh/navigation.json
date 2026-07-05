@@ -1,0 +1,11 @@
+{
+  "operate": "运行",
+  "build": "构建",
+  "dataTools": "数据工具",
+  "packages": "软件包",
+  "settings": "设置",
+  "advanced": "高级",
+  "developer": "开发者",
+  "i18nDebug": "i18n 调试",
+  "bffUnavailable": "Navigation BFF 不可用，正在使用本地 fallback。"
+}

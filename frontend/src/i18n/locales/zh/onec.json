@@ -1,0 +1,7 @@
+{
+  "namespace": "1C 软件包",
+  "connector": "1C 连接器",
+  "cockpit": "1C 驾驶舱",
+  "odataExplorer": "OData 浏览器",
+  "xmlTools": "XML 工具"
+}

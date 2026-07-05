@@ -1,0 +1,11 @@
+{
+  "operate": "Операции",
+  "build": "Сборка",
+  "dataTools": "Инструменты данных",
+  "packages": "Пакеты",
+  "settings": "Настройки",
+  "advanced": "Расширенный",
+  "developer": "Разработчик",
+  "i18nDebug": "i18n Debug",
+  "bffUnavailable": "Navigation BFF недоступен, используется локальный fallback."
+}

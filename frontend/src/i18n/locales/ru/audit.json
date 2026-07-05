@@ -1,0 +1,12 @@
+{
+  "event": "Событие аудита",
+  "time": "Время",
+  "actor": "Автор",
+  "category": "Категория",
+  "object": "Объект",
+  "requestId": "Request ID",
+  "correlation": "Корреляция",
+  "changed": "Изменено",
+  "added": "Добавлено",
+  "removed": "Удалено"
+}

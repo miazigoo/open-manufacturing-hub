@@ -1,3 +1,5 @@
+import { namespaceDictionaries } from './namespaceResources';
+
 export type Language = 'ru' | 'en' | 'zh';
 export type Dictionary = Record<string, string>;
 
@@ -1782,4 +1784,8 @@ const zh: Dictionary = {
   'secrets.rawWarnings': '疑似明文密钥字段',
 };
 
-export const dictionaries: Record<Language, Dictionary> = { en, ru, zh };
+export const dictionaries: Record<Language, Dictionary> = {
+  en: { ...en, ...namespaceDictionaries.en },
+  ru: { ...ru, ...namespaceDictionaries.ru },
+  zh: { ...zh, ...namespaceDictionaries.zh },
+};

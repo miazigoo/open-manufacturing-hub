@@ -1,12 +1,15 @@
+import { useT } from '../../i18n/useI18n';
+
 export function ScreenshotPlaceholder({ label, assetId, sourceRoute }: { label: string; assetId?: string; sourceRoute?: string }) {
+  const t = useT();
   return (
     <figure className="docs-screenshot-placeholder">
       <div className="docs-screenshot-frame">
-        <span>{assetId ? 'Screenshot missing' : 'Screenshot'}</span>
+        <span>{assetId ? t('docs.screenshotMissing') : t('docs.screenshot')}</span>
         <strong>{label}</strong>
-        <small>{assetId ? `Asset ${assetId} is registered, but the generated image is not captured yet.` : 'Annotated image will be added here.'}</small>
+        <small>{assetId ? t('docs.screenshotMissingDetail', { assetId }) : t('docs.screenshotPlaceholderDetail')}</small>
       </div>
-      <figcaption>{label}{sourceRoute ? ` · source route ${sourceRoute}` : ''}</figcaption>
+      <figcaption>{label}{sourceRoute ? ` · ${t('docs.sourceRoute', { route: sourceRoute })}` : ''}</figcaption>
     </figure>
   );
 }

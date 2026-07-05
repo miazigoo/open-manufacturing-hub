@@ -1,13 +1,15 @@
 import { NavLink } from 'react-router-dom';
+import { useT } from '../../i18n/useI18n';
 import { packageOverviewPath, pagePath } from './content';
 import type { DocsLanguageBundle } from './types';
 
 export function DocsSidebar({ bundle }: { bundle: DocsLanguageBundle }) {
+  const t = useT();
   return (
-    <aside className="docs-sidebar-panel" aria-label="Documentation tree">
+    <aside className="docs-sidebar-panel" aria-label={t('docs.tree')}>
       <div className="docs-sidebar-head">
-        <span className="eyebrow">Documentation</span>
-        <strong>{bundle.packages.length} packages</strong>
+        <span className="eyebrow">{t('docs.documentation')}</span>
+        <strong>{t('docs.packagesCount', { count: bundle.packages.length })}</strong>
       </div>
       <nav className="docs-tree">
         {bundle.packages.map((pkg) => (

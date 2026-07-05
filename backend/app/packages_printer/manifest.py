@@ -23,6 +23,7 @@ manifest = PackageManifest(
     },
     presets={"scenarios": "app.scenario_library.presets:SCENARIOS"},
     docs={"readme": "docs/packages/printer-package-boundary.md", "quick_start": "docs/printing-quick-start.md"},
+    i18n={"namespaces": ["printer"], "locales": {"ru": "i18n/ru/printer.json", "en": "i18n/en/printer.json", "zh": "i18n/zh/printer.json"}},
     extension_points=["Connector SDK", "Execution Step SDK", "Frontend Navigation metadata", "Scenario Preset Installer"],
     dependencies=[{"package_id": "omh-package-onec", "optional": True, "reason": "Enables 1C-to-printer scenario presets."}],
 )

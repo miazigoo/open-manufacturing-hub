@@ -1,7 +1,8 @@
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { I18nContext, I18nContextValue, TranslationParams } from './context';
 import { dictionaries, languageMeta } from './dictionary';
 import type { Language } from './dictionary';
+import { i18nNamespaces } from './types';
 
 const STORAGE_KEY = 'omh_language';
 
@@ -12,14 +13,12 @@ function initialLanguage(): Language {
   } catch {
     // Browser privacy settings can block storage. Language fallback must still work.
   }
-  const browser = navigator.language?.toLowerCase() ?? '';
-  if (browser.startsWith('ru')) return 'ru';
-  if (browser.startsWith('zh')) return 'zh';
-  return 'en';
+  return 'ru';
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => initialLanguage());
+  const missingKeys = useRef(new Set<string>());
 
   useEffect(() => {
     document.documentElement.lang = languageMeta[language].htmlLang;
@@ -33,10 +32,23 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const value = useMemo<I18nContextValue>(() => ({
     language,
     setLanguage: setLanguageState,
-    t: (key, params) => interpolate(dictionaries[language][key] ?? dictionaries.en[key] ?? key, params),
+    fallbackChain: language === 'ru' ? ['ru', 'en'] : [language, 'ru', 'en'],
+    loadedNamespaces: [...i18nNamespaces],
+    missingKeys: Array.from(missingKeys.current).sort(),
+    t: (key, params) => interpolate(resolveTranslation(key, language, missingKeys.current), params),
   }), [language]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+function resolveTranslation(key: string, language: Language, missingKeys: Set<string>) {
+  const chain: Language[] = language === 'ru' ? ['ru', 'en'] : [language, 'ru', 'en'];
+  for (const candidate of chain) {
+    const translated = dictionaries[candidate][key];
+    if (translated !== undefined) return translated;
+  }
+  missingKeys.add(key);
+  return key;
 }
 
 function interpolate(template: string, params?: TranslationParams): string {

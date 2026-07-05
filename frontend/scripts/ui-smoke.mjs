@@ -156,9 +156,9 @@ async function stable(page) {
 async function assertHealthy(page, route) {
   const body = await page.locator('body').innerText({ timeout: timeoutMs });
   if (!body.trim()) fail('EMPTY_PAGE', route);
-  if (/Loading page|Loading /i.test(body)) await page.waitForTimeout(1500);
+  if (/Loading page|Loading |Загрузка|正在加载/i.test(body)) await page.waitForTimeout(1500);
   const later = await page.locator('body').innerText({ timeout: timeoutMs });
-  if (/Loading page|Loading /i.test(later)) fail('STUCK_LOADING', route);
+  if (/Loading page|Loading |Загрузка|正在加载/i.test(later)) fail('STUCK_LOADING', route);
   if (/API request failed|Failed to fetch|Error:/i.test(later)) fail('VISIBLE_ERROR', `${route}: ${later.slice(0, 280).replace(/\s+/g, ' ')}`);
   const h1 = await page.locator('h1').first().textContent({ timeout: 5000 }).catch(() => 'NO_H1');
   routeSummaries.push(`${route} -> ${String(h1).trim()}`);
@@ -177,7 +177,7 @@ async function clickButton(page, name) {
 
 async function ensurePackageWorkspace(page, uiBase, route) {
   await gotoRoute(page, uiBase, route);
-  const gateAction = page.getByRole('button', { name: /Install package|Enable package/i }).first();
+  const gateAction = page.getByRole('button', { name: /Install package|Enable package|Установить пакет|Включить пакет|安装软件包|启用软件包/i }).first();
   if (await gateAction.count()) {
     await gateAction.click({ timeout: timeoutMs });
     await page.getByText('Activation required').waitFor({ state: 'hidden', timeout: timeoutMs }).catch(() => undefined);
@@ -236,11 +236,11 @@ async function runBrowserSmoke(apiBase, uiBase) {
   await ensurePackageWorkspace(page, uiBase, '/printing');
 
   await gotoRoute(page, uiBase, '/');
-  await page.getByRole('button', { name: /English/i }).click({ timeout: timeoutMs });
+  await page.locator('.language-switcher .flag-button').nth(1).click({ timeout: timeoutMs });
   await page.waitForTimeout(200);
   let text = await page.locator('body').innerText();
   if (!/Control cockpit|Dashboard|Open Manufacturing Hub/i.test(text)) fail('I18N_EN', 'English switch did not render expected text');
-  await page.getByRole('button', { name: /Chinese/i }).click({ timeout: timeoutMs });
+  await page.locator('.language-switcher .flag-button').nth(2).click({ timeout: timeoutMs });
   await page.waitForTimeout(200);
   text = await page.locator('body').innerText();
   if (!/控制|仪表|集成|制造/i.test(text)) fail('I18N_ZH', 'Chinese switch did not render expected text');
