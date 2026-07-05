@@ -6,9 +6,11 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from uuid import uuid4
 from typing import Any
 
 BASE_URL = os.getenv("E2E_BASE_URL", os.getenv("SMOKE_BASE_URL", "http://localhost:8000")).rstrip("/")
+RUN_ID = os.getenv("E2E_RUN_ID", uuid4().hex[:10])
 
 
 class E2EFailure(RuntimeError):
@@ -99,10 +101,11 @@ def process_queue_until(queue_item_id: str, expected: set[str], label: str, limi
 
 
 def scenario_marking_pool() -> None:
+    order_id = f"REL-POOL-{RUN_ID}"
     body = request(
         "/api/bus/in/marking-pool",
         "POST",
-        {"pool_type": "DNP", "order_id": "REL-POOL-001", "codes": ["010464615169738421REL"]},
+        {"pool_type": "DNP", "order_id": order_id, "codes": ["010464615169738421REL"]},
     )
     if not isinstance(body, dict) or not body.get("event_id") or not body.get("queue_item_id"):
         raise E2EFailure(f"marking-pool response missing ids: {body}")
@@ -114,10 +117,11 @@ def scenario_marking_pool() -> None:
 
 
 def scenario_two_odata_to_endpoint() -> None:
+    pool_id = f"REL-DNP-{RUN_ID}"
     body = request(
         "/api/bus/in/onec-pool-to-dnp",
         "POST",
-        {"inn": "1234567890", "product_code": "ABC-123", "pool_id": "REL-DNP-001", "codes": ["code1", "code2"]},
+        {"inn": "1234567890", "product_code": "ABC-123", "pool_id": pool_id, "codes": ["code1", "code2"]},
     )
     if not isinstance(body, dict) or not body.get("event_id"):
         raise E2EFailure(f"onec-pool-to-dnp response missing event_id: {body}")
@@ -142,14 +146,15 @@ def scenario_xml_bridge() -> None:
 
 
 def scenario_queue_and_dlq() -> None:
+    business_key = f"release-e2e-dlq-{RUN_ID}"
     created = request(
         "/api/queue",
         "POST",
         {
             "business_object": "ReleaseOrder",
-            "business_key": "release-e2e-dlq-001",
+            "business_key": business_key,
             "operation": "force_dlq",
-            "payload_json": {"order_id": "release-e2e-dlq-001"},
+            "payload_json": {"order_id": business_key},
             "max_attempts": 1,
         },
     )
@@ -158,7 +163,7 @@ def scenario_queue_and_dlq() -> None:
     dlq = request(f"/api/queue/{created['id']}/move-to-dlq?{urllib.parse.urlencode({'reason': 'Release e2e printer unavailable'})}", "POST")
     if not isinstance(dlq, dict) or not dlq.get("id"):
         raise E2EFailure(f"move to DLQ failed: {dlq}")
-    restored = request(f"/api/dlq/{dlq['id']}/edit-and-retry", "POST", {"payload_json": {"order_id": "release-e2e-dlq-001", "fixed": True}})
+    restored = request(f"/api/dlq/{dlq['id']}/edit-and-retry", "POST", {"payload_json": {"order_id": business_key, "fixed": True}})
     if not isinstance(restored, dict) or restored.get("status") != "waiting":
         raise E2EFailure(f"DLQ edit-and-retry did not restore queue item: {restored}")
     completed = request(f"/api/queue/{restored['id']}/force-complete", "POST")
@@ -168,13 +173,14 @@ def scenario_queue_and_dlq() -> None:
 
 
 def scenario_printer_dry_run() -> None:
+    job_key = f"release-e2e-print-{RUN_ID}"
     body = request(
         "/api/printing/onec/send-batch",
         "POST",
         {
-            "job_key": "release-e2e-print-001",
+            "job_key": job_key,
             "source_system": "1C ERP",
-            "source_document_id": "REL-PRINT-001",
+            "source_document_id": f"REL-PRINT-{RUN_ID}",
             "printer": {"name": "Release E2E Zebra", "host": "127.0.0.1", "port": 9100, "dpi": 203},
             "dry_run": True,
             "lines": [{"sequence_no": 1, "code": "010460123456789021REL", "zpl": "^XA\n^FO0,0\n^FDREL^FS\n^XZ"}],

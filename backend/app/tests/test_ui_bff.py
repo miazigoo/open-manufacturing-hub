@@ -58,3 +58,21 @@ async def test_documentation_is_first_navigation_item(client):
     assert first["title"] == "Documentation"
     assert first["route"] == "/docs"
     assert first["enabled"] is True
+
+
+async def test_optional_secrets_navigation_requires_package(client):
+    navigation = await client.get("/api/ui/navigation")
+    assert navigation.status_code == 200
+    secrets = next(item for item in navigation.json() if item["route"] == "/secrets")
+    assert secrets["package_id"] == "omh-package-secrets"
+    assert secrets["installed"] is False
+    assert secrets["enabled"] is False
+
+    installed = await client.post("/api/packages/omh-package-secrets/install", json={"install_demo_data": False})
+    assert installed.status_code == 200, installed.text
+
+    navigation = await client.get("/api/ui/navigation")
+    assert navigation.status_code == 200
+    secrets = next(item for item in navigation.json() if item["route"] == "/secrets")
+    assert secrets["installed"] is True
+    assert secrets["enabled"] is True

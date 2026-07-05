@@ -20,7 +20,7 @@ from app.resolvers.models import ResolverDefinitionV2
 from app.secrets.models import Secret
 from app.secrets.redaction import collect_secret_references, raw_secret_warnings
 
-MIGRATION_HEAD = "0023_package_capabilities"
+MIGRATION_HEAD = "0024_onboarding_state"
 
 
 async def database_revision(session: AsyncSession) -> str | None:
