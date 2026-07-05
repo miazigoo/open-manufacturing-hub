@@ -17,6 +17,7 @@ from app.integration_flows import repository as flow_repository
 from app.integration_flows import service as flow_service
 from app.matchers.schemas import MATCHER_TYPES
 from app.operation_templates import repository as operation_repository
+from app.odata_connections import service as odata_connection_service
 from app.packages import repository as package_repository
 from app.packages.service import package_navigation
 from app.scenario_library.service import list_scenarios
@@ -55,6 +56,7 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
             ("Saved Test Cases", "/test-cases", None, False),
         ]),
         ("Data Tools", [
+            ("OData Connections", "/odata-connections", ONEC_PACKAGE, False),
             ("OData Explorer", "/odata-explorer", ONEC_PACKAGE, False),
             ("XML Tools", "/xml-tools", ONEC_PACKAGE, False),
             ("JSON Builder / Mappings", "/mappings", None, False),
@@ -150,10 +152,12 @@ async def _shared_options(session: AsyncSession) -> dict[str, Any]:
     connectors = await connector_repository.list_instances(session)
     operations = await operation_repository.list_templates(session)
     lookups = await bus_repository.list_lookup_templates(session)
+    odata_connections = await odata_connection_service.list_connections(session)
     connector_options = [_connector_option(item) for item in connectors]
     return {
         "connectors": connector_options,
         "onec_connectors": [_connector_option(item) for item in connectors if item.connector_type == "onec"],
+        "odata_connections": [{"id": str(item.id), "label": item.name, "type": "odata_connection", "meta": {"connector_id": str(item.connector_id), "base_url": item.base_url, "enabled": item.enabled, "tags": item.tags}} for item in odata_connections],
         "rest_connectors": [_connector_option(item) for item in connectors if item.connector_type == "rest"],
         "printer_connectors": [_connector_option(item) for item in connectors if item.connector_type == "zpl_printer"],
         "operation_templates": [{"id": str(item.id), "label": item.name, "type": item.system_type, "meta": {"operation": item.operation, "input_mode": item.input_mode, "output_mode": item.output_mode}} for item in operations],

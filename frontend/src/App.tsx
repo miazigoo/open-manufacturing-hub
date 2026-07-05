@@ -21,6 +21,7 @@ const IntegrationFlowsPage = lazy(() => import('./pages/IntegrationFlowsPage').t
 const VisualFlowBuilderPage = lazy(() => import('./pages/VisualFlowBuilderPage').then((m) => ({ default: m.VisualFlowBuilderPage })));
 const IntegrationDesignerPage = lazy(() => import('./pages/IntegrationDesignerPage').then((m) => ({ default: m.IntegrationDesignerPage })));
 const ScenarioLibraryPage = lazy(() => import('./pages/ScenarioLibraryPage').then((m) => ({ default: m.ScenarioLibraryPage })));
+const ODataConnectionsPage = lazy(() => import('./pages/ODataConnectionsPage').then((m) => ({ default: m.ODataConnectionsPage })));
 const ODataExplorerPage = lazy(() => import('./pages/ODataExplorerPage').then((m) => ({ default: m.ODataExplorerPage })));
 const XmlToolsPage = lazy(() => import('./pages/XmlToolsPage').then((m) => ({ default: m.XmlToolsPage })));
 const TestConsolePage = lazy(() => import('./pages/TestConsolePage').then((m) => ({ default: m.TestConsolePage })));
@@ -108,6 +109,7 @@ export function App() {
           <Route path="integration-flows/:flowId/builder" element={<VisualFlowBuilderPage />} />
           <Route path="integration-designer" element={onec(<IntegrationDesignerPage />)} />
           <Route path="scenario-library" element={<ScenarioLibraryPage />} />
+          <Route path="odata-connections" element={onec(<ODataConnectionsPage />)} />
           <Route path="odata-explorer" element={onec(<ODataExplorerPage />)} />
           <Route path="xml-tools" element={onec(<XmlToolsPage />)} />
           <Route path="test-console" element={<TestConsolePage />} />

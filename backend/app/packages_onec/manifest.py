@@ -10,16 +10,17 @@ manifest = PackageManifest(
     core_version_min="0.1.0",
     core_version_max="0.2.x",
     category="erp",
-    capabilities=["connector", "odata", "xml", "workbench", "scenario_library", "operation_templates", "frontend_pages", "visual_flow_builder"],
+    capabilities=["connector", "odata", "odata_connection_catalog", "xml", "workbench", "scenario_library", "operation_templates", "frontend_pages", "visual_flow_builder"],
     backend={
         "modules": ["app.packages_onec"],
-        "routers": ["app.packages_onec.router:router", "app.onec_workbench.router:router", "app.odata_explorer.router:router", "app.xml_tools.router:router", "app.onec_scenarios.router:router", "app.onec_templates.router:router"],
+        "routers": ["app.packages_onec.router:router", "app.onec_workbench.router:router", "app.odata_connections.router:router", "app.odata_explorer.router:router", "app.xml_tools.router:router", "app.onec_scenarios.router:router", "app.onec_templates.router:router"],
         "connectors": ["app.packages_onec.connector:OneCConnector"],
         "steps": ["app.execution.steps.odata_lookup:ODataLookupStep"],
     },
     frontend={
         "pages": [
             {"route": "/onec-workbench", "title": "1C Workbench", "component": "OneCWorkbenchPage"},
+            {"route": "/odata-connections", "title": "OData Connections", "component": "ODataConnectionsPage"},
             {"route": "/odata-explorer", "title": "OData Explorer", "component": "ODataExplorerPage"},
             {"route": "/xml-tools", "title": "XML Tools", "component": "XmlToolsPage"},
             {"route": "/onec-quick-setup", "title": "1C Quick Setup", "component": "OneCQuickSetupPage"},
@@ -27,6 +28,7 @@ manifest = PackageManifest(
         ],
         "navigation": [
             {"group": "Integration Packages", "title": "1C Workbench", "route": "/onec-workbench"},
+            {"group": "Integration Packages", "title": "OData Connections", "route": "/odata-connections"},
             {"group": "Integration Packages", "title": "OData Explorer", "route": "/odata-explorer"},
             {"group": "Integration Packages", "title": "XML Tools", "route": "/xml-tools"},
             {"group": "Integration Packages", "title": "1C Quick Setup", "route": "/onec-quick-setup"},

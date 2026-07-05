@@ -15,6 +15,7 @@ export interface UICockpitOptions {
   package_state: UIPackageState;
   connectors: UIOption[];
   onec_connectors: UIOption[];
+  odata_connections: UIOption[];
   rest_connectors: UIOption[];
   printer_connectors: UIOption[];
   operation_templates: UIOption[];

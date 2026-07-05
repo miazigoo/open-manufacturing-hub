@@ -6,6 +6,7 @@ import { connectorsApi } from '../api/connectors';
 import { configVersionsApi } from '../api/configVersions';
 import { integrationFlowsApi } from '../api/integrationFlows';
 import { resolversApi } from '../api/resolvers';
+import { uiApi } from '../api/ui';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
@@ -14,6 +15,7 @@ import { VersionHistoryPanel } from '../features/configVersions';
 
 type BuilderStep = Record<string, unknown> & { id: string; type: string; name?: string; save_as?: string };
 type BuilderJson = { version: number; input: Record<string, unknown>; variables: Array<Record<string, unknown>>; steps: BuilderStep[] };
+type ODataOption = { id: string; label: string; base_url: string; enabled: boolean };
 
 const sampleRequest = { inn: '1234567890', product_code: 'ABC-123', pool_id: 'POOL-001', codes: ['code1', 'code2'] };
 
@@ -58,6 +60,7 @@ export function VisualFlowBuilderPage() {
   const queryClient = useQueryClient();
   const flow = useQuery({ queryKey: ['integration-flow', flowId], queryFn: async () => (await integrationFlowsApi.list()).find((item) => item.id === flowId) ?? null, enabled: Boolean(flowId) });
   const connectors = useQuery({ queryKey: ['connectors'], queryFn: connectorsApi.list });
+  const builderOptions = useQuery({ queryKey: ['ui-flow-builder-options'], queryFn: uiApi.flowBuilderOptions });
   const resolvers = useQuery({ queryKey: ['resolvers-v2'], queryFn: () => resolversApi.list() });
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,8 +92,8 @@ export function VisualFlowBuilderPage() {
   });
   const compile = useMutation({ mutationFn: () => integrationFlowsApi.compileBuilder(flowId!), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['integration-flow', flowId] }) });
 
-  if (flow.isLoading || connectors.isLoading) return <LoadingState label="Loading visual flow builder" />;
-  if (flow.error) return <ErrorState error={flow.error} />;
+  if (flow.isLoading || connectors.isLoading || builderOptions.isLoading) return <LoadingState label="Loading visual flow builder" />;
+  if (flow.error || builderOptions.error) return <ErrorState error={(flow.error ?? builderOptions.error) as Error} />;
   if (!flow.data) return <ErrorState error={new Error('Integration flow not found')} />;
 
   function setBuilder(next: BuilderJson) {
@@ -123,8 +126,9 @@ export function VisualFlowBuilderPage() {
 
   function addStep(type: string) {
     const id = `${type}_${builder.steps.length + 1}`;
+    const defaultOData = odataOptions.find((connection) => connection.enabled) ?? odataOptions[0];
     const base: BuilderStep = type === 'odata_query'
-      ? { id, type, name: 'New OData query', connection: '1C ERP', resource: '', filter_builder: [{ field: '', operator: 'eq', value: '{{request.body.value}}' }], top: 1, save_as: 'lookup_result', required: true }
+      ? { id, type, name: 'New OData query', connection: defaultOData?.label ?? 'OData ERP', connection_id: defaultOData?.id ?? '', resource: '', filter_builder: [{ field: '', operator: 'eq', value: '{{request.body.value}}' }], top: 1, save_as: 'lookup_result', required: true }
       : type === 'apply_transforms'
         ? { id, type, name: 'Normalize fields', chains: [{ source: 'request.body.inn', target: 'variables.normalized_inn', transforms: [{ name: 'trim' }, { name: 'remove_spaces' }] }] }
       : type === 'evaluate_rules'
@@ -153,6 +157,7 @@ export function VisualFlowBuilderPage() {
   }
 
   const connectorNames = (connectors.data ?? []).map((connector) => connector.name);
+  const odataOptions: ODataOption[] = (builderOptions.data?.odata_connections ?? []).map((item) => ({ id: item.id, label: item.label, base_url: String(item.meta.base_url ?? ''), enabled: item.meta.enabled !== false }));
   const resolverOptions = resolvers.data ?? [];
 
   return (
@@ -190,7 +195,7 @@ export function VisualFlowBuilderPage() {
             {selectedStep.type === 'read_variable' && <ReadVariableEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'apply_transforms' && <TransformStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'evaluate_rules' && <BusinessRuleStepEditor step={selectedStep} update={updateStep} />}
-            {selectedStep.type === 'odata_query' && <ODataStepEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
+            {selectedStep.type === 'odata_query' && <ODataStepEditor step={selectedStep} update={updateStep} odataOptions={odataOptions} />}
             {selectedStep.type === 'resolve_object' && <ResolveObjectEditor step={selectedStep} update={updateStep} resolverOptions={resolverOptions} />}
             {selectedStep.type === 'build_json' && <BuildJsonEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'call_endpoint' && <CallEndpointEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
@@ -216,10 +221,11 @@ export function VisualFlowBuilderPage() {
     return <div className="metadata-grid compact-grid no-margin"><label className="field-label">Save as<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label><label className="field-label">Source path<input value={String(step.path ?? '')} onChange={(event) => update(step.id, { path: event.target.value })} /></label><span className="success-note">Example<span>request.body.inn</span></span></div>;
   }
 
-  function ODataStepEditor({ step, update, connectorNames }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; connectorNames: string[] }) {
+  function ODataStepEditor({ step, update, odataOptions }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; odataOptions: ODataOption[] }) {
     const filter = firstFilter(step);
+    const selectedConnectionId = String(step.connection_id ?? odataOptions.find((item) => item.label === step.connection)?.id ?? '');
     const setFilter = (patch: Record<string, unknown>) => update(step.id, { filter_builder: [{ ...filter, ...patch }] });
-    return <div className="stack-form"><div className="metadata-grid compact-grid no-margin"><label className="field-label">Connection<input list="connector-names" value={String(step.connection ?? '')} onChange={(event) => update(step.id, { connection: event.target.value })} /><datalist id="connector-names">{connectorNames.map((name) => <option key={name} value={name} />)}</datalist></label><label className="field-label">Resource<input value={String(step.resource ?? '')} onChange={(event) => update(step.id, { resource: event.target.value })} /></label><label className="field-label">Save as<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label></div><div className="metadata-grid compact-grid no-margin"><label className="field-label">Field<input value={String(filter.field ?? '')} onChange={(event) => setFilter({ field: event.target.value })} /></label><label className="field-label">Operator<select value={String(filter.operator ?? 'eq')} onChange={(event) => setFilter({ operator: event.target.value })}><option value="eq">eq</option><option value="ne">ne</option><option value="contains">contains</option><option value="startswith">startswith</option><option value="endswith">endswith</option><option value="gt">gt</option><option value="lt">lt</option><option value="ge">ge</option><option value="le">le</option></select></label><label className="field-label">Value source<input value={String(filter.value ?? '')} onChange={(event) => setFilter({ value: event.target.value })} /></label></div><div className="metadata-grid compact-grid no-margin"><label className="field-label">$select<input value={Array.isArray(step.select) ? step.select.join(',') : String(step.select ?? '')} onChange={(event) => update(step.id, { select: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} /></label><label className="field-label">$top<input value={String(step.top ?? 1)} onChange={(event) => update(step.id, { top: Number(event.target.value) || 1 })} /></label><label className="check-row"><input type="checkbox" checked={step.required !== false} onChange={(event) => update(step.id, { required: event.target.checked })} /> Required result</label></div></div>;
+    return <div className="stack-form"><div className="metadata-grid compact-grid no-margin"><label className="field-label">OData connection<select value={selectedConnectionId} onChange={(event) => { const selected = odataOptions.find((item) => item.id === event.target.value); update(step.id, { connection_id: event.target.value, connection: selected?.label ?? '' }); }}><option value="">Select OData profile</option>{odataOptions.map((connection) => <option key={connection.id} value={connection.id}>{connection.label} · {connection.base_url}</option>)}</select></label><label className="field-label">Resource<input value={String(step.resource ?? '')} onChange={(event) => update(step.id, { resource: event.target.value })} /></label><label className="field-label">Save as<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label></div><div className="metadata-grid compact-grid no-margin"><label className="field-label">Field<input value={String(filter.field ?? '')} onChange={(event) => setFilter({ field: event.target.value })} /></label><label className="field-label">Operator<select value={String(filter.operator ?? 'eq')} onChange={(event) => setFilter({ operator: event.target.value })}><option value="eq">eq</option><option value="ne">ne</option><option value="contains">contains</option><option value="startswith">startswith</option><option value="endswith">endswith</option><option value="gt">gt</option><option value="lt">lt</option><option value="ge">ge</option><option value="le">le</option></select></label><label className="field-label">Value source<input value={String(filter.value ?? '')} onChange={(event) => setFilter({ value: event.target.value })} /></label></div><div className="metadata-grid compact-grid no-margin"><label className="field-label">$select<input value={Array.isArray(step.select) ? step.select.join(',') : String(step.select ?? '')} onChange={(event) => update(step.id, { select: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} /></label><label className="field-label">$top<input value={String(step.top ?? 1)} onChange={(event) => update(step.id, { top: Number(event.target.value) || 1 })} /></label><label className="check-row"><input type="checkbox" checked={step.required !== false} onChange={(event) => update(step.id, { required: event.target.checked })} /> Required result</label></div><div className="action-row wrap-actions"><button type="button" className="ghost-button" onClick={runPreview} disabled={preview.isPending}>Test query in preview</button><Link className="primary-link" to="/odata-connections">Manage OData connections</Link><Link className="primary-link" to="/docs/onec/academy/lesson-04-build-1c-post-to-odata-flow">How this step works</Link></div></div>;
   }
 
   function TransformStepEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {

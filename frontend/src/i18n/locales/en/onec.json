@@ -2,6 +2,7 @@
   "namespace": "1C Package",
   "connector": "1C connector",
   "cockpit": "1C Cockpit",
+  "odataConnections": "OData Connections",
   "odataExplorer": "OData Explorer",
   "xmlTools": "XML Tools"
 }

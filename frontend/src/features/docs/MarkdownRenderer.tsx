@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { CodeBlockWithCopy } from './CodeBlockWithCopy';
+import { DocsChecklist } from './DocsChecklist';
 import { ExampleBlock } from './ExampleBlock';
 import { OpenPageLink } from './OpenPageLink';
 import { Screenshot } from './Screenshot';
@@ -87,6 +88,14 @@ function parseMarkdown(markdown: string) {
       flushAll();
       const attrs = parseShortcodeAttrs(openPageShortcode[1]);
       nodes.push(<OpenPageLink key={`open-${nodes.length}`} route={attrs.route ?? '/'} label={attrs.label ?? attrs.route ?? 'Open page'} />);
+      continue;
+    }
+    const checklistShortcode = /^::checklist\{(.+)\}$/.exec(line.trim());
+    if (checklistShortcode) {
+      flushAll();
+      const attrs = parseShortcodeAttrs(checklistShortcode[1]);
+      const items = (attrs.items ?? '').split('|').map((item) => item.trim()).filter(Boolean);
+      nodes.push(<DocsChecklist key={`checklist-${nodes.length}`} id={attrs.id ?? `checklist-${nodes.length}`} items={items} />);
       continue;
     }
 

@@ -143,6 +143,7 @@ async function prepareDatabase(databaseUrl) {
 }
 
 async function seedApi(apiBase) {
+  await requestJson(`${apiBase}/api/packages/omh-package-onec/install`, { method: 'POST', body: JSON.stringify({ install_demo_data: true }), headers: { 'Content-Type': 'application/json' } });
   await requestJson(`${apiBase}/api/scenario-library/onec-post-two-odata-to-endpoint/install`, { method: 'POST' });
   await requestJson(`${apiBase}/api/resolvers/install-presets`, { method: 'POST' });
   await requestJson(`${apiBase}/api/business-rules/install-presets`, { method: 'POST' });
@@ -222,9 +223,10 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/integration-bus', '/integration-flows', flowId ? `/integration-flows/${flowId}/builder` : null,
     '/business-objects', '/resolvers', resolverId ? `/resolvers/${resolverId}` : null, '/resolvers/cache',
     '/transforms', '/business-rules', ruleId ? `/business-rules/${ruleId}` : null,
-    '/test-console', '/test-console?exampleId=onec.two_odata_to_json_endpoint', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
+    '/test-console', '/test-console?exampleId=onec.two_odata_to_json_endpoint', '/odata-connections', '/odata-explorer', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
     '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
     '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
+    '/docs/onec/academy/lesson-02-create-odata-connection', '/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint',
     '/docs/onec/setup/connector-setup', '/docs/onec/tools/visual-flow-builder',
     '/docs/onec/scenarios/onec-post-two-odata-json-endpoint', '/docs/onec/scenarios/onec-to-printer',
     '/docs/onec/support/errors-timeline-artifacts', '/docs/onec/support/queue-retry-dlq',

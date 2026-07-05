@@ -83,6 +83,26 @@ export function OneCCockpitPage() {
           </div>
         </SectionCard>
 
+        <SectionCard eyebrow="Academy" title="1C POST -> OData -> JSON -> endpoint" description="A guided path for the most confusing setup: inbound token, named OData connection, OData lookup, JSON payload and final endpoint response.">
+          <div className="cockpit-action-grid">
+            <Link className="cockpit-action-card primary" to="/docs/onec/academy/lesson-01-map-of-the-product">
+              <span>01</span>
+              <strong>Start learning path</strong>
+              <p>Concepts, endpoint contract, OData profiles and visual flow steps in order.</p>
+            </Link>
+            <Link className="cockpit-action-card" to="/odata-connections">
+              <span>02</span>
+              <strong>Create OData profiles</strong>
+              <p>OData ERP, OData УСП or WMS with URL, user, password/secret and metadata test.</p>
+            </Link>
+            <Link className="cockpit-action-card" to="/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint">
+              <span>03</span>
+              <strong>Use a complete recipe</strong>
+              <p>Copy the full business recipe with request examples, timeline checks and common mistakes.</p>
+            </Link>
+          </div>
+        </SectionCard>
+
         <SectionCard eyebrow="Connection Health" title="1C / API / printer channels">
           {summary.data.connection_health.length === 0 ? <EmptyPanel title="No connectors" detail="Create 1C, REST or printer connectors to see runtime health here." action={<Link className="primary-button" to="/connectors">Add connector</Link>} /> : <div className="cockpit-health-list">{summary.data.connection_health.map((item) => { const row = item as Row; return <article key={text(row, 'id')}><div><strong>{text(row, 'name')}</strong><span>{text(row, 'connector_type')}</span></div><StatusBadge status={text(row, 'status', 'unknown')} label={text(row, 'status', 'unknown')} compact /><p>{text(row, 'message')}</p></article>; })}</div>}
         </SectionCard>

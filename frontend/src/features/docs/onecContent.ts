@@ -1,4 +1,5 @@
 import type { PackageSeed, PageSeed } from './content';
+import { academyPages, decisionPages, recipePages } from './onecAcademyContent';
 
 function md(...lines: string[]) {
   return lines.join('\n').trim();
@@ -541,6 +542,9 @@ export const onecPackageSeed: PackageSeed = {
   accent: 'green',
   sections: [
     { id: 'overview', title: 'Обзор 1C', description: 'Что дает 1C package и где он заканчивается.', order: 10, pages: [overview] },
+    { id: 'academy', title: '1C Integration Academy', description: 'Пошаговое обучение: от OData profile до production checklist.', order: 15, pages: academyPages },
+    { id: 'recipes', title: '1C Recipes', description: 'Практические рецепты с endpoints, payload, UI-настройкой и диагностикой.', order: 17, pages: recipePages },
+    { id: 'decisions', title: 'Как выбрать подход', description: 'Input mode, response mode, lookup/resolver и Flow/Workflow.', order: 18, pages: decisionPages },
     { id: 'setup', title: 'Настройка 1C', description: 'Connector, secrets, endpoint auth и проверка соединения.', order: 20, pages: [connectorSetup, secretsToken] },
     { id: 'tools', title: 'Инструменты 1C', description: 'Connector, OData Explorer, XML Tools, Cockpit, Flow Builder.', order: 30, pages: toolPages },
     { id: 'scenarios', title: 'Практические сценарии 1C', description: 'Полные payload, endpoints, 1C code, artifacts и troubleshooting.', order: 40, pages: scenarios },

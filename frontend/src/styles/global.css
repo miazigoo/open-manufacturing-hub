@@ -657,6 +657,11 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .docs-markdown blockquote { margin: 0; border-left: 3px solid var(--accent); background: rgba(240,179,90,.08); padding: 14px 16px; color: var(--ink); }
 .docs-markdown table { border: 1px solid var(--line); background: rgba(0,0,0,.12); overflow: hidden; }
 .docs-markdown th, .docs-markdown td { padding: 12px; vertical-align: top; }
+.docs-checklist { border: 1px solid rgba(143,198,180,.22); background: linear-gradient(135deg, rgba(143,198,180,.1), rgba(240,179,90,.07)); padding: 18px; display: grid; gap: 12px; }
+.docs-checklist h3 { margin: 0; color: var(--ink); }
+.docs-checklist-items { display: grid; gap: 10px; }
+.docs-checklist .check-row { border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.16); padding: 10px 12px; color: #d8ceb8; }
+.docs-checklist .check-row span { line-height: 1.45; }
 .docs-code-block { border: 1px solid var(--line-strong); background: #0b0d0a; overflow: hidden; }
 .docs-code-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); background: linear-gradient(90deg, rgba(240,179,90,.12), rgba(143,198,180,.06)); padding: 9px 11px; }
 .docs-code-toolbar span { color: var(--accent); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
