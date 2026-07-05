@@ -32,7 +32,7 @@ const requiredAcademy = [
   'lesson-04-create-inbound-endpoint-for-1c-post', 'lesson-05-read-values-from-incoming-request',
   'lesson-06-first-odata-lookup-contractor-by-inn', 'lesson-07-second-odata-lookup-product-by-article',
   'lesson-08-build-target-json', 'lesson-09-send-json-to-external-api', 'lesson-10-test-full-flow',
-  'lesson-11-read-timeline-and-artifacts', 'lesson-12-fix-common-errors',
+  'lesson-11-read-timeline-and-artifacts', 'lesson-12-fix-common-errors', 'full-flow-click-by-click',
 ];
 const requiredRecipes = [
   'recipe-01-onec-marking-pool-to-external-api', 'recipe-02-onec-post-two-odata-lookups', 'recipe-03-onec-xml-raw-forwarding',
@@ -108,6 +108,7 @@ assert(makefile.includes('docs-quality-check') && packageJson.scripts['docs:qual
 assert(makefile.includes('docs-ru-language-check') && packageJson.scripts['docs:ru-language-check'], 'make docs-ru-language-check command is missing');
 assert(onecContent.includes("page('start-here', 'glossary'") && onecContent.includes('Глоссарий терминов для 1C'), 'Russian 1C glossary page is missing');
 assert(onecContent.includes("id: 'odata-course'") && onecContent.includes('Глубокий курс OData'), 'Task 045 OData deep course section is missing');
+assert(onecAcademyContent.includes('Настраиваем полный обмен: 1С POST → две OData выборки → JSON → endpoint') && onecAcademyContent.includes('Dry Run не отправляет запрос во внешний API.') && onecAcademyContent.includes('Expected Timeline:') && onecAcademyContent.includes('odata.get_contractor.request.json'), 'Task 046 click-by-click Flow Builder tutorial is incomplete');
 for (const exampleId of ['onec.odata.find_contractor_by_inn', 'onec.odata.find_product_by_article', 'onec.odata.find_order_by_number', 'onec.odata.empty_result', 'onec.odata.unauthorized']) {
   assert(examples[exampleId], `Task 045 OData example missing: ${exampleId}`);
 }

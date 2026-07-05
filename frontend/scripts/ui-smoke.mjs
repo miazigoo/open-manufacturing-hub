@@ -144,6 +144,7 @@ async function prepareDatabase(databaseUrl) {
 
 async function seedApi(apiBase) {
   await requestJson(`${apiBase}/api/packages/omh-package-onec/install`, { method: 'POST', body: JSON.stringify({ install_demo_data: true }), headers: { 'Content-Type': 'application/json' } });
+  await requestJson(`${apiBase}/api/packages/omh-package-printer/install`, { method: 'POST' });
   await requestJson(`${apiBase}/api/scenario-library/onec-post-two-odata-to-endpoint/install`, { method: 'POST' });
   await requestJson(`${apiBase}/api/resolvers/install-presets`, { method: 'POST' });
   await requestJson(`${apiBase}/api/business-rules/install-presets`, { method: 'POST' });
@@ -231,7 +232,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/docs/onec/academy/create-inbound-endpoint', '/docs/onec/academy/read-request-fields',
     '/docs/onec/academy/first-odata-query-contractor', '/docs/onec/academy/second-odata-query-product',
     '/docs/onec/academy/build-target-json', '/docs/onec/academy/send-to-external-api',
-    '/docs/onec/academy/test-full-flow',
+    '/docs/onec/academy/full-flow-click-by-click', '/docs/onec/academy/test-full-flow',
     '/docs/onec/academy/lesson-01-what-is-omh-for-1c-users', '/docs/onec/academy/lesson-02-create-odata-connection',
     '/docs/onec/academy/lesson-06-first-odata-lookup-contractor-by-inn', '/docs/onec/academy/lesson-12-fix-common-errors',
     '/docs/onec/recipes/recipe-01-onec-marking-pool-to-external-api',
@@ -343,6 +344,32 @@ async function runBrowserSmoke(apiBase, uiBase) {
   const sendTargetText = await page.locator('body').innerText();
   for (const required of ['DNP Service', 'POST http://dnp.local/api/marking/pools', 'target.request', 'target.response', 'Call endpoint step settings']) {
     if (!sendTargetText.includes(required)) fail('PACK_B_SEND_TARGET', required);
+  }
+
+  await gotoRoute(page, uiBase, '/docs/onec/academy/full-flow-click-by-click');
+  const clickByClickText = await page.locator('body').innerText();
+  for (const required of [
+    'Настраиваем полный обмен',
+    '1С отправит в OMH ИНН',
+    'Endpoint slug: onec-pool-to-dnp',
+    'Set step name: get_contractor',
+    'Save result as: contractor',
+    'Step name: get_product',
+    'Save as: product',
+    'Save as: target_payload',
+    'Dry Run не отправляет запрос во внешний API',
+    'OData request preview',
+    'JSON builder output',
+    'target request preview',
+    'curl -X POST',
+    'Данные = Новый Структура',
+    'Expected Timeline',
+    'odata.get_contractor.request.json',
+    'send_to_dnp',
+    'Открыть Test Console',
+    'Test Console Dry Run for full flow',
+  ]) {
+    if (!clickByClickText.includes(required)) fail('TASK_046_CLICK_BY_CLICK', required);
   }
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/test-full-flow');
