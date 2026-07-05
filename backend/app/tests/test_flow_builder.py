@@ -61,3 +61,69 @@ async def test_visual_flow_builder_preset_preview_compile_and_dispatch(client):
     send_step = next(step for step in steps if step["step_name"] == "send_to_dnp")
     outgoing = next(artifact for artifact in send_step["artifacts"] if artifact["name"] == "outgoing_request.json")
     assert outgoing["content_json"]["body"]["contractor_uuid"] == "contractor-uuid-001"
+
+
+async def test_flow_builder_odata_chaining_selects_fields_and_ignores_empty_filters(client):
+    builder = {
+        "version": 1,
+        "input": {"endpoint_slug": "odata-chain", "input_mode": "json", "response_mode": "sync_response"},
+        "steps": [
+            {
+                "id": "get_contractor",
+                "type": "odata_query",
+                "name": "Find contractor",
+                "connection": "Demo 1C ERP",
+                "resource": "Catalog_Контрагенты",
+                "filter_builder": [{"field": "ИНН", "operator": "eq", "value": "{{request.body.inn}}"}],
+                "select": ["Ref_Key", "Description", "ИНН"],
+                "top": 1,
+                "save_as": "contractor",
+                "required": True,
+                "mock_items": [{"Ref_Key": "contractor-001", "Description": "Demo contractor", "ИНН": "7707083893", "Unused": "must-not-be-read"}],
+            },
+            {
+                "id": "get_last_order",
+                "type": "odata_query",
+                "name": "Find latest order",
+                "connection": "Demo 1C ERP",
+                "resource": "Document_ЗаказКлиента",
+                "filter_builder": [
+                    {"field": "Контрагент_Key", "operator": "eq", "value": "{{contractor.Ref_Key}}"},
+                    {"field": "", "operator": "eq", "value": ""},
+                ],
+                "select": ["Ref_Key", "Number", "Date"],
+                "orderby": "Date desc",
+                "top": 1,
+                "save_as": "last_order",
+                "required": True,
+                "mock_items": [{"Ref_Key": "order-001", "Number": "SO-1001", "Date": "2026-07-05T10:00:00"}],
+            },
+            {
+                "id": "build_payload",
+                "type": "build_json",
+                "name": "Build target",
+                "save_as": "target_payload",
+                "template": {
+                    "contractor_uuid": "{{contractor.Ref_Key}}",
+                    "contractor_name": "{{steps.get_contractor.first.Description}}",
+                    "last_order_uuid": "{{last_order.Ref_Key}}",
+                    "last_order_number": "{{last_order.Number}}",
+                },
+            },
+        ],
+    }
+
+    response = await client.post("/api/flow-builder/preview", json={"builder_json": builder, "sample_request": {"inn": "7707083893"}})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert body["steps"][1]["request_preview"]["query"]["$filter"] == "Контрагент_Key eq 'contractor-001'"
+    assert body["steps"][1]["request_preview"]["query"]["$select"] == "Ref_Key,Number,Date"
+    assert body["steps"][1]["request_preview"]["query"]["$orderby"] == "Date desc"
+    assert body["final_payload_preview"] == {
+        "contractor_uuid": "contractor-001",
+        "contractor_name": "Demo contractor",
+        "last_order_uuid": "order-001",
+        "last_order_number": "SO-1001",
+    }

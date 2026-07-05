@@ -230,7 +230,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/docs/onec/academy/lesson-02-create-odata-connection', '/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint',
     '/docs/onec/case-studies/case-03-wms-stock-fact-to-1c', '/docs/onec/request-examples/request-03-two-lookups-order',
     '/docs/onec/error-playbooks/odata-empty-required',
-    '/docs/onec/setup/connector-setup', '/docs/onec/tools/visual-flow-builder',
+    '/docs/onec/setup/connector-setup', '/docs/onec/tools/odata-chaining-fields', '/docs/onec/tools/visual-flow-builder',
     '/docs/onec/scenarios/onec-post-two-odata-json-endpoint', '/docs/onec/scenarios/onec-to-printer',
     '/docs/onec/support/errors-timeline-artifacts', '/docs/onec/support/queue-retry-dlq',
   ].filter(Boolean);
@@ -248,6 +248,21 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (orderedLists < 2) fail('DOCS_ORDERED_LISTS', `Expected beginner guide to render numbered steps, got ${orderedLists}`);
   if (!(await page.getByText('Мини-словарь простыми словами').count())) fail('DOCS_BEGINNER_GLOSSARY', 'Beginner guide glossary is missing');
   if (!(await page.locator('.docs-example-card').count())) fail('DOCS_BEGINNER_EXAMPLE', 'Beginner guide runnable example is missing');
+
+  await gotoRoute(page, uiBase, '/odata-explorer');
+  if (!(await page.locator('.odata-filter-builder').count())) fail('ODATA_FILTER_BUILDER', 'OData Explorer filter builder is missing');
+  if ((await page.locator('.hint-chip').count()) < 3) fail('ODATA_HINT_CHIPS', 'OData Explorer field/select hint chips are missing');
+  const odataText = await page.locator('body').innerText();
+  if (!/Safe OData workflow|Filter builder|\$select/i.test(odataText)) fail('ODATA_EXPLAINER_COPY', 'OData Explorer does not explain filter/select workflow');
+
+  if (flowId) {
+    await gotoRoute(page, uiBase, `/integration-flows/${flowId}/builder`);
+    const odataStep = page.locator('.builder-step-card').filter({ hasText: /OData|contractor|get_contractor|Find contractor/i }).first();
+    if (await odataStep.count()) await odataStep.click({ timeout: timeoutMs });
+    const builderHelpText = await page.locator('body').innerText();
+    if (!/OData query result contract|Save as|\$select/i.test(builderHelpText)) fail('BUILDER_ODATA_HELP', 'Visual Flow Builder OData step does not explain result contract');
+    if (!(await page.getByRole('button', { name: /Add filter/i }).count())) fail('BUILDER_ODATA_FILTERS', 'Visual Flow Builder OData step cannot add filter conditions');
+  }
 
   await ensurePackageWorkspace(page, uiBase, '/onec-cockpit');
   await ensurePackageWorkspace(page, uiBase, '/printing');

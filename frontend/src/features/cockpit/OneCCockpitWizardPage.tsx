@@ -88,8 +88,8 @@ function defaultForm(preset: string | null): WizardForm {
 function defaultLookups(preset: string | null): ODataLookupDraft[] {
   if (preset !== 'onec_post_two_odata_to_endpoint') return [];
   return [
-    { id: 'get_contractor', name: 'Find contractor by INN', connection: '1C ERP', resource: 'Catalog_ContrAgents', field: 'INN', operator: 'eq', value: '{{inn}}', saveAs: 'contractor', required: true },
-    { id: 'get_product', name: 'Find product by code', connection: '1C ERP', resource: 'Catalog_Products', field: 'Article', operator: 'eq', value: '{{product_code}}', saveAs: 'product', required: true },
+    { id: 'get_contractor', name: 'Find contractor by INN', connection: '1C ERP', resource: 'Catalog_ContrAgents', field: 'INN', operator: 'eq', value: '{{inn}}', select: 'Ref_Key,Description,INN', saveAs: 'contractor', required: true },
+    { id: 'get_product', name: 'Find product by code', connection: '1C ERP', resource: 'Catalog_Products', field: 'Article', operator: 'eq', value: '{{product_code}}', select: 'Ref_Key,Description,Article', saveAs: 'product', required: true },
   ];
 }
 
@@ -115,7 +115,7 @@ function builderFor(form: WizardForm, lookups: ODataLookupDraft[]): Record<strin
   });
   if (form.matcherPath) variables.add(form.matcherPath);
   const readSteps = Array.from(variables).map((name) => ({ id: `read_${slugify(name).replaceAll('-', '_')}`, type: 'read_variable', name: `Read ${name}`, path: `request.body.${name}`, save_as: name }));
-  const lookupSteps = lookups.map((lookup) => ({ id: lookup.id, type: 'odata_query', name: lookup.name, connection: lookup.connection || form.onecConnector, resource: lookup.resource, filter_builder: [{ field: lookup.field, operator: lookup.operator, value: lookup.value }], top: 1, save_as: lookup.saveAs, required: lookup.required }));
+  const lookupSteps = lookups.map((lookup) => ({ id: lookup.id, type: 'odata_query', name: lookup.name, connection: lookup.connection || form.onecConnector, resource: lookup.resource, filter_builder: [{ field: lookup.field, operator: lookup.operator, value: lookup.value }], select: (lookup.select ?? '').split(',').map((item) => item.trim()).filter(Boolean), orderby: lookup.orderby || undefined, top: 1, save_as: lookup.saveAs, required: lookup.required }));
   const buildJson = { id: 'build_target_payload', type: 'build_json', name: 'Build target JSON', save_as: 'target_payload', template: parseObject(form.payloadTemplate, 'Payload template') };
   const callEndpoint = { id: 'send_to_target', type: 'call_endpoint', name: 'Send to target', connector: form.targetConnector, method: form.targetMethod, path: form.targetPath, body: form.actionType === 'call_printer' ? '{{request.body}}' : '{{target_payload}}', response_mode: form.responseMode };
   const returnStep = { id: 'return_response', type: 'return_response', name: 'Return response', body: '{{response}}' };
@@ -196,7 +196,7 @@ export function OneCCockpitWizardPage() {
             <div className="lookup-editor-list">
               {lookups.map((lookup, index) => <ODataLookupBlockEditor key={lookup.id} lookup={lookup} index={index} connectors={options.data.onec_connectors} templates={options.data.odata_lookup_templates} onChange={(next) => setLookups(lookups.map((item) => item.id === lookup.id ? next : item))} onRemove={() => setLookups(lookups.filter((item) => item.id !== lookup.id))} />)}
             </div>
-            <button type="button" className="ghost-button" onClick={() => setLookups([...lookups, { id: `odata_${lookups.length + 1}`, name: 'OData lookup', connection: form.onecConnector, resource: '', field: '', operator: 'eq', value: '{{request.body.value}}', saveAs: `lookup_${lookups.length + 1}`, required: true }])}>Add OData lookup</button>
+            <button type="button" className="ghost-button" onClick={() => setLookups([...lookups, { id: `odata_${lookups.length + 1}`, name: 'OData lookup', connection: form.onecConnector, resource: '', field: '', operator: 'eq', value: '{{request.body.value}}', select: 'Ref_Key,Description', saveAs: `lookup_${lookups.length + 1}`, required: true }])}>Add OData lookup</button>
           </SectionCard>
 
           <JsonPayloadBuilder value={form.payloadTemplate} onChange={(value) => setForm({ ...form, payloadTemplate: value })} />

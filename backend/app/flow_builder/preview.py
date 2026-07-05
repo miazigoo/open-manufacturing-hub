@@ -111,6 +111,8 @@ def _compile_filter_builder(conditions: list[dict[str, Any]], scope: dict[str, A
         field = str(condition.get("field") or "").strip()
         operator = str(condition.get("operator") or "eq")
         raw_value = render_template(condition.get("value"), scope)
+        if not field or raw_value in (None, ""):
+            continue
         value = str(raw_value).replace("'", "''")
         if operator in {"contains", "startswith", "endswith"}:
             chunks.append(f"{operator}({field}, '{value}')")
