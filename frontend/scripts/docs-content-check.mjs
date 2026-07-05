@@ -7,6 +7,7 @@ const frontendDir = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(frontendDir, '..');
 
 const requiredPages = [
+  'start-here/beginner-path',
   'overview/overview', 'setup/connector-setup', 'setup/auth-secrets-static-token',
   'tools/connector', 'tools/odata-explorer', 'tools/xml-tools', 'tools/cockpit', 'tools/visual-flow-builder',
   'scenarios/onec-to-external-api', 'scenarios/onec-post-two-odata-json-endpoint', 'scenarios/xml-raw-forward',
@@ -36,7 +37,7 @@ for (const route of requiredPages) {
   assert(onecContent.includes(`'${section}'`) && onecContent.includes(`'${slug}'`), `frontend docs missing ${route}`);
   assert(service.includes(`"id": "${section}"`) && service.includes(`"slug": "${slug}"`), `backend docs API missing ${route}`);
 }
-for (const link of ['onec.troubleshooting', 'timeline.errors', 'integration-flows', 'test-console']) assert(docLinks.includes(link), `docLinks missing ${link}`);
+for (const link of ['onec.start', 'onec.troubleshooting', 'timeline.errors', 'integration-flows', 'test-console']) assert(docLinks.includes(link), `docLinks missing ${link}`);
 for (const id of requiredExamples) assert(examples[id], `required docs example missing: ${id}`);
 for (const id of requiredLearningExamples) assert(examples[id], `required learning example missing: ${id}`);
 for (const id of requiredAssets) assert(assets[id], `required screenshot asset missing: ${id}`);
@@ -57,7 +58,9 @@ assert(content.includes('onecPackageSeed,'), 'content.ts must use onecPackageSee
 assert(content.includes('Translation in progress') && content.includes('翻译正在进行中'), 'language fallback notes are missing');
 assert(renderer.includes('ExampleBlock') && renderer.includes('::example') && renderer.includes('::open-page') && renderer.includes('Screenshot'), 'MarkdownRenderer must support docs assets/examples/actions');
 assert(renderer.includes('~~~'), 'MarkdownRenderer must support tilde code fences used by academy pages');
+assert(renderer.includes('<ol') && renderer.includes('orderedList'), 'MarkdownRenderer must support numbered step lists');
 assert(codeBlock.includes('CopyButton'), 'Code blocks must expose copy controls');
+assert(onecContent.includes('Endpoint | URL в OMH') && onecContent.includes('Первый тестовый запрос'), '1C beginner path must explain basics in plain language');
 for (const section of ['case-studies', 'request-examples', 'error-playbooks']) assert(onecContent.includes(`id: '${section}'`), `1C docs missing ${section} section`);
 assert(onecContent.includes('caseStudyPages') && onecContent.includes('requestExamplePages') && onecContent.includes('errorPlaybookPages'), '1C docs must include expanded learning sections');
 assert(existsSync(path.join(repoRoot, 'docs/documentation-quality-checklist.md')), 'documentation-quality-checklist.md is missing');

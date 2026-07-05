@@ -226,6 +226,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
     '/test-console', '/test-console?exampleId=onec.two_odata_to_json_endpoint', '/odata-connections', '/odata-explorer', '/mappings', '/runtime/queue', '/runtime/dlq', '/runtime/monitor',
     '/workflows', '/execution/steps', '/maintenance', '/environments', '/change-sets', changeSetId ? `/change-sets/${changeSetId}` : null, '/change-sets/import',
     '/retention', '/notifications', '/onec-cockpit', '/printing', '/docs',
+    '/docs/onec/start-here/beginner-path',
     '/docs/onec/academy/lesson-02-create-odata-connection', '/docs/onec/recipes/recipe-01-onec-post-odata-json-endpoint',
     '/docs/onec/case-studies/case-03-wms-stock-fact-to-1c', '/docs/onec/request-examples/request-03-two-lookups-order',
     '/docs/onec/error-playbooks/odata-empty-required',
@@ -235,6 +236,18 @@ async function runBrowserSmoke(apiBase, uiBase) {
   ].filter(Boolean);
 
   for (const route of routes) await gotoRoute(page, uiBase, route);
+
+  await gotoRoute(page, uiBase, '/docs');
+  const startCards = await page.locator('.docs-start-card').count();
+  if (startCards < 3) fail('DOCS_START_CARDS', `Expected at least 3 guided start cards, got ${startCards}`);
+  const docsText = await page.locator('body').innerText();
+  if (!/Первый обмен с 1C|Start with a guided path|Начните с понятного маршрута/i.test(docsText)) fail('DOCS_START_COPY', 'Docs landing does not explain where a beginner should start');
+
+  await gotoRoute(page, uiBase, '/docs/onec/start-here/beginner-path');
+  const orderedLists = await page.locator('.docs-markdown ol').count();
+  if (orderedLists < 2) fail('DOCS_ORDERED_LISTS', `Expected beginner guide to render numbered steps, got ${orderedLists}`);
+  if (!(await page.getByText('Мини-словарь простыми словами').count())) fail('DOCS_BEGINNER_GLOSSARY', 'Beginner guide glossary is missing');
+  if (!(await page.locator('.docs-example-card').count())) fail('DOCS_BEGINNER_EXAMPLE', 'Beginner guide runnable example is missing');
 
   await ensurePackageWorkspace(page, uiBase, '/onec-cockpit');
   await ensurePackageWorkspace(page, uiBase, '/printing');

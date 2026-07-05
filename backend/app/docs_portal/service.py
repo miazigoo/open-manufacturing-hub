@@ -22,6 +22,9 @@ DOC_PACKAGES = [
         "title": {"ru": "1C", "en": "1C", "zh": "1C"},
         "description": {"ru": "OData, XML, HTTP-сервисы, Cockpit, Flow Builder, печать и диагностика.", "en": "OData, XML, HTTP services, Cockpit, Flow Builder, printing and diagnostics.", "zh": "OData、XML、HTTP 服务、驾驶舱、流程构建器、打印和诊断。"},
         "sections": [
+            {"id": "start-here", "title": {"ru": "Начните здесь", "en": "Start here", "zh": "从这里开始"}, "description": {"ru": "Первый понятный маршрут для пользователя без опыта интеграций.", "en": "A first clear path for users new to integrations.", "zh": "面向集成新手的第一条清晰路径。"}, "pages": [
+                {"slug": "beginner-path", "title": {"ru": "Начните здесь: первый понятный обмен с 1C", "en": "Start here: first understandable 1C exchange", "zh": "从这里开始：第一个易懂的 1C 交换"}, "description": {"ru": "Endpoint, token, OData profile, Flow, Test Console и Timeline простыми словами.", "en": "Endpoint, token, OData profile, Flow, Test Console and Timeline in plain language.", "zh": "用简单语言解释端点、令牌、OData 配置、Flow、Test Console 和 Timeline。"}},
+            ]},
             {"id": "overview", "title": {"ru": "Обзор 1C", "en": "1C Overview", "zh": "1C 概览"}, "description": {"ru": "Что дает 1C package и где он заканчивается.", "en": "What the 1C package adds and where it ends.", "zh": "1C 软件包提供的能力和边界。"}, "pages": [
                 {"slug": "overview", "title": {"ru": "Обзор 1C Package", "en": "1C Package overview", "zh": "1C 软件包概览"}, "description": {"ru": "OData, HTTP-сервисы, XML, печать, Flow Builder и diagnostics.", "en": "OData, HTTP services, XML, printing, Flow Builder and diagnostics.", "zh": "OData、HTTP 服务、XML、打印、流程构建器和诊断。"}},
             ]},

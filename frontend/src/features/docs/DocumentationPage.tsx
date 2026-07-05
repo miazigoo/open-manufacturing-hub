@@ -20,6 +20,13 @@ const copy = {
     languages: 'языка',
     planned: 'запланирован',
     translation: 'Перевод страницы ещё дорабатывается. Структура стабильна и соответствует русскому оригиналу.',
+    startTitle: 'Если вы здесь впервые, начните с понятного маршрута',
+    startSubtitle: 'Не нужно читать все подряд. Выберите задачу, повторите пример в Test Console, затем откройте Timeline и проверьте результат.',
+    paths: [
+      { label: 'Первый обмен с 1C', detail: 'Что установить, где создать OData profile, как собрать flow и куда смотреть после теста.', to: '/docs/onec/start-here/beginner-path', action: 'Открыть маршрут' },
+      { label: 'Готовые запросы', detail: 'HTTP, 1C-код, payload, OData filter и ожидаемый ответ для типовых сценариев.', to: '/docs/onec/request-examples/request-03-two-lookups-order', action: 'Посмотреть пример' },
+      { label: 'Ошибка в production', detail: 'Понятные playbooks: симптом, где смотреть artifact, как исправить и когда делать replay.', to: '/docs/onec/error-playbooks/odata-empty-required', action: 'Разобрать ошибку' },
+    ],
   },
   en: {
     eyebrow: 'In-app documentation',
@@ -32,6 +39,13 @@ const copy = {
     languages: 'languages',
     planned: 'planned',
     translation: 'Translation is in progress. The structure is stable and follows the Russian source page.',
+    startTitle: 'First time here? Start with a guided path',
+    startSubtitle: 'Do not read everything in order. Pick the job, run the example in Test Console, then inspect Timeline.',
+    paths: [
+      { label: 'First 1C exchange', detail: 'Install package, create OData profile, build a flow and verify the event.', to: '/docs/onec/start-here/beginner-path', action: 'Open path' },
+      { label: 'Ready requests', detail: 'HTTP, 1C code, payload, OData filter and expected response for common scenarios.', to: '/docs/onec/request-examples/request-03-two-lookups-order', action: 'View example' },
+      { label: 'Production error', detail: 'Symptom, artifact, fix and replay guidance in practical playbooks.', to: '/docs/onec/error-playbooks/odata-empty-required', action: 'Open playbook' },
+    ],
   },
   zh: {
     eyebrow: '应用内文档',
@@ -44,6 +58,13 @@ const copy = {
     languages: '语言',
     planned: '计划中',
     translation: '翻译正在完善中。页面结构稳定，并与俄文原版保持一致。',
+    startTitle: '第一次使用？从引导路径开始',
+    startSubtitle: '无需按顺序阅读所有内容。选择任务，在 Test Console 运行示例，然后检查 Timeline。',
+    paths: [
+      { label: '第一个 1C 交换', detail: '安装包、创建 OData 配置、构建 flow 并验证事件。', to: '/docs/onec/start-here/beginner-path', action: '打开路径' },
+      { label: '现成请求', detail: '常见场景的 HTTP、1C 代码、payload、OData filter 和预期响应。', to: '/docs/onec/request-examples/request-03-two-lookups-order', action: '查看示例' },
+      { label: '生产错误', detail: '通过 playbook 查看症状、artifact、修复和 replay。', to: '/docs/onec/error-playbooks/odata-empty-required', action: '打开 playbook' },
+    ],
   },
 };
 
@@ -54,6 +75,7 @@ export function DocumentationPage() {
   const location = useLocation();
   const params = useParams();
   const isSearch = location.pathname === '/docs/search';
+  const isLanding = !isSearch && !params.packageId;
   const page = findDocPage(bundle, params.packageId, params.sectionId, params.pageId);
   const toc = extractToc(page.markdown);
 
@@ -88,6 +110,24 @@ export function DocumentationPage() {
             <DocsSearch bundle={bundle} />
           ) : (
             <>
+              {isLanding && (
+                <section className="docs-start-panel">
+                  <div>
+                    <span className="eyebrow">Start here</span>
+                    <h2>{texts.startTitle}</h2>
+                    <p>{texts.startSubtitle}</p>
+                  </div>
+                  <div className="docs-start-grid">
+                    {texts.paths.map((item) => (
+                      <Link key={item.to} className="docs-start-card" to={item.to}>
+                        <strong>{item.label}</strong>
+                        <span>{item.detail}</span>
+                        <em>{item.action}</em>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              )}
               {page.translationStatus === 'in_progress' && <div className="docs-translation-note">{texts.translation}</div>}
               <div className="docs-page-header">
                 <span className="eyebrow">{page.packageId} / {page.sectionId}</span>

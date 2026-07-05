@@ -29,6 +29,7 @@ function parseMarkdown(markdown: string) {
   const nodes: ReactElement[] = [];
   let paragraph: string[] = [];
   let list: string[] = [];
+  let orderedList: string[] = [];
   let table: string[] = [];
   let code: string[] | null = null;
   let codeLanguage = 'text';
@@ -43,6 +44,11 @@ function parseMarkdown(markdown: string) {
     nodes.push(<ul key={`ul-${nodes.length}`}>{list.map((item, index) => <li key={index}>{renderInline(item)}</li>)}</ul>);
     list = [];
   }
+  function flushOrderedList() {
+    if (!orderedList.length) return;
+    nodes.push(<ol key={`ol-${nodes.length}`}>{orderedList.map((item, index) => <li key={index}>{renderInline(item)}</li>)}</ol>);
+    orderedList = [];
+  }
   function flushTable() {
     if (table.length < 2) { table = []; return; }
     const rows = table.map((line) => line.split('|').map((cell) => cell.trim()).filter(Boolean));
@@ -50,7 +56,7 @@ function parseMarkdown(markdown: string) {
     nodes.push(<table key={`tbl-${nodes.length}`}><thead><tr>{head.map((cell) => <th key={cell}>{renderInline(cell)}</th>)}</tr></thead><tbody>{body.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{renderInline(cell)}</td>)}</tr>)}</tbody></table>);
     table = [];
   }
-  function flushAll() { flushParagraph(); flushList(); flushTable(); }
+  function flushAll() { flushParagraph(); flushList(); flushOrderedList(); flushTable(); }
 
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
@@ -103,7 +109,7 @@ function parseMarkdown(markdown: string) {
     if (screenshot) { flushAll(); nodes.push(<ScreenshotPlaceholder key={`shot-${nodes.length}`} label={screenshot[1].trim()} />); continue; }
 
     if (!line.trim()) { flushAll(); continue; }
-    if (line.startsWith('|')) { flushParagraph(); flushList(); table.push(line); continue; }
+    if (line.startsWith('|')) { flushParagraph(); flushList(); flushOrderedList(); table.push(line); continue; }
     const heading = /^(#{1,4})\s+(.+)$/.exec(line.trim());
     if (heading) {
       flushAll();
@@ -119,7 +125,12 @@ function parseMarkdown(markdown: string) {
     const quote = /^>\s+(.+)$/.exec(line.trim());
     if (quote) { flushAll(); nodes.push(<blockquote key={`q-${nodes.length}`}>{renderInline(quote[1])}</blockquote>); continue; }
     const bullet = /^[-*]\s+(.+)$/.exec(line.trim());
-    if (bullet) { flushParagraph(); flushTable(); list.push(bullet[1]); continue; }
+    if (bullet) { flushParagraph(); flushOrderedList(); flushTable(); list.push(bullet[1]); continue; }
+    const ordered = /^\d+\.\s+(.+)$/.exec(line.trim());
+    if (ordered) { flushParagraph(); flushList(); flushTable(); orderedList.push(ordered[1]); continue; }
+    flushList();
+    flushOrderedList();
+    flushTable();
     paragraph.push(line.trim());
   }
   if (code !== null) nodes.push(<CodeBlockWithCopy key={`code-${nodes.length}`} language={codeLanguage} code={code.join('\n')} />);

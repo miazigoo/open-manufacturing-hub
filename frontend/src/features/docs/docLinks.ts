@@ -1,6 +1,7 @@
 export const docLinks: Record<string, string> = {
   'core.overview': '/docs/core/start/overview',
   'core.concepts': '/docs/core/start/concepts',
+  'onec.start': '/docs/onec/start-here/beginner-path',
   'onec.overview': '/docs/onec/overview/overview',
   'onec.connector': '/docs/onec/tools/connector',
   'onec.odata-explorer': '/docs/onec/tools/odata-explorer',
