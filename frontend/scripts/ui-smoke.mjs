@@ -167,6 +167,7 @@ async function assertHealthy(page, route) {
 }
 
 async function gotoRoute(page, uiBase, route) {
+  log(`route ${route}`);
   await page.goto(`${uiBase}${route}`, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
   await stable(page);
   await assertHealthy(page, route);
@@ -301,7 +302,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
 
   await gotoRoute(page, uiBase, '/docs/onec/start-here/start-in-15-minutes');
   const start15Text = await page.locator('body').innerText();
-  for (const required of ['OData-подключение OData ERP', 'Входную точку интеграции', 'Одну выборку OData', 'Целевой JSON', 'code1', 'code2', 'Timeline opened']) {
+  for (const required of ['OData-подключение OData ERP', 'Входную точку интеграции', 'Одну выборку OData', 'Целевой JSON', 'code1', 'code2', 'Timeline opened', 'Промежуточный результат', 'Таблица полей UI', 'Что появится в Timeline', 'Для разработчика 1С']) {
     if (!start15Text.includes(required)) fail('PACK_A_START_15', required);
   }
 
@@ -337,7 +338,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
 
   await gotoRoute(page, uiBase, '/docs/onec/academy/first-odata-query-contractor');
   const firstOdataText = await page.locator('body').innerText();
-  for (const required of ['Save result as: contractor', 'Required: yes', 'contractor-uuid', "Catalog_Контрагенты?$filter=ИНН eq '7707083893'&$top=1", 'Flow Builder first OData contractor query']) {
+  for (const required of ['Save result as: contractor', 'Required: yes', 'contractor-uuid', "Catalog_Контрагенты?$filter=ИНН eq '7707083893'&$top=1", 'Flow Builder first OData contractor query', 'Промежуточный результат', 'Что появится в Timeline', 'Что вы должны увидеть', 'Для разработчика 1С', 'odata_query_request', 'contractor.Ref_Key']) {
     if (!firstOdataText.includes(required)) fail('PACK_B_FIRST_ODATA', required);
   }
 
@@ -381,6 +382,10 @@ async function runBrowserSmoke(apiBase, uiBase) {
     'send_to_dnp',
     'Открыть Test Console',
     'Test Console Dry Run for full flow',
+    'Если совсем коротко',
+    'Dry Run показывает будущий результат',
+    'target_payload',
+    'Для разработчика 1С',
   ]) {
     if (!clickByClickText.includes(required)) fail('TASK_046_CLICK_BY_CLICK', required);
   }
@@ -411,14 +416,14 @@ async function runBrowserSmoke(apiBase, uiBase) {
 
   const troubleshootingChecks = [
     ['/docs/onec/troubleshooting', ['Troubleshooting по симптомам', 'Connection/OData', 'Endpoint/Request', 'Pipeline', 'Runtime', 'Printer', 'OData query returns empty result', '1C receives 404 from OMH']],
-    ['/docs/onec/troubleshooting/odata-empty-result', ['Symptom: OData query returns empty result', 'What you see', 'What it means', 'Quick fix', 'Full checklist', 'Where to look in OMH', 'Example', 'Related lessons', 'ODATA_LOOKUP_NOT_FOUND', 'Artifact odata_query_request', 'Artifact odata_query_response']],
+    ['/docs/onec/troubleshooting/odata-empty-result', ['Symptom: OData query returns empty result', 'What you see', 'What it means', 'Quick fix', 'Full checklist', 'Where to look in OMH', 'Example', 'Related lessons', 'ODATA_LOOKUP_NOT_FOUND', 'Artifact odata_query_request', 'Artifact odata_query_response', 'По-русски: OMH дошел до 1C']],
     ['/docs/onec/troubleshooting/omh-404-from-1c', ['Symptom: 1C receives 404 from OMH', 'frontend URL instead of backend API URL', '/api/bus/in/{slug}', 'Integration Bus', 'Test Console']],
-    ['/docs/onec/troubleshooting/onec-returned-401', ['Symptom: 1C returned 401 Unauthorized', 'X-OMH-Token', 'odata_query_request', 'OData Connections', 'Test metadata']],
+    ['/docs/onec/troubleshooting/onec-returned-401', ['Symptom: 1C returned 401 Unauthorized', 'X-OMH-Token', 'odata_query_request', 'OData Connections', 'Test metadata', 'Неверный логин или пароль для подключения к 1C']],
     ['/docs/onec/troubleshooting/json-builder-variable-missing', ['Symptom: JSON Builder variable missing', 'contractor.Ref_Key', 'target_payload.json', 'Собираем целевой JSON']],
     ['/docs/onec/troubleshooting/worker-not-processing', ['Symptom: Worker is not processing', 'Worker heartbeat', 'Transaction Monitor', 'Queue status']],
     ['/docs/onec/troubleshooting/printer-unavailable', ['Symptom: Printer unavailable', 'Connection refused 192.168.1.50:9100', 'zpl.rendered.txt', 'Printing page']],
     ['/docs/onec/troubleshooting/zpl-label-wrong', ['Symptom: ZPL sent but label wrong', '^XA', 'barcode', 'printer DPI']],
-    ['/docs/onec/troubleshooting/event-moved-to-dlq', ['Symptom: Event moved to DLQ', 'Replay from DLQ', 'Queue attempt history', 'Audit log']],
+    ['/docs/onec/troubleshooting/event-moved-to-dlq', ['Symptom: Event moved to DLQ', 'Replay from DLQ', 'Queue attempt history', 'Audit log', 'DLQ — это не причина ошибки']],
   ];
   for (const [route, requiredItems] of troubleshootingChecks) {
     await gotoRoute(page, uiBase, route);
@@ -486,7 +491,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
 
   const odataCourseChecks = [
     ['/docs/onec/odata-course/what-is-odata-for-omh', ['Что такое OData в 1C', 'Catalog_Контрагенты', 'Document_ЗаказКлиента', 'Ref_Key']],
-    ['/docs/onec/odata-course/multiple-connections', ['OData ERP', 'OData УСП', 'OData WMS', 'secret_erp_odata_password']],
+    ['/docs/onec/odata-course/multiple-connections', ['OData ERP', 'OData УСП', 'OData WMS', 'secret_erp_odata_password', 'exchange_erp', 'exchange_usp']],
     ['/docs/onec/odata-course/select-connection-in-flow', ['Flow Builder -> Add Step -> OData Query', 'Save result as: contractor', 'OData: найти контрагента по ИНН']],
     ['/docs/onec/odata-course/filter-basics', ['ИНН eq', 'DeletionMark eq false', 'contains(Description', 'value']],
     ['/docs/onec/odata-course/select-top-orderby', ['$select=Ref_Key,Description,ИНН', '$top=1', '$orderby=Description', 'OData: найти заказ по номеру']],

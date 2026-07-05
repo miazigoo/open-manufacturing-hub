@@ -139,6 +139,25 @@ assert(onecAcademyContent.includes('Troubleshooting по симптомам') &&
 assert(onecAcademyContent.includes('Практические упражнения и проверка навыков') && onecAcademyContent.includes('Open Exercise in Test Console') && onecAcademyContent.includes('Readiness checklist для 1C интеграций'), 'Task 048 exercises/readiness docs are incomplete');
 assert(onecAcademyContent.includes('## Вопросы для самопроверки') && onecAcademyContent.includes('Чем OData Connection отличается от Endpoint?') && onecAcademyContent.includes('Где вы видите точный OData filter, который OMH отправил в 1C?'), 'Task 048 academy self-check questions are incomplete');
 assert(onecAcademyContent.includes('- [ ] I can create OData connection.') && onecAcademyContent.includes('- [ ] I can retry failed event.') && onecAcademyContent.includes('You are ready to configure basic 1C integrations if:'), 'Task 048 readiness checklist/mini certification is incomplete');
+for (const task049Required of [
+  '## Если совсем коротко',
+  '## Промежуточный результат',
+  '## Как UI поля становятся переменными',
+  '## Что появится в Timeline',
+  '## Что вы должны увидеть',
+  '## Для разработчика 1С',
+  'По-русски: OMH дошел до 1C',
+  'Неверный логин или пароль для подключения к 1C',
+  'DLQ — это не причина ошибки',
+  'exchange_erp_training',
+  'exchange_erp',
+  'exchange_usp',
+  'json_builder_template',
+  'outgoing_request',
+  'incoming_response',
+]) assert(allDocsSource.includes(task049Required), `Task 049 pedagogical docs quality missing: ${task049Required}`);
+assert(!allDocsSource.includes('"username": "Администратор"'), 'Task 049 docs must not use Administrator as primary OData username');
+assert(!allDocsSource.includes('"password": "123"'), 'Task 049 docs must not use raw 123 password in primary examples');
 for (const forbidden of ['## What you will build', '## Before you start', '## Что вы соберете', '## Перед началом']) {
   assert(!onecAcademyContent.includes(forbidden), `forbidden lesson heading remains: ${forbidden}`);
 }

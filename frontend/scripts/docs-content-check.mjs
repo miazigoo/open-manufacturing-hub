@@ -378,6 +378,30 @@ for (const task048Required of [
 ]) assert(onecDocsContent.includes(task048Required), `Task 048 readiness docs missing: ${task048Required}`);
 const exercisePageSlugs = [...onecAcademyContent.matchAll(/exercisePage\(\{\s*slug: '([^']+)'/g)].map((match) => match[1]);
 assert(exercisePageSlugs.length >= 10, `Task 048 requires at least 10 exercises, got ${exercisePageSlugs.length}`);
+for (const task049Required of [
+  '## Если совсем коротко',
+  '## Промежуточный результат',
+  '## Как UI поля становятся переменными',
+  '## Таблица полей UI',
+  '## Что появится в Timeline',
+  '## Что вы должны увидеть',
+  '## Для разработчика 1С',
+  'Dry Run показывает будущий результат',
+  'Dry Run показывает будущий `target_payload`',
+  'json_builder_template',
+  'json_builder_result',
+  'outgoing_request',
+  'incoming_response',
+  'Неверный логин или пароль для подключения к 1C',
+  'DLQ — это не причина ошибки',
+  'OMH дошел до 1C',
+  'exchange_erp',
+  'exchange_usp',
+  'exchange_erp_training',
+  'Не используйте `Администратор / 123` как основной пример подключения',
+]) assert(onecDocsContent.includes(task049Required), `Task 049 pedagogical rewrite missing: ${task049Required}`);
+assert(!onecDocsContent.includes('"username": "Администратор"'), 'Task 049 forbids Administrator username in primary docs examples');
+assert(!onecDocsContent.includes('"password": "123"'), 'Task 049 forbids raw 123 password in primary docs examples');
 assert(odataConnectionsPage.includes('Create OData Connection') && odataConnectionsPage.includes('Choose the 1C base where OMH will search data.'), 'OData Connections UI wording must guide users to OData Connection');
 assert(odataExplorerPage.includes('Create OData Connection') && odataExplorerPage.includes('Choose the 1C base where OMH will search data.') && odataExplorerPage.includes('/docs/onec/academy/test-odata-explorer'), 'OData Explorer UI wording must guide users to OData Connection and lesson');
 assert(odataLookupBlockEditor.includes('OData Connection') && odataLookupBlockEditor.includes('Select OData Connection'), 'OData lookup builder must say OData Connection, not generic connector');

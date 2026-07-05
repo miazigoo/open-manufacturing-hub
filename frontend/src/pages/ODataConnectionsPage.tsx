@@ -10,7 +10,7 @@ import { StatusBadge } from '../components/StatusBadge';
 
 const presets = [
   { name: 'OData ERP', base_url: 'http://erp-server/base/odata/standard.odata', username: 'exchange_user', tags: ['ERP', 'contractors', 'products'] },
-  { name: 'OData УСП', base_url: 'http://usp-server/base/odata/standard.odata', username: 'Администратор', tags: ['УСП', 'marking'] },
+  { name: 'OData УСП', base_url: 'http://usp-server/base/odata/standard.odata', username: 'exchange_usp', tags: ['УСП', 'marking'] },
   { name: 'OData WMS', base_url: 'http://wms-server/base/odata/standard.odata', username: 'wms_exchange', tags: ['WMS', 'warehouse'] },
 ];
 

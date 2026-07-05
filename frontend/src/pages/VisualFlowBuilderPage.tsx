@@ -231,8 +231,8 @@ export function VisualFlowBuilderPage() {
     const updateFilter = (index: number, patch: Record<string, unknown>) => update(step.id, { filter_builder: filters.map((filter, filterIndex) => filterIndex === index ? { ...filter, ...patch } : filter) });
     return <div className="stack-form">
       <div className="builder-help-card">
-        <strong>OData query result contract</strong>
-        <span>`$select` controls which fields 1C returns. `Save as` stores the first row as <code>{saveAs}</code>. Later steps can use <code>{resultPath}</code>, <code>{stepPath}</code>, or list data from <code>{`{{steps.${step.id}.items}}`}</code>. To feed another OData query, put one of these placeholders into its Value source.</span>
+        <strong>Что станет переменной OData</strong>
+        <span>`$select` controls which fields 1C returns. `Save as` stores the first row as <code>{saveAs}</code>. Дальше JSON Builder или следующий OData step может взять <code>{resultPath}</code>, <code>{stepPath}</code> или список строк <code>{`{{steps.${step.id}.items}}`}</code>. Чтобы один OData запрос стал фильтром для другого, вставьте этот placeholder в Value source.</span>
       </div>
       <div className="metadata-grid compact-grid no-margin">
         <label className="field-label">OData connection<select value={selectedConnectionId} onChange={(event) => { const selected = odataOptions.find((item) => item.id === event.target.value); update(step.id, { connection_id: event.target.value, connection: selected?.label ?? '' }); }} title="Named OData profile: ERP, УСП, WMS. Create it once, reuse it in every flow."><option value="">Select OData profile</option>{odataOptions.map((connection) => <option key={connection.id} value={connection.id}>{connection.label} · {connection.base_url}</option>)}</select></label>
@@ -240,7 +240,7 @@ export function VisualFlowBuilderPage() {
         <label className="field-label">Save as<input value={saveAs} onChange={(event) => update(step.id, { save_as: event.target.value })} title="Variable name for the first OData row. Use it in JSON or next filters: {{contractor.Ref_Key}}." /></label>
       </div>
       <div className="odata-filter-builder">
-        <div className="panel-toolbar compact-toolbar"><h3>Filters</h3><button type="button" className="ghost-button" onClick={() => update(step.id, { filter_builder: [...filters, { field: '', operator: 'eq', value: '' }] })}>Add filter</button></div>
+        <div className="panel-toolbar compact-toolbar"><h3>Filters / условия поиска</h3><button type="button" className="ghost-button" onClick={() => update(step.id, { filter_builder: [...filters, { field: '', operator: 'eq', value: '' }] })}>Add filter</button></div>
         {filters.map((filter, index) => (
           <div className="metadata-grid compact-grid no-margin" key={index}>
             <label className="field-label">Field<input value={String(filter.field ?? '')} onChange={(event) => updateFilter(index, { field: event.target.value })} title="OData field name. Check it in Explorer before using in production." /></label>
@@ -254,7 +254,7 @@ export function VisualFlowBuilderPage() {
         <label className="field-label">$select<input value={Array.isArray(step.select) ? step.select.join(',') : String(step.select ?? '')} onChange={(event) => update(step.id, { select: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} title="Comma-separated fields returned by 1C. Keep only fields used by JSON builder or next OData step." /></label>
         <label className="field-label">$top<input value={String(step.top ?? 1)} onChange={(event) => update(step.id, { top: Number(event.target.value) || 1 })} title="top=1 saves the first row as object. top>1 saves a list; use steps.<step>.items for the full list." /></label>
         <label className="field-label">$orderby<input value={String(step.orderby ?? '')} onChange={(event) => update(step.id, { orderby: event.target.value })} title="Optional deterministic ordering, e.g. Date desc before top=1." /></label>
-        <label className="check-row"><input type="checkbox" checked={step.required !== false} onChange={(event) => update(step.id, { required: event.target.checked })} /> Required result</label>
+        <label className="check-row"><input type="checkbox" checked={step.required !== false} onChange={(event) => update(step.id, { required: event.target.checked })} /> Required result / остановить flow, если строка не найдена</label>
       </div>
       <div className="hint-chip-row">
         {['{{request.body.inn}}', '{{inn}}', resultPath, stepPath, `{{steps.${step.id}.items}}`].map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)} title="Click to copy placeholder">{hint}</button>)}
@@ -262,7 +262,7 @@ export function VisualFlowBuilderPage() {
       <div className="hint-chip-row">
         {['Ref_Key,Description,ИНН', 'Ref_Key,Description,Артикул', 'Ref_Key,Number,Date,Posted', 'Ref_Key,Склад_Key,Номенклатура_Key,Количество'].map((select) => <button key={select} type="button" className="hint-chip" onClick={() => update(step.id, { select: select.split(',') })} title="Use this $select preset">{select}</button>)}
       </div>
-      <div className="action-row wrap-actions"><button type="button" className="ghost-button" onClick={runPreview} disabled={preview.isPending}>Test query in preview</button><Link className="primary-link" to="/odata-connections">Manage OData connections</Link><Link className="primary-link" to="/docs/onec/tools/odata-chaining-fields">OData chaining guide</Link></div>
+      <div className="action-row wrap-actions"><button type="button" className="ghost-button" onClick={runPreview} disabled={preview.isPending}>Preview OData query</button><Link className="primary-link" to="/odata-connections">Manage OData connections</Link><Link className="primary-link" to="/docs/onec/tools/odata-chaining-fields">OData chaining guide</Link></div>
     </div>;
   }
 
@@ -282,7 +282,7 @@ export function VisualFlowBuilderPage() {
 
   function BuildJsonEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {
     const template = asJson(step.template ?? {});
-    return <div className="stack-form"><label className="field-label">Save as<input value={String(step.save_as ?? 'target_payload')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label><div className="builder-help-card"><strong>Pick only the fields you need</strong><span>Use OData result variables directly: <code>{'{{contractor.Ref_Key}}'}</code>, <code>{'{{product.Description}}'}</code>, <code>{'{{steps.get_prices.items}}'}</code>. Full placeholders preserve arrays/objects; embedded placeholders become strings.</span></div><label className="field-label">JSON template<CodeEditor value={template} onChange={(value) => { try { update(step.id, { template: parseJsonObject(value, 'JSON template') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid JSON template'); } }} language="json" minRows={8} title="Rendered after OData/Resolver/Transform steps. Use only fields target endpoint needs." /></label><div className="hint-chip-row">{['{{request.body.pool_id}}', '{{contractor.Ref_Key}}', '{{product.Ref_Key}}', '{{steps.get_contractor.first.Description}}'].map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)}>{hint}</button>)}</div><div className="success-note">Full placeholders preserve source type<span>{'"codes": "{{request.body.codes}}"'}</span></div></div>;
+    return <div className="stack-form"><label className="field-label">Save as<input value={String(step.save_as ?? 'target_payload')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label><div className="builder-help-card"><strong>Собирайте только нужные поля</strong><span>Используйте OData result variables напрямую: <code>{'{{contractor.Ref_Key}}'}</code>, <code>{'{{product.Description}}'}</code>, <code>{'{{steps.get_prices.items}}'}</code>. Если placeholder занимает всё значение, массивы и объекты сохраняют тип; если он вставлен внутрь строки, получится строка.</span></div><label className="field-label">JSON template<CodeEditor value={template} onChange={(value) => { try { update(step.id, { template: parseJsonObject(value, 'JSON template') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid JSON template'); } }} language="json" minRows={8} title="Rendered after OData/Resolver/Transform steps. Use only fields target endpoint needs." /></label><div className="hint-chip-row">{['{{request.body.pool_id}}', '{{contractor.Ref_Key}}', '{{product.Ref_Key}}', '{{steps.get_contractor.first.Description}}'].map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)}>{hint}</button>)}</div><div className="success-note">Full placeholders preserve source type<span>{'"codes": "{{request.body.codes}}"'}</span></div></div>;
   }
 
   function CallEndpointEditor({ step, update, connectorNames }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; connectorNames: string[] }) {

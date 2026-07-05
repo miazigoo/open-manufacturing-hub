@@ -239,6 +239,418 @@ function withSelfCheck(seed: PageSeed): PageSeed {
   return { ...seed, markdown: `${seed.markdown}${block}` };
 }
 
+type PedagogyBlock = {
+  short?: string[];
+  intermediate: string[];
+  variables: string[];
+  artifacts: string[];
+  shouldSee: string[];
+  developer: string;
+  fieldTable?: string[];
+  errors?: string[];
+};
+
+const defaultPedagogyBlock: PedagogyBlock = {
+  intermediate: [
+    'Появляется проверяемый результат текущего шага, а не просто “настройка сохранена”.',
+    'Следующий шаг должен явно использовать этот результат как переменную, field value или artifact.',
+  ],
+  variables: [
+    '`request.body.*` — значения из тела входящего запроса 1C.',
+    '`contractor.*`, `product.*`, `target_payload` — переменные, которые создают шаги интеграционного потока.',
+  ],
+  artifacts: [
+    '`incoming.request.json` — тело входящего запроса.',
+    '`step.result.json` — сохраненный результат шага.',
+    '`step.error.json` — понятная ошибка, если шаг не выполнен.',
+  ],
+  shouldSee: [
+    'У шага есть понятное имя.',
+    'Preview или Timeline показывает результат без чтения backend logs.',
+    'Понятно, что делать дальше при success и при ошибке.',
+  ],
+  developer: 'Держите контракт простым: 1C отправляет HTTP POST в OMH, а OMH уже выполняет выборки OData, сборку JSON и диагностику в Timeline. Писать Python-код в 1C не нужно.',
+};
+
+const pedagogyBySlug: Record<string, PedagogyBlock> = {
+  'create-odata-connection': {
+    intermediate: [
+      'В списке OData Connections появляется подключение `OData ERP`.',
+      'Проверка подключения (`Test $metadata`) показывает, может ли OMH прочитать структуру опубликованной базы 1C.',
+    ],
+    variables: [
+      'Переменных потока пока нет. Вы создаете reusable connection, которую потом выберете в OData Explorer и Flow Builder.',
+      'Имя `OData ERP` должно сразу отвечать пользователю: в какую базу 1C пойдет OMH.',
+    ],
+    artifacts: [
+      '`odata_metadata_request` — какой `$metadata` URL проверял OMH.',
+      '`odata_metadata_response` — что 1C вернула при проверке подключения.',
+    ],
+    shouldSee: [
+      'OData connection появилась в списке.',
+      'Test $metadata показывает success или понятную внешнюю ошибку 1C.',
+      'Это подключение можно выбрать в OData Explorer.',
+    ],
+    fieldTable: [
+      '| UI field | Пример | Что означает |',
+      '| --- | --- | --- |',
+      '| OData Connection | `OData ERP` | база 1C, где OMH будет искать данные |',
+      '| Base URL | `/odata/standard.odata` | опубликованный OData endpoint 1C, не web-клиент |',
+      '| Username | `exchange_user` | пользователь 1C для обмена |',
+      '| Password | `$secret:secret_odata_erp_password` | пароль хранится в Secrets Store |',
+      '| Test $metadata | кнопка проверки | проверяет URL, логин, пароль и права чтения metadata |',
+    ],
+    developer: 'Попросите администратора 1C создать отдельного пользователя обмена, например `exchange_user`. Не используйте основного администратора как рекомендованный вариант для production.',
+    errors: [
+      'Если `$metadata` не открывается, не переходите в Flow Builder.',
+      'Если ошибка 401, проверяйте логин, пароль и права пользователя 1C.',
+      'Если ошибка 404, почти всегда указан не OData URL, а другой адрес публикации.',
+    ],
+  },
+  'test-odata-explorer': {
+    intermediate: [
+      'OMH показывает список ресурсов из metadata выбранной базы 1C.',
+      'Первый запрос `$top=5` возвращает несколько строк без сложного фильтра.',
+    ],
+    variables: [
+      'Переменных потока еще нет. Но вы уже узнаете точные имена resource и fields, которые потом попадут в OData Query step.',
+      'Например: `Catalog_Контрагенты`, `Ref_Key`, `Description`, `ИНН`.',
+    ],
+    artifacts: [
+      '`odata_explorer_request` — безопасный учебный запрос в 1C.',
+      '`odata_explorer_response` — ответ 1C, по которому вы проверяете поля.',
+    ],
+    shouldSee: [
+      'Resource list загрузился из metadata.',
+      'В ответе есть `Ref_Key` и `Description`.',
+      'Вы можете скопировать resource и field names в Flow Builder без угадывания.',
+    ],
+    fieldTable: [
+      '| UI field | Пример | Что означает |',
+      '| --- | --- | --- |',
+      '| OData Connection | `OData ERP` | конкретная база 1C |',
+      '| Resource | `Catalog_Контрагенты` | справочник/таблица из metadata |',
+      '| `$select` | `Ref_Key,Description,ИНН` | какие поля вернуть |',
+      '| `$top` | `5` | безопасный лимит строк |',
+    ],
+    developer: 'Для разработчика 1C это доказательство, что проблема не в коде POST из 1C: OMH уже умеет читать опубликованную базу через OData.',
+  },
+  'find-contractor-by-inn': {
+    intermediate: [
+      'OData Explorer возвращает одну строку контрагента.',
+      'В этой строке есть `Ref_Key`, который дальше станет UUID контрагента в итоговом JSON.',
+    ],
+    variables: [
+      'В учебном запросе переменная еще не создана, но именно этот результат позже будет сохранен как `contractor`.',
+      'Следующие шаги смогут читать `contractor.Ref_Key`, `contractor.Description`, `contractor.ИНН`.',
+    ],
+    artifacts: [
+      '`odata_query_request` — resource, filter, `$select`, `$top`.',
+      '`odata_query_response` — raw ответ 1C.',
+      '`odata_query_result` — первый найденный объект, сохраненный как переменная.',
+    ],
+    shouldSee: [
+      'В результате есть `Ref_Key`.',
+      'Фильтр использует точное поле `ИНН` из metadata.',
+      'Если ответ `{ "value": [] }`, вы понимаете, что OMH дошел до 1C, но 1C не нашла строку.',
+    ],
+    developer: 'Если в 1C другое имя поля ИНН, передайте внедренцу точное OData имя из metadata. Не ориентируйтесь только на подпись поля в форме 1C.',
+  },
+  'create-inbound-endpoint': {
+    intermediate: [
+      'Появляется URL `/api/bus/in/onec-pool-to-dnp`, на который 1C сможет отправлять POST.',
+      'OMH уже знает input mode, response mode и способ проверки входного token.',
+    ],
+    variables: [
+      'После первого POST OMH создаст `request.body` — тело входящего запроса.',
+      'Поля из JSON будут доступны как `request.body.inn`, `request.body.product_code`, `request.body.pool_id`, `request.body.codes`.',
+    ],
+    artifacts: [
+      '`incoming.request.json` — исходное тело запроса от 1C.',
+      '`incoming.request.headers` — headers с redaction секретов.',
+      '`route.match.json` — как OMH сопоставил запрос с endpoint/flow.',
+    ],
+    shouldSee: [
+      'Endpoint виден в Integration Bus или Flow Builder.',
+      'Test Console может выбрать этот endpoint.',
+      'Ошибочный frontend URL не используется вместо backend API URL.',
+    ],
+    fieldTable: [
+      '| UI field | Пример | Что означает |',
+      '| --- | --- | --- |',
+      '| Slug | `onec-pool-to-dnp` | часть URL после `/api/bus/in/` |',
+      '| Input mode | `JSON` | OMH ожидает JSON body |',
+      '| Response mode | `accepted_event` | 1C быстро получает `event_id` |',
+      '| Auth | `static token` | защита endpoint от чужих запросов |',
+    ],
+    developer: 'Для разработчика 1C нужен только HTTP POST на backend API URL. Внешний вид сайта и auth-пакет UI не меняют адрес интеграционного endpoint.',
+    errors: [
+      '404 от OMH: проверьте slug, `/api/bus/in/{slug}` и backend host.',
+      '401/403 от OMH: проверьте `X-OMH-Token`, а не OData пароль.',
+    ],
+  },
+  'read-request-fields': {
+    intermediate: [
+      'OMH разбирает входящий JSON и показывает поля, которые дальше можно использовать.',
+      'Теперь есть значения `inn`, `product_code`, `pool_id`, `codes`.',
+    ],
+    variables: [
+      '`request.body.inn` — ИНН контрагента.',
+      '`request.body.product_code` — код товара.',
+      '`request.body.pool_id` — номер/код пула.',
+      '`request.body.codes` — массив кодов маркировки.',
+    ],
+    artifacts: [
+      '`incoming.request.json` — исходный JSON от 1C.',
+      '`read_fields.result.json` — извлеченные значения для следующих шагов.',
+    ],
+    shouldSee: [
+      '`codes` остался массивом, а не строкой.',
+      'Preview variables показывает все четыре поля.',
+      'Следующий OData step может использовать `request.body.inn`.',
+    ],
+    developer: 'Если структура JSON меняется в 1C, сначала обновите paths чтения полей. Иначе OData filter будет пустым или неверным.',
+  },
+  'first-odata-query-contractor': {
+    intermediate: [
+      'После Preview появляется переменная `contractor`.',
+      'Внутри нее есть `contractor.Ref_Key`, `contractor.Description`, `contractor.ИНН`.',
+    ],
+    variables: [
+      '`contractor.Ref_Key` — UUID контрагента в 1C.',
+      '`contractor.Description` — название контрагента.',
+      '`contractor.ИНН` — проверочное значение, по которому нашли строку.',
+    ],
+    artifacts: [
+      '`odata_query_request` — точный OData filter, который OMH отправил в 1C.',
+      '`odata_query_response` — raw ответ 1C.',
+      '`odata_query_result` — объект, сохраненный как `contractor`.',
+    ],
+    shouldSee: [
+      'В Preview есть `contractor.Ref_Key`.',
+      'В Timeline есть artifact `odata_query_response`.',
+      'Переменная `contractor` доступна в следующих шагах.',
+    ],
+    fieldTable: [
+      '| UI field | Example | Meaning |',
+      '| --- | --- | --- |',
+      '| OData Connection | `OData ERP` | 1C base where OMH will search data |',
+      '| Resource | `Catalog_Контрагенты` | 1C catalog/table to query |',
+      '| Filter field | `ИНН` | field in 1C resource |',
+      '| Operator | `equals` | comparison type |',
+      '| Value source | `request.body.inn` | where value comes from |',
+      '| Save as | `contractor` | variable name for result |',
+      '| Required | `yes` | fail if not found |',
+    ],
+    developer: 'Если в 1C есть пробелы или форматирование ИНН, лучше нормализовать значение до OData Query: trim/remove spaces.',
+    errors: [
+      'Пустой результат: проверьте connection, resource, field name, значение ИНН и права пользователя 1C.',
+      '401: исправляйте логин/пароль OData connection.',
+      'Resource not found: скопируйте имя из OData Explorer, а не из памяти.',
+    ],
+  },
+  'second-odata-query-product': {
+    intermediate: [
+      'После Preview одновременно доступны `contractor` и `product`.',
+      'Второй OData step не перезаписывает результат первого.',
+    ],
+    variables: [
+      '`product.Ref_Key` — UUID товара/номенклатуры в 1C.',
+      '`product.Description` — имя товара.',
+      '`product.Артикул` — артикул, по которому нашли товар.',
+    ],
+    artifacts: [
+      '`odata_query_request` для `get_product` — connection, resource и filter товара.',
+      '`odata_query_response` — ответ выбранной OData базы.',
+      '`odata_query_result` — объект, сохраненный как `product`.',
+    ],
+    shouldSee: [
+      'Preview показывает `product.Ref_Key`.',
+      'Переменные `contractor` и `product` существуют одновременно.',
+      'В JSON Builder можно выбрать `product.Ref_Key`.',
+    ],
+    developer: 'Если номенклатура живет в WMS/УСП, выберите отдельную OData Connection. Не заставляйте ERP искать то, чего в ней нет.',
+  },
+  'build-target-json': {
+    intermediate: [
+      'Появляется переменная `target_payload` — итоговый JSON для внешнего API.',
+      'В него попали только нужные поля: `pool_id`, UUID контрагента, UUID товара и `codes`.',
+    ],
+    variables: [
+      '`target_payload.pool_id` берется из `request.body.pool_id`.',
+      '`target_payload.contractor_uuid` берется из `contractor.Ref_Key`.',
+      '`target_payload.product_uuid` берется из `product.Ref_Key`.',
+      '`target_payload.codes` берется из `request.body.codes` и остается массивом.',
+    ],
+    artifacts: [
+      '`json_builder_template` — правила сборки JSON.',
+      '`json_builder_result` — итоговый JSON.',
+      '`target_payload.json` — сохраненный payload для target call.',
+    ],
+    shouldSee: [
+      'Preview показывает валидный JSON.',
+      '`codes` не превратился в строку.',
+      'Если `contractor.Ref_Key` отсутствует, ошибка появляется до отправки наружу.',
+    ],
+    fieldTable: [
+      '| Target field | Source | Meaning |',
+      '| --- | --- | --- |',
+      '| `contractor_uuid` | `contractor.Ref_Key` | 1C UUID of contractor |',
+      '| `product_uuid` | `product.Ref_Key` | 1C UUID of product |',
+      '| `codes` | `request.body.codes` | marking codes from 1C request |',
+      '| `source_system` | constant `"1C"` | fixed value |',
+    ],
+    developer: 'Если вы уже знаете структуру JSON внешнего API, укажите её в JSON Builder. В 1C не нужно вручную собирать этот итоговый JSON.',
+  },
+  'send-to-external-api': {
+    intermediate: [
+      'OMH готовит outgoing request: method, URL, headers и body `target_payload`.',
+      'После запуска будет понятно, что именно ушло во внешний API и что он ответил.',
+    ],
+    variables: [
+      '`target_payload` — body исходящего запроса.',
+      '`target.response.status` и body ответа будут доступны в Timeline после вызова.',
+    ],
+    artifacts: [
+      '`outgoing_request` или `target.request.json` — что OMH отправил во внешний API.',
+      '`incoming_response` или `target.response.json` — что внешний API ответил.',
+      '`external_error` — исходная ошибка target API без потери текста.',
+    ],
+    shouldSee: [
+      'Target step использует `target_payload`, а не raw `request.body`.',
+      'Headers не раскрывают secret values.',
+      'При ошибке target API виден оригинальный status/body.',
+    ],
+    developer: 'Если внешний API возвращает бизнес-ошибку 400, не делайте бесконечный retry. Сначала исправьте данные или mapping.',
+  },
+  'full-flow-click-by-click': {
+    short: [
+      '1C отправляет JSON.',
+      'OMH берет из него ИНН и код товара.',
+      'OMH ищет контрагента и товар в OData.',
+      'OMH собирает новый JSON.',
+      'OMH отправляет JSON во внешний API.',
+    ],
+    intermediate: [
+      'После полного Preview видны все ключевые данные: `request.body`, `contractor`, `product`, `target_payload` и target request preview.',
+      'Dry Run показывает будущий результат без реального вызова внешнего API.',
+    ],
+    variables: [
+      '`request.body.inn` -> `contractor` -> `target_payload.contractor_uuid`.',
+      '`request.body.product_code` -> `product` -> `target_payload.product_uuid`.',
+      '`request.body.codes` -> `target_payload.codes`.',
+    ],
+    artifacts: [
+      '`incoming.request.json` — что пришло от 1C.',
+      '`odata.get_contractor.request.json` и `.response.json`.',
+      '`odata.get_product.request.json` и `.response.json`.',
+      '`target_payload.json`.',
+      '`target.request.json` и `target.response.json`.',
+    ],
+    shouldSee: [
+      'Expected Timeline содержит receive, get_contractor, get_product, build_target_payload, send_to_dnp, handle_response.',
+      'Dry Run не отправляет запрос во внешний API.',
+      'После real Send есть `event_id` и открываемый Timeline.',
+    ],
+    developer: 'В коде 1C вам нужно отправить HTTP POST на endpoint OMH. OMH не требует, чтобы вы писали Python-код или вручную выполняли OData lookup из 1C.',
+  },
+  'test-full-flow': {
+    intermediate: [
+      'После Send появляется `event_id` и `timeline_url`.',
+      'Timeline показывает фактический runtime, а не только конфигурацию.',
+    ],
+    variables: [
+      'Проверяйте, что runtime получил те же variables, которые вы видели в Preview.',
+      'Если variable отличается, сравните `incoming.request.json` и preview input.',
+    ],
+    artifacts: [
+      '`incoming.request.json`.',
+      '`odata.contractor.request.json` / `response.json`.',
+      '`odata.product.request.json` / `response.json`.',
+      '`target_payload.json`.',
+      '`target.request.json` / `target.response.json`.',
+    ],
+    shouldSee: [
+      'Send создал event id.',
+      'Timeline содержит все ожидаемые steps.',
+      'Artifacts позволяют объяснить результат без backend logs.',
+    ],
+    developer: 'HTTP accepted означает, что OMH принял событие. Финальный бизнес-результат проверяйте в Timeline.',
+  },
+  'lesson-11-read-timeline-and-artifacts': {
+    intermediate: [
+      'Вы находите первый failed step и открываете его request/response artifacts.',
+      'Root cause формулируется по оригинальному ответу внешней системы или 1C.',
+    ],
+    variables: [
+      'Timeline показывает, какие переменные были созданы до ошибки.',
+      'Если переменная отсутствует, ошибка почти всегда в предыдущем step.',
+    ],
+    artifacts: [
+      '`incoming.request.json`, `odata_query_request`, `odata_query_response`.',
+      '`target_payload.json`, `target.request.json`, `target.response.json`.',
+      '`error.json` с классификацией retryable/non-retryable.',
+    ],
+    shouldSee: [
+      'Первый failed step найден.',
+      'Оригинальная ошибка открыта как artifact.',
+      'Понятно, делать retry, edit retry или менять конфигурацию.',
+    ],
+    developer: 'Не просите пользователя прислать только “ошибка”. Просите event id и artifacts первого failed step.',
+  },
+  'lesson-12-fix-common-errors': {
+    intermediate: [
+      'Каждая ошибка привязана к месту проверки: endpoint, OData connection, Flow Builder, Timeline или DLQ.',
+      'Пользователь не чинит весь flow сразу, а исправляет первый доказанный сбой.',
+    ],
+    variables: [
+      'При OData empty result проверяйте value source: `request.body.inn` или `request.body.product_code`.',
+      'При JSON Builder missing variable проверяйте `contractor.Ref_Key`, `product.Ref_Key`, `target_payload`.',
+    ],
+    artifacts: [
+      '`incoming.request.headers` для inbound auth.',
+      '`odata_query_response` для 401/empty/resource errors.',
+      '`target.response.json` для внешнего API.',
+      '`dlq.reason.json` или attempt history для DLQ.',
+    ],
+    shouldSee: [
+      'Понятно, где именно ошибка: вход, OData, JSON Builder, target API или runtime.',
+      'Retry делается только после исправления причины.',
+      'DLQ не очищается до разбора artifacts.',
+    ],
+    developer: 'Для каждого инцидента фиксируйте event id, failed step, artifact и действие: config fix, data fix, secret fix или retry.',
+  },
+};
+
+function withPedagogicalPass(seed: PageSeed): PageSeed {
+  if (seed.markdown.includes('## Промежуточный результат')) return seed;
+  const note = pedagogyBySlug[seed.slug] ?? defaultPedagogyBlock;
+  const block = mdLines(
+    ...(note.short ? ['## Если совсем коротко', ...note.short.map((item, index) => `${index + 1}. ${item}`), ''] : []),
+    '## Промежуточный результат',
+    ...note.intermediate.map((item) => `- ${item}`),
+    '',
+    '## Как UI поля становятся переменными',
+    ...note.variables.map((item) => `- ${item}`),
+    '',
+    ...(note.fieldTable ? ['## Таблица полей UI', ...note.fieldTable, ''] : []),
+    '## Что появится в Timeline',
+    ...note.artifacts.map((item) => `- ${item}`),
+    '',
+    '## Что вы должны увидеть',
+    ...note.shouldSee.map((item) => `- ✓ ${item}`),
+    '',
+    '## Для разработчика 1С',
+    note.developer,
+    '',
+    ...(note.errors ? ['## Практичная диагностика ошибок', ...note.errors.map((item, index) => `${index + 1}. ${item}`), ''] : []),
+  );
+  const marker = '\n## Частые ошибки';
+  const index = seed.markdown.indexOf(marker);
+  if (index >= 0) return { ...seed, markdown: `${seed.markdown.slice(0, index)}\n${block}\n${seed.markdown.slice(index)}` };
+  return { ...seed, markdown: `${seed.markdown}\n\n${block}` };
+}
+
 export const academyPackAPages: PageSeed[] = [
   page('academy', 'create-odata-connection', 'Создаём OData-подключение к 1С', 'Подробный урок: создать OData ERP connection, понять поля формы, secrets и healthcheck.', 21, mdLines(
     '# Создаём OData-подключение к 1С',
@@ -460,7 +872,7 @@ export const academyPackAPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Создать входную точку для POST-запроса из 1С" href="/docs/onec/academy/lesson-04-create-inbound-endpoint-for-1c-post"}',
   )),
-].map(withSelfCheck);
+].map(withSelfCheck).map(withPedagogicalPass);
 
 export const academyPackBPages: PageSeed[] = [
   page('academy', 'create-inbound-endpoint', 'Создаём входную точку для POST-запроса из 1С', 'Создать URL, куда 1C отправляет Golden Scenario payload.', 51, mdLines(
@@ -1416,7 +1828,7 @@ export const academyPackBPages: PageSeed[] = [
     '## Следующий урок',
     '::next-lesson{label="Прочитать Timeline и артефакты" href="/docs/onec/academy/lesson-11-read-timeline-and-artifacts"}',
   )),
-].map(withSelfCheck);
+].map(withSelfCheck).map(withPedagogicalPass);
 
 export const academyPages: PageSeed[] = [
   lesson({
@@ -1471,7 +1883,7 @@ export const academyPages: PageSeed[] = [
       'Введите name: OData ERP training.',
       'Введите base URL: http://erp-demo/ERP/odata/standard.odata.',
       'Выберите auth type basic.',
-      'Введите username: Администратор, password: 123 для учебного стенда или `$secret:onec.erp.password` для production.',
+      'Введите username: `exchange_erp_training`. Пароль храните через `$secret:onec.erp.password`. Для временного учебного стенда можно использовать простой пароль, но явно помечайте такое подключение как test-only.',
       'Сохраните connection.',
       'Нажмите Test $metadata и дождитесь HTTP 200 или понятной внешней ошибки.'
     ],
@@ -1480,8 +1892,8 @@ export const academyPages: PageSeed[] = [
   "name": "OData ERP training",
   "base_url": "http://erp-demo/ERP/odata/standard.odata",
   "auth_type": "basic",
-  "username": "Администратор",
-  "password": "123",
+  "username": "exchange_erp_training",
+  "password": { "$secret": "onec.erp.password" },
   "default_top": 50,
   "max_pages": 5
 }
@@ -1888,7 +2300,7 @@ DLQ -> inspect artifacts, fix, replay
     ],
     checklist: ['Понял 401 inbound', 'Понял 401 OData', 'Понял empty lookup', 'Понял target error', 'Понял DLQ replay']
   }),
-].map(withSelfCheck);
+].map(withSelfCheck).map(withPedagogicalPass);
 
 export const referencePages: PageSeed[] = [
   page('reference', 'odata-connection', 'Reference — OData Connection', 'Что хранит OData connection и где он используется.', 10, md(`
@@ -2027,6 +2439,15 @@ type SymptomPageConfig = {
   related: string[];
 };
 
+function russianSymptomExplanation(slug: string): string {
+  const explanations: Record<string, string> = {
+    'odata-empty-result': 'По-русски: OMH дошел до 1C, авторизация и ресурс сработали, но фильтр не нашел ни одной строки. Не меняйте весь flow. Сначала откройте `odata_query_request`, скопируйте filter в OData Explorer и проверьте value из `incoming.request.json`.',
+    'onec-returned-401': 'По-русски: Неверный логин или пароль для подключения к 1C, если failed step — `odata_query`; неверный `X-OMH-Token`, если failed step — `receive`; неверные credentials target-сервиса, если failed step — `call_endpoint`.',
+    'event-moved-to-dlq': 'По-русски: DLQ — это не причина ошибки, а безопасная остановка после неуспешных попыток. Причина находится в первом failed step Timeline и его artifacts. Сначала исправьте данные, secret, config или target, потом делайте Replay from DLQ.',
+  };
+  return explanations[slug] ?? 'По-русски: начните не с общего сообщения об ошибке, а с первого failed step в Timeline. Он показывает владельца проблемы: входной endpoint, OData, JSON Builder, target API, очередь или принтер.';
+}
+
 function symptomPage(config: SymptomPageConfig): PageSeed {
   return page('troubleshooting', config.slug, config.title, config.description, config.order, mdLines(
     `# ${config.title}`,
@@ -2036,6 +2457,9 @@ function symptomPage(config: SymptomPageConfig): PageSeed {
     '',
     '## What it means',
     config.meaning,
+    '',
+    '### По-русски для пользователя 1C',
+    russianSymptomExplanation(config.slug),
     '',
     '## Quick fix',
     config.quickFix,
