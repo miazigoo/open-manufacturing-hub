@@ -208,6 +208,19 @@ async def install_two_odata_to_endpoint_preset(session: AsyncSession) -> Integra
 async def install_dnp_pull_codes_preset(session: AsyncSession) -> IntegrationFlow:
     existing = await repository.get_by_slug(session, DNP_PULL_CODES_PRESET["slug"])
     if existing:
+        await patch_flow(
+            session,
+            existing.id,
+            IntegrationFlowPatch(
+                description=DNP_PULL_CODES_PRESET["description"],
+                matcher_group_json=DNP_PULL_CODES_PRESET["matcher_group_json"],
+                action_json=DNP_PULL_CODES_PRESET["action_json"],
+                response_config_json=DNP_PULL_CODES_PRESET["response_config_json"],
+                builder_json=DNP_PULL_CODES_PRESET["builder_json"],
+                test_payload_json=DNP_PULL_CODES_PRESET["test_payload_json"],
+            ),
+        )
+        await compile_flow(session, existing.id)
         return existing
     return await create_flow(session, IntegrationFlowCreate(**DNP_PULL_CODES_PRESET))
 
