@@ -2509,6 +2509,72 @@ DLQ -> inspect artifacts, fix, replay
     ],
     checklist: ['Понял 401 inbound', 'Понял 401 OData', 'Понял empty lookup', 'Понял target error', 'Понял DLQ replay']
   }),
+  page('academy', 'xml-input-to-odata-to-xml-response', 'XML-вход → OData → XML-ответ', 'Пошаговый учебный сценарий: внешний сервис отправляет XML, OMH ищет данные в 1C OData и возвращает XML.', 190, mdLines(
+    '# XML-вход → OData → XML-ответ',
+    '',
+    'Цель урока: собрать интеграцию от реальной задачи, а не от технических терминов. Внешний сервис вызывает OMH, OMH понимает XML, берет номер документа, делает OData-запрос в 1C и сразу возвращает XML-ответ.',
+    '',
+    '## Схема',
+    '```text',
+    'External service',
+    '  -> POST /api/bus/in/lookup-order-products',
+    '  -> XML Toolkit: /Request/Number -> number',
+    "  -> OData ERP: Document_ЗаказНаПроизводство2_2?$filter=Number eq '{{number}}'",
+    '  -> XML Response Builder',
+    '  -> XML response to caller',
+    '```',
+    '',
+    '## 1. Вставьте входящий XML',
+    '```xml',
+    '<Request>',
+    '  <Operation>lookup_order_products</Operation>',
+    '  <Number>260666/6938</Number>',
+    '  <DeviceType>toodoo</DeviceType>',
+    '</Request>',
+    '```',
+    '',
+    'Откройте Request/Response Workbench, выберите `Input mode = XML` и вставьте пример. Ниже появится XML Path Picker. Нажмите `Use this field` у `/Request/Number`.',
+    '',
+    '## 2. Проверьте переменную',
+    'После выбора поля Workbench создаст шаг:',
+    '```json',
+    '{',
+    '  "type": "xml_extract",',
+    '  "source": "request.xml",',
+    '  "fields": [{ "name": "number", "path": "/Request/Number", "required": true }]',
+    '}',
+    '```',
+    '',
+    'Теперь в следующих шагах можно использовать `{{number}}`.',
+    '',
+    '## 3. Настройте OData',
+    'Выберите OData connection, например `OData ERP production`. Resource укажите из OData Explorer, не из памяти.',
+    '',
+    '| Поле | Значение |',
+    '| --- | --- |',
+    '| Resource | `Document_ЗаказНаПроизводство2_2` |',
+    '| $filter | `Number eq \'{{number}}\'` |',
+    '| $select | `Ref_Key,Number,Date,Posted` |',
+    '| $top | `1` |',
+    '| Save as | `order` |',
+    '',
+    '## 4. Соберите XML-ответ',
+    '```xml',
+    '<Response>',
+    '  <Success>true</Success>',
+    '  <OrderRef>{{order.Ref_Key}}</OrderRef>',
+    '  <OrderNumber>{{order.Number}}</OrderNumber>',
+    '</Response>',
+    '```',
+    '',
+    'XML Response Builder проверит, что итоговый XML валиден. Если переменная отсутствует, будет понятная ошибка `Missing XML template variables`.',
+    '',
+    '## 5. Проверьте Preview и Timeline',
+    'В Preview должны быть шаги `xml_extract`, `get_order`, `return_response`. После live test откройте Timeline и проверьте artifacts: `xml_parse_input.xml`, `xml_parse_tree.json`, `xml_extracted_fields.json`, `odata_query_request.json`, `xml_response_rendered.xml`.',
+    '',
+    '::open-page{route="/test-console" label="Открыть Request/Response Workbench"}',
+    '::checklist{id="academy-xml-odata-xml-response" items="Вставил XML sample|Выбрал /Request/Number|Проверил переменную number|Настроил OData filter|Собрал XML response|Сделал Preview|Проверил Timeline artifacts"}'
+  )),
 ].map(withSelfCheck).map(withPedagogicalPass);
 
 export const referencePages: PageSeed[] = [
@@ -2587,6 +2653,78 @@ ${goldenScenarioTargetJson}
 
 ## Практическое правило
 Отправляйте наружу только поля target contract. Не отправляйте целиком raw OData response, если внешней системе нужны только UUID и name.
+`)),
+  page('reference', 'xml-toolkit', 'Reference — XML Toolkit', 'Парсер XML, выбор path, извлечение переменных, XML response и raw forwarding.', 55, md(`
+# Reference — XML Toolkit
+
+XML Toolkit — не отдельный сценарий интеграции. Это общий слой, который используют Request/Response Workbench, 1C Cockpit, Visual Flow Builder и advanced XML Tools.
+
+## Когда пользователь видит XML Toolkit
+- Входящий request имеет input mode \`xml\`.
+- Нужно выбрать поле XML и использовать его в OData filter.
+- Нужно вернуть caller XML response.
+- Нужно переслать XML в 1C HTTP service без изменения тела.
+
+## Основные возможности
+| Возможность | Где используется | Что дает |
+| --- | --- | --- |
+| Parse XML | Workbench, Cockpit, XML Tools | root, encoding, namespaces, preview tree |
+| Path Picker | Workbench, Flow Builder | путь вида \`/Request/Number\` |
+| xml_extract | runtime step | переменные \`number\`, \`operation\`, \`device_type\` |
+| XML Response Builder | Workbench, Flow Builder | валидный XML из шаблона и variables |
+| Raw XML forward | Flow Builder, Cockpit | SHA256 до/после и доказательство, что тело не менялось |
+
+## Пример входящего XML
+~~~xml
+<Request>
+  <Operation>lookup_order_products</Operation>
+  <Number>260666/6938</Number>
+  <DeviceType>toodoo</DeviceType>
+</Request>
+~~~
+
+Path Picker покажет:
+
+| Path | Variable |
+| --- | --- |
+| \`/Request/Operation\` | \`operation\` |
+| \`/Request/Number\` | \`number\` |
+| \`/Request/DeviceType\` | \`device_type\` |
+
+## Runtime step
+~~~json
+{
+  "id": "extract_xml_fields",
+  "type": "xml_extract",
+  "source": "request.xml",
+  "fields": [
+    { "name": "number", "path": "/Request/Number", "required": true, "mode": "first" }
+  ]
+}
+~~~
+
+После этого OData filter может использовать:
+
+~~~text
+Number eq '{{number}}'
+~~~
+
+## XML response
+~~~xml
+<Response>
+  <Success>true</Success>
+  <OrderRef>{{order.Ref_Key}}</OrderRef>
+  <OrderNumber>{{order.Number}}</OrderNumber>
+</Response>
+~~~
+
+OMH экранирует значения XML-переменных, валидирует итоговый XML и сохраняет artifacts:
+- \`xml_response_template.xml\`;
+- \`xml_response_rendered.xml\`;
+- \`return_response.json\`.
+
+::open-page{route="/test-console" label="Открыть Request/Response Workbench"}
+::checklist{id="reference-xml-toolkit" items="Понял, что XML Toolkit встроен в мастера|Выбрал XML path|Создал переменную|Использовал переменную в OData|Собрал XML response|Проверил XML artifacts"}
 `)),
   page('reference', 'timeline', 'Reference — Timeline', 'Где OMH показывает шаги, длительность, ошибки и artifacts.', 60, md(`
 # Reference — Timeline
@@ -3720,6 +3858,78 @@ export const recipePages: PageSeed[] = [
     "- [Business rules](/business-rules)",
     "- [Диагностика остановки business rule](/docs/onec/error-playbooks/business-rule-stopped)",
     "- [Диагностика недоступного принтера](/docs/onec/troubleshooting/printer-unavailable)"
+  )),
+  page("recipes", "xml-raw-forwarding", "XML raw forwarding без изменения тела", "Короткий рецепт: принять XML, сохранить hash и передать дальше как пришло.", 90, mdLines(
+    "# XML raw forwarding без изменения тела",
+    "",
+    "## Когда использовать",
+    "Используйте этот рецепт, если целевая 1C или внешний сервис требует ровно тот XML, который пришел во входящем запросе. OMH в этом сценарии не должен форматировать, pretty-print, менять encoding или переставлять namespace.",
+    "",
+    "## Настройка",
+    "1. В Workbench или Cockpit выберите `Input mode = XML`.",
+    "2. Выберите действие `Raw XML forward`.",
+    "3. Укажите target connector и path 1C HTTP service, например `/hs/omh/receive`.",
+    "4. Сделайте Preview и убедитесь, что hash не меняется.",
+    "",
+    "## Runtime block",
+    "```json",
+    "{",
+    "  \"id\": \"raw_xml_forward\",",
+    "  \"type\": \"raw_xml_forward\",",
+    "  \"source\": \"request.xml\",",
+    "  \"method\": \"POST\",",
+    "  \"path\": \"/hs/omh/receive\"",
+    "}",
+    "```",
+    "",
+    "## Timeline artifacts",
+    "- `raw_xml_forward_input.xml`: оригинальное тело.",
+    "- `raw_xml_forward.json`: SHA256 input/forwarded и флаг `forwarded_unchanged`.",
+    "- `incoming.request`: headers и content type.",
+    "",
+    "## Частые ошибки",
+    "- Пользователь выбрал XML parse, хотя нужен raw: XML может быть валидирован, но бизнес-смысл в том, что тело нельзя менять.",
+    "- Target ждет `text/xml`, а endpoint отправляет `application/json`.",
+    "- 1C отправляет XML внутри JSON-строки: сначала нужно извлечь строку, это уже не raw XML body.",
+    "",
+    "::checklist{id=\"recipe-xml-raw-forwarding\" items=\"Выбран input mode XML|Выбран Raw XML forward|Проверен Content-Type|Проверен SHA256|Открыт Timeline artifact\"}"
+  )),
+  page("recipes", "xml-field-extraction", "Извлечение полей из XML для OData и ответа", "Короткий рецепт: выбрать XML path, сделать переменную и использовать ее в OData filter.", 100, mdLines(
+    "# Извлечение полей из XML для OData и ответа",
+    "",
+    "## Когда использовать",
+    "Входящий сервис присылает XML, но дальше интеграции нужны конкретные значения: номер заказа, ИНН, код склада, тип устройства. Не надо вручную писать XPath в JSON. Вставьте XML sample и выберите поля через Path Picker.",
+    "",
+    "## Пример XML",
+    "```xml",
+    "<Request>",
+    "  <Number>260666/6938</Number>",
+    "  <DeviceType>toodoo</DeviceType>",
+    "</Request>",
+    "```",
+    "",
+    "## Что нажать",
+    "1. Откройте Request/Response Workbench.",
+    "2. Выберите `Input mode = XML`.",
+    "3. Вставьте XML sample.",
+    "4. В XML Path Picker нажмите `Use this field` у `/Request/Number`.",
+    "5. В OData step используйте filter `Number eq '{{number}}'`.",
+    "6. В response template используйте `{{order.Ref_Key}}` или `{{number}}`.",
+    "",
+    "## Что создаст OMH",
+    "```json",
+    "{",
+    "  \"type\": \"xml_extract\",",
+    "  \"fields\": [",
+    "    { \"name\": \"number\", \"path\": \"/Request/Number\", \"required\": true }",
+    "  ]",
+    "}",
+    "```",
+    "",
+    "## Проверка",
+    "В Preview переменные должны содержать `number = 260666/6938`. В Timeline ищите `xml_extracted_fields.json`; если переменная пустая, значит path не совпадает с реальным XML или namespace.",
+    "",
+    "::checklist{id=\"recipe-xml-field-extraction\" items=\"Вставил XML sample|Выбрал path|Проверил variable name|Использовал variable в OData|Проверил xml_extracted_fields artifact\"}"
   )),
 ];
 

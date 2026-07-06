@@ -807,6 +807,16 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .odata-workbench-step { border-color: rgba(143,198,180,.25); }
 .request-preview-list { display: grid; gap: 10px; }
 .compact-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.xml-toolkit-card, .xml-response-builder { border: 1px solid rgba(143,198,180,.28); background: linear-gradient(145deg, rgba(143,198,180,.075), rgba(240,179,90,.045)); padding: 14px; display: grid; gap: 12px; }
+.xml-toolkit-card.compact { padding: 12px; }
+.xml-path-grid { display: grid; gap: 6px; max-height: 360px; overflow: auto; padding-right: 4px; }
+.xml-path-head, .xml-path-row { display: grid; grid-template-columns: minmax(180px, 1.3fr) minmax(120px, .8fr) auto; gap: 10px; align-items: center; }
+.xml-path-head { color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-size: 10px; }
+.xml-path-row { border: 1px solid rgba(247,239,218,.09); background: rgba(0,0,0,.14); padding: 8px; }
+.xml-path-row code { color: var(--accent-2); overflow-wrap: anywhere; }
+.xml-path-row span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compact-actions { justify-content: flex-end; gap: 6px; }
+.hint-chip.active, .xml-selected-fields .hint-chip { border-color: rgba(143,198,180,.52); background: rgba(143,198,180,.13); color: var(--accent-2); }
 
 @media (max-width: 1320px) {
   .docs-layout-grid { grid-template-columns: 280px minmax(0, 1fr); }
@@ -827,6 +837,9 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
   .docs-screenshot-frame { min-height: 190px; }
   .docs-action-bar, .docs-lesson-navigation { grid-template-columns: minmax(0, 1fr); }
   .docs-action-links, .docs-lesson-nav-links { justify-content: flex-start; }
+  .xml-path-head { display: none; }
+  .xml-path-row { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .compact-actions { justify-content: flex-start; }
 }
 
 /* Guided onboarding, contextual help and tours */

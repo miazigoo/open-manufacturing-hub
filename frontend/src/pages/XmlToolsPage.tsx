@@ -5,6 +5,7 @@ import { CodeBlock } from '../components/CodeBlock';
 import { CodeEditor } from '../components/CodeEditor';
 import { JsonBlock } from '../components/JsonBlock';
 import { StatusBadge } from '../components/StatusBadge';
+import { XmlPathPicker } from '../components/xml/XmlPathPicker';
 
 const sampleXml = '<Документ><Номер>UPD-1001</Номер><ИНН>1234567890</ИНН></Документ>';
 
@@ -18,8 +19,9 @@ export function XmlToolsPage() {
   return (
     <div className="page-stack two-column-page">
       <section className="panel form-panel">
-        <span className="eyebrow">XML Tools</span>
+        <span className="eyebrow">XML Toolkit · advanced</span>
         <h1>Inspect XML safely</h1>
+        <p className="microcopy">Для реальной интеграции начинайте с Request/Response Workbench: там XML-поля сразу превращаются в переменные для OData/API и ответа. Эта страница оставлена как advanced/debug: hash, diff, pretty view и ручная проверка raw XML.</p>
         <label className="field-label">Original XML<CodeEditor value={left} onChange={setLeft} language="xml" minRows={9} /></label>
         <label className="field-label">Forwarded / comparison XML<CodeEditor value={right} onChange={setRight} language="xml" minRows={9} /></label>
         {runtimeError instanceof Error && <div className="error-state compact">{runtimeError.message}</div>}
@@ -31,6 +33,7 @@ export function XmlToolsPage() {
         {diff.data && <StatusBadge status={diff.data.forwarded_unchanged ? 'ok' : 'warning'} label={diff.data.forwarded_unchanged ? 'unchanged' : 'changed'} />}
       </section>
       <section className="page-stack">
+        <XmlPathPicker xml={left} compact />
         <JsonBlock title="Parsed XML / paths" value={parse.data ?? { hint: 'Parse XML to inspect normalized paths and metadata.' }} searchable />
         <JsonBlock title="Pretty XML" value={{ pretty_xml: parse.data?.pretty_xml ?? '' }} searchable={false} />
         <CodeBlock code={diff.data?.diff_text ?? 'Run XML diff to see changes'} language="diff" title="Diff" />

@@ -16,6 +16,7 @@ from app.sdk.types import ConnectorContext
 from app.secrets.service import SecretResolver
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
+from app.xml_toolkit.renderer import render_xml_template
 
 
 class FlowReadVariableStep:
@@ -184,7 +185,9 @@ class FlowReturnResponseStep:
         config = _config(context)
         try:
             scope = _scope(context)
-            if config.get("body_template") is not None:
+            if str(config.get("response_body_type") or "").lower() == "xml" and config.get("body_template") is not None:
+                body = render_xml_template(str(config.get("body_template") or ""), scope)
+            elif config.get("body_template") is not None:
                 body = render_template(str(config.get("body_template") or ""), scope)
             else:
                 body = render_template(config.get("body") if config.get("body") is not None else "{{response}}", scope)
@@ -202,7 +205,11 @@ class FlowReturnResponseStep:
             "headers": headers,
             "body": body,
         }
-        return StepResult.success("Response selected", artifacts=[ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "return_response.json", response)], variables_update={"response": response})
+        artifacts = [ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "return_response.json", response)]
+        if body_type == "xml":
+            artifacts.insert(0, ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "xml_response_template.xml", {"template": str(config.get("body_template") or "")}))
+            artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "xml_response_rendered.xml", {"xml": str(body)}))
+        return StepResult.success("Response selected", artifacts=artifacts, variables_update={"response": response})
 
 
 def _config(context: PipelineContext) -> dict[str, Any]:

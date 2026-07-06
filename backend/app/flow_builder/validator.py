@@ -43,6 +43,15 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
             for field, code in (("connection", "ODATA_CONNECTION_NOT_SET"), ("resource", "ODATA_RESOURCE_NOT_SET"), ("save_as", "ODATA_SAVE_AS_REQUIRED")):
                 if not step.get(field):
                     errors.append(_error(step_id, code, f"OData step needs {field}", "Select connector/resource and save result variable."))
+        if step_type == "xml_extract":
+            fields = step.get("fields")
+            if not isinstance(fields, list) or not fields:
+                errors.append(_error(step_id, "XML_FIELDS_REQUIRED", "XML extract step needs at least one field", "Use XML Path Picker in Request/Response Workbench and add fields such as /Request/Number -> order_number."))
+            for field in fields or []:
+                if not isinstance(field, dict) or not field.get("name") or not field.get("path"):
+                    errors.append(_error(step_id, "XML_FIELD_INVALID", "Each XML field needs name and path", "Example: { name: order_number, path: /Request/Number }."))
+        if step_type == "build_xml_response" and not (step.get("body_template") or step.get("template")):
+            errors.append(_error(step_id, "XML_RESPONSE_TEMPLATE_REQUIRED", "XML response step needs a template", "Add an XML template with variables such as {{order.Ref_Key}}."))
         if step_type == "resolve_object":
             if not (step.get("resolver") or step.get("resolver_code")):
                 errors.append(_error(step_id, "RESOLVER_CODE_REQUIRED", "Resolve step needs resolver code", "Select a resolver such as resolve_customer or resolve_product."))
@@ -54,7 +63,7 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
             errors.append(_error(step_id, "JSON_TEMPLATE_REQUIRED", "Build JSON step needs template or visual fields", "Add target fields or switch to advanced JSON template."))
         if step_type == "call_endpoint" and not step.get("connector"):
             errors.append(_error(step_id, "TARGET_CONNECTOR_NOT_SET", "Endpoint step needs connector", "Select a REST/1C target connector."))
-    has_terminal_response = any(isinstance(step, dict) and step.get("type") in {"call_endpoint", "return_response"} for step in steps)
+    has_terminal_response = any(isinstance(step, dict) and step.get("type") in {"call_endpoint", "return_response", "build_xml_response", "raw_xml_forward"} for step in steps)
     if not has_terminal_response:
         warnings.append(_error(None, "TARGET_STEP_MISSING", "Flow has no target endpoint call", "Add Call Endpoint when this flow should send data out."))
     return {"valid": not errors, "errors": errors, "warnings": warnings}

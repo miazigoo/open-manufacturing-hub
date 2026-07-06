@@ -13,6 +13,9 @@ from app.transforms.engine import engine as transform_engine
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
 from app.secrets.service import SecretResolver
+from app.xml_toolkit.paths import extract_fields
+from app.xml_toolkit.renderer import render_xml_template
+from app.xml_toolkit.service import raw_forward_preview
 
 
 async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], sample_request: dict[str, Any], *, run_real_queries: bool = False) -> dict[str, Any]:
@@ -65,6 +68,20 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 items = await _preview_odata_items(session, step, query, run_real_queries)
                 result = _saved_odata_result(items, step)
                 variables[str(step["save_as"])] = result
+            elif step_type == "xml_extract":
+                raw_xml = _sample_xml(sample_request)
+                fields = [field for field in step.get("fields") or [] if isinstance(field, dict)]
+                values, errors = extract_fields(raw_xml, fields)
+                if errors:
+                    raise ValueError("; ".join(str(item.get("message")) for item in errors))
+                variables.update(values)
+                result = values
+                request_preview = {"source": step.get("source") or "request.body_raw", "fields": fields}
+            elif step_type == "raw_xml_forward":
+                raw_xml = _sample_xml(sample_request)
+                result = raw_forward_preview(raw_xml).model_dump(mode="json")
+                target_request = {"body_type": "xml", "hash": result["input_sha256"], "forwarded_unchanged": result["forwarded_unchanged"]}
+                request_preview = target_request
             elif step_type == "resolve_object":
                 input_data = _resolve_input_preview(step.get("input") or {}, scope)
                 result = _preview_resolved_object(step, input_data)
@@ -84,15 +101,19 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 variables["response"] = response
                 target_request = result["would_call"]
                 request_preview = result["would_call"]
-            elif step_type == "return_response":
-                if step.get("body_template") is not None:
+            elif step_type in {"return_response", "build_xml_response"}:
+                response_type = step.get("response_body_type") or ("xml" if step_type == "build_xml_response" else None)
+                template = step.get("body_template") if step.get("body_template") is not None else step.get("template")
+                if response_type == "xml" and template is not None:
+                    body = render_xml_template(str(template or ""), scope)
+                elif step.get("body_template") is not None:
                     body = render_template(str(step.get("body_template") or ""), scope)
                 else:
                     body = render_template(step.get("body") if step.get("body") is not None else "{{response}}", scope)
                 result = {
                     "status_code": int(step.get("status_code") or 200),
-                    "response_body_type": step.get("response_body_type") or ("json" if isinstance(body, dict) else "raw_text"),
-                    "headers": step.get("headers") if isinstance(step.get("headers"), dict) else {},
+                    "response_body_type": response_type or ("json" if isinstance(body, dict) else "raw_text"),
+                    "headers": step.get("headers") if isinstance(step.get("headers"), dict) else ({"Content-Type": "application/xml"} if response_type == "xml" else {}),
                     "body": body,
                 }
                 request_preview = {"status_code": result["status_code"], "headers": result["headers"], "response_body_type": result["response_body_type"]}
@@ -108,7 +129,15 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
 
 
 def _scope(sample_request: dict[str, Any], variables: dict[str, Any]) -> dict[str, Any]:
-    return build_runtime_scope(request_body=sample_request, variables=variables, headers={}, query={}, context={})
+    return build_runtime_scope(request_body=sample_request, variables=variables, headers={}, query={}, raw_text=sample_request.get("text") if isinstance(sample_request, dict) else None, xml=sample_request.get("xml") if isinstance(sample_request, dict) else None, context={})
+
+
+def _sample_xml(sample_request: dict[str, Any]) -> str:
+    if isinstance(sample_request, dict):
+        value = sample_request.get("xml") or sample_request.get("text") or sample_request.get("body_raw")
+        if value:
+            return str(value)
+    raise ValueError("XML sample is empty. Paste a real XML request before preview.")
 
 
 def _odata_query(step: dict[str, Any], scope: dict[str, Any]) -> dict[str, Any]:

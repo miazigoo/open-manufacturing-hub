@@ -59,6 +59,7 @@ from app.transforms.router import router as transforms_router
 from app.ui.router import router as ui_router
 from app.workflows.router import router as workflows_router
 from app.xml_tools.router import router as xml_tools_router
+from app.xml_toolkit.router import router as xml_toolkit_router
 from app.packages.service import startup_package_check
 from app.production.startup import log_startup_banner
 from app.packages_onec.router import router as packages_onec_router
@@ -142,6 +143,7 @@ app.include_router(scenario_library_router)
 app.include_router(odata_connections_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(odata_explorer_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(xml_tools_router)
+app.include_router(xml_toolkit_router)
 app.include_router(test_console_router)
 app.include_router(docs_portal_router)
 app.include_router(docs_examples_router)

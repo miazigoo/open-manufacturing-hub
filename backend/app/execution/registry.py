@@ -61,6 +61,7 @@ def register_builtin_steps() -> None:
     from app.execution.steps.save_integration_message import SaveIntegrationMessageStep
     from app.execution.steps.send_notifications import SendNotificationsStep
     from app.execution.steps.validate import ValidatePayloadStep
+    from app.xml_toolkit.steps import RawXmlForwardStep, XmlExtractStep
 
     registry.register(ReceiveEventStep())
     registry.register(SaveIntegrationMessageStep())
@@ -72,6 +73,8 @@ def register_builtin_steps() -> None:
     registry.register(FlowConditionStep())
     registry.register(FlowCallEndpointStep())
     registry.register(FlowReturnResponseStep())
+    registry.register(XmlExtractStep())
+    registry.register(RawXmlForwardStep())
     registry.register(ApplyTransformsStep())
     registry.register(EvaluateRulesStep())
     registry.register(ResolveObjectStep())

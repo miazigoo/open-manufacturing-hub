@@ -7,10 +7,13 @@ import type { IntegrationEndpoint } from '../api/integrationBus';
 import { integrationFlowsApi, type FlowBuilderPreviewResponse, type IntegrationFlow } from '../api/integrationFlows';
 import { odataConnectionsApi } from '../api/odataConnections';
 import { testConsoleApi } from '../api/testConsole';
+import { xmlToolkitApi, type XmlPathItem } from '../api/xmlToolkit';
 import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
+import { XmlPathPicker } from '../components/xml/XmlPathPicker';
+import { XmlResponseBuilder } from '../components/xml/XmlResponseBuilder';
 import { getExternalErrorTranslation } from '../i18n/errors';
 import { useI18n } from '../i18n/useI18n';
 
@@ -37,6 +40,7 @@ interface ODataStepDraft {
 }
 
 interface ExtractedField { path: string; value: unknown }
+interface XmlMappingDraft { name: string; path: string; required: boolean; mode: 'first' | 'all' }
 
 function sampleForMode(mode: string) {
   if (mode === 'xml') return xmlSample;
@@ -60,6 +64,13 @@ function variableName(value: string) {
   return /^[0-9]/.test(normalized) ? `v_${normalized}` : normalized;
 }
 
+function variableNameFromXmlPath(path: string, index = 0) {
+  const last = (path.split('/').filter(Boolean).pop() || `field_${index + 1}`).replace(/\[\d+\]$/, '').replace(/^@/, '').split(':').pop() || `field_${index + 1}`;
+  const aliases: Record<string, string> = { Номер: 'number', ИНН: 'inn', КПП: 'kpp', Код: 'code', Артикул: 'article', Количество: 'quantity', Документ: 'document', Operation: 'operation', Number: 'number', DeviceType: 'device_type' };
+  const normalized = variableName(last);
+  return aliases[last] || (normalized === 'odata_result' ? `field_${index + 1}` : normalized);
+}
+
 function parseJsonObject(value: string, label: string): Record<string, unknown> {
   const parsed = JSON.parse(value || '{}') as unknown;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(`${label} must be a JSON object`);
@@ -68,11 +79,7 @@ function parseJsonObject(value: string, label: string): Record<string, unknown> 
 
 function parseSample(inputMode: string, sample: string): Record<string, unknown> {
   if (inputMode === 'json') return parseJsonObject(sample, 'Sample request');
-  if (inputMode === 'xml') return extractXmlFields(sample).reduce<Record<string, unknown>>((acc, field) => {
-    const key = field.path.replace(/^xml\./, '');
-    acc[key] = field.value;
-    return acc;
-  }, { xml: sample });
+  if (inputMode === 'xml') return { xml: sample };
   return { text: sample };
 }
 
@@ -85,7 +92,7 @@ function extractFields(inputMode: string, sample: string): ExtractedField[] {
       return [];
     }
   }
-  if (inputMode === 'xml') return extractXmlFields(sample);
+  if (inputMode === 'xml') return [];
   return [{ path: 'request.raw_text', value: sample.slice(0, 140) }];
 }
 
@@ -96,18 +103,6 @@ function flattenJson(value: unknown, prefix = ''): Array<[string, unknown]> {
     if (child && typeof child === 'object' && !Array.isArray(child)) return flattenJson(child, path);
     return [[path, child]];
   });
-}
-
-function extractXmlFields(xml: string): ExtractedField[] {
-  const fields: ExtractedField[] = [];
-  const regex = /<([A-Za-zА-Яа-яЁё0-9_:-]+)(?:\s[^>]*)?>([^<>{}][\s\S]*?)<\/\1>/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(xml)) && fields.length < 20) {
-    const tag = match[1].split(':').pop() || match[1];
-    const value = match[2].trim();
-    if (value && !value.includes('<')) fields.push({ path: `xml.${tag}`, value });
-  }
-  return fields;
 }
 
 function previewValue(value: unknown) {
@@ -162,6 +157,8 @@ export function TestConsolePage() {
   const [odataSteps, setODataSteps] = useState<ODataStepDraft[]>([
     { id: 'get_order', name: 'Найти заказ по номеру', connection: '', resource: 'Document_ЗаказНаПроизводство2_2', filter: "Number eq '{{request.body.Number}}'", select: 'Ref_Key,Number,Date,Posted', top: '1', save_as: 'order', required: true },
   ]);
+  const [xmlMappings, setXmlMappings] = useState<XmlMappingDraft[]>([]);
+  const xmlParse = useQuery({ queryKey: ['workbench-xml-parse', wizard.sample], queryFn: () => xmlToolkitApi.parse(wizard.sample), enabled: wizard.inputMode === 'xml' && wizard.sample.trim().includes('<') });
 
   const send = useMutation({
     mutationFn: (payload: { dry_run: boolean; headers: Record<string, string>; bodyJson: Record<string, unknown> | null }) =>
@@ -217,8 +214,10 @@ export function TestConsolePage() {
   const translatedError = externalError ? getExternalErrorTranslation(externalError.code, t) : null;
   const selectedEndpoint = endpoints.data?.find((item) => item.id === form.endpoint_id) ?? null;
   const loadedExample = trainingExample.data ?? docsExample.data;
-  const extractedFields = useMemo(() => extractFields(wizard.inputMode, wizard.sample), [wizard.inputMode, wizard.sample]);
-  const responsePreview = useMemo(() => renderLocalResponsePreview(wizard.responseBody, wizard.responseType, wizard.sample, wizard.inputMode, odataSteps), [wizard.responseBody, wizard.responseType, wizard.sample, wizard.inputMode, odataSteps]);
+  const xmlFields = useMemo<ExtractedField[]>(() => (xmlParse.data?.paths ?? []).map((field, index) => ({ path: variableNameFromXmlPath(field.path, index), value: field.value_preview ?? field.type })), [xmlParse.data]);
+  const extractedFields = useMemo(() => wizard.inputMode === 'xml' ? xmlFields : extractFields(wizard.inputMode, wizard.sample), [wizard.inputMode, wizard.sample, xmlFields]);
+  const xmlFieldsForBuild = useMemo(() => xmlMappings.length ? xmlMappings : (xmlParse.data?.paths ?? []).slice(0, 12).map((field, index) => ({ name: variableNameFromXmlPath(field.path, index), path: field.path, required: index === 0, mode: 'first' as const })), [xmlMappings, xmlParse.data]);
+  const responsePreview = useMemo(() => renderLocalResponsePreview(wizard.responseBody, wizard.responseType, wizard.sample, wizard.inputMode, odataSteps, extractedFields), [wizard.responseBody, wizard.responseType, wizard.sample, wizard.inputMode, odataSteps, extractedFields]);
 
   if (endpoints.isLoading) return <LoadingState label={t('integration.testConsoleLoading')} />;
   if (endpoints.error) return <ErrorState error={endpoints.error} />;
@@ -250,6 +249,13 @@ export function TestConsolePage() {
 
   function changeInputMode(inputMode: string) {
     updateWizard({ inputMode, sample: sampleForMode(inputMode) });
+    if (inputMode === 'xml') {
+      setODataSteps((steps) => steps.map((step, index) => index === 0 ? { ...step, filter: "Number eq '{{number}}'" } : step));
+    }
+    if (inputMode === 'json') {
+      setODataSteps((steps) => steps.map((step, index) => index === 0 ? { ...step, filter: "Number eq '{{request.body.Number}}'" } : step));
+    }
+    setXmlMappings([]);
   }
 
   function changeResponseType(responseType: ResponseBodyType) {
@@ -277,12 +283,20 @@ export function TestConsolePage() {
   function buildBuilderJson() {
     const responseBody = wizard.responseType === 'json' ? parseJsonObject(wizard.responseBody, 'Response body') : undefined;
     const headers = headersForWizard();
-    const readSteps = extractedFields
+    const readSteps = wizard.inputMode === 'xml'
+      ? [{
+          id: 'extract_xml_fields',
+          type: 'xml_extract',
+          name: 'Extract XML fields',
+          source: 'request.xml',
+          fields: xmlFieldsForBuild,
+        }]
+      : extractedFields
       .filter((field) => field.path.startsWith('request.body.') || field.path.startsWith('xml.'))
       .slice(0, 12)
       .map((field) => {
         const name = variableName(field.path.split('.').pop() || field.path);
-        const path = field.path.startsWith('xml.') ? `request.body.${field.path.replace(/^xml\./, '')}` : field.path;
+        const path = field.path;
         return { id: `read_${name}`, type: 'read_variable', name: `Read ${name}`, path, save_as: name };
       });
     return {
@@ -327,6 +341,13 @@ export function TestConsolePage() {
   function safeCreate() {
     setBuilderError(null);
     try { createFlow.mutate(); } catch (error) { setBuilderError(error instanceof Error ? error.message : 'Cannot create integration'); }
+  }
+
+  function addXmlMapping(field: XmlPathItem) {
+    const index = xmlMappings.length;
+    const name = variableNameFromXmlPath(field.path, index);
+    if (xmlMappings.some((item) => item.path === field.path)) return;
+    setXmlMappings([...xmlMappings, { name, path: field.path, required: index === 0, mode: field.repeated ? 'all' : 'first' }]);
   }
 
   return (
@@ -385,6 +406,8 @@ export function TestConsolePage() {
           <WizardStep index="02" title="Что приходит во входящем запросе" description="Вставьте пример JSON, XML или raw text. Ниже сразу появятся поля, которые можно использовать в OData filter и ответе.">
             <label className="field-label">Input mode<select value={wizard.inputMode} onChange={(event) => changeInputMode(event.target.value)}><option value="json">JSON</option><option value="xml">XML</option><option value="raw_text">raw text</option></select></label>
             <CodeEditor value={wizard.sample} onChange={(value) => updateWizard({ sample: value })} language={wizard.inputMode === 'json' ? 'json' : wizard.inputMode === 'xml' ? 'xml' : 'text'} minRows={8} />
+            {wizard.inputMode === 'xml' && <XmlPathPicker xml={wizard.sample} onUseField={addXmlMapping} compact />}
+            {wizard.inputMode === 'xml' && <SelectedXmlMappings mappings={xmlFieldsForBuild} onRemove={(path) => setXmlMappings(xmlMappings.filter((item) => item.path !== path))} />}
             <ExtractedFields fields={extractedFields} />
           </WizardStep>
 
@@ -401,7 +424,9 @@ export function TestConsolePage() {
           <WizardStep index="04" title="Что вернуть внешнему сервису" description="Выберите sync/proxy/accepted mode и соберите тело ответа. JSON, XML и raw text поддерживаются здесь же.">
             <div className="metadata-grid compact-grid no-margin"><label className="field-label">Response mode<select value={wizard.responseMode} onChange={(event) => updateWizard({ responseMode: event.target.value })}><option value="sync_response">sync_response: вернуть свой ответ</option><option value="proxy_response">proxy_response: вернуть ответ target</option><option value="accepted_event">accepted_event: принять в очередь</option></select></label><label className="field-label">Response body type<select value={wizard.responseType} onChange={(event) => changeResponseType(event.target.value as ResponseBodyType)}><option value="json">JSON</option><option value="xml">XML</option><option value="raw_text">raw text</option></select></label><label className="field-label">HTTP status<input value={wizard.statusCode} onChange={(event) => updateWizard({ statusCode: event.target.value })} /></label></div>
             <label className="field-label">Headers<CodeEditor value={wizard.headers} onChange={(value) => updateWizard({ headers: value })} language="json" minRows={4} /></label>
-            <label className="field-label">Response body<CodeEditor value={wizard.responseBody} onChange={(value) => updateWizard({ responseBody: value })} language={wizard.responseType === 'json' ? 'json' : wizard.responseType === 'xml' ? 'xml' : 'text'} minRows={8} /></label>
+            {wizard.responseType === 'xml'
+              ? <XmlResponseBuilder value={wizard.responseBody} onChange={(value) => updateWizard({ responseBody: value })} variables={previewVariables(wizard.sample, wizard.inputMode, odataSteps, extractedFields)} hints={['{{order.Ref_Key}}', '{{order.Number}}', '{{products}}', '{{number}}']} />
+              : <label className="field-label">Response body<CodeEditor value={wizard.responseBody} onChange={(value) => updateWizard({ responseBody: value })} language={wizard.responseType === 'json' ? 'json' : 'text'} minRows={8} /></label>}
             <div className="hint-chip-row">{['{{order.Ref_Key}}', '{{order.Number}}', '{{products}}', '{{steps.get_order.first.Ref_Key}}', '{{request.body.Number}}'].map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)}>{hint}</button>)}</div>
             <ResponsePreview type={wizard.responseType} value={responsePreview} status={wizard.statusCode} headers={wizard.headers} />
           </WizardStep>
@@ -446,11 +471,17 @@ function PreviewStory({ fields, steps, responseType, endpointSlug }: { fields: E
   return <div className="request-preview-list"><div className="success-note"><strong>1. Incoming request</strong><span>POST /api/bus/in/{endpointSlug}</span></div><div className="success-note"><strong>2. Extracted variables</strong><span>{fields.slice(0, 5).map((field) => field.path).join(' · ') || 'нет полей'}</span></div>{steps.map((step, index) => <div className="success-note" key={step.id}><strong>{index + 3}. OData request: {step.save_as}</strong><span>{step.connection || 'OData connection'} · {step.resource} · {step.filter || 'no filter'}</span></div>)}<div className="success-note"><strong>{steps.length + 3}. Return response</strong><span>{responseType.toUpperCase()} response to caller</span></div></div>;
 }
 
-function renderLocalResponsePreview(template: string, type: ResponseBodyType, sample: string, inputMode: string, steps: ODataStepDraft[]) {
-  const scope: Record<string, unknown> = {};
-  try { Object.assign(scope, parseSample(inputMode, sample)); } catch { /* preview stays best-effort */ }
-  for (const step of steps) scope[step.save_as] = { Ref_Key: `${step.save_as}-ref-key`, Number: (scope.Number as string) || '260666/6938', Description: `${step.save_as} preview` };
-  scope.products = [{ Ref_Key: 'line-1', Quantity: 1 }, { Ref_Key: 'line-2', Quantity: 2 }];
+function SelectedXmlMappings({ mappings, onRemove }: { mappings: XmlMappingDraft[]; onRemove: (path: string) => void }) {
+  return <div className="builder-help-card xml-selected-fields"><strong>XML → variables</strong><span>Эти переменные будут созданы шагом `xml_extract` перед OData. Если ничего не выбирать вручную, Workbench возьмет первые распознанные XML-поля.</span><div className="variable-card-list compact-list">{mappings.length === 0 ? <span className="microcopy">Пока XML-поля не выбраны.</span> : mappings.map((field) => <button key={field.path} type="button" className="hint-chip active" onClick={() => onRemove(field.path)} title="Click to remove">{field.name} ← {field.path}</button>)}</div></div>;
+}
+
+function previewVariables(sample: string, inputMode: string, steps: ODataStepDraft[], fields: ExtractedField[]) {
+  const scope = previewScope(sample, inputMode, steps, fields);
+  return { ...scope, request: { body: inputMode === 'json' ? scope : { xml: sample }, xml: inputMode === 'xml' ? sample : undefined } };
+}
+
+function renderLocalResponsePreview(template: string, type: ResponseBodyType, sample: string, inputMode: string, steps: ODataStepDraft[], fields: ExtractedField[]) {
+  const scope = previewScope(sample, inputMode, steps, fields);
   const rendered = template.replace(/{{\s*([^{}]+?)\s*}}/g, (_match, expression: string) => {
     const value = resolvePreviewPath(scope, expression.trim());
     if (typeof value === 'object') return JSON.stringify(value, null, type === 'json' ? 0 : 2);
@@ -458,6 +489,15 @@ function renderLocalResponsePreview(template: string, type: ResponseBodyType, sa
   });
   if (type !== 'json') return rendered;
   try { return JSON.parse(rendered) as Record<string, unknown>; } catch { return { preview_error: 'Response JSON is not valid yet', rendered }; }
+}
+
+function previewScope(sample: string, inputMode: string, steps: ODataStepDraft[], fields: ExtractedField[]) {
+  const scope: Record<string, unknown> = {};
+  try { Object.assign(scope, parseSample(inputMode, sample)); } catch { /* preview stays best-effort */ }
+  if (inputMode === 'xml') fields.forEach((field) => { scope[field.path] = field.value; });
+  for (const step of steps) scope[step.save_as] = { Ref_Key: `${step.save_as}-ref-key`, Number: (scope.Number as string) || '260666/6938', Description: `${step.save_as} preview` };
+  scope.products = [{ Ref_Key: 'line-1', Quantity: 1 }, { Ref_Key: 'line-2', Quantity: 2 }];
+  return scope;
 }
 
 function resolvePreviewPath(scope: Record<string, unknown>, path: string): unknown {

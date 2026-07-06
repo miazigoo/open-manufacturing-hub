@@ -9,8 +9,11 @@ HANDLERS = {
     "apply_transforms": "apply_transforms",
     "evaluate_rules": "evaluate_rules",
     "odata_query": "flow_odata_query",
+    "xml_extract": "xml_extract",
+    "raw_xml_forward": "raw_xml_forward",
     "resolve_object": "resolve_object",
     "build_json": "flow_build_json",
+    "build_xml_response": "flow_return_response",
     "condition": "flow_condition",
     "call_endpoint": "flow_call_endpoint",
     "return_response": "flow_return_response",
@@ -27,6 +30,10 @@ class FlowCompiler:
             step_type = str(step.get("type"))
             step_id = str(step.get("id") or step_type)
             config = {key: value for key, value in step.items() if key not in {"id", "type", "name"}}
+            if step_type == "build_xml_response":
+                config["response_body_type"] = "xml"
+                config["body_template"] = config.get("body_template") or config.get("template") or ""
+                config.setdefault("headers", {"Content-Type": "application/xml"})
             config["step_id"] = step_id
             config["step_type"] = step_type
             config["display_name"] = step.get("name") or _title(step_id)

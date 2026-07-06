@@ -20,6 +20,7 @@ import { FormGrid } from '../../components/product/FormGrid';
 import { PageHeader } from '../../components/product/PageHeader';
 import { ResultPanel } from '../../components/product/ResultPanel';
 import { SectionCard } from '../../components/product/SectionCard';
+import { XmlPathPicker } from '../../components/xml/XmlPathPicker';
 
 interface WizardForm {
   name: string;
@@ -45,6 +46,7 @@ interface WizardForm {
 }
 
 const sampleJson = { inn: '1234567890', product_code: 'ABC-123', pool_id: 'POOL-001', codes: ['010464615169738421ABC'] };
+const sampleXml = '<Request>\n  <Operation>lookup_order_products</Operation>\n  <Number>260666/6938</Number>\n  <DeviceType>toodoo</DeviceType>\n</Request>';
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'onec-integration';
@@ -54,6 +56,12 @@ function parseObject(value: string, label: string): Record<string, unknown> {
   const parsed = JSON.parse(value || '{}') as unknown;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(`${label} must be a JSON object`);
   return parsed as Record<string, unknown>;
+}
+
+function samplePayload(inputMode: string, value: string): Record<string, unknown> {
+  if (inputMode === 'xml') return { xml: value };
+  if (inputMode === 'raw_text') return { text: value };
+  return parseObject(value, 'Sample request');
 }
 
 function defaultForm(preset: string | null): WizardForm {
@@ -82,7 +90,7 @@ function defaultForm(preset: string | null): WizardForm {
     matcherPath: twoOData ? 'inn' : 'pool_id',
     matcherValue: xmlBridge ? '<Document' : '',
     payloadTemplate: asJson(twoOData ? { pool_id: '{{request.body.pool_id}}', contractor_uuid: '{{contractor.Ref_Key}}', product_uuid: '{{product.Ref_Key}}', codes: '{{request.body.codes}}', source: '1C' } : { id: '{{request.body.id}}', payload: '{{request.body}}', source: '1C' }),
-    sampleRequest: asJson(sampleJson),
+    sampleRequest: xmlBridge ? sampleXml : asJson(sampleJson),
   };
 }
 
@@ -115,7 +123,9 @@ function builderFor(form: WizardForm, lookups: ODataLookupDraft[]): Record<strin
     if (match?.[1]) variables.add(match[1].replace(/^request\.body\./, ''));
   });
   if (form.matcherPath) variables.add(form.matcherPath);
-  const readSteps = Array.from(variables).map((name) => ({ id: `read_${slugify(name).replaceAll('-', '_')}`, type: 'read_variable', name: `Read ${name}`, path: `request.body.${name}`, save_as: name }));
+  const readSteps = form.inputMode === 'xml'
+    ? [{ id: 'extract_xml_fields', type: 'xml_extract', name: 'Extract XML fields', source: 'request.xml', fields: [{ name: 'operation', path: '/Request/Operation', required: false, mode: 'first' }, { name: 'number', path: '/Request/Number', required: true, mode: 'first' }, { name: 'device_type', path: '/Request/DeviceType', required: false, mode: 'first' }] }]
+    : Array.from(variables).map((name) => ({ id: `read_${slugify(name).replaceAll('-', '_')}`, type: 'read_variable', name: `Read ${name}`, path: `request.body.${name}`, save_as: name }));
   const lookupSteps = lookups.map((lookup) => ({ id: lookup.id, type: 'odata_query', name: lookup.name, connection: lookup.connection || form.onecConnector, resource: lookup.resource, filter_builder: [{ field: lookup.field, operator: lookup.operator, value: lookup.value }], select: (lookup.select ?? '').split(',').map((item) => item.trim()).filter(Boolean), orderby: lookup.orderby || undefined, top: 1, save_as: lookup.saveAs, required: lookup.required }));
   const buildJson = { id: 'build_target_payload', type: 'build_json', name: 'Build target JSON', save_as: 'target_payload', template: parseObject(form.payloadTemplate, 'Payload template') };
   const callEndpoint = { id: 'send_to_target', type: 'call_endpoint', name: 'Send to target', connector: form.targetConnector, method: form.targetMethod, path: form.targetPath, body: form.actionType === 'call_printer' ? '{{request.body}}' : '{{target_payload}}', response_mode: form.responseMode };
@@ -140,7 +150,7 @@ export function OneCCockpitWizardPage() {
   }, [form, lookups]);
   const builder = builderState.builder;
 
-  const preview = useMutation({ mutationFn: () => integrationFlowsApi.previewBuilder({ builder_json: builder, sample_request: parseObject(form.sampleRequest, 'Sample request'), run_real_queries: false }), onSuccess: setResult });
+  const preview = useMutation({ mutationFn: () => integrationFlowsApi.previewBuilder({ builder_json: builder, sample_request: samplePayload(form.inputMode, form.sampleRequest), run_real_queries: false }), onSuccess: setResult });
   const create = useMutation({ mutationFn: () => integrationFlowsApi.create({ name: form.name, slug: form.slug, description: form.description, enabled: true, source_type: form.sourceType, target_type: form.targetType, endpoint: { input_mode: form.inputMode, response_mode: form.responseMode, auth_mode: form.authMode, auth_config_json: form.authMode === 'static_token' ? { token: form.token } : {} }, matcher_group_json: matcherFor(form), action_json: actionFor(form), response_config_json: { response_mode: form.responseMode }, builder_json: builder, test_payload_json: form.inputMode === 'json' ? parseObject(form.sampleRequest, 'Sample request') : null, test_payload_text: form.inputMode === 'json' ? null : form.sampleRequest }), onSuccess: (flow) => { setSelectedFlow(flow); setResult(flow); queryClient.invalidateQueries({ queryKey: ['ui-cockpit-summary'] }); } });
   const compile = useMutation({ mutationFn: () => integrationFlowsApi.compileBuilder(selectedFlow!.id), onSuccess: setResult });
   const test = useMutation({ mutationFn: () => integrationFlowsApi.test(selectedFlow!.id, { input_mode: form.inputMode, payload_json: form.inputMode === 'json' ? parseObject(form.sampleRequest, 'Sample request') : null, payload_text: form.inputMode === 'json' ? null : form.sampleRequest, dry_run: false }), onSuccess: setResult });
@@ -190,6 +200,15 @@ export function OneCCockpitWizardPage() {
             {form.authMode === 'static_token' && <label className="field-label">Token<input value={form.token} onChange={(event) => setForm({ ...form, token: event.target.value })} /></label>}
           </FormGrid>
           <EndpointUrlBox url={`/api/bus/in/${form.slug}`} label="Generated inbound endpoint" />
+
+          {form.inputMode === 'xml' && <SectionCard eyebrow="XML mode" title="Что сделать с входящим XML" description="Выберите сценарий от задачи, а не от технической вкладки: извлечь поля для OData, передать XML без изменений или собрать XML-ответ.">
+            <div className="metadata-grid request-action-cards">
+              <button type="button" className={`builder-help-card action-card ${lookups.length ? 'active' : ''}`} onClick={() => setLookups(lookups.length ? lookups : [{ id: 'get_order', name: 'Find order by XML number', connection: form.onecConnector, resource: 'Document_ЗаказНаПроизводство2_2', field: 'Number', operator: 'eq', value: '{{number}}', select: 'Ref_Key,Number,Date', saveAs: 'order', required: true }])}><strong>Parse XML → OData</strong><span>Взять `/Request/Number`, найти данные в 1С и вернуть ответ.</span></button>
+              <button type="button" className={`builder-help-card action-card ${form.actionType === 'call_1c_http_service' ? 'active' : ''}`} onClick={() => setForm({ ...form, actionType: 'call_1c_http_service', targetType: 'onec' })}><strong>Raw XML forward</strong><span>Передать XML как пришел, с hash-контролем.</span></button>
+              <button type="button" className={`builder-help-card action-card ${form.responseMode === 'sync_response' ? 'active' : ''}`} onClick={() => setForm({ ...form, responseMode: 'sync_response' })}><strong>Build XML response</strong><span>Вернуть caller понятный XML-ответ сразу.</span></button>
+            </div>
+            <XmlPathPicker xml={form.sampleRequest} compact />
+          </SectionCard>}
 
           <MatcherBuilder mode={form.matcherMode} matcherType={form.matcherType} path={form.matcherPath} value={form.matcherValue} matcherTypes={options.data.matcher_types} onChange={(patch) => setForm({ ...form, ...patch })} />
 
