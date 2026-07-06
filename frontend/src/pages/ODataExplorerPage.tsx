@@ -584,7 +584,7 @@ export function ODataExplorerPage() {
 
   function renderWizard() {
     return (
-      <div className="page-stack">
+      <div className="page-stack odata-wizard-page">
         <section className="panel form-panel">
           <div className="panel-toolbar">
             <div>
@@ -619,7 +619,7 @@ export function ODataExplorerPage() {
         {wizardStep === 'choose_action' && renderActionChoice()}
         {wizardStep === 'odata' && renderODataStep()}
         {wizardStep === 'send_result' && renderSendResultStep()}
-        <section className="panel form-panel">
+        {wizardStep !== 'odata' && <section className="panel form-panel">
           <div className="panel-toolbar">
             <div>
               <span className="eyebrow">Draft</span>
@@ -628,7 +628,7 @@ export function ODataExplorerPage() {
             <button type="button" className="ghost-button danger" onClick={clearDraft} disabled={draftSteps.length === 0}>Clear</button>
           </div>
           {renderDraftSummary()}
-        </section>
+        </section>}
         {renderTriggerModal()}
       </div>
     );
