@@ -44,11 +44,15 @@ function keyify(value: string) {
 
 function variableName(value: string) {
   const clean = value.split('/').pop()?.replace(/^.*_/, '') || value;
-  return clean.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'odata_result';
+  const normalized = clean.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+  if (!normalized) return 'odata_result';
+  return /^[0-9]/.test(normalized) ? `v_${normalized}` : normalized;
 }
 
 function variableInput(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9_]+/g, '_').slice(0, 40);
+  const normalized = value.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+/, '').slice(0, 40);
+  if (!normalized) return '';
+  return /^[0-9]/.test(normalized) ? `v_${normalized}` : normalized;
 }
 
 function loadDraft(): DraftStep[] {
@@ -75,6 +79,22 @@ function renderInputPlaceholders(value: string, sample: Record<string, unknown>)
     if (raw === undefined || raw === null) return '';
     return typeof raw === 'object' ? JSON.stringify(raw) : String(raw);
   });
+}
+
+function renderDraftPlaceholders(value: string, steps: DraftStep[]) {
+  return steps.reduce((current, step) => {
+    if (!step.sample) return current;
+    const escaped = step.save_as.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return current.replace(new RegExp(`{{\\s*${escaped}\\.([A-Za-z0-9_А-Яа-яЁё-]+)\\s*}}`, 'g'), (_match, field: string) => {
+      const raw = step.sample?.[field];
+      if (raw === undefined || raw === null) return '';
+      return typeof raw === 'object' ? JSON.stringify(raw) : String(raw);
+    });
+  }, value);
+}
+
+function renderTestPlaceholders(value: string, sample: Record<string, unknown>, steps: DraftStep[]) {
+  return renderDraftPlaceholders(renderInputPlaceholders(value, sample), steps);
 }
 
 function formatInputValue(value: unknown) {
@@ -114,9 +134,9 @@ export function ODataExplorerPage() {
     mutationFn: () => {
       const sample = parseInputSample(inputSampleText);
       return odataExplorerApi.query(connectorId, {
-        resource: renderInputPlaceholders(query.resource, sample),
+        resource: renderTestPlaceholders(query.resource, sample, draftSteps),
         top: Number(query.top) || 10,
-        filter: query.filter ? renderInputPlaceholders(query.filter, sample) : null,
+        filter: query.filter ? renderTestPlaceholders(query.filter, sample, draftSteps) : null,
         select: query.select || null,
         orderby: query.orderby || null,
         paginate,
@@ -303,7 +323,8 @@ export function ODataExplorerPage() {
   function useAsOneCObjectResource(step: DraftStep, field: string) {
     const part = tabularPart.trim();
     const suffix = part ? `/${part}` : '';
-    setQuery({ ...query, resource: `${step.resource}(guid'{{${step.save_as}.${field}}}')${suffix}`, filter: '' });
+    const baseResource = step.resource.split('?')[0].split('(')[0];
+    setQuery({ ...query, resource: `${baseResource}(guid'{{${step.save_as}.${field}}}')${suffix}`, filter: '' });
   }
 
   function clearDraft() {
@@ -515,7 +536,8 @@ export function ODataExplorerPage() {
             <label className="field-label">$orderby<input value={query.orderby} onChange={(event) => setQuery({ ...query, orderby: event.target.value })} /></label>
           </div>
           <label className="field-label">$filter<input value={query.filter} onChange={(event) => setQuery({ ...query, filter: event.target.value })} placeholder="Number eq '260666/6938'" title={t('integration.odataExplorer.filterTitle')} /></label>
-          {query.filter && <div className="success-note">Test filter preview<span>{renderInputPlaceholders(query.filter, inputSample)}</span></div>}
+          {query.resource && <div className="success-note">Test resource preview<span>{renderTestPlaceholders(query.resource, inputSample, draftSteps)}</span></div>}
+          {query.filter && <div className="success-note">Test filter preview<span>{renderTestPlaceholders(query.filter, inputSample, draftSteps)}</span></div>}
           <div className="odata-filter-builder">
             <div className="panel-toolbar compact-toolbar"><h3>{t('integration.odataExplorer.filterBuilder')}</h3><button type="button" className="ghost-button" onClick={() => setFilters([...filters, { field: '', operator: 'eq', value: '' }])}>{t('integration.odataExplorer.addCondition')}</button></div>
             {filters.map((filter, index) => (
