@@ -496,17 +496,34 @@ export function ODataExplorerPage() {
             </select>
           </label>
           {enabledConnections.length === 0 && <div className="success-note">{t('integration.odataExplorer.createProfileFirst')}<span>{t('integration.odataExplorer.createProfileFirstDetail')}</span></div>}
-          {latestDraftStep?.sample && (
+          {draftSteps.length > 0 && (
             <div className="builder-help-card">
-              <strong>Данные предыдущего шага</strong>
+              <strong>Переменные предыдущих шагов</strong>
               <span>Нажмите поле, чтобы вставить переменную. Для документа 1C используйте кнопку <code>1C object resource</code>, она соберет ресурс вида <code>Document_...(guid'{'{{'}order.Ref_Key{'}}'}')/Продукция</code>.</span>
-              <div className="hint-chip-row">
-                {Object.keys(latestDraftStep.sample).slice(0, 14).map((field) => (
-                  <span key={field} className="action-row wrap-actions">
-                    <button type="button" className="hint-chip" onClick={() => insertPlaceholder('resource', latestDraftStep, field)}>Resource: {field}</button>
-                    <button type="button" className="hint-chip" onClick={() => insertPlaceholder('filter', latestDraftStep, field)}>Filter: {field}</button>
-                    {field.endsWith('_Key') || field === 'Ref_Key' ? <button type="button" className="hint-chip" onClick={() => useAsOneCObjectResource(latestDraftStep, field)}>1C object resource: {field}</button> : null}
-                  </span>
+              <div className="variable-card-list">
+                {draftSteps.map((step, index) => (
+                  <details className="variable-card" key={step.id} open={index === draftSteps.length - 1}>
+                    <summary>
+                      <span>Step {index + 1}</span>
+                      <strong>{step.save_as}</strong>
+                      <small>{step.resource}</small>
+                    </summary>
+                    {step.sample ? (
+                      <div className="stack-form">
+                        <JsonBlock title={`Artifact: ${step.save_as}`} value={step.sample} searchable={false} />
+                        <div className="hint-chip-row">
+                          {Object.keys(step.sample).slice(0, 18).map((field) => (
+                            <span key={field} className="action-row wrap-actions">
+                              <button type="button" className="hint-chip" onClick={() => insertPlaceholder('resource', step, field)}>Resource: {field}</button>
+                              <button type="button" className="hint-chip" onClick={() => insertPlaceholder('filter', step, field)}>Filter: {field}</button>
+                              <button type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(`{{${step.save_as}.${field}}}`)}>Copy: {field}</button>
+                              {field.endsWith('_Key') || field === 'Ref_Key' ? <button type="button" className="hint-chip" onClick={() => useAsOneCObjectResource(step, field)}>1C object resource: {field}</button> : null}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : <div className="success-note">Artifact empty<span>У этого шага нет первого элемента результата.</span></div>}
+                  </details>
                 ))}
               </div>
             </div>
