@@ -40,9 +40,14 @@ async def read_odata(config: dict[str, Any], resource: str, query: dict[str, Any
         if not isinstance(data, dict):
             return OneCReadResult(False, request_payload={"requests": requests}, response_payload={"responses": responses}, error_code=errors.ONEC_RESPONSE_INVALID, error_message="1C OData response is not a JSON object")
         page_items = data.get("value") if "value" in data else data.get("items")
+        single_entity = page_items is None and "odata.metadata" in data
+        if single_entity:
+            page_items = [data]
         if not isinstance(page_items, list):
             return OneCReadResult(False, request_payload={"requests": requests}, response_payload={"responses": responses}, error_code=errors.ONEC_RESPONSE_INVALID, error_message="1C OData response does not contain value array")
         items.extend([item for item in page_items if isinstance(item, dict)])
+        if single_entity:
+            break
         next_url = data.get("@odata.nextLink") if isinstance(data.get("@odata.nextLink"), str) else None
         requested_top = int((params or json_query).get("$top") or 0)
         if next_url is None and (requested_top <= 0 or len(page_items) < requested_top):

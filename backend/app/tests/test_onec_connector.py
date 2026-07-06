@@ -76,6 +76,30 @@ async def test_onec_odata_read_paginates_and_manual_endpoint(monkeypatch, client
     assert calls[1]["params"] is None
 
 
+async def test_onec_odata_read_accepts_single_entity_response(monkeypatch, client):
+    async def fake_request(self, method, url, *, params=None, json_payload=None, headers=None):
+        return httpx.Response(
+            200,
+            json={
+                "odata.metadata": "https://onec.example.local/odata/standard.odata/$metadata#Document_ЗаказКлиента/@Element",
+                "Ref_Key": "doc-1",
+                "Number": "SO-1",
+            },
+        ), {"url": url, "params": params}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
+    created = await client.post(
+        "/api/connectors",
+        json={"name": "1C ERP", "connector_type": "onec", "direction": "bidirectional", "config_json": ONEC_CONFIG},
+    )
+    connector = created.json()
+    response = await client.post(f"/api/connectors/{connector['id']}/onec/odata/read", json={"resource": "Document_ЗаказКлиента(guid'doc-1')", "query": {"$top": 1}})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 1
+    assert body["items"][0]["Ref_Key"] == "doc-1"
+
+
 async def test_onec_send_and_dry_run_map_http_errors(monkeypatch):
     connector = OneCConnector()
 
