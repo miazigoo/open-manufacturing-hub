@@ -74,6 +74,8 @@ export function ODataExplorerPage() {
   const [flowForm, setFlowForm] = useState({ name: 'Order products lookup', slug: 'order-products-lookup', operation: 'lookup_order_products', description: 'Lookup 1C order data through chained OData requests.' });
   const [newKey, setNewKey] = useState({ name: 'Lookup order products', operation: 'lookup_order_products', description: 'External system asks OMH to run this flow.' });
   const [newKeyTouched, setNewKeyTouched] = useState(false);
+  const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('continue_odata');
+  const [tabularPart, setTabularPart] = useState('Продукция');
   const resources = useQuery({ queryKey: ['odata-resources', connectorId], queryFn: () => odataExplorerApi.resources(connectorId), enabled: Boolean(connectorId) });
   const run = useMutation({ mutationFn: () => odataExplorerApi.query(connectorId, { resource: query.resource, top: Number(query.top) || 10, filter: query.filter || null, select: query.select || null, orderby: query.orderby || null, paginate }) });
   const createLookup = useMutation({ mutationFn: (extractJson: Record<string, string>) => odataExplorerApi.createLookup(connectorId, { name: lookup.name, resource: query.resource, filter_template: lookup.filter_template, extract_json: extractJson }) });
@@ -195,6 +197,12 @@ export function ODataExplorerPage() {
     else setQuery({ ...query, filter: `${query.filter}${query.filter ? ' ' : ''}${placeholder}` });
   }
 
+  function useAsOneCObjectResource(step: DraftStep, field: string) {
+    const part = tabularPart.trim();
+    const suffix = part ? `/${part}` : '';
+    setQuery({ ...query, resource: `${step.resource}(guid'{{${step.save_as}.${field}}}')${suffix}`, filter: '' });
+  }
+
   function clearDraft() {
     updateDraft([]);
   }
@@ -216,6 +224,7 @@ export function ODataExplorerPage() {
       builder_json: {
         version: 1,
         input: { endpoint_slug: flowForm.slug, input_mode: 'json', response_mode: 'sync_response' },
+        next_action: nextAction,
         variables: [{ name: 'operation_key', source: 'request.body.operation' }],
         steps: [
           { id: 'read_operation_key', type: 'read_variable', name: 'Read operation key', path: 'request.body.operation', fallback_paths: ['request.body.sinc'], save_as: 'operation_key' },
@@ -353,13 +362,24 @@ export function ODataExplorerPage() {
           <div className="panel-toolbar">
             <div>
               <span className="eyebrow">Draft flow</span>
-              <h2>Шаги из OData Explorer</h2>
-              <p className="microcopy">Сначала выполняйте запросы и добавляйте рабочие результаты как шаги. В базу flow сохранится только по кнопке ниже.</p>
+              <h2>Пошаговая сборка интеграции</h2>
+              <p className="microcopy">Сначала выберите trigger key, затем проверяйте OData-запросы. Flow сохранится только по кнопке Save as Integration Flow.</p>
             </div>
             <button type="button" className="ghost-button danger" onClick={clearDraft} disabled={draftSteps.length === 0}>Clear</button>
           </div>
+          <div className="builder-help-card">
+            <strong>Step 1. Trigger key</strong>
+            <span>Этот ключ придет во входящем JSON в поле <code>operation</code> или <code>sinc</code>. По нему OMH поймет, какой flow запускать.</span>
+            <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => setFlowForm({ ...flowForm, operation: event.target.value })}><option value={flowForm.operation}>{flowForm.operation}</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
+            <div className="metadata-grid compact-grid no-margin">
+              <label className="field-label">New key name<input value={newKey.name} onChange={(event) => setNewKey({ ...newKey, name: event.target.value, operation: newKeyTouched ? newKey.operation : keyify(event.target.value) })} /></label>
+              <label className="field-label">New key<input value={newKey.operation} onChange={(event) => { setNewKeyTouched(true); setNewKey({ ...newKey, operation: keyify(event.target.value) }); }} /></label>
+            </div>
+            <label className="field-label">Key description<input value={newKey.description} onChange={(event) => setNewKey({ ...newKey, description: event.target.value })} /></label>
+            <button type="button" className="ghost-button" onClick={() => createOperationKey.mutate()} disabled={createOperationKey.isPending}>Create operation key</button>
+          </div>
           {run.data && <div className="builder-help-card">
-            <strong>Текущий результат можно добавить как шаг</strong>
+            <strong>Step 2. Add current OData result as a step</strong>
             <span>Save as - имя переменной результата. Потом используйте поля как <code>{`{{${stepSaveAs}.Ref_Key}}`}</code>.</span>
             <div className="metadata-grid compact-grid no-margin">
               <label className="field-label">Save as<input value={stepSaveAs} onChange={(event) => { setStepSaveAsTouched(true); setStepSaveAs(variableInput(event.target.value)); }} /></label>
@@ -375,11 +395,22 @@ export function ODataExplorerPage() {
               <span><code>{step.save_as}</code> · {step.connection} · top {step.top}</span>
               <span>{step.resource}</span>
               {step.filter && <span>$filter: {step.filter}</span>}
+              <div className="builder-help-card">
+                <strong>Step 3. Choose how to use this result</strong>
+                <span>Если нужно открыть табличную часть документа 1C, выберите поле `Ref_Key`, укажите tabular part и нажмите `1C object resource`.</span>
+                <label className="field-label">1C tabular part<input value={tabularPart} onChange={(event) => setTabularPart(event.target.value)} placeholder="Продукция" /></label>
+                <div className="segmented-control">
+                  <button type="button" className={nextAction === 'continue_odata' ? 'active' : ''} onClick={() => setNextAction('continue_odata')}>Continue OData</button>
+                  <button type="button" className={nextAction === 'return_all' ? 'active' : ''} onClick={() => setNextAction('return_all')}>Return all</button>
+                  <button type="button" className={nextAction === 'send_result' ? 'active' : ''} onClick={() => setNextAction('send_result')}>Send result</button>
+                </div>
+              </div>
               {step.sample && <div className="hint-chip-row">
                 {Object.keys(step.sample).slice(0, 12).map((field) => (
                   <span key={field} className="action-row wrap-actions">
                     <button type="button" className="hint-chip" onClick={() => insertPlaceholder('resource', step, field)}>Resource: {field}</button>
                     <button type="button" className="hint-chip" onClick={() => insertPlaceholder('filter', step, field)}>Filter: {field}</button>
+                    {field.endsWith('_Key') || field === 'Ref_Key' ? <button type="button" className="hint-chip" onClick={() => useAsOneCObjectResource(step, field)}>1C object resource: {field}</button> : null}
                   </span>
                 ))}
               </div>}
@@ -390,16 +421,10 @@ export function ODataExplorerPage() {
             <label className="field-label">Flow name<input value={flowForm.name} onChange={(event) => setFlowForm({ ...flowForm, name: event.target.value, slug: slugify(event.target.value) })} /></label>
             <label className="field-label">Slug<input value={flowForm.slug} onChange={(event) => setFlowForm({ ...flowForm, slug: slugify(event.target.value) })} /></label>
           </div>
-          <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => setFlowForm({ ...flowForm, operation: event.target.value })}><option value={flowForm.operation}>{flowForm.operation}</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
-          <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">New key name<input value={newKey.name} onChange={(event) => setNewKey({ ...newKey, name: event.target.value, operation: newKeyTouched ? newKey.operation : keyify(event.target.value) })} /></label>
-            <label className="field-label">New key<input value={newKey.operation} onChange={(event) => { setNewKeyTouched(true); setNewKey({ ...newKey, operation: keyify(event.target.value) }); }} /></label>
-          </div>
-          <label className="field-label">Key description<input value={newKey.description} onChange={(event) => setNewKey({ ...newKey, description: event.target.value })} /></label>
           <div className="action-row wrap-actions">
-            <button type="button" className="ghost-button" onClick={() => createOperationKey.mutate()} disabled={createOperationKey.isPending}>Create operation key</button>
             <button type="button" className="primary-button" onClick={() => saveFlow.mutate()} disabled={saveFlow.isPending || draftSteps.length === 0}>Save as Integration Flow</button>
             <Link className="primary-link" to="/integration-flows">Open Integration Flows</Link>
+            <Link className="primary-link" to="/docs/onec/tools/odata-chaining-fields">Open OData chaining guide</Link>
           </div>
           {createOperationKey.error instanceof Error && <div className="error-state compact">{createOperationKey.error.message}</div>}
           {saveFlow.error instanceof Error && <div className="error-state compact">{saveFlow.error.message}</div>}
