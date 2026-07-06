@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import re
 from typing import Any
 from uuid import UUID
@@ -50,7 +51,7 @@ async def query(session: AsyncSession, connector_id: UUID, request: ODataQueryRe
         return {"request_url": f"mock://training-odata/{request.resource}", "request": {"resource": request.resource, "params": params}, "response": response, "items": items, "count": len(items), "artifact_ids": {}}
     result = await read_odata(config, request.resource, params)
     if not result.success:
-        raise BadRequestError(result.error_message or result.error_code or "ODATA_QUERY_FAILED")
+        raise BadRequestError(_odata_error_message(result.error_message or result.error_code or "ODATA_QUERY_FAILED", result.request_payload, result.response_payload))
     return {"request_url": (result.request_payload or {}).get("url"), "request": result.request_payload or {}, "response": result.response_payload or {}, "items": result.items, "count": len(result.items), "artifact_ids": {}}
 
 async def create_lookup(session: AsyncSession, connector_id: UUID, request: ODataLookupCreateRequest) -> ODataLookupTemplate:
@@ -67,3 +68,34 @@ async def _onec_connector(session: AsyncSession, connector_id: UUID) -> Connecto
     if connector.connector_type != "onec":
         raise BadRequestError("Connector must be connector_type=onec")
     return connector
+
+def _odata_error_message(message: str, request_payload: dict[str, Any] | None, response_payload: dict[str, Any] | None) -> str:
+    parts = [message]
+    requests = (request_payload or {}).get("requests")
+    if isinstance(requests, list) and requests:
+        first_request = requests[0]
+        if isinstance(first_request, dict):
+            url = first_request.get("url")
+            params = first_request.get("params")
+            if url:
+                parts.append(f"Request: {url}")
+            if params:
+                parts.append(f"Params: {_short_json(params)}")
+    responses = (response_payload or {}).get("responses")
+    if isinstance(responses, list) and responses:
+        first_response = responses[0]
+        if isinstance(first_response, dict):
+            status_code = first_response.get("status_code")
+            body = first_response.get("body")
+            if status_code:
+                parts.append(f"1C status: {status_code}")
+            if body is not None:
+                parts.append(f"1C response: {_short_json(body)}")
+    return "\n".join(parts)
+
+def _short_json(value: Any, limit: int = 1200) -> str:
+    try:
+        text = json.dumps(value, ensure_ascii=False)
+    except TypeError:
+        text = str(value)
+    return text if len(text) <= limit else f"{text[:limit]}..."

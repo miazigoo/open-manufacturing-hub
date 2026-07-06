@@ -183,6 +183,7 @@ export function ODataExplorerPage() {
       </section>
       <section className="page-stack">
         <JsonBlock title={t('integration.odataExplorer.resources')} value={resources.data ?? { hint: t('integration.odataExplorer.resourcesHint') }} searchable={false} />
+        {run.error instanceof Error && <div className="error-state compact">{run.error.message}</div>}
         <JsonBlock title={t('integration.odataExplorer.queryResult')} value={run.data ?? { hint: t('integration.odataExplorer.queryResultHint') }} searchable />
         <JsonBlock title={t('integration.odataExplorer.createdLookup')} value={createLookup.data ?? {}} searchable={false} />
       </section>
