@@ -8,6 +8,7 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? '')
 
 export default defineConfig({
   plugins: [react()],
+  base: process.env.VITE_PUBLIC_BASE_PATH || '/',
   server: {
     port: 5173,
     allowedHosts,

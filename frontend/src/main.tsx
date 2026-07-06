@@ -18,11 +18,13 @@ const queryClient = new QueryClient({
   },
 });
 
+const routerBasename = import.meta.env.VITE_PUBLIC_BASE_PATH?.replace(/\/$/, '') || undefined;
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={routerBasename}>
           <AuthGate>
             <TourProvider>
               <App />
