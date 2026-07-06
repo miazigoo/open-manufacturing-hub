@@ -29,6 +29,11 @@ interface DraftStep {
 
 type WizardStep = 'trigger' | 'choose_action' | 'odata' | 'send_result';
 
+interface InputField {
+  name: string;
+  value: unknown;
+}
+
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'odata-chain';
 }
@@ -53,6 +58,23 @@ function loadDraft(): DraftStep[] {
   } catch {
     return [];
   }
+}
+
+function parseInputSample(value: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+}
+
+function renderInputPlaceholders(value: string, sample: Record<string, unknown>) {
+  return value.replace(/{{\s*request\.body\.([A-Za-z0-9_А-Яа-яЁё-]+)\s*}}/g, (_match, field: string) => {
+    const raw = sample[field];
+    if (raw === undefined || raw === null) return '';
+    return typeof raw === 'object' ? JSON.stringify(raw) : String(raw);
+  });
 }
 
 export function ODataExplorerPage() {
@@ -81,8 +103,21 @@ export function ODataExplorerPage() {
   const [tabularPart, setTabularPart] = useState('Продукция');
   const [wizardStep, setWizardStep] = useState<WizardStep>('trigger');
   const [target, setTarget] = useState({ method: 'POST', url: '' });
+  const [inputSampleText, setInputSampleText] = useState('{\n  "operation": "lookup_order_products",\n  "Number": "260666/6938",\n  "device_type": "toodoo"\n}');
   const resources = useQuery({ queryKey: ['odata-resources', connectorId], queryFn: () => odataExplorerApi.resources(connectorId), enabled: Boolean(connectorId) });
-  const run = useMutation({ mutationFn: () => odataExplorerApi.query(connectorId, { resource: query.resource, top: Number(query.top) || 10, filter: query.filter || null, select: query.select || null, orderby: query.orderby || null, paginate }) });
+  const run = useMutation({
+    mutationFn: () => {
+      const sample = parseInputSample(inputSampleText);
+      return odataExplorerApi.query(connectorId, {
+        resource: renderInputPlaceholders(query.resource, sample),
+        top: Number(query.top) || 10,
+        filter: query.filter ? renderInputPlaceholders(query.filter, sample) : null,
+        select: query.select || null,
+        orderby: query.orderby || null,
+        paginate,
+      });
+    },
+  });
   const createLookup = useMutation({ mutationFn: (extractJson: Record<string, string>) => odataExplorerApi.createLookup(connectorId, { name: lookup.name, resource: query.resource, filter_template: lookup.filter_template, extract_json: extractJson }) });
   const createOperationKey = useMutation({
     mutationFn: () => operationTemplatesApi.create({
@@ -178,6 +213,19 @@ export function ODataExplorerPage() {
     localStorage.setItem(draftStorageKey, JSON.stringify(next));
   }
 
+  function requestInputFields(): InputField[] {
+    return Object.entries(parseInputSample(inputSampleText))
+      .filter(([key]) => !['operation', 'sinc'].includes(key))
+      .map(([name, value]) => ({ name, value }));
+  }
+
+  function insertRequestPlaceholder(target: 'resource' | 'filter' | 'filter_value', field: string) {
+    const placeholder = `{{request.body.${field}}}`;
+    if (target === 'resource') setQuery({ ...query, resource: `${query.resource}${placeholder}` });
+    else if (target === 'filter') setQuery({ ...query, filter: `${query.filter}${query.filter ? ' ' : ''}${placeholder}` });
+    else setFilters(filters.map((item, index) => index === 0 ? { ...item, value: placeholder } : item));
+  }
+
   function startODataStep() {
     setNextAction('continue_odata');
     setQuery({ resource: '', top: '10', filter: '', select: '', orderby: '' });
@@ -237,6 +285,7 @@ export function ODataExplorerPage() {
   function buildFlowPayload() {
     if (draftSteps.length === 0) throw new Error('Add at least one OData step');
     const responseBody = draftSteps.reduce<Record<string, string>>((acc, step) => ({ ...acc, [step.save_as]: `{{${step.save_as}}}` }), { operation_key: '{{operation_key}}' });
+    const inputFields = requestInputFields();
     return {
       name: flowForm.name,
       slug: flowForm.slug,
@@ -253,9 +302,10 @@ export function ODataExplorerPage() {
         input: { endpoint_slug: flowForm.slug, input_mode: 'json', response_mode: 'sync_response' },
         next_action: nextAction,
         target: nextAction === 'send_result' ? target : null,
-        variables: [{ name: 'operation_key', source: 'request.body.operation' }],
+        variables: [{ name: 'operation_key', source: 'request.body.operation' }, ...inputFields.map((field) => ({ name: field.name, source: `request.body.${field.name}` }))],
         steps: [
           { id: 'read_operation_key', type: 'read_variable', name: 'Read operation key', path: 'request.body.operation', fallback_paths: ['request.body.sinc'], save_as: 'operation_key' },
+          ...inputFields.map((field) => ({ id: `read_${variableInput(field.name)}`, type: 'read_variable', name: `Read ${field.name}`, path: `request.body.${field.name}`, save_as: variableInput(field.name) })),
           ...draftSteps.map((step) => ({
             id: step.id,
             type: 'odata_query',
@@ -271,7 +321,7 @@ export function ODataExplorerPage() {
           { id: 'return_response', type: 'return_response', name: 'Return response', body: responseBody },
         ],
       },
-      test_payload_json: { operation: flowForm.operation, Number: '260666/6938' },
+      test_payload_json: { ...parseInputSample(inputSampleText), operation: flowForm.operation },
     };
   }
 
@@ -295,6 +345,7 @@ export function ODataExplorerPage() {
   const firstResult = run.data?.items?.[0] ?? null;
   const operationKeyRows = (operationKeys.data ?? []).filter((item) => item.system_type === 'operation_key' || item.direction === 'inbound');
   const latestDraftStep = draftSteps[draftSteps.length - 1] ?? null;
+  const inputFields = requestInputFields();
 
   function goToActionChoice() {
     run.reset();
@@ -312,7 +363,7 @@ export function ODataExplorerPage() {
             <div>
               <span className="eyebrow">Trigger</span>
               <h2>Add trigger key</h2>
-              <p className="microcopy">Создайте ключ, который внешний сервис будет отправлять в поле <code>operation</code> или <code>sinc</code>.</p>
+            <p className="microcopy">Создайте ключ, который внешний сервис будет отправлять в поле <code>operation</code> или <code>sinc</code>.</p>
             </div>
             <button type="button" className="ghost-button" onClick={() => setShowTriggerModal(false)}>Close</button>
           </div>
@@ -320,7 +371,7 @@ export function ODataExplorerPage() {
             <label className="field-label">Name<input value={newKey.name} onChange={(event) => setNewKey({ ...newKey, name: event.target.value, operation: newKeyTouched ? newKey.operation : keyify(event.target.value) })} /></label>
             <label className="field-label">Key<input value={newKey.operation} onChange={(event) => { setNewKeyTouched(true); setNewKey({ ...newKey, operation: keyify(event.target.value) }); }} /></label>
             <label className="field-label">Description<input value={newKey.description} onChange={(event) => setNewKey({ ...newKey, description: event.target.value })} /></label>
-            <div className="success-note">Example request<span><code>{`{"operation":"${newKey.operation || 'your_key'}","Number":"260666/6938"}`}</code></span></div>
+            <div className="success-note">Example request<span><code>{`{"operation":"${newKey.operation || 'your_key'}","Number":"260666/6938","device_type":"toodoo"}`}</code></span></div>
             <button type="button" className="primary-button" onClick={() => createOperationKey.mutate()} disabled={createOperationKey.isPending || !newKey.operation}>Create trigger</button>
             {createOperationKey.error instanceof Error && <div className="error-state compact">{createOperationKey.error.message}</div>}
           </div>
@@ -410,6 +461,19 @@ export function ODataExplorerPage() {
               </div>
             </div>
           )}
+          <div className="builder-help-card">
+            <strong>Входные параметры из JSON</strong>
+            <span>Эти значения придут от внешней системы вместе с trigger key. В flow они сохраняются как шаблоны <code>{'{{request.body.Number}}'}</code>, а для тестового запуска здесь подставляются из примера ниже.</span>
+            <div className="hint-chip-row">
+              {inputFields.length === 0 ? <span className="microcopy">Добавьте поля в пример JSON на первом шаге.</span> : inputFields.map((field) => (
+                <span key={field.name} className="action-row wrap-actions">
+                  <button type="button" className="hint-chip" onClick={() => insertRequestPlaceholder('filter_value', field.name)}>Filter value: {field.name}</button>
+                  <button type="button" className="hint-chip" onClick={() => insertRequestPlaceholder('filter', field.name)}>Filter raw: {field.name}</button>
+                  <button type="button" className="hint-chip" onClick={() => insertRequestPlaceholder('resource', field.name)}>Resource: {field.name}</button>
+                </span>
+              ))}
+            </div>
+          </div>
           <label className="field-label">
             {t('integration.odataExplorer.resource')}
             <input list="odata-resources" value={query.resource} onChange={(event) => setQuery({ ...query, resource: event.target.value })} placeholder="Document_ЗаказНаПроизводство2_2" />
@@ -509,6 +573,11 @@ export function ODataExplorerPage() {
             <h1>Trigger key</h1>
             <p className="microcopy">Выберите ключ, который придет от внешней системы в JSON-поле <code>operation</code> или <code>sinc</code>.</p>
             <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => setFlowForm({ ...flowForm, operation: event.target.value })}><option value="">Выберите ключ</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
+            <label className="field-label">
+              Пример входящего JSON
+              <CodeEditor value={inputSampleText} onChange={setInputSampleText} language="json" minRows={6} title="Укажите пример того, что внешний backend будет отправлять в OMH. Поля кроме operation/sinc можно вставлять в OData filter/resource." />
+            </label>
+            <div className="success-note">Доступные параметры<span>{inputFields.length ? inputFields.map((field) => `${field.name}=${String(field.value)}`).join(', ') : 'Пока нет параметров кроме operation/sinc'}</span></div>
             <div className="action-row wrap-actions">
               <button type="button" className="ghost-button" onClick={() => setShowTriggerModal(true)}>Добавить trigger</button>
               <button type="button" className="primary-button" onClick={goToActionChoice} disabled={!flowForm.operation}>Следующий шаг</button>
