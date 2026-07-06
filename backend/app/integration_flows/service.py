@@ -19,7 +19,7 @@ from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
 from app.core.enums import EndpointProcessingMode
 from app.integration_flows import repository
 from app.integration_flows.models import IntegrationFlow
-from app.integration_flows.presets import DNP_PULL_CODES_PRESET, MARKING_POOL_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
+from app.integration_flows.presets import MARKING_POOL_PRESET, OPERATION_KEY_ODATA_CHAIN_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
 from app.integration_flows.schemas import FlowTestRequest, IntegrationFlowCreate, IntegrationFlowPatch
 from app.matchers.engine import evaluate_matcher_group
 from app.matchers.validators import validate_matcher_group
@@ -205,24 +205,28 @@ async def install_two_odata_to_endpoint_preset(session: AsyncSession) -> Integra
     return await create_flow(session, IntegrationFlowCreate(**TWO_ODATA_TO_ENDPOINT_PRESET))
 
 
-async def install_dnp_pull_codes_preset(session: AsyncSession) -> IntegrationFlow:
-    existing = await repository.get_by_slug(session, DNP_PULL_CODES_PRESET["slug"])
+async def install_operation_key_odata_chain_preset(session: AsyncSession) -> IntegrationFlow:
+    existing = await repository.get_by_slug(session, OPERATION_KEY_ODATA_CHAIN_PRESET["slug"])
     if existing:
         await patch_flow(
             session,
             existing.id,
             IntegrationFlowPatch(
-                description=DNP_PULL_CODES_PRESET["description"],
-                matcher_group_json=DNP_PULL_CODES_PRESET["matcher_group_json"],
-                action_json=DNP_PULL_CODES_PRESET["action_json"],
-                response_config_json=DNP_PULL_CODES_PRESET["response_config_json"],
-                builder_json=DNP_PULL_CODES_PRESET["builder_json"],
-                test_payload_json=DNP_PULL_CODES_PRESET["test_payload_json"],
+                description=OPERATION_KEY_ODATA_CHAIN_PRESET["description"],
+                matcher_group_json=OPERATION_KEY_ODATA_CHAIN_PRESET["matcher_group_json"],
+                action_json=OPERATION_KEY_ODATA_CHAIN_PRESET["action_json"],
+                response_config_json=OPERATION_KEY_ODATA_CHAIN_PRESET["response_config_json"],
+                builder_json=OPERATION_KEY_ODATA_CHAIN_PRESET["builder_json"],
+                test_payload_json=OPERATION_KEY_ODATA_CHAIN_PRESET["test_payload_json"],
             ),
         )
         await compile_flow(session, existing.id)
         return existing
-    return await create_flow(session, IntegrationFlowCreate(**DNP_PULL_CODES_PRESET))
+    return await create_flow(session, IntegrationFlowCreate(**OPERATION_KEY_ODATA_CHAIN_PRESET))
+
+
+async def install_dnp_pull_codes_preset(session: AsyncSession) -> IntegrationFlow:
+    return await install_operation_key_odata_chain_preset(session)
 
 
 async def _upsert_endpoint(session: AsyncSession, request: IntegrationFlowCreate, route_id: UUID, workflow_id: UUID, operation_id: UUID) -> IntegrationEndpoint:

@@ -80,17 +80,17 @@ TWO_ODATA_TO_ENDPOINT_PRESET = {
     "test_payload_json": {"inn": "1234567890", "product_code": "ABC-123", "pool_id": "POOL-001", "codes": ["code1", "code2"]},
 }
 
-DNP_PULL_CODES_OPERATION_KEY = "dnp_key_connect_odata_pull_codes"
+OPERATION_KEY_ODATA_CHAIN_KEY = "lookup_order_products"
 
-DNP_PULL_CODES_BUILDER = {
+OPERATION_KEY_ODATA_CHAIN_BUILDER = {
     "version": 1,
-    "input": {"endpoint_slug": "dnp-pull-codes", "input_mode": "json", "response_mode": "sync_response"},
+    "input": {"endpoint_slug": "operation-key-odata-chain", "input_mode": "json", "response_mode": "sync_response"},
     "variables": [
-        {"name": "operation_key", "source": "request.body.sinc"},
+        {"name": "operation_key", "source": "request.body.operation"},
         {"name": "order_number", "source": "request.body.Number"},
     ],
     "steps": [
-        {"id": "read_operation_key", "type": "read_variable", "name": "Read operation key", "path": "request.body.sinc", "save_as": "operation_key"},
+        {"id": "read_operation_key", "type": "read_variable", "name": "Read operation key", "path": "request.body.operation", "save_as": "operation_key"},
         {"id": "read_order_number", "type": "read_variable", "name": "Read 1C order number", "path": "request.body.Number", "save_as": "order_number"},
         {
             "id": "find_order",
@@ -123,27 +123,29 @@ DNP_PULL_CODES_BUILDER = {
                 "operation_key": "{{operation_key}}",
                 "order": "{{order}}",
                 "products": "{{products}}",
-                "next_manual_step": "Use products[].Номенклатура_Key to investigate InformationRegister_ПулКодовМаркировкиСУЗ filters.",
+                "next_manual_step": "Use products[].Номенклатура_Key in the next configured step if the target register supports filtering.",
             },
         },
     ],
 }
 
-DNP_PULL_CODES_PRESET = {
-    "name": "DNP Pull Marking Codes by 1C Order",
-    "slug": "dnp-pull-codes",
-    "description": "Inbound DNP request keyed by sinc=dnp_key_connect_odata_pull_codes. Looks up the 1C production order by Number, reads its Продукция tabular part and returns product nomenclature keys.",
+OPERATION_KEY_ODATA_CHAIN_PRESET = {
+    "name": "Operation Key to OData Chained Lookup",
+    "slug": "operation-key-odata-chain",
+    "description": "Inbound JSON selects a route by operation key. OMH looks up the 1C production order by Number, uses Ref_Key in the next OData resource and returns related rows.",
     "source_type": "external_api",
     "target_type": "odata_lookup",
     "endpoint": {"input_mode": "json", "response_mode": "sync_response", "auth_mode": "none", "auth_config_json": {}},
-    "matcher_group_json": {"mode": "all", "rules": [{"type": "body_path_equals", "path": "sinc", "value": DNP_PULL_CODES_OPERATION_KEY}, {"type": "body_path_exists", "path": "Number"}]},
+    "matcher_group_json": {"mode": "all", "rules": [{"type": "body_path_exists", "path": "Number"}]},
     "action_json": {
         "type": "create_event_only",
-        "operation": DNP_PULL_CODES_OPERATION_KEY,
-        "business_object": "DnpMarkingCodePull",
-        "description": "DnP asks OMH to pull marking code context from 1C OData by production order Number.",
+        "operation": OPERATION_KEY_ODATA_CHAIN_KEY,
+        "business_object": "ODataChainedLookup",
+        "description": "External system asks OMH to run a chained 1C OData lookup by production order Number.",
     },
     "response_config_json": {"response_mode": "sync_response"},
-    "builder_json": DNP_PULL_CODES_BUILDER,
-    "test_payload_json": {"sinc": DNP_PULL_CODES_OPERATION_KEY, "Number": "260666/6938"},
+    "builder_json": OPERATION_KEY_ODATA_CHAIN_BUILDER,
+    "test_payload_json": {"operation": OPERATION_KEY_ODATA_CHAIN_KEY, "Number": "260666/6938"},
 }
+
+DNP_PULL_CODES_PRESET = OPERATION_KEY_ODATA_CHAIN_PRESET

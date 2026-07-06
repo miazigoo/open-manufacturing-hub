@@ -30,6 +30,13 @@ async def install_two_odata_to_endpoint_flow(session: AsyncSession = Depends(get
     return await flow_service._read_flow(flow, session)
 
 
+@router.post("/operation-key-odata-chain/install")
+async def install_operation_key_odata_chain_flow(session: AsyncSession = Depends(get_session)):
+    flow = await flow_service.install_operation_key_odata_chain_preset(session)
+    await session.commit()
+    return await flow_service._read_flow(flow, session)
+
+
 @router.post("/dnp-pull-codes/install")
 async def install_dnp_pull_codes_flow(session: AsyncSession = Depends(get_session)):
     flow = await flow_service.install_dnp_pull_codes_preset(session)

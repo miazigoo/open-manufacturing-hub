@@ -139,23 +139,23 @@ async def test_odata_lookup_template_crud_test_and_step(monkeypatch, client):
 
 
 async def test_bus_route_can_match_sinc_operation_key(client):
-    workflow = await _workflow(client, name="DNP sinc route workflow", steps=[{"name": "receive"}], event_type="DnpRequest")
+    workflow = await _workflow(client, name="Operation key route workflow", steps=[{"name": "receive"}], event_type="ExternalRequest")
     route = await client.post(
         "/api/integration-bus/routes",
-        json={"name": "DNP sinc route", "event_type": "DnpRequest", "operation": "dnp_key_connect_odata_pull_codes", "workflow_id": workflow["id"], "priority": 10},
+        json={"name": "Sinc operation route", "event_type": "ExternalRequest", "operation": "lookup_order_products", "workflow_id": workflow["id"], "priority": 10},
     )
     assert route.status_code == 200
     endpoint = await client.post(
         "/api/integration-bus/endpoints",
-        json={"name": "DNP sinc endpoint", "slug": "dnp-sinc-test", "input_mode": "json", "response_mode": "accepted_event", "default_event_type": "DnpRequest"},
+        json={"name": "Sinc operation endpoint", "slug": "sinc-operation-test", "input_mode": "json", "response_mode": "accepted_event", "default_event_type": "ExternalRequest"},
     )
     assert endpoint.status_code == 200
-    response = await client.post("/api/bus/in/dnp-sinc-test", json={"sinc": "dnp_key_connect_odata_pull_codes", "Number": "260666/6938"})
+    response = await client.post("/api/bus/in/sinc-operation-test", json={"sinc": "lookup_order_products", "Number": "260666/6938"})
     assert response.status_code == 200
     assert response.json()["route_id"] == route.json()["id"]
 
 
-async def test_dnp_pull_codes_preset_uses_order_ref_in_products_resource(monkeypatch, client):
+async def test_operation_key_odata_chain_preset_uses_order_ref_in_products_resource(monkeypatch, client):
     calls = []
 
     async def fake_request(self, method, url, *, params=None, json_payload=None, headers=None):
@@ -172,9 +172,9 @@ async def test_dnp_pull_codes_preset_uses_order_ref_in_products_resource(monkeyp
         json={"name": "1C CHZ OData ERP", "connector_type": "onec", "direction": "bidirectional", "config_json": {"base_url": "https://onec.example.local/odata/standard.odata", "auth": {"type": "none"}}},
     )
     assert connector.status_code == 200
-    installed = await client.post("/api/integration-flows/presets/dnp-pull-codes/install")
+    installed = await client.post("/api/integration-flows/presets/operation-key-odata-chain/install")
     assert installed.status_code == 200, installed.text
-    response = await client.post("/api/bus/in/dnp-pull-codes", json={"sinc": "dnp_key_connect_odata_pull_codes", "Number": "260666/6938"})
+    response = await client.post("/api/bus/in/operation-key-odata-chain", json={"operation": "lookup_order_products", "Number": "260666/6938"})
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["success"] is True, {"body": body, "calls": calls}

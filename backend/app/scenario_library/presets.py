@@ -4,18 +4,18 @@ from typing import Any
 
 SCENARIOS: list[dict[str, Any]] = [
     {
-        "code": "dnp_pull_codes_by_order",
-        "title": "DNP key to 1C OData order products",
-        "description": "Inbound DNP JSON uses sinc=dnp_key_connect_odata_pull_codes and Number. OMH routes by the key, finds the 1C production order and reads its Продукция tabular part.",
-        "source": "DNP",
+        "code": "operation_key_odata_chain",
+        "title": "Operation key to 1C OData chained lookup",
+        "description": "Inbound JSON uses an operation key and Number. OMH routes by the key, finds the 1C production order and reads its Продукция tabular part.",
+        "source": "External API",
         "target": "1C CHZ OData",
         "input_modes": ["json"],
-        "default_slug": "dnp-pull-codes",
-        "event_type": "Flow.dnp-pull-codes",
-        "entity_type": "DnpMarkingCodePull",
+        "default_slug": "operation-key-odata-chain",
+        "event_type": "Flow.operation-key-odata-chain",
+        "entity_type": "ODataChainedLookup",
         "workflow_steps": ["read_operation_key", "read_order_number", "find_order", "read_products", "return_order_products"],
-        "operation_code": "dnp.dnp_key_connect_odata_pull_codes",
-        "sample_payload": {"sinc": "dnp_key_connect_odata_pull_codes", "Number": "260666/6938"},
+        "operation_code": "lookup_order_products",
+        "sample_payload": {"operation": "lookup_order_products", "Number": "260666/6938"},
     },
     {
         "code": "onec_post_two_odata_to_endpoint",

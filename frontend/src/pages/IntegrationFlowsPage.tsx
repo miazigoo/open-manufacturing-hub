@@ -69,7 +69,7 @@ export function IntegrationFlowsPage() {
   const create = useMutation({ mutationFn: integrationFlowsApi.create, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const installPreset = useMutation({ mutationFn: integrationFlowsApi.installMarkingPool, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const installBuilderPreset = useMutation({ mutationFn: integrationFlowsApi.installTwoODataToEndpoint, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
-  const installDnpPullCodes = useMutation({ mutationFn: integrationFlowsApi.installDnpPullCodes, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
+  const installOperationKeyODataChain = useMutation({ mutationFn: integrationFlowsApi.installOperationKeyODataChain, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const duplicate = useMutation({ mutationFn: integrationFlowsApi.duplicate, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const exportFlow = useMutation({ mutationFn: integrationFlowsApi.export, onSuccess: setResult });
   const exportForProduction = useMutation({
@@ -126,7 +126,7 @@ export function IntegrationFlowsPage() {
         <span className="eyebrow">{t('integration.flowBuilder.eyebrow')}</span>
         <h1>{t('integration.flowBuilder.title')}</h1>
         <p>{t('integration.flowBuilder.description')}</p>
-        <div className="hero-meta" data-tour="flow-presets"><button className="primary-button" onClick={() => installDnpPullCodes.mutate()} disabled={installDnpPullCodes.isPending}>Install DNP key flow</button><button className="ghost-button" onClick={() => installBuilderPreset.mutate()} disabled={installBuilderPreset.isPending}>{t('integration.flowBuilder.installODataPreset')}</button><button className="ghost-button" onClick={() => installPreset.mutate()} disabled={installPreset.isPending}>{t('integration.flowBuilder.installMarkingPreset')}</button><span className="microcopy">{t('integration.flowBuilder.flowPipeline')}</span></div>
+        <div className="hero-meta" data-tour="flow-presets"><button className="primary-button" onClick={() => installOperationKeyODataChain.mutate()} disabled={installOperationKeyODataChain.isPending}>Install OData chain flow</button><button className="ghost-button" onClick={() => installBuilderPreset.mutate()} disabled={installBuilderPreset.isPending}>{t('integration.flowBuilder.installODataPreset')}</button><button className="ghost-button" onClick={() => installPreset.mutate()} disabled={installPreset.isPending}>{t('integration.flowBuilder.installMarkingPreset')}</button><span className="microcopy">{t('integration.flowBuilder.flowPipeline')}</span></div>
       </section>
 
       <section className="flow-layout">
@@ -143,7 +143,7 @@ export function IntegrationFlowsPage() {
           <section className="wizard-step"><span className="step-index">04</span><div className="metadata-grid compact-grid no-margin"><label className="field-label">{t('integration.flowBuilder.action')}<select value={form.action_type} onChange={(event) => setForm({ ...form, action_type: event.target.value })}><option value="call_rest_api">Forward JSON to API</option><option value="call_1c_http_service">Forward raw XML to 1C</option><option value="call_odata_lookup">Call OData lookup</option><option value="call_printer">Print</option><option value="create_event_only">Create event only</option></select></label><label className="field-label">{t('integration.flowBuilder.targetConnector')}<input value={form.target_connector} onChange={(event) => setForm({ ...form, target_connector: event.target.value })} /></label><label className="field-label">{t('integration.flowBuilder.targetPath')}<input value={form.target_path} onChange={(event) => setForm({ ...form, target_path: event.target.value })} /></label></div></section>
           <section className="wizard-step"><span className="step-index">05</span><label className="field-label">{t('integration.flowBuilder.samplePayload')}<CodeEditor value={form.test_payload} onChange={(value) => setForm({ ...form, test_payload: value })} language="json" minRows={8} /></label></section>
           {formError && <div className="error-state compact">{formError}</div>}
-          {[create, installPreset, installBuilderPreset, testMatcher].find((item) => item.error)?.error instanceof Error && <div className="error-state compact">{([create, installPreset, installBuilderPreset, testMatcher].find((item) => item.error)?.error as Error).message}</div>}
+          {[create, installPreset, installBuilderPreset, installOperationKeyODataChain, testMatcher].find((item) => item.error)?.error instanceof Error && <div className="error-state compact">{([create, installPreset, installBuilderPreset, installOperationKeyODataChain, testMatcher].find((item) => item.error)?.error as Error).message}</div>}
         </form>
       </section>
 
