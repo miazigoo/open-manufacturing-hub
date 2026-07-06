@@ -27,6 +27,8 @@ interface DraftStep {
   sample: Record<string, unknown> | null;
 }
 
+type WizardStep = 'trigger' | 'choose_action' | 'odata' | 'send_result';
+
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'odata-chain';
 }
@@ -77,6 +79,8 @@ export function ODataExplorerPage() {
   const [showTriggerModal, setShowTriggerModal] = useState(false);
   const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('continue_odata');
   const [tabularPart, setTabularPart] = useState('Продукция');
+  const [wizardStep, setWizardStep] = useState<WizardStep>('trigger');
+  const [target, setTarget] = useState({ method: 'POST', url: '' });
   const resources = useQuery({ queryKey: ['odata-resources', connectorId], queryFn: () => odataExplorerApi.resources(connectorId), enabled: Boolean(connectorId) });
   const run = useMutation({ mutationFn: () => odataExplorerApi.query(connectorId, { resource: query.resource, top: Number(query.top) || 10, filter: query.filter || null, select: query.select || null, orderby: query.orderby || null, paginate }) });
   const createLookup = useMutation({ mutationFn: (extractJson: Record<string, string>) => odataExplorerApi.createLookup(connectorId, { name: lookup.name, resource: query.resource, filter_template: lookup.filter_template, extract_json: extractJson }) });
@@ -174,6 +178,26 @@ export function ODataExplorerPage() {
     localStorage.setItem(draftStorageKey, JSON.stringify(next));
   }
 
+  function startODataStep() {
+    setNextAction('continue_odata');
+    setQuery({ resource: '', top: '10', filter: '', select: '', orderby: '' });
+    setFilters([{ field: '', operator: 'eq', value: '' }]);
+    setStepSaveAs('odata_result');
+    setStepSaveAsTouched(false);
+    run.reset();
+    setWizardStep('odata');
+  }
+
+  function chooseSendResult() {
+    setNextAction('send_result');
+    setWizardStep('send_result');
+  }
+
+  function chooseReturnAll() {
+    setNextAction('return_all');
+    setWizardStep('send_result');
+  }
+
   function addResultAsStep() {
     if (!selectedConnection || !run.data) return;
     const saveAs = variableName(stepSaveAs || query.resource);
@@ -191,6 +215,7 @@ export function ODataExplorerPage() {
     updateDraft([...draftSteps, step]);
     setStepSaveAs(variableName(query.resource));
     setStepSaveAsTouched(false);
+    setWizardStep('choose_action');
   }
 
   function insertPlaceholder(target: 'resource' | 'filter', step: DraftStep, field: string) {
@@ -227,6 +252,7 @@ export function ODataExplorerPage() {
         version: 1,
         input: { endpoint_slug: flowForm.slug, input_mode: 'json', response_mode: 'sync_response' },
         next_action: nextAction,
+        target: nextAction === 'send_result' ? target : null,
         variables: [{ name: 'operation_key', source: 'request.body.operation' }],
         steps: [
           { id: 'read_operation_key', type: 'read_variable', name: 'Read operation key', path: 'request.body.operation', fallback_paths: ['request.body.sinc'], save_as: 'operation_key' },
@@ -268,170 +294,19 @@ export function ODataExplorerPage() {
   const selectedConnection = enabledConnections.find((item) => item.id === connectorId);
   const firstResult = run.data?.items?.[0] ?? null;
   const operationKeyRows = (operationKeys.data ?? []).filter((item) => item.system_type === 'operation_key' || item.direction === 'inbound');
+  const latestDraftStep = draftSteps[draftSteps.length - 1] ?? null;
 
-  return (
-    <div className="page-stack two-column-page">
-      <section className="panel form-panel">
-        <div className="panel-toolbar">
-          <div>
-            <span className="eyebrow">{t('integration.odataExplorer.eyebrow')}</span>
-            <h1>{t('integration.odataExplorer.title')}</h1>
-            <p className="microcopy">{t('integration.odataExplorer.description')}</p>
-          </div>
-          <div className="toolbar-actions">
-            <Link className="primary-link" to="/odata-connections">{t('integration.odataExplorer.createConnection')}</Link>
-            <Link className="primary-link" to="/operation-keys">Operation keys</Link>
-            <Link className="primary-link" to="/docs/onec/academy/test-odata-explorer">{t('integration.odataExplorer.lesson')}</Link>
-          </div>
-        </div>
-        <div className="builder-help-card training-quickstart">
-          <strong>{t('integration.odataExplorer.trainingTitle')}</strong>
-          <span>{t('integration.odataExplorer.trainingDesc')}</span>
-          <div className="action-row wrap-actions">
-            {trainingErp ? <button type="button" className="ghost-button" onClick={() => useTrainingConnection('Training OData ERP')}>{t('integration.odataExplorer.useTrainingErp')}</button> : null}
-            {trainingWms ? <button type="button" className="ghost-button" onClick={() => useTrainingConnection('Training OData WMS')}>{t('integration.odataExplorer.useTrainingWms')}</button> : null}
-            {!trainingErp && !trainingWms && <button type="button" className="primary-button" onClick={() => installTraining.mutate()} disabled={installTraining.isPending}>{t('integration.odataExplorer.installTraining')}</button>}
-            {training.data?.sandbox_installed && <Link className="primary-link" to="/training">{t('integration.odataExplorer.openTraining')}</Link>}
-          </div>
-        </div>
-        <form className="stack-form" onSubmit={submit} data-tour="odata-query">
-          <label className="field-label" data-tour="odata-connector">
-            {t('integration.odataExplorer.connection')}
-            <select value={connectorId} onChange={(event) => setConnectorId(event.target.value)}>
-              <option value="">{t('integration.odataExplorer.selectConnection')}</option>
-              {enabledConnections.map((connection) => <option key={connection.id} value={connection.id}>{connection.name} · {connection.base_url}</option>)}
-            </select>
-            <span className="microcopy">{t('integration.odataExplorer.connectionHint')}</span>
-          </label>
-          {enabledConnections.length === 0 && <div className="success-note">{t('integration.odataExplorer.createProfileFirst')}<span>{t('integration.odataExplorer.createProfileFirstDetail')}</span></div>}
-          <label className="field-label">
-            {t('integration.odataExplorer.resource')}
-            <input list="odata-resources" value={query.resource} onChange={(event) => setQuery({ ...query, resource: event.target.value })} />
-            <datalist id="odata-resources">{(resources.data?.resources ?? []).map((resource) => <option key={resource} value={resource} />)}</datalist>
-          </label>
-          <div className="builder-help-card">
-            <strong>{t('integration.odataExplorer.safeWorkflow')}</strong>
-            <span>{t('integration.odataExplorer.safeWorkflowDesc')}</span>
-          </div>
-          <div className="odata-filter-builder">
-            <div className="panel-toolbar compact-toolbar"><h3>{t('integration.odataExplorer.filterBuilder')}</h3><button type="button" className="ghost-button" onClick={() => setFilters([...filters, { field: '', operator: 'eq', value: '' }])}>{t('integration.odataExplorer.addCondition')}</button></div>
-            {filters.map((filter, index) => (
-              <div className="metadata-grid compact-grid no-margin" key={index}>
-                <label className="field-label">{t('integration.odataExplorer.field')}<input value={filter.field} onChange={(event) => setFilter(index, { field: event.target.value })} placeholder="ИНН" title={t('integration.odataExplorer.fieldHint')} /></label>
-                <label className="field-label">{t('integration.odataExplorer.operator')}<select value={filter.operator} onChange={(event) => setFilter(index, { operator: event.target.value })}><option value="eq">eq</option><option value="ne">ne</option><option value="contains">contains</option><option value="startswith">startswith</option><option value="endswith">endswith</option><option value="gt">gt</option><option value="lt">lt</option><option value="ge">ge</option><option value="le">le</option></select></label>
-                <label className="field-label">{t('integration.odataExplorer.value')}<input value={filter.value} onChange={(event) => setFilter(index, { value: event.target.value })} placeholder="7707083893" title={t('integration.odataExplorer.valueHint')} /></label>
-                <button type="button" className="ghost-button danger" onClick={() => setFilters(filters.filter((_, itemIndex) => itemIndex !== index))} disabled={filters.length === 1}>{t('integration.odataExplorer.remove')}</button>
-              </div>
-            ))}
-            <div className="action-row wrap-actions"><button type="button" className="primary-button" onClick={applyFilters}>{t('integration.odataExplorer.applyFilter')}</button><span className="microcopy">{t('integration.odataExplorer.conditionsJoined')}</span></div>
-          </div>
-          <label className="field-label">$filter<input value={query.filter} onChange={(event) => setQuery({ ...query, filter: event.target.value })} title={t('integration.odataExplorer.filterTitle')} /></label>
-          <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">$top<input value={query.top} onChange={(event) => setQuery({ ...query, top: event.target.value })} /></label>
-            <label className="field-label">$select<input value={query.select} onChange={(event) => setQuery({ ...query, select: event.target.value })} title={t('integration.odataExplorer.selectTitle')} /></label>
-            <label className="field-label">$orderby<input value={query.orderby} onChange={(event) => setQuery({ ...query, orderby: event.target.value })} /></label>
-          </div>
-          <div className="hint-chip-row">
-            {['Ref_Key,Description,ИНН', 'Ref_Key,Description,Артикул', 'Ref_Key,Number,Date,Posted', 'Ref_Key,Склад_Key,Номенклатура_Key,Количество'].map((select) => <button key={select} type="button" className="hint-chip" onClick={() => setQuery({ ...query, select })}>{select}</button>)}
-          </div>
-          <label className="check-row" title={t('integration.odataExplorer.paginationHint')}>
-            <input type="checkbox" checked={paginate} onChange={(event) => setPaginate(event.target.checked)} />
-            {t('integration.odataExplorer.pagination')}
-          </label>
-          <div className="success-note">{t('integration.odataExplorer.paginationTitle')}<span>{t('integration.odataExplorer.paginationHint')}</span></div>
-          <button className="primary-button" disabled={!connectorId || run.isPending}>{t('integration.odataExplorer.runQuery')}</button>
-        </form>
-        <hr />
-        <div className="stack-form" data-tour="odata-lookup">
-          <h2>{t('integration.odataExplorer.lookupTitle')}</h2>
-          <label className="field-label">{t('integration.odataExplorer.lookupName')}<input value={lookup.name} onChange={(event) => setLookup({ ...lookup, name: event.target.value })} /></label>
-          <label className="field-label">{t('integration.odataExplorer.filterTemplate')}<input value={lookup.filter_template} onChange={(event) => setLookup({ ...lookup, filter_template: event.target.value })} title={t('integration.odataExplorer.filterTemplateHint')} /></label>
-          <label className="field-label">{t('integration.odataExplorer.extractJson')}<CodeEditor value={lookup.extract_json} onChange={(value) => setLookup({ ...lookup, extract_json: value })} language="json" minRows={5} title={t('integration.odataExplorer.extractJsonHint')} /></label>
-          <div className="hint-chip-row">
-            <button type="button" className="hint-chip" onClick={() => setLookup({ ...lookup, extract_json: '{"contractor_uuid":"Ref_Key","contractor_name":"Description","inn":"ИНН"}' })}>{t('integration.odataExplorer.contractorExtract')}</button>
-            <button type="button" className="hint-chip" onClick={() => setLookup({ ...lookup, extract_json: '{"product_uuid":"Ref_Key","product_name":"Description","article":"Артикул"}' })}>{t('integration.odataExplorer.productExtract')}</button>
-          </div>
-          {formError && <div className="error-state compact">{formError}</div>}
-          {runtimeError instanceof Error && <div className="error-state compact">{runtimeError.message}</div>}
-          <button type="button" className="ghost-button" disabled={!connectorId || createLookup.isPending} onClick={handleCreateLookup}>{t('integration.odataExplorer.createLookup')}</button>
-        </div>
-      </section>
-      <section className="page-stack">
-        <JsonBlock title={t('integration.odataExplorer.resources')} value={resources.data ?? { hint: t('integration.odataExplorer.resourcesHint') }} searchable={false} />
-        {run.error instanceof Error && <div className="error-state compact">{run.error.message}</div>}
-        <JsonBlock title={t('integration.odataExplorer.queryResult')} value={run.data ?? { hint: t('integration.odataExplorer.queryResultHint') }} searchable />
-        <section className="panel stack-form">
-          <div className="panel-toolbar">
-            <div>
-              <span className="eyebrow">Draft flow</span>
-              <h2>Пошаговая сборка интеграции</h2>
-              <p className="microcopy">Сначала выберите trigger key, затем проверяйте OData-запросы. Flow сохранится только по кнопке Save as Integration Flow.</p>
-            </div>
-            <button type="button" className="ghost-button danger" onClick={clearDraft} disabled={draftSteps.length === 0}>Clear</button>
-          </div>
-          <div className="builder-help-card">
-            <strong>Step 1. Trigger key</strong>
-            <span>Этот ключ придет во входящем JSON в поле <code>operation</code> или <code>sinc</code>. По нему OMH поймет, какой flow запускать.</span>
-            <div className="metadata-grid compact-grid no-margin">
-              <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => setFlowForm({ ...flowForm, operation: event.target.value })}><option value={flowForm.operation}>{flowForm.operation}</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
-              <button type="button" className="ghost-button" onClick={() => setShowTriggerModal(true)}>Add trigger</button>
-            </div>
-          </div>
-          {run.data && <div className="builder-help-card">
-            <strong>Step 2. Add current OData result as a step</strong>
-            <span>Save as - имя переменной результата. Потом используйте поля как <code>{`{{${stepSaveAs}.Ref_Key}}`}</code>.</span>
-            <div className="metadata-grid compact-grid no-margin">
-              <label className="field-label">Save as<input value={stepSaveAs} onChange={(event) => { setStepSaveAsTouched(true); setStepSaveAs(variableInput(event.target.value)); }} /></label>
-              <button type="button" className="primary-button" onClick={addResultAsStep} disabled={!selectedConnection}>Add as OData step</button>
-            </div>
-          </div>}
-          {firstResult && <div className="hint-chip-row">
-            {Object.keys(firstResult).slice(0, 16).map((field) => <button key={field} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(field)}>{field}</button>)}
-          </div>}
-          {draftSteps.length === 0 ? <div className="success-note">Черновик пуст<span>Выполните OData query и нажмите Add as OData step.</span></div> : draftSteps.map((step, index) => (
-            <article className="success-note" key={step.id}>
-              <strong>{index + 1}. {step.name}</strong>
-              <span><code>{step.save_as}</code> · {step.connection} · top {step.top}</span>
-              <span>{step.resource}</span>
-              {step.filter && <span>$filter: {step.filter}</span>}
-              <div className="builder-help-card">
-                <strong>Step 3. Choose how to use this result</strong>
-                <span>Если нужно открыть табличную часть документа 1C, выберите поле `Ref_Key`, укажите tabular part и нажмите `1C object resource`.</span>
-                <label className="field-label">1C tabular part<input value={tabularPart} onChange={(event) => setTabularPart(event.target.value)} placeholder="Продукция" /></label>
-                <div className="segmented-control">
-                  <button type="button" className={nextAction === 'continue_odata' ? 'active' : ''} onClick={() => setNextAction('continue_odata')}>Continue OData</button>
-                  <button type="button" className={nextAction === 'return_all' ? 'active' : ''} onClick={() => setNextAction('return_all')}>Return all</button>
-                  <button type="button" className={nextAction === 'send_result' ? 'active' : ''} onClick={() => setNextAction('send_result')}>Send result</button>
-                </div>
-              </div>
-              {step.sample && <div className="hint-chip-row">
-                {Object.keys(step.sample).slice(0, 12).map((field) => (
-                  <span key={field} className="action-row wrap-actions">
-                    <button type="button" className="hint-chip" onClick={() => insertPlaceholder('resource', step, field)}>Resource: {field}</button>
-                    <button type="button" className="hint-chip" onClick={() => insertPlaceholder('filter', step, field)}>Filter: {field}</button>
-                    {field.endsWith('_Key') || field === 'Ref_Key' ? <button type="button" className="hint-chip" onClick={() => useAsOneCObjectResource(step, field)}>1C object resource: {field}</button> : null}
-                  </span>
-                ))}
-              </div>}
-            </article>
-          ))}
-          <hr />
-          <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">Flow name<input value={flowForm.name} onChange={(event) => setFlowForm({ ...flowForm, name: event.target.value, slug: slugify(event.target.value) })} /></label>
-            <label className="field-label">Slug<input value={flowForm.slug} onChange={(event) => setFlowForm({ ...flowForm, slug: slugify(event.target.value) })} /></label>
-          </div>
-          <div className="action-row wrap-actions">
-            <button type="button" className="primary-button" onClick={() => saveFlow.mutate()} disabled={saveFlow.isPending || draftSteps.length === 0}>Save as Integration Flow</button>
-            <Link className="primary-link" to="/integration-flows">Open Integration Flows</Link>
-            <Link className="primary-link" to="/docs/onec/tools/odata-chaining-fields">Open OData chaining guide</Link>
-          </div>
-          {createOperationKey.error instanceof Error && <div className="error-state compact">{createOperationKey.error.message}</div>}
-          {saveFlow.error instanceof Error && <div className="error-state compact">{saveFlow.error.message}</div>}
-          {saveFlow.data && <JsonBlock title="Saved flow" value={saveFlow.data} searchable={false} />}
-        </section>
-        <JsonBlock title={t('integration.odataExplorer.createdLookup')} value={createLookup.data ?? {}} searchable={false} />
-      </section>
-      {showTriggerModal && <div className="help-panel-backdrop" onClick={() => setShowTriggerModal(false)}>
+  function goToActionChoice() {
+    run.reset();
+    setQuery({ resource: '', top: '10', filter: '', select: '', orderby: '' });
+    setFilters([{ field: '', operator: 'eq', value: '' }]);
+    setWizardStep('choose_action');
+  }
+
+  function renderTriggerModal() {
+    if (!showTriggerModal) return null;
+    return (
+      <div className="help-panel-backdrop" onClick={() => setShowTriggerModal(false)}>
         <aside className="help-panel" role="dialog" aria-label="Add trigger" onClick={(event) => event.stopPropagation()}>
           <div className="panel-toolbar">
             <div>
@@ -450,7 +325,214 @@ export function ODataExplorerPage() {
             {createOperationKey.error instanceof Error && <div className="error-state compact">{createOperationKey.error.message}</div>}
           </div>
         </aside>
-      </div>}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  function renderDraftSummary() {
+    if (draftSteps.length === 0) return <div className="success-note">Шагов пока нет<span>После успешного OData-запроса нажмите “Следующий шаг”, и результат сохранится в черновик.</span></div>;
+    return (
+      <div className="stack-form">
+        {draftSteps.map((step, index) => (
+          <article className="success-note" key={step.id}>
+            <strong>{index + 1}. {step.name}</strong>
+            <span><code>{step.save_as}</code> · {step.connection} · top {step.top}</span>
+            <span>{step.resource}</span>
+            {step.filter && <span>$filter: {step.filter}</span>}
+          </article>
+        ))}
+      </div>
+    );
+  }
+
+  function renderActionChoice() {
+    return (
+      <section className="panel form-panel centered-panel">
+        <span className="eyebrow">Next step</span>
+        <h1>Что дальше?</h1>
+        <p className="microcopy">Выберите следующее действие. Экран будет показывать только нужные поля для выбранного шага.</p>
+        <div className="metadata-grid">
+          <button type="button" className="builder-help-card action-card" onClick={startODataStep}>
+            <strong>Продолжить работу с OData</strong>
+            <span>Собрать следующий ресурс, фильтр или select на основе уже полученных данных.</span>
+          </button>
+          <button type="button" className="builder-help-card action-card" onClick={chooseReturnAll} disabled={draftSteps.length === 0}>
+            <strong>Отправить весь результат</strong>
+            <span>Передать наружу весь результат последнего шага.</span>
+          </button>
+          <button type="button" className="builder-help-card action-card" onClick={chooseSendResult} disabled={draftSteps.length === 0}>
+            <strong>Отправить выбранный результат</strong>
+            <span>Указать внешний URL и метод отправки.</span>
+          </button>
+        </div>
+        {latestDraftStep && <div className="success-note">Последний сохраненный результат<span><code>{latestDraftStep.save_as}</code> из {latestDraftStep.resource}</span></div>}
+        <div className="action-row wrap-actions">
+          <button type="button" className="ghost-button" onClick={() => setWizardStep('trigger')}>Назад к ключу</button>
+          <button type="button" className="ghost-button danger" onClick={clearDraft} disabled={draftSteps.length === 0}>Очистить черновик</button>
+        </div>
+      </section>
+    );
+  }
+
+  function renderODataStep() {
+    return (
+      <section className="panel form-panel">
+        <div className="panel-toolbar">
+          <div>
+            <span className="eyebrow">OData step</span>
+            <h1>Соберите OData-запрос</h1>
+            <p className="microcopy">Выполните запрос. Если результат подходит, нажмите “Следующий шаг”, чтобы сохранить его в черновик.</p>
+          </div>
+          <Link className="primary-link" to="/docs/onec/tools/odata-chaining-fields">Примеры OData</Link>
+        </div>
+        <form className="stack-form" onSubmit={submit} data-tour="odata-query">
+          <label className="field-label">
+            {t('integration.odataExplorer.connection')}
+            <select value={connectorId} onChange={(event) => setConnectorId(event.target.value)}>
+              <option value="">{t('integration.odataExplorer.selectConnection')}</option>
+              {enabledConnections.map((connection) => <option key={connection.id} value={connection.id}>{connection.name} · {connection.base_url}</option>)}
+            </select>
+          </label>
+          {enabledConnections.length === 0 && <div className="success-note">{t('integration.odataExplorer.createProfileFirst')}<span>{t('integration.odataExplorer.createProfileFirstDetail')}</span></div>}
+          {latestDraftStep?.sample && (
+            <div className="builder-help-card">
+              <strong>Данные предыдущего шага</strong>
+              <span>Нажмите поле, чтобы вставить переменную. Для документа 1C используйте `1C object resource`, например <code>Document_...(guid'{'{{'}order.Ref_Key{'}}'}')/Продукция</code>.</span>
+              <label className="field-label">1C tabular part<input value={tabularPart} onChange={(event) => setTabularPart(event.target.value)} placeholder="Продукция" /></label>
+              <div className="hint-chip-row">
+                {Object.keys(latestDraftStep.sample).slice(0, 14).map((field) => (
+                  <span key={field} className="action-row wrap-actions">
+                    <button type="button" className="hint-chip" onClick={() => insertPlaceholder('resource', latestDraftStep, field)}>Resource: {field}</button>
+                    <button type="button" className="hint-chip" onClick={() => insertPlaceholder('filter', latestDraftStep, field)}>Filter: {field}</button>
+                    {field.endsWith('_Key') || field === 'Ref_Key' ? <button type="button" className="hint-chip" onClick={() => useAsOneCObjectResource(latestDraftStep, field)}>1C object resource: {field}</button> : null}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <label className="field-label">
+            {t('integration.odataExplorer.resource')}
+            <input list="odata-resources" value={query.resource} onChange={(event) => setQuery({ ...query, resource: event.target.value })} placeholder="Document_ЗаказНаПроизводство2_2" />
+            <datalist id="odata-resources">{(resources.data?.resources ?? []).map((resource) => <option key={resource} value={resource} />)}</datalist>
+          </label>
+          <div className="metadata-grid compact-grid no-margin">
+            <label className="field-label">$top<input value={query.top} onChange={(event) => setQuery({ ...query, top: event.target.value })} /></label>
+            <label className="field-label">$select<input value={query.select} onChange={(event) => setQuery({ ...query, select: event.target.value })} placeholder="Ref_Key,Number,Date,Posted" /></label>
+            <label className="field-label">$orderby<input value={query.orderby} onChange={(event) => setQuery({ ...query, orderby: event.target.value })} /></label>
+          </div>
+          <label className="field-label">$filter<input value={query.filter} onChange={(event) => setQuery({ ...query, filter: event.target.value })} placeholder="Number eq '260666/6938'" title={t('integration.odataExplorer.filterTitle')} /></label>
+          <div className="odata-filter-builder">
+            <div className="panel-toolbar compact-toolbar"><h3>{t('integration.odataExplorer.filterBuilder')}</h3><button type="button" className="ghost-button" onClick={() => setFilters([...filters, { field: '', operator: 'eq', value: '' }])}>{t('integration.odataExplorer.addCondition')}</button></div>
+            {filters.map((filter, index) => (
+              <div className="metadata-grid compact-grid no-margin" key={index}>
+                <label className="field-label">{t('integration.odataExplorer.field')}<input value={filter.field} onChange={(event) => setFilter(index, { field: event.target.value })} placeholder="Number" /></label>
+                <label className="field-label">{t('integration.odataExplorer.operator')}<select value={filter.operator} onChange={(event) => setFilter(index, { operator: event.target.value })}><option value="eq">eq</option><option value="ne">ne</option><option value="contains">contains</option><option value="startswith">startswith</option><option value="endswith">endswith</option><option value="gt">gt</option><option value="lt">lt</option><option value="ge">ge</option><option value="le">le</option></select></label>
+                <label className="field-label">{t('integration.odataExplorer.value')}<input value={filter.value} onChange={(event) => setFilter(index, { value: event.target.value })} placeholder="260666/6938" /></label>
+                <button type="button" className="ghost-button danger" onClick={() => setFilters(filters.filter((_, itemIndex) => itemIndex !== index))} disabled={filters.length === 1}>{t('integration.odataExplorer.remove')}</button>
+              </div>
+            ))}
+            <div className="action-row wrap-actions"><button type="button" className="ghost-button" onClick={applyFilters}>{t('integration.odataExplorer.applyFilter')}</button><span className="microcopy">{t('integration.odataExplorer.conditionsJoined')}</span></div>
+          </div>
+          <label className="check-row" title={t('integration.odataExplorer.paginationHint')}>
+            <input type="checkbox" checked={paginate} onChange={(event) => setPaginate(event.target.checked)} />
+            {t('integration.odataExplorer.pagination')}
+          </label>
+          <div className="action-row wrap-actions">
+            <button type="submit" className="primary-button" disabled={!connectorId || !query.resource || run.isPending}>{t('integration.odataExplorer.runQuery')}</button>
+            <button type="button" className="ghost-button" onClick={() => setWizardStep('choose_action')}>Назад</button>
+          </div>
+        </form>
+        {run.error instanceof Error && <div className="error-state compact">{run.error.message}</div>}
+        {run.data && (
+          <div className="stack-form">
+            <JsonBlock title={t('integration.odataExplorer.queryResult')} value={run.data} searchable />
+            <div className="builder-help-card">
+              <strong>Результат подходит?</strong>
+              <span>Сохраните его как переменную шага. Потом поля можно будет вставлять в следующий OData-ресурс или фильтр.</span>
+              <div className="metadata-grid compact-grid no-margin">
+                <label className="field-label">Save as<input value={stepSaveAs} onChange={(event) => { setStepSaveAsTouched(true); setStepSaveAs(variableInput(event.target.value)); }} /></label>
+                <button type="button" className="primary-button" onClick={addResultAsStep} disabled={!selectedConnection}>Следующий шаг</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderSendResultStep() {
+    return (
+      <section className="panel form-panel centered-panel">
+        <span className="eyebrow">Final step</span>
+        <h1>Куда отправить результат?</h1>
+        <p className="microcopy">Укажите адрес внешней системы. Сейчас сохраняем это как настройку интеграции вместе с собранными OData-шагами.</p>
+        <div className="metadata-grid compact-grid">
+          <label className="field-label">Method<select value={target.method} onChange={(event) => setTarget({ ...target, method: event.target.value })}><option value="POST">POST</option><option value="PUT">PUT</option><option value="PATCH">PATCH</option></select></label>
+          <label className="field-label">URL<input value={target.url} onChange={(event) => setTarget({ ...target, url: event.target.value })} placeholder="https://example.local/api/result" /></label>
+        </div>
+        <div className="metadata-grid compact-grid">
+          <label className="field-label">Flow name<input value={flowForm.name} onChange={(event) => setFlowForm({ ...flowForm, name: event.target.value, slug: slugify(event.target.value) })} /></label>
+          <label className="field-label">Slug<input value={flowForm.slug} onChange={(event) => setFlowForm({ ...flowForm, slug: slugify(event.target.value) })} /></label>
+        </div>
+        <label className="field-label">Description<input value={flowForm.description} onChange={(event) => setFlowForm({ ...flowForm, description: event.target.value })} /></label>
+        {renderDraftSummary()}
+        <div className="action-row wrap-actions">
+          <button type="button" className="primary-button" onClick={() => saveFlow.mutate()} disabled={saveFlow.isPending || draftSteps.length === 0 || !target.url.trim()}>Сохранить интеграцию</button>
+          <button type="button" className="ghost-button" onClick={() => setWizardStep('choose_action')}>Назад</button>
+          <Link className="primary-link" to="/integration-flows">Open Integration Flows</Link>
+        </div>
+        {saveFlow.error instanceof Error && <div className="error-state compact">{saveFlow.error.message}</div>}
+        {saveFlow.data && <JsonBlock title="Saved flow" value={saveFlow.data} searchable={false} />}
+      </section>
+    );
+  }
+
+  function renderWizard() {
+    return (
+      <div className="page-stack">
+        <section className="panel form-panel">
+          <div className="panel-toolbar">
+            <div>
+              <span className="eyebrow">{t('integration.odataExplorer.eyebrow')}</span>
+              <h1>{t('integration.odataExplorer.title')}</h1>
+              <p className="microcopy">Соберите интеграцию пошагово: trigger key, OData-запросы, затем отправка результата.</p>
+            </div>
+            <div className="toolbar-actions">
+              <Link className="primary-link" to="/operation-keys">Operation keys</Link>
+              <Link className="primary-link" to="/docs/onec/academy/test-odata-explorer">{t('integration.odataExplorer.lesson')}</Link>
+            </div>
+          </div>
+        </section>
+        {wizardStep === 'trigger' && (
+          <section className="panel form-panel centered-panel">
+            <span className="eyebrow">Step 1</span>
+            <h1>Trigger key</h1>
+            <p className="microcopy">Выберите ключ, который придет от внешней системы в JSON-поле <code>operation</code> или <code>sinc</code>.</p>
+            <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => setFlowForm({ ...flowForm, operation: event.target.value })}><option value="">Выберите ключ</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
+            <div className="action-row wrap-actions">
+              <button type="button" className="ghost-button" onClick={() => setShowTriggerModal(true)}>Добавить trigger</button>
+              <button type="button" className="primary-button" onClick={goToActionChoice} disabled={!flowForm.operation}>Следующий шаг</button>
+            </div>
+            {createOperationKey.error instanceof Error && <div className="error-state compact">{createOperationKey.error.message}</div>}
+          </section>
+        )}
+        {wizardStep === 'choose_action' && renderActionChoice()}
+        {wizardStep === 'odata' && renderODataStep()}
+        {wizardStep === 'send_result' && renderSendResultStep()}
+        <section className="panel form-panel">
+          <div className="panel-toolbar">
+            <div>
+              <span className="eyebrow">Draft</span>
+              <h2>Черновик интеграции</h2>
+            </div>
+            <button type="button" className="ghost-button danger" onClick={clearDraft} disabled={draftSteps.length === 0}>Clear</button>
+          </div>
+          {renderDraftSummary()}
+        </section>
+        {renderTriggerModal()}
+      </div>
+    );
+  }
+
+  return renderWizard();
 }
