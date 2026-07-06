@@ -70,6 +70,7 @@ async def test_onec_odata_read_paginates_and_manual_endpoint(monkeypatch, client
     assert body["count"] == 2
     assert [item["Ref_Key"] for item in body["items"]] == ["A", "B"]
     assert calls[0]["params"]["$top"] == 1
+    assert "$skip" not in calls[0]["params"]
     assert calls[0]["params"]["$format"] == "json"
     assert calls[0]["headers"]["Accept"] == "application/json"
     assert calls[1]["params"] is None

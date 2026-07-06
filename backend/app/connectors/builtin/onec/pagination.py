@@ -8,7 +8,11 @@ def pagination_params(config: dict[str, Any], query: dict[str, Any] | None, page
     page_size = int((query or {}).get("$top") or odata.get("default_page_size") or 100)
     params = dict(query or {})
     params["$top"] = page_size
-    params["$skip"] = int(params.get("$skip") or 0) + page * page_size
+    skip = int(params.get("$skip") or 0) + page * page_size
+    if skip:
+        params["$skip"] = skip
+    else:
+        params.pop("$skip", None)
     return params
 
 
