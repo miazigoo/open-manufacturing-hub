@@ -40,6 +40,10 @@ function variableName(value: string) {
   return clean.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'odata_result';
 }
 
+function variableInput(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9_]+/g, '_').slice(0, 40);
+}
+
 function loadDraft(): DraftStep[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(draftStorageKey) || '[]') as unknown;
@@ -66,6 +70,7 @@ export function ODataExplorerPage() {
   const [lookup, setLookup] = useState({ name: 'Find contractor by INN', filter_template: "ИНН eq '{inn}'", extract_json: '{"contractor_uuid":"Ref_Key","contractor_name":"Description"}' });
   const [draftSteps, setDraftSteps] = useState<DraftStep[]>(loadDraft);
   const [stepSaveAs, setStepSaveAs] = useState('result');
+  const [stepSaveAsTouched, setStepSaveAsTouched] = useState(false);
   const [flowForm, setFlowForm] = useState({ name: 'Order products lookup', slug: 'order-products-lookup', operation: 'lookup_order_products', description: 'Lookup 1C order data through chained OData requests.' });
   const [newKey, setNewKey] = useState({ name: 'Lookup order products', operation: 'lookup_order_products', description: 'External system asks OMH to run this flow.' });
   const [newKeyTouched, setNewKeyTouched] = useState(false);
@@ -116,8 +121,8 @@ export function ODataExplorerPage() {
   }, [connectorId, enabledConnections]);
 
   useEffect(() => {
-    setStepSaveAs(variableName(query.resource));
-  }, [query.resource]);
+    if (!stepSaveAsTouched) setStepSaveAs(variableName(query.resource));
+  }, [query.resource, stepSaveAsTouched]);
 
   if (connections.isLoading) return <LoadingState label={t('integration.odataExplorer.loading')} />;
   if (connections.error) return <ErrorState error={connections.error} />;
@@ -181,6 +186,7 @@ export function ODataExplorerPage() {
     };
     updateDraft([...draftSteps, step]);
     setStepSaveAs(variableName(query.resource));
+    setStepSaveAsTouched(false);
   }
 
   function insertPlaceholder(target: 'resource' | 'filter', step: DraftStep, field: string) {
@@ -356,7 +362,7 @@ export function ODataExplorerPage() {
             <strong>Текущий результат можно добавить как шаг</strong>
             <span>Save as - имя переменной результата. Потом используйте поля как <code>{`{{${stepSaveAs}.Ref_Key}}`}</code>.</span>
             <div className="metadata-grid compact-grid no-margin">
-              <label className="field-label">Save as<input value={stepSaveAs} onChange={(event) => setStepSaveAs(variableName(event.target.value))} /></label>
+              <label className="field-label">Save as<input value={stepSaveAs} onChange={(event) => { setStepSaveAsTouched(true); setStepSaveAs(variableInput(event.target.value)); }} /></label>
               <button type="button" className="primary-button" onClick={addResultAsStep} disabled={!selectedConnection}>Add as OData step</button>
             </div>
           </div>}
