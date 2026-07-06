@@ -36,9 +36,23 @@ async def test_training_package_install_status_mocks_and_examples(client):
     assert contains.status_code == 200, contains.text
     assert contains.json()["value"][0]["Артикул"] == "A-100"
 
-    dnp_ok = await client.post("/api/training/mock-dnp/marking/pools", json={"pool_id": "POOL-001"})
+    dnp_ok = await client.post(
+        "/api/training/mock-dnp/marking/pools",
+        json={
+            "pool_id": "POOL-001",
+            "order_id": "SO-1001",
+            "inn": "7707083893",
+            "product_code": "A-100",
+            "codes": ["010464615169738421ABC"],
+        },
+    )
     assert dnp_ok.status_code == 200, dnp_ok.text
     assert dnp_ok.json()["success"] is True
+    assert dnp_ok.json()["accepted_codes"] == 1
+    dnp_validation = await client.post("/api/training/mock-dnp/marking/pools", json={"pool_id": "POOL-001"})
+    assert dnp_validation.status_code == 422
+    assert dnp_validation.json()["error"] == "DNP_CONTRACT_VALIDATION_FAILED"
+    assert dnp_validation.json()["field_errors"]["codes"] == "non_empty_array_required"
     dnp_error = await client.post("/api/training/mock-dnp/marking/pools", json={"pool_id": "POOL-ERROR"})
     assert dnp_error.status_code == 400
     assert dnp_error.json()["error"] == "DNP_POOL_REJECTED"
@@ -76,4 +90,3 @@ async def test_training_package_install_status_mocks_and_examples(client):
     assert reset.json()["reset"] is True
     status_reset = await client.get("/api/training/status")
     assert status_reset.json()["sandbox_installed"] is False
-

@@ -12,10 +12,42 @@ def submit_marking_pool(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
             "message": "Training DNP rejected this pool by design.",
             "hint": "Use POOL-001 for the happy path or inspect the timeline to see external error handling.",
         }
+    field_errors = _validate_marking_pool_payload(payload)
+    if field_errors:
+        return 422, {
+            "success": False,
+            "error": "DNP_CONTRACT_VALIDATION_FAILED",
+            "message": "Training DNP payload does not match the marking pool contract.",
+            "field_errors": field_errors,
+            "hint": "Send pool_id, order_id, codes, contractor/inn and product/product_code fields.",
+        }
     return 200, {
         "success": True,
-        "pool_id": pool_id or "POOL-001",
+        "pool_id": pool_id,
+        "order_id": payload.get("order_id"),
+        "accepted_codes": len(payload.get("codes") or []),
         "dnp_request_id": "DNP-TRAINING-0001",
         "status": "accepted",
     }
 
+
+def _validate_marking_pool_payload(payload: dict[str, Any]) -> dict[str, str]:
+    errors: dict[str, str] = {}
+    if not str(payload.get("pool_id") or payload.get("pool") or "").strip():
+        errors["pool_id"] = "required"
+    if not str(payload.get("order_id") or "").strip():
+        errors["order_id"] = "required"
+    codes = payload.get("codes")
+    if not isinstance(codes, list) or not codes:
+        errors["codes"] = "non_empty_array_required"
+    elif any(not str(code or "").strip() for code in codes):
+        errors["codes"] = "all_codes_must_be_non_empty"
+
+    contractor = payload.get("contractor") if isinstance(payload.get("contractor"), dict) else {}
+    if not str(contractor.get("inn") or payload.get("inn") or "").strip():
+        errors["contractor.inn"] = "required"
+
+    product = payload.get("product") if isinstance(payload.get("product"), dict) else {}
+    if not str(product.get("gtin") or payload.get("product_code") or "").strip():
+        errors["product.gtin"] = "required"
+    return errors

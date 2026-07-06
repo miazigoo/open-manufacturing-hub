@@ -1,6 +1,6 @@
 """environment profiles and change sets
 
-Revision ID: 0026_environment_profiles_change_sets
+Revision ID: 0026_env_profiles_changes
 Revises: 0025_config_versions
 Create Date: 2026-07-05
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0026_environment_profiles_change_sets"
+revision: str = "0026_env_profiles_changes"
 down_revision: str | None = "0025_config_versions"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
