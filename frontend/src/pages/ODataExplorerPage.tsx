@@ -5,7 +5,7 @@ import { asJson } from '../api/client';
 import { integrationFlowsApi } from '../api/integrationFlows';
 import { odataConnectionsApi } from '../api/odataConnections';
 import { odataExplorerApi } from '../api/odataExplorer';
-import { operationTemplatesApi } from '../api/operationTemplates';
+import { operationTemplatesApi, type OperationTemplate } from '../api/operationTemplates';
 import { trainingApi } from '../api/training';
 import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
@@ -96,7 +96,7 @@ export function ODataExplorerPage() {
   const [stepSaveAs, setStepSaveAs] = useState('result');
   const [stepSaveAsTouched, setStepSaveAsTouched] = useState(false);
   const [flowForm, setFlowForm] = useState({ name: 'Order products lookup', slug: 'order-products-lookup', operation: 'lookup_order_products', description: 'Lookup 1C order data through chained OData requests.' });
-  const [newKey, setNewKey] = useState({ name: 'Lookup order products', operation: 'lookup_order_products', description: 'External system asks OMH to run this flow.' });
+  const [newKey, setNewKey] = useState({ name: 'Lookup order products', operation: 'lookup_order_products', description: 'External system asks OMH to run this flow.', example_request_json: '{\n  "operation": "lookup_order_products",\n  "Number": "260666/6938",\n  "device_type": "toodoo"\n}' });
   const [newKeyTouched, setNewKeyTouched] = useState(false);
   const [showTriggerModal, setShowTriggerModal] = useState(false);
   const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('continue_odata');
@@ -131,11 +131,12 @@ export function ODataExplorerPage() {
       description: newKey.description,
       enabled: true,
       request_template_json: { operation: newKey.operation },
-      example_request_json: { operation: newKey.operation, Number: '260666/6938' },
+      example_request_json: { ...parseInputSample(newKey.example_request_json), operation: newKey.operation },
     }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['operation-templates'] });
       setFlowForm((current) => ({ ...current, operation: data.operation }));
+      setInputSampleText(asJson(operationExample(data)));
       setShowTriggerModal(false);
     },
   });
@@ -211,6 +212,17 @@ export function ODataExplorerPage() {
   function updateDraft(next: DraftStep[]) {
     setDraftSteps(next);
     localStorage.setItem(draftStorageKey, JSON.stringify(next));
+  }
+
+  function operationExample(operationKey: OperationTemplate) {
+    const example = operationKey.example_request_json && Object.keys(operationKey.example_request_json).length > 0 ? operationKey.example_request_json : operationKey.request_template_json;
+    return { ...example, operation: operationKey.operation };
+  }
+
+  function selectOperationKey(operation: string) {
+    setFlowForm({ ...flowForm, operation });
+    const operationKey = operationKeyRows.find((item) => item.operation === operation);
+    if (operationKey) setInputSampleText(asJson(operationExample(operationKey)));
   }
 
   function requestInputFields(): InputField[] {
@@ -371,6 +383,7 @@ export function ODataExplorerPage() {
             <label className="field-label">Name<input value={newKey.name} onChange={(event) => setNewKey({ ...newKey, name: event.target.value, operation: newKeyTouched ? newKey.operation : keyify(event.target.value) })} /></label>
             <label className="field-label">Key<input value={newKey.operation} onChange={(event) => { setNewKeyTouched(true); setNewKey({ ...newKey, operation: keyify(event.target.value) }); }} /></label>
             <label className="field-label">Description<input value={newKey.description} onChange={(event) => setNewKey({ ...newKey, description: event.target.value })} /></label>
+            <label className="field-label">Example JSON<CodeEditor value={newKey.example_request_json} onChange={(value) => setNewKey({ ...newKey, example_request_json: value })} language="json" minRows={6} /></label>
             <div className="success-note">Example request<span><code>{`{"operation":"${newKey.operation || 'your_key'}","Number":"260666/6938","device_type":"toodoo"}`}</code></span></div>
             <button type="button" className="primary-button" onClick={() => createOperationKey.mutate()} disabled={createOperationKey.isPending || !newKey.operation}>Create trigger</button>
             {createOperationKey.error instanceof Error && <div className="error-state compact">{createOperationKey.error.message}</div>}
@@ -572,7 +585,7 @@ export function ODataExplorerPage() {
             <span className="eyebrow">Step 1</span>
             <h1>Trigger key</h1>
             <p className="microcopy">Выберите ключ, который придет от внешней системы в JSON-поле <code>operation</code> или <code>sinc</code>.</p>
-            <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => setFlowForm({ ...flowForm, operation: event.target.value })}><option value="">Выберите ключ</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
+            <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => selectOperationKey(event.target.value)}><option value="">Выберите ключ</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
             <label className="field-label">
               Пример входящего JSON
               <CodeEditor value={inputSampleText} onChange={setInputSampleText} language="json" minRows={6} title="Укажите пример того, что внешний backend будет отправлять в OMH. Поля кроме operation/sinc можно вставлять в OData filter/resource." />
