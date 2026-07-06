@@ -30,10 +30,21 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
         try:
             if step_type == "read_variable":
                 name = str(step.get("save_as") or step.get("variable") or step.get("name"))
-                value = resolve_path(scope, str(step["path"]))
+                path = str(step["path"])
+                paths = [path, *[str(item).strip() for item in step.get("fallback_paths") or [] if str(item).strip()]]
+                last_error: PathResolutionError | None = None
+                for candidate in paths:
+                    try:
+                        value = resolve_path(scope, candidate)
+                        path = candidate
+                        break
+                    except PathResolutionError as exc:
+                        last_error = exc
+                else:
+                    raise last_error or PathResolutionError("Variable path not found")
                 variables[name] = value
                 result = value
-                request_preview = {"path": step["path"]}
+                request_preview = {"path": path, "fallback_paths": step.get("fallback_paths") or []}
             elif step_type == "apply_transforms":
                 result = _preview_apply_transforms(step, sample_request, variables)
                 sample_request = result["payload"]

@@ -90,7 +90,7 @@ OPERATION_KEY_ODATA_CHAIN_BUILDER = {
         {"name": "order_number", "source": "request.body.Number"},
     ],
     "steps": [
-        {"id": "read_operation_key", "type": "read_variable", "name": "Read operation key", "path": "request.body.operation", "save_as": "operation_key"},
+        {"id": "read_operation_key", "type": "read_variable", "name": "Read operation key", "path": "request.body.operation", "fallback_paths": ["request.body.sinc"], "save_as": "operation_key"},
         {"id": "read_order_number", "type": "read_variable", "name": "Read 1C order number", "path": "request.body.Number", "save_as": "order_number"},
         {
             "id": "find_order",

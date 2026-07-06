@@ -181,6 +181,12 @@ async def test_operation_key_odata_chain_preset_uses_order_ref_in_products_resou
     assert body["response"]["products"][0]["Номенклатура_Key"] == "nom-guid"
     assert any("guid'order-guid'" in url for url in calls)
 
+    sinc_response = await client.post("/api/bus/in/operation-key-odata-chain", json={"sinc": "lookup_order_products", "Number": "260666/6938"})
+    assert sinc_response.status_code == 200, sinc_response.text
+    sinc_body = sinc_response.json()
+    assert sinc_body["success"] is True, {"body": sinc_body, "calls": calls}
+    assert sinc_body["response"]["operation_key"] == "lookup_order_products"
+
 
 async def test_bus_presets_and_print_endpoint(client):
     presets = await client.post("/api/integration-bus/install-presets")

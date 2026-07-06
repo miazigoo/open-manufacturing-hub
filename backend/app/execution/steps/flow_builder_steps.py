@@ -26,8 +26,19 @@ class FlowReadVariableStep:
         config = _config(context)
         variable_name = str(config.get("save_as") or config.get("variable") or config.get("name") or "").strip()
         path = str(config.get("path") or "").strip()
+        paths = [path, *[str(item).strip() for item in config.get("fallback_paths") or [] if str(item).strip()]]
+        last_error: PathResolutionError | None = None
         try:
-            value = resolve_path(_scope(context), path)
+            scope = _scope(context)
+            for candidate in paths:
+                try:
+                    value = resolve_path(scope, candidate)
+                    path = candidate
+                    break
+                except PathResolutionError as exc:
+                    last_error = exc
+            else:
+                raise last_error or PathResolutionError("Variable path not found")
         except PathResolutionError as exc:
             return _failed("VARIABLE_NOT_FOUND", str(exc), config, "Check the request sample and the source path.")
         variables = _variables_with_step(context, config["step_id"], value)
