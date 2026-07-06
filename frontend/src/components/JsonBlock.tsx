@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { asJson } from '../api/client';
 import { useT } from '../i18n/useI18n';
 import { CodeBlock } from './CodeBlock';
+import { CopyButton } from './product/CopyButton';
 
 interface JsonBlockProps {
   value: unknown;
@@ -15,11 +16,8 @@ export function JsonBlock({ value, title, searchable = true }: JsonBlockProps) {
   const [query, setQuery] = useState('');
   const pretty = useMemo(() => asJson(value), [value]);
   const display = raw ? JSON.stringify(value) : pretty;
-  const filtered = query ? display.split('\n').filter((line) => line.toLowerCase().includes(query.toLowerCase())).join('\n') : display;
-
-  async function copy() {
-    await navigator.clipboard?.writeText(display);
-  }
+  const visibleDisplay = display.length > 120_000 ? `${display.slice(0, 120_000)}\n\n${t('common.jsonTruncated')}` : display;
+  const filtered = query ? visibleDisplay.split('\n').filter((line) => line.toLowerCase().includes(query.toLowerCase())).join('\n') : visibleDisplay;
 
   return (
     <section className="json-panel">
@@ -31,7 +29,7 @@ export function JsonBlock({ value, title, searchable = true }: JsonBlockProps) {
         <div className="toolbar-actions">
           {searchable && <input className="micro-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('common.searchJson')} />}
           <button className="ghost-button" onClick={() => setRaw((current) => !current)}>{raw ? t('common.pretty') : t('common.raw')}</button>
-          <button className="ghost-button" onClick={copy}>{t('common.copy')}</button>
+          <CopyButton value={display} label={t('common.copy')} copiedLabel={t('common.copied')} failedLabel={t('docs.copyUnavailable')} />
         </div>
       </div>
       <CodeBlock code={filtered} language="json" copyLabel={t('common.copy')} copiedLabel={t('common.copied')} failedLabel={t('docs.copyUnavailable')} showToolbar={false} />
