@@ -49,6 +49,8 @@ async def query(session: AsyncSession, connector_id: UUID, request: ODataQueryRe
         response = query_mock_odata(mock_odata, request.resource, params)
         items = response.get("value") if isinstance(response.get("value"), list) else []
         return {"request_url": f"mock://training-odata/{request.resource}", "request": {"resource": request.resource, "params": params}, "response": response, "items": items, "count": len(items), "artifact_ids": {}}
+    if not request.paginate:
+        config = {**config, "odata": {**(config.get("odata") or {}), "max_pages": 1}}
     result = await read_odata(config, request.resource, params)
     if not result.success:
         raise BadRequestError(_odata_error_message(result.error_message or result.error_code or "ODATA_QUERY_FAILED", result.request_payload, result.response_payload))

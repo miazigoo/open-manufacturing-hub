@@ -21,10 +21,11 @@ export function ODataExplorerPage() {
   const [connectorId, setConnectorId] = useState(requestedConnection);
   const [formError, setFormError] = useState<string | null>(null);
   const [query, setQuery] = useState({ resource: 'Catalog_Контрагенты', top: '10', filter: "ИНН eq '1234567890'", select: 'Ref_Key,Description', orderby: '' });
+  const [paginate, setPaginate] = useState(false);
   const [filters, setFilters] = useState([{ field: 'ИНН', operator: 'eq', value: '1234567890' }]);
   const [lookup, setLookup] = useState({ name: 'Find contractor by INN', filter_template: "ИНН eq '{inn}'", extract_json: '{"contractor_uuid":"Ref_Key","contractor_name":"Description"}' });
   const resources = useQuery({ queryKey: ['odata-resources', connectorId], queryFn: () => odataExplorerApi.resources(connectorId), enabled: Boolean(connectorId) });
-  const run = useMutation({ mutationFn: () => odataExplorerApi.query(connectorId, { resource: query.resource, top: Number(query.top) || 10, filter: query.filter || null, select: query.select || null, orderby: query.orderby || null }) });
+  const run = useMutation({ mutationFn: () => odataExplorerApi.query(connectorId, { resource: query.resource, top: Number(query.top) || 10, filter: query.filter || null, select: query.select || null, orderby: query.orderby || null, paginate }) });
   const createLookup = useMutation({ mutationFn: (extractJson: Record<string, string>) => odataExplorerApi.createLookup(connectorId, { name: lookup.name, resource: query.resource, filter_template: lookup.filter_template, extract_json: extractJson }) });
   const installTraining = useMutation({
     mutationFn: trainingApi.install,
@@ -164,6 +165,11 @@ export function ODataExplorerPage() {
           <div className="hint-chip-row">
             {['Ref_Key,Description,ИНН', 'Ref_Key,Description,Артикул', 'Ref_Key,Number,Date,Posted', 'Ref_Key,Склад_Key,Номенклатура_Key,Количество'].map((select) => <button key={select} type="button" className="hint-chip" onClick={() => setQuery({ ...query, select })}>{select}</button>)}
           </div>
+          <label className="check-row" title={t('integration.odataExplorer.paginationHint')}>
+            <input type="checkbox" checked={paginate} onChange={(event) => setPaginate(event.target.checked)} />
+            {t('integration.odataExplorer.pagination')}
+          </label>
+          <div className="success-note">{t('integration.odataExplorer.paginationTitle')}<span>{t('integration.odataExplorer.paginationHint')}</span></div>
           <button className="primary-button" disabled={!connectorId || run.isPending}>{t('integration.odataExplorer.runQuery')}</button>
         </form>
         <hr />

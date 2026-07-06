@@ -15,6 +15,7 @@ class ODataQueryRequest(BaseModel):
     filter: str | None = None
     select: str | None = None
     orderby: str | None = None
+    paginate: bool = False
 
 class ODataQueryResponse(BaseModel):
     request_url: str | None = None
