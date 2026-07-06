@@ -74,6 +74,7 @@ export function ODataExplorerPage() {
   const [flowForm, setFlowForm] = useState({ name: 'Order products lookup', slug: 'order-products-lookup', operation: 'lookup_order_products', description: 'Lookup 1C order data through chained OData requests.' });
   const [newKey, setNewKey] = useState({ name: 'Lookup order products', operation: 'lookup_order_products', description: 'External system asks OMH to run this flow.' });
   const [newKeyTouched, setNewKeyTouched] = useState(false);
+  const [showTriggerModal, setShowTriggerModal] = useState(false);
   const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('continue_odata');
   const [tabularPart, setTabularPart] = useState('Продукция');
   const resources = useQuery({ queryKey: ['odata-resources', connectorId], queryFn: () => odataExplorerApi.resources(connectorId), enabled: Boolean(connectorId) });
@@ -96,6 +97,7 @@ export function ODataExplorerPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['operation-templates'] });
       setFlowForm((current) => ({ ...current, operation: data.operation }));
+      setShowTriggerModal(false);
     },
   });
   const saveFlow = useMutation({
@@ -370,13 +372,10 @@ export function ODataExplorerPage() {
           <div className="builder-help-card">
             <strong>Step 1. Trigger key</strong>
             <span>Этот ключ придет во входящем JSON в поле <code>operation</code> или <code>sinc</code>. По нему OMH поймет, какой flow запускать.</span>
-            <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => setFlowForm({ ...flowForm, operation: event.target.value })}><option value={flowForm.operation}>{flowForm.operation}</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
             <div className="metadata-grid compact-grid no-margin">
-              <label className="field-label">New key name<input value={newKey.name} onChange={(event) => setNewKey({ ...newKey, name: event.target.value, operation: newKeyTouched ? newKey.operation : keyify(event.target.value) })} /></label>
-              <label className="field-label">New key<input value={newKey.operation} onChange={(event) => { setNewKeyTouched(true); setNewKey({ ...newKey, operation: keyify(event.target.value) }); }} /></label>
+              <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => setFlowForm({ ...flowForm, operation: event.target.value })}><option value={flowForm.operation}>{flowForm.operation}</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
+              <button type="button" className="ghost-button" onClick={() => setShowTriggerModal(true)}>Add trigger</button>
             </div>
-            <label className="field-label">Key description<input value={newKey.description} onChange={(event) => setNewKey({ ...newKey, description: event.target.value })} /></label>
-            <button type="button" className="ghost-button" onClick={() => createOperationKey.mutate()} disabled={createOperationKey.isPending}>Create operation key</button>
           </div>
           {run.data && <div className="builder-help-card">
             <strong>Step 2. Add current OData result as a step</strong>
@@ -432,6 +431,26 @@ export function ODataExplorerPage() {
         </section>
         <JsonBlock title={t('integration.odataExplorer.createdLookup')} value={createLookup.data ?? {}} searchable={false} />
       </section>
+      {showTriggerModal && <div className="help-panel-backdrop" onClick={() => setShowTriggerModal(false)}>
+        <aside className="help-panel" role="dialog" aria-label="Add trigger" onClick={(event) => event.stopPropagation()}>
+          <div className="panel-toolbar">
+            <div>
+              <span className="eyebrow">Trigger</span>
+              <h2>Add trigger key</h2>
+              <p className="microcopy">Создайте ключ, который внешний сервис будет отправлять в поле <code>operation</code> или <code>sinc</code>.</p>
+            </div>
+            <button type="button" className="ghost-button" onClick={() => setShowTriggerModal(false)}>Close</button>
+          </div>
+          <div className="stack-form">
+            <label className="field-label">Name<input value={newKey.name} onChange={(event) => setNewKey({ ...newKey, name: event.target.value, operation: newKeyTouched ? newKey.operation : keyify(event.target.value) })} /></label>
+            <label className="field-label">Key<input value={newKey.operation} onChange={(event) => { setNewKeyTouched(true); setNewKey({ ...newKey, operation: keyify(event.target.value) }); }} /></label>
+            <label className="field-label">Description<input value={newKey.description} onChange={(event) => setNewKey({ ...newKey, description: event.target.value })} /></label>
+            <div className="success-note">Example request<span><code>{`{"operation":"${newKey.operation || 'your_key'}","Number":"260666/6938"}`}</code></span></div>
+            <button type="button" className="primary-button" onClick={() => createOperationKey.mutate()} disabled={createOperationKey.isPending || !newKey.operation}>Create trigger</button>
+            {createOperationKey.error instanceof Error && <div className="error-state compact">{createOperationKey.error.message}</div>}
+          </div>
+        </aside>
+      </div>}
     </div>
   );
 }
