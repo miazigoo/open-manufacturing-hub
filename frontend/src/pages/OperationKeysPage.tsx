@@ -12,7 +12,7 @@ import { StatusBadge } from '../components/StatusBadge';
 const sampleRequest = { operation: 'lookup_order_products', Number: '260666/6938' };
 
 function slugify(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 120) || 'operation_key';
+  return value.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 120);
 }
 
 function parseObject(value: string, label: string): Record<string, unknown> {
@@ -25,6 +25,7 @@ export function OperationKeysPage() {
   const queryClient = useQueryClient();
   const keys = useQuery({ queryKey: ['operation-templates'], queryFn: operationTemplatesApi.list });
   const [form, setForm] = useState({ name: 'Lookup order products', operation: 'lookup_order_products', description: 'External system asks OMH to find a production order and related rows.', example_request_json: asJson(sampleRequest) });
+  const [operationTouched, setOperationTouched] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const create = useMutation({
     mutationFn: () => operationTemplatesApi.create({
@@ -66,8 +67,8 @@ export function OperationKeysPage() {
         <form className="panel stack-form runtime-control-card" onSubmit={submit}>
           <span className="eyebrow">Add key</span>
           <h2>Новый ключ операции</h2>
-          <label className="field-label">Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value, operation: slugify(event.target.value) })} /></label>
-          <label className="field-label">Operation key<input value={form.operation} onChange={(event) => setForm({ ...form, operation: slugify(event.target.value) })} /></label>
+          <label className="field-label">Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value, operation: operationTouched ? form.operation : slugify(event.target.value) })} /></label>
+          <label className="field-label">Operation key<input value={form.operation} onChange={(event) => { setOperationTouched(true); setForm({ ...form, operation: slugify(event.target.value) }); }} /></label>
           <label className="field-label">Description<input value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
           <label className="field-label">Example JSON<CodeEditor value={form.example_request_json} onChange={(value) => setForm({ ...form, example_request_json: value })} language="json" minRows={6} /></label>
           <button className="primary-button" disabled={create.isPending}>Save operation key</button>

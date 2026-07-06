@@ -31,6 +31,10 @@ function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'odata-chain';
 }
 
+function keyify(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 120);
+}
+
 function variableName(value: string) {
   const clean = value.split('/').pop()?.replace(/^.*_/, '') || value;
   return clean.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'odata_result';
@@ -64,6 +68,7 @@ export function ODataExplorerPage() {
   const [stepSaveAs, setStepSaveAs] = useState('result');
   const [flowForm, setFlowForm] = useState({ name: 'Order products lookup', slug: 'order-products-lookup', operation: 'lookup_order_products', description: 'Lookup 1C order data through chained OData requests.' });
   const [newKey, setNewKey] = useState({ name: 'Lookup order products', operation: 'lookup_order_products', description: 'External system asks OMH to run this flow.' });
+  const [newKeyTouched, setNewKeyTouched] = useState(false);
   const resources = useQuery({ queryKey: ['odata-resources', connectorId], queryFn: () => odataExplorerApi.resources(connectorId), enabled: Boolean(connectorId) });
   const run = useMutation({ mutationFn: () => odataExplorerApi.query(connectorId, { resource: query.resource, top: Number(query.top) || 10, filter: query.filter || null, select: query.select || null, orderby: query.orderby || null, paginate }) });
   const createLookup = useMutation({ mutationFn: (extractJson: Record<string, string>) => odataExplorerApi.createLookup(connectorId, { name: lookup.name, resource: query.resource, filter_template: lookup.filter_template, extract_json: extractJson }) });
@@ -381,8 +386,8 @@ export function ODataExplorerPage() {
           </div>
           <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => setFlowForm({ ...flowForm, operation: event.target.value })}><option value={flowForm.operation}>{flowForm.operation}</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
           <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">New key name<input value={newKey.name} onChange={(event) => setNewKey({ ...newKey, name: event.target.value, operation: slugify(event.target.value).replaceAll('-', '_') })} /></label>
-            <label className="field-label">New key<input value={newKey.operation} onChange={(event) => setNewKey({ ...newKey, operation: slugify(event.target.value).replaceAll('-', '_') })} /></label>
+            <label className="field-label">New key name<input value={newKey.name} onChange={(event) => setNewKey({ ...newKey, name: event.target.value, operation: newKeyTouched ? newKey.operation : keyify(event.target.value) })} /></label>
+            <label className="field-label">New key<input value={newKey.operation} onChange={(event) => { setNewKeyTouched(true); setNewKey({ ...newKey, operation: keyify(event.target.value) }); }} /></label>
           </div>
           <label className="field-label">Key description<input value={newKey.description} onChange={(event) => setNewKey({ ...newKey, description: event.target.value })} /></label>
           <div className="action-row wrap-actions">
