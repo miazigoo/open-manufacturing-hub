@@ -25,6 +25,7 @@ const fallbackNavigation: UINavigationItem[] = [
   { group: 'Operate', title: 'Event Journal', route: '/events', package_id: null, enabled: true, advanced: false },
   { group: 'Build', title: '1C Integration Cockpit', route: '/onec-cockpit', package_id: 'omh-package-onec', enabled: false, installed: false, advanced: false },
   { group: 'Build', title: 'Integration Flows', route: '/integration-flows', package_id: null, enabled: true, advanced: false },
+  { group: 'Build', title: 'Operation Keys', route: '/operation-keys', package_id: null, enabled: true, advanced: false },
   { group: 'Data Tools', title: 'OData Connections', route: '/odata-connections', package_id: 'omh-package-onec', enabled: false, installed: false, advanced: false },
   { group: 'Data Tools', title: 'OData Explorer', route: '/odata-explorer', package_id: 'omh-package-onec', enabled: false, installed: false, advanced: false },
   { group: 'Packages', title: 'Packages', route: '/packages', package_id: null, enabled: true, advanced: false },
@@ -58,6 +59,7 @@ const routeKey: Record<string, string> = {
   '/health': 'nav.health',
   '/onec-cockpit': 'nav.onecCockpit',
   '/integration-flows': 'nav.integrationFlows',
+  '/operation-keys': 'nav.operationKeys',
   '/training': 'nav.training',
   '/test-console': 'nav.testConsole',
   '/test-cases': 'nav.savedTestCases',
@@ -96,7 +98,7 @@ const routeKey: Record<string, string> = {
 
 const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Settings', 'Advanced', 'Developer'];
 const modeRank: Record<UIMode, number> = { simple: 0, advanced: 1, developer: 2 };
-const simpleRoutes = new Set(['/docs', '/onboarding', '/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/training', '/test-console', '/packages', '/plugin-store']);
+const simpleRoutes = new Set(['/docs', '/onboarding', '/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/operation-keys', '/training', '/test-console', '/packages', '/plugin-store']);
 const developerRoutes = new Set(['/workflows', '/execution/steps', '/i18n-debug']);
 
 export function Layout() {
