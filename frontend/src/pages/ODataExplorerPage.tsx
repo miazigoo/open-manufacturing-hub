@@ -125,7 +125,7 @@ export function ODataExplorerPage() {
   const [newKeyTouched, setNewKeyTouched] = useState(false);
   const [showTriggerModal, setShowTriggerModal] = useState(false);
   const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('continue_odata');
-  const [tabularPart, setTabularPart] = useState('Продукция');
+  const tabularPart = 'Продукция';
   const [wizardStep, setWizardStep] = useState<WizardStep>('trigger');
   const [target, setTarget] = useState({ method: 'POST', url: '' });
   const [inputSampleText, setInputSampleText] = useState('{\n  "operation": "lookup_order_products",\n  "Number": "260666/6938",\n  "device_type": "toodoo"\n}');
@@ -499,8 +499,7 @@ export function ODataExplorerPage() {
           {latestDraftStep?.sample && (
             <div className="builder-help-card">
               <strong>Данные предыдущего шага</strong>
-              <span>Нажмите поле, чтобы вставить переменную. Для документа 1C используйте `1C object resource`, например <code>Document_...(guid'{'{{'}order.Ref_Key{'}}'}')/Продукция</code>.</span>
-              <label className="field-label">1C tabular part<input value={tabularPart} onChange={(event) => setTabularPart(event.target.value)} placeholder="Продукция" /></label>
+              <span>Нажмите поле, чтобы вставить переменную. Для документа 1C используйте кнопку <code>1C object resource</code>, она соберет ресурс вида <code>Document_...(guid'{'{{'}order.Ref_Key{'}}'}')/Продукция</code>.</span>
               <div className="hint-chip-row">
                 {Object.keys(latestDraftStep.sample).slice(0, 14).map((field) => (
                   <span key={field} className="action-row wrap-actions">
