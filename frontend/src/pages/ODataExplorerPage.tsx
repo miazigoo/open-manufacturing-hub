@@ -77,6 +77,11 @@ function renderInputPlaceholders(value: string, sample: Record<string, unknown>)
   });
 }
 
+function formatInputValue(value: unknown) {
+  if (value === undefined || value === null) return '';
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+}
+
 export function ODataExplorerPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -238,6 +243,17 @@ export function ODataExplorerPage() {
     else setFilters(filters.map((item, index) => index === 0 ? { ...item, value: placeholder } : item));
   }
 
+  function useRequestFieldAsFilter(field: string) {
+    const placeholder = `{{request.body.${field}}}`;
+    setFilters([{ field, operator: 'eq', value: placeholder }]);
+    setQuery({ ...query, filter: `${field} eq '${placeholder}'` });
+  }
+
+  function updateInputSampleField(field: string, value: string) {
+    const sample = parseInputSample(inputSampleText);
+    setInputSampleText(asJson({ ...sample, [field]: value }));
+  }
+
   function startODataStep() {
     setNextAction('continue_odata');
     setQuery({ resource: '', top: '10', filter: '', select: '', orderby: '' });
@@ -358,6 +374,7 @@ export function ODataExplorerPage() {
   const operationKeyRows = (operationKeys.data ?? []).filter((item) => item.system_type === 'operation_key' || item.direction === 'inbound');
   const latestDraftStep = draftSteps[draftSteps.length - 1] ?? null;
   const inputFields = requestInputFields();
+  const inputSample = parseInputSample(inputSampleText);
 
   function goToActionChoice() {
     run.reset();
@@ -477,13 +494,13 @@ export function ODataExplorerPage() {
           <div className="builder-help-card">
             <strong>Входные параметры из JSON</strong>
             <span>Эти значения придут от внешней системы вместе с trigger key. В flow они сохраняются как шаблоны <code>{'{{request.body.Number}}'}</code>, а для тестового запуска здесь подставляются из примера ниже.</span>
-            <div className="hint-chip-row">
+            <div className="stack-form">
               {inputFields.length === 0 ? <span className="microcopy">Добавьте поля в пример JSON на первом шаге.</span> : inputFields.map((field) => (
-                <span key={field.name} className="action-row wrap-actions">
-                  <button type="button" className="hint-chip" onClick={() => insertRequestPlaceholder('filter_value', field.name)}>Filter value: {field.name}</button>
-                  <button type="button" className="hint-chip" onClick={() => insertRequestPlaceholder('filter', field.name)}>Filter raw: {field.name}</button>
-                  <button type="button" className="hint-chip" onClick={() => insertRequestPlaceholder('resource', field.name)}>Resource: {field.name}</button>
-                </span>
+                <div key={field.name} className="metadata-grid compact-grid no-margin">
+                  <label className="field-label">Test value: {field.name}<input value={formatInputValue(field.value)} onChange={(event) => updateInputSampleField(field.name, event.target.value)} /></label>
+                  <button type="button" className="hint-chip" onClick={() => useRequestFieldAsFilter(field.name)}>Filter: {field.name} eq value</button>
+                  <button type="button" className="hint-chip" onClick={() => insertRequestPlaceholder('resource', field.name)}>Insert into resource</button>
+                </div>
               ))}
             </div>
           </div>
@@ -498,6 +515,7 @@ export function ODataExplorerPage() {
             <label className="field-label">$orderby<input value={query.orderby} onChange={(event) => setQuery({ ...query, orderby: event.target.value })} /></label>
           </div>
           <label className="field-label">$filter<input value={query.filter} onChange={(event) => setQuery({ ...query, filter: event.target.value })} placeholder="Number eq '260666/6938'" title={t('integration.odataExplorer.filterTitle')} /></label>
+          {query.filter && <div className="success-note">Test filter preview<span>{renderInputPlaceholders(query.filter, inputSample)}</span></div>}
           <div className="odata-filter-builder">
             <div className="panel-toolbar compact-toolbar"><h3>{t('integration.odataExplorer.filterBuilder')}</h3><button type="button" className="ghost-button" onClick={() => setFilters([...filters, { field: '', operator: 'eq', value: '' }])}>{t('integration.odataExplorer.addCondition')}</button></div>
             {filters.map((filter, index) => (
