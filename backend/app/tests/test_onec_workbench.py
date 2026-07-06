@@ -121,7 +121,7 @@ async def test_onec_raw_xml_body_mode(monkeypatch):
 
 async def test_odata_lookup_test_endpoint_extracts_fields(monkeypatch, client):
     await _install_onec_package(client)
-    async def fake_request(self, method, url, *, params=None, json_payload=None):
+    async def fake_request(self, method, url, *, params=None, json_payload=None, headers=None):
         assert params["$filter"] == "ИНН eq '1234567890'"
         return httpx.Response(200, json={"value": [{"Ref_Key": "uuid-1", "Description": "ООО Ромашка"}]}), {"method": method, "url": url, "params": params}, None, None
 

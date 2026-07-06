@@ -107,7 +107,7 @@ async def test_bus_xml_endpoint_stores_message_hash_and_preview(client):
 
 
 async def test_odata_lookup_template_crud_test_and_step(monkeypatch, client):
-    async def fake_request(self, method, url, *, params=None, json_payload=None):
+    async def fake_request(self, method, url, *, params=None, json_payload=None, headers=None):
         assert params["$filter"] == "ИНН eq '1234567890'"
         return httpx.Response(200, json={"value": [{"Ref_Key": "uuid-1", "Description": "ООО Ромашка"}]}), {"method": method, "url": url, "params": params}, None, None
 

@@ -57,8 +57,8 @@ export function ODataConnectionsPage() {
       </section>
 
       <section className="flow-layout">
-        <form className="panel stack-form" onSubmit={submit}>
-          <div className="panel-toolbar"><div><span className="eyebrow">{t('integration.odataConnections.create')}</span><h2>{t('integration.odataConnections.newConnection')}</h2><p>{t('integration.odataConnections.newConnectionHint')}</p></div><button className="primary-button" disabled={create.isPending}>{t('integration.odataConnections.createButton')}</button></div>
+        <form className="panel stack-form odata-connection-form" onSubmit={submit}>
+          <div className="panel-toolbar"><div><span className="eyebrow">{t('integration.odataConnections.create')}</span><h2>{t('integration.odataConnections.newConnection')}</h2><p>{t('integration.odataConnections.newConnectionHint')}</p></div></div>
           <div className="component-strip package-capabilities">{presets.map((preset) => <button type="button" className="ghost-button" key={preset.name} onClick={() => loadPreset(preset)}>{preset.name}</button>)}</div>
           <label className="field-label">{t('integration.odataConnections.name')}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
           <label className="field-label">{t('integration.odataConnections.descriptionLabel')}<input value={form.description ?? ''} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
@@ -75,6 +75,7 @@ export function ODataConnectionsPage() {
           </div>
           <label className="check-row"><input type="checkbox" checked={form.verify_ssl} onChange={(event) => setForm({ ...form, verify_ssl: event.target.checked })} /> {t('integration.odataConnections.verifySsl')}</label>
           <label className="field-label">{t('integration.odataConnections.tags')}<input value={form.tags.join(', ')} onChange={(event) => setForm({ ...form, tags: normalizeTags(event.target.value) })} /></label>
+          <div className="action-row wrap-actions"><button className="primary-button" disabled={create.isPending}>{t('integration.odataConnections.createButton')}</button></div>
           {create.error instanceof Error && <div className="error-state compact">{create.error.message}</div>}
         </form>
 

@@ -50,8 +50,8 @@ async def test_onec_config_is_masked_in_connector_api(client):
 async def test_onec_odata_read_paginates_and_manual_endpoint(monkeypatch, client):
     calls = []
 
-    async def fake_request(self, method, url, *, params=None, json_payload=None):
-        calls.append({"method": method, "url": url, "params": params, "json_payload": json_payload})
+    async def fake_request(self, method, url, *, params=None, json_payload=None, headers=None):
+        calls.append({"method": method, "url": url, "params": params, "json_payload": json_payload, "headers": headers})
         if len(calls) == 1:
             return httpx.Response(200, json={"value": [{"Ref_Key": "A", "Number": "SO-1"}], "@odata.nextLink": "https://onec.example.local/odata/standard.odata/Document_ЗаказКлиента?$skip=1"}), {"url": url, "params": params}, None, None
         if len(calls) == 2:
@@ -70,6 +70,8 @@ async def test_onec_odata_read_paginates_and_manual_endpoint(monkeypatch, client
     assert body["count"] == 2
     assert [item["Ref_Key"] for item in body["items"]] == ["A", "B"]
     assert calls[0]["params"]["$top"] == 1
+    assert calls[0]["params"]["$format"] == "json"
+    assert calls[0]["headers"]["Accept"] == "application/json"
     assert calls[1]["params"] is None
 
 
