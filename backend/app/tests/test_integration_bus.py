@@ -169,7 +169,7 @@ async def test_dnp_pull_codes_preset_uses_order_ref_in_products_resource(monkeyp
     monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
     connector = await client.post(
         "/api/connectors",
-        json={"name": "1C CHZ OData", "connector_type": "onec", "direction": "bidirectional", "config_json": {"base_url": "https://onec.example.local/odata/standard.odata", "auth": {"type": "none"}}},
+        json={"name": "1C CHZ OData ERP", "connector_type": "onec", "direction": "bidirectional", "config_json": {"base_url": "https://onec.example.local/odata/standard.odata", "auth": {"type": "none"}}},
     )
     assert connector.status_code == 200
     installed = await client.post("/api/integration-flows/presets/dnp-pull-codes/install")
