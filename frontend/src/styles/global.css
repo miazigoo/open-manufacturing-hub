@@ -793,6 +793,20 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .endpoint-select-preview strong, .test-console-empty-response strong { color: var(--accent-2); }
 .endpoint-select-preview span { color: var(--ink); font-family: var(--font-mono); overflow-wrap: anywhere; }
 .endpoint-select-preview small, .test-console-empty-response p { color: var(--muted); margin: 0; }
+.request-response-hero { background: radial-gradient(circle at 12% 10%, rgba(143,198,180,.2), transparent 30%), radial-gradient(circle at 82% 6%, rgba(240,179,90,.15), transparent 28%), linear-gradient(135deg, rgba(143,198,180,.09), rgba(0,0,0,.18)); }
+.request-response-mode { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.request-response-grid { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 18px; align-items: start; }
+.request-response-builder { background: linear-gradient(145deg, rgba(247,239,218,.055), rgba(143,198,180,.045)); }
+.request-response-sidecar { display: grid; gap: 18px; position: sticky; top: 72px; min-width: 0; }
+.request-response-step { background: rgba(0,0,0,.12); }
+.request-response-step h2 { margin: 0 0 6px; }
+.request-response-step p { margin: 0; color: var(--muted); }
+.request-action-cards { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.request-action-cards .action-card { text-align: left; min-height: 118px; opacity: .58; }
+.request-action-cards .action-card.active { opacity: 1; border-color: rgba(240,179,90,.42); background: rgba(240,179,90,.08); }
+.odata-workbench-step { border-color: rgba(143,198,180,.25); }
+.request-preview-list { display: grid; gap: 10px; }
+.compact-list { display: flex; flex-wrap: wrap; gap: 8px; }
 
 @media (max-width: 1320px) {
   .docs-layout-grid { grid-template-columns: 280px minmax(0, 1fr); }
@@ -800,6 +814,8 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
   .docs-toc-panel nav { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 }
 @media (max-width: 980px) {
+  .request-response-grid { grid-template-columns: minmax(0, 1fr); }
+  .request-response-sidecar { position: static; }
   .docs-layout-grid { grid-template-columns: minmax(0, 1fr); }
   .docs-sidebar-panel { position: static; max-height: none; }
   .docs-hero-card { min-width: 0; width: 100%; }

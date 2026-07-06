@@ -489,6 +489,9 @@ def _format_response(
             return {**response, "success": queue_status == "completed", **base, "response": response}
         return {**base, "response": None}
     if endpoint.response_mode == SYNC_RESPONSE:
+        if response and "response_body_type" in response and "body" in response:
+            response_meta = {key: response.get(key) for key in ("status_code", "response_body_type", "headers") if key in response}
+            return {"success": event.status.value == "success", **base, "response": response.get("body"), "response_meta": response_meta}
         return {"success": event.status.value == "success", **base, "response": response}
     return base
 

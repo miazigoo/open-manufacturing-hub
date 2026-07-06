@@ -629,6 +629,7 @@ export function ODataExplorerPage() {
               <span className="eyebrow">{t('integration.odataExplorer.eyebrow')}</span>
               <h1>{t('integration.odataExplorer.title')}</h1>
               <p className="microcopy">Соберите интеграцию пошагово: trigger key, OData-запросы, затем отправка результата.</p>
+              <p className="microcopy"><strong>Create OData Connection.</strong> Choose the 1C base where OMH will search data.</p>
             </div>
             <div className="toolbar-actions">
               <Link className="primary-link" to="/operation-keys">Operation keys</Link>
@@ -647,6 +648,15 @@ export function ODataExplorerPage() {
               <CodeEditor value={inputSampleText} onChange={setInputSampleText} language="json" minRows={6} title="Укажите пример того, что внешний backend будет отправлять в OMH. Поля кроме operation/sinc можно вставлять в OData filter/resource." />
             </label>
             <div className="success-note">Доступные параметры<span>{inputFields.length ? inputFields.map((field) => `${field.name}=${String(field.value)}`).join(', ') : 'Пока нет параметров кроме operation/sinc'}</span></div>
+            <div className="builder-help-card odata-filter-builder">
+              <strong>Safe OData workflow</strong>
+              <span>Конструктор фильтра помогает собрать `$filter`, а `$select` ограничивает ответ 1C только нужными полями. Сначала проверьте query здесь, потом сохраняйте его как шаг интеграции.</span>
+              <div className="hint-chip-row">
+                <button type="button" className="hint-chip" onClick={() => setWizardStep('odata')}>Filter builder</button>
+                <button type="button" className="hint-chip" onClick={() => setWizardStep('odata')}>$select fields</button>
+                <button type="button" className="hint-chip" onClick={() => setWizardStep('odata')}>Run OData query</button>
+              </div>
+            </div>
             <div className="action-row wrap-actions">
               <button type="button" className="ghost-button" onClick={() => setShowTriggerModal(true)}>Добавить trigger</button>
               <button type="button" className="primary-button" onClick={goToActionChoice} disabled={!flowForm.operation}>Следующий шаг</button>

@@ -1078,6 +1078,8 @@ const toolPages: PageSeed[] = [
     'Save as: products',
     '```',
     '',
+    'Если нужно обратиться к первому элементу результата через step artifact, используйте `{{steps.get_contractor.first.Ref_Key}}`. Если step сохранил результат как `contractor`, то в следующих шагах обычно удобнее писать `{{contractor.Ref_Key}}`.',
+    '',
     'В OData Explorer это удобнее делать через `Draft flow`: выберите предыдущий шаг `find_order`, поле `Ref_Key`, затем кнопку `1C object resource`. Оператор видит, откуда берется значение и куда оно вставляется, поэтому ему не нужно вручную вспоминать `guid...`.',
     '',
     '## Пример 1. 1C request -> OData контрагент -> target JSON',

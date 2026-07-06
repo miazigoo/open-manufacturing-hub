@@ -127,3 +127,46 @@ async def test_flow_builder_odata_chaining_selects_fields_and_ignores_empty_filt
         "last_order_uuid": "order-001",
         "last_order_number": "SO-1001",
     }
+
+
+async def test_flow_builder_return_response_preview_supports_xml_without_target_warning(client):
+    builder = {
+        "version": 1,
+        "input": {"endpoint_slug": "lookup-order-products", "input_mode": "json", "response_mode": "sync_response"},
+        "steps": [
+            {
+                "id": "get_order",
+                "type": "odata_query",
+                "name": "Find order",
+                "connection": "Demo 1C ERP",
+                "resource": "Document_ЗаказНаПроизводство2_2",
+                "filter": "Number eq '{{request.body.Number}}'",
+                "select": ["Ref_Key", "Number"],
+                "top": 1,
+                "save_as": "order",
+                "required": True,
+                "mock_items": [{"Ref_Key": "order-001", "Number": "260666/6938"}],
+            },
+            {
+                "id": "return_response",
+                "type": "return_response",
+                "name": "Return XML",
+                "response_body_type": "xml",
+                "status_code": 200,
+                "headers": {"Content-Type": "application/xml"},
+                "body_template": "<Response><Order>{{order.Ref_Key}}</Order><Number>{{order.Number}}</Number></Response>",
+            },
+        ],
+    }
+
+    response = await client.post("/api/flow-builder/preview", json={"builder_json": builder, "sample_request": {"Number": "260666/6938"}})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert body["errors"] == []
+    return_step = body["steps"][1]
+    assert return_step["request_preview"]["response_body_type"] == "xml"
+    assert return_step["result_preview"]["headers"]["Content-Type"] == "application/xml"
+    assert return_step["result_preview"]["body"] == "<Response><Order>order-001</Order><Number>260666/6938</Number></Response>"
+    assert all(warning["code"] != "TARGET_STEP_MISSING" for warning in body.get("warnings", []))

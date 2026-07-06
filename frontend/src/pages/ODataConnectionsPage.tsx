@@ -52,6 +52,7 @@ export function ODataConnectionsPage() {
           <span className="eyebrow">1C OData</span>
           <h1>{t('integration.odataConnections.title')}</h1>
           <p>{t('integration.odataConnections.description')}</p>
+          <p className="microcopy"><strong>Create OData Connection.</strong> Choose the 1C base where OMH will search data.</p>
         </div>
         <div className="product-header-actions"><Link className="primary-button" to="/docs/onec/academy/create-odata-connection">{t('integration.odataConnections.openLesson')}</Link><Link className="ghost-button" to="/odata-explorer">{t('integration.odataConnections.testExplorer')}</Link></div>
       </section>

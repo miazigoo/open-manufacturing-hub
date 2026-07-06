@@ -85,8 +85,17 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 target_request = result["would_call"]
                 request_preview = result["would_call"]
             elif step_type == "return_response":
-                result = render_template(step.get("body") or "{{response}}", scope)
-                request_preview = {"body": step.get("body")}
+                if step.get("body_template") is not None:
+                    body = render_template(str(step.get("body_template") or ""), scope)
+                else:
+                    body = render_template(step.get("body") if step.get("body") is not None else "{{response}}", scope)
+                result = {
+                    "status_code": int(step.get("status_code") or 200),
+                    "response_body_type": step.get("response_body_type") or ("json" if isinstance(body, dict) else "raw_text"),
+                    "headers": step.get("headers") if isinstance(step.get("headers"), dict) else {},
+                    "body": body,
+                }
+                request_preview = {"status_code": result["status_code"], "headers": result["headers"], "response_body_type": result["response_body_type"]}
             else:
                 result = None
                 request_preview = None

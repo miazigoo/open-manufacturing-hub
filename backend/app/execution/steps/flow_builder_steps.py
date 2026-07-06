@@ -183,12 +183,26 @@ class FlowReturnResponseStep:
     async def execute(self, context: PipelineContext) -> StepResult:
         config = _config(context)
         try:
-            body = render_template(config.get("body") or "{{response}}", _scope(context))
+            scope = _scope(context)
+            if config.get("body_template") is not None:
+                body = render_template(str(config.get("body_template") or ""), scope)
+            else:
+                body = render_template(config.get("body") if config.get("body") is not None else "{{response}}", scope)
         except Exception as exc:
             return _failed("RETURN_RESPONSE_BUILD_FAILED", str(exc), config, "Check return body variable path.")
-        response = body if isinstance(body, dict) else {"body": body}
-        response = {**response, "success": True, "event_id": str(context.event.id), "run_id": str(context.run.id)}
-        return StepResult.success("Response selected", artifacts=[ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", response)], variables_update={"response": response})
+        body_type = str(config.get("response_body_type") or ("json" if isinstance(body, dict) else "raw_text"))
+        status_code = int(config.get("status_code") or 200)
+        headers = config.get("headers") if isinstance(config.get("headers"), dict) else {}
+        response = {
+            "success": True,
+            "event_id": str(context.event.id),
+            "run_id": str(context.run.id),
+            "status_code": status_code,
+            "response_body_type": body_type,
+            "headers": headers,
+            "body": body,
+        }
+        return StepResult.success("Response selected", artifacts=[ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "return_response.json", response)], variables_update={"response": response})
 
 
 def _config(context: PipelineContext) -> dict[str, Any]:
