@@ -10,17 +10,18 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { useI18n } from '../i18n/useI18n';
 
 type RuntimeView = 'queue' | 'dlq' | 'monitor' | 'objects' | 'resolvers' | 'transforms' | 'rules';
 
-const titles: Record<RuntimeView, { eyebrow: string; title: string; subtitle: string }> = {
-  queue: { eyebrow: 'Enterprise Runtime', title: 'Integration Queue', subtitle: 'Prioritized operational queue with retry, worker and timeline visibility.' },
-  dlq: { eyebrow: 'Enterprise Runtime', title: 'Dead Letter Queue', subtitle: 'Recover failed transactions without losing artifacts or timeline evidence.' },
-  monitor: { eyebrow: 'Enterprise Runtime', title: 'Transaction Monitor', subtitle: 'Live queue posture across waiting, processing, retry, DLQ and completed work.' },
-  objects: { eyebrow: 'Enterprise Runtime', title: 'Canonical Business Objects', subtitle: 'Shared object vocabulary for mappings, rules and resolver targets.' },
-  resolvers: { eyebrow: 'Enterprise Runtime', title: 'Resolver Engine', subtitle: 'Resolve customers, products, warehouses, orders and printers through cache/OData/REST.' },
-  transforms: { eyebrow: 'Enterprise Runtime', title: 'Transformation Library', subtitle: 'Reusable transforms for mappings and operational data shaping.' },
-  rules: { eyebrow: 'Enterprise Runtime', title: 'Business Rules Engine', subtitle: 'Configurable IF/SWITCH/SET/STOP/FAIL rules for runtime decisions.' },
+const titleKeys: Record<RuntimeView, { title: string; subtitle: string }> = {
+  queue: { title: 'queueTitle', subtitle: 'queueSubtitle' },
+  dlq: { title: 'dlqTitle', subtitle: 'dlqSubtitle' },
+  monitor: { title: 'monitorTitle', subtitle: 'monitorSubtitle' },
+  objects: { title: 'objectsTitle', subtitle: 'objectsSubtitle' },
+  resolvers: { title: 'resolversTitle', subtitle: 'resolversSubtitle' },
+  transforms: { title: 'transformsTitle', subtitle: 'transformsSubtitle' },
+  rules: { title: 'rulesTitle', subtitle: 'rulesSubtitle' },
 };
 
 const runtimeQueryKeys = ['runtime-queue', 'runtime-dlq', 'runtime-monitor', 'runtime-objects', 'runtime-resolvers', 'runtime-transforms', 'runtime-rules', 'runtime-cache'];
@@ -42,6 +43,7 @@ function queueTone(status: QueueStatus) {
 
 export function EnterpriseRuntimePage({ view }: { view: RuntimeView }) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [result, setResult] = useState<unknown>(null);
   const install = useMutation({
     mutationFn: enterpriseRuntimeApi.installPresets,
@@ -50,17 +52,17 @@ export function EnterpriseRuntimePage({ view }: { view: RuntimeView }) {
       runtimeQueryKeys.forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
     },
   });
-  const meta = titles[view];
+  const meta = titleKeys[view];
 
   return (
     <div className="page-stack enterprise-runtime-page">
       <section className="page-header enterprise-hero">
-        <span className="eyebrow">{meta.eyebrow}</span>
-        <h1>{meta.title}</h1>
-        <p>{meta.subtitle}</p>
+        <span className="eyebrow">{t('integration.enterprisePolish.enterpriseRuntime')}</span>
+        <h1>{t(`integration.enterprisePolish.${meta.title}`)}</h1>
+        <p>{t(`integration.enterprisePolish.${meta.subtitle}`)}</p>
         <div className="hero-meta">
-          <button className="primary-button" onClick={() => install.mutate()} disabled={install.isPending}>Install enterprise presets</button>
-          <span className="microcopy">Queue · DLQ · Resolvers · Rules · Cache</span>
+          <button className="primary-button" onClick={() => install.mutate()} disabled={install.isPending}>{t('integration.enterprisePolish.installPresets')}</button>
+          <span className="microcopy">{t('integration.enterprisePolish.runtimeStack')}</span>
         </div>
         {install.error instanceof Error && <div className="error-state compact">{install.error.message}</div>}
       </section>
@@ -73,7 +75,7 @@ export function EnterpriseRuntimePage({ view }: { view: RuntimeView }) {
       {view === 'transforms' && <TransformsPanel onResult={setResult} />}
       {view === 'rules' && <RulesPanel onResult={setResult} />}
 
-      {result !== null && <JsonBlock title="Runtime result" value={(result as Record<string, unknown>) ?? {}} searchable={false} />}
+      {result !== null && <JsonBlock title={t('integration.enterprisePolish.runtimeResult')} value={(result as Record<string, unknown>) ?? {}} searchable={false} />}
     </div>
   );
 }

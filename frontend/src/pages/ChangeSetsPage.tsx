@@ -6,11 +6,13 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { useI18n } from '../i18n/useI18n';
 import { formatDateTime } from '../utils';
 
 export function ChangeSetsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const changeSets = useQuery({ queryKey: ['change-sets'], queryFn: changeSetsApi.list });
   const [form, setForm] = useState({ name: 'Production promotion', description: 'Promote tested draft configuration', object_type: 'integration_flow', object_id: '' });
   const create = useMutation({
@@ -33,11 +35,11 @@ export function ChangeSetsPage() {
     <div className="page-stack promotion-page">
       <section className="page-header promotion-hero change-set-hero">
         <div>
-          <span className="eyebrow">Promotion Pipeline</span>
-          <h1>Package drafts into audited release change sets.</h1>
-          <p>Create from tested drafts, export a reference-only package, preview imports, map secrets/environment variables and apply without silent overwrite.</p>
+          <span className="eyebrow">{t('integration.enterprisePolish.promotionPipeline')}</span>
+          <h1>{t('integration.enterprisePolish.changeSetsTitle')}</h1>
+          <p>{t('integration.enterprisePolish.changeSetsDesc')}</p>
         </div>
-        <div className="hero-meta"><Link className="primary-button" to="/change-sets/import">Import change set</Link><Link className="ghost-button" to="/environments">Environment profiles</Link></div>
+        <div className="hero-meta"><Link className="primary-button" to="/change-sets/import">{t('integration.enterprisePolish.importChangeSet')}</Link><Link className="ghost-button" to="/environments">{t('integration.enterprisePolish.environmentProfiles')}</Link></div>
       </section>
 
       <section className="promotion-grid">

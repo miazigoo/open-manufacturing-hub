@@ -10,6 +10,7 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { useI18n } from '../i18n/useI18n';
 
 function parseObject(value: string, label: string): Record<string, unknown> {
   const parsed = JSON.parse(value || '{}') as unknown;
@@ -19,6 +20,7 @@ function parseObject(value: string, label: string): Record<string, unknown> {
 
 export function ResolversPage() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const resolvers = useQuery({ queryKey: ['resolvers-v2'], queryFn: () => resolversApi.list() });
   const objects = useQuery({ queryKey: ['business-objects'], queryFn: businessObjectsApi.list });
   const [objectFilter, setObjectFilter] = useState('');
@@ -32,9 +34,9 @@ export function ResolversPage() {
     <div className="page-stack enterprise-runtime-page">
       <section className="page-header enterprise-hero">
         <span className="eyebrow">Resolver Engine v2</span>
-        <h1>Business Object Resolvers</h1>
-        <p>Reusable business lookups that hide OData/REST details behind stable names like resolve_customer and resolve_product.</p>
-        <div className="hero-meta"><button className="primary-button" onClick={() => install.mutate()} disabled={install.isPending}>Install presets</button><Link className="primary-link" to="/resolvers/cache">Resolver cache</Link><span className="microcopy">{rows.length} resolvers</span></div>
+        <h1>{t('integration.enterprisePolish.resolversPageTitle')}</h1>
+        <p>{t('integration.enterprisePolish.resolversPageDesc')}</p>
+        <div className="hero-meta"><button className="primary-button" onClick={() => install.mutate()} disabled={install.isPending}>{t('integration.enterprisePolish.installPresets')}</button><Link className="primary-link" to="/resolvers/cache">{t('integration.enterprisePolish.resolverCache')}</Link><span className="microcopy">{t('integration.enterprisePolish.resolversCount', { count: rows.length })}</span></div>
         {install.error instanceof Error && <div className="error-state compact">{install.error.message}</div>}
       </section>
       <section className="metric-grid runtime-metrics"><article className="metric-card info"><span>Enabled</span><strong>{metrics.enabled}</strong></article><article className="metric-card info"><span>Cached</span><strong>{metrics.cached}</strong></article><article className="metric-card warn"><span>Strategies</span><strong>{metrics.strategies}</strong></article></section>

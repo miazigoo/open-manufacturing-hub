@@ -7,6 +7,7 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { useI18n } from '../i18n/useI18n';
 
 const environmentTypes: EnvironmentType[] = ['development', 'test', 'staging', 'production', 'custom'];
 
@@ -21,6 +22,7 @@ function parseValue(value: string): unknown {
 
 export function EnvironmentsPage() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const environments = useQuery({ queryKey: ['environments'], queryFn: environmentsApi.list });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(() => (environments.data ?? []).find((item) => item.id === selectedId) ?? environments.data?.[0] ?? null, [environments.data, selectedId]);
@@ -61,11 +63,11 @@ export function EnvironmentsPage() {
     <div className="page-stack promotion-page">
       <section className="page-header promotion-hero">
         <div>
-          <span className="eyebrow">Environment Profiles</span>
-          <h1>Separate dev, test and production safely.</h1>
-          <p>Profiles hold target-specific variables and secret references. Change sets resolve these values only when applying into the current environment.</p>
+          <span className="eyebrow">{t('integration.enterprisePolish.environmentProfiles')}</span>
+          <h1>{t('integration.enterprisePolish.environmentTitle')}</h1>
+          <p>{t('integration.enterprisePolish.environmentDesc')}</p>
         </div>
-        <div className="product-header-actions"><StatusBadge status={selected?.environment_type ?? 'unknown'} label={selected ? `${selected.code} current=${selected.is_current ? 'yes' : 'no'}` : 'not configured'} /></div>
+        <div className="product-header-actions"><StatusBadge status={selected?.environment_type ?? 'unknown'} label={selected ? `${selected.code} current=${selected.is_current ? t('integration.enterprisePolish.currentYes') : t('integration.enterprisePolish.currentNo')}` : t('integration.enterprisePolish.notConfigured')} /></div>
       </section>
 
       <section className="promotion-grid">

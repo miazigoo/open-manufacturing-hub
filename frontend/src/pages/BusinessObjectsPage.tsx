@@ -6,22 +6,24 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
+import { useI18n } from '../i18n/useI18n';
 
 export function BusinessObjectsPage() {
+  const { t } = useI18n();
   const objects = useQuery({ queryKey: ['business-objects'], queryFn: businessObjectsApi.list });
   const [selected, setSelected] = useState<string>('Customer');
   if (objects.isLoading) return <LoadingState label="Loading business objects" />;
   if (objects.error) return <ErrorState error={objects.error} />;
   const rows = objects.data ?? [];
   const current = rows.find((item) => item.object_type === selected) ?? rows[0];
-  if (!current) return <EmptyState title="No business objects" detail="Business object registry is empty." />;
+  if (!current) return <EmptyState title={t('integration.enterprisePolish.businessObjectsTitle')} detail="Business object registry is empty." />;
   return (
     <div className="page-stack enterprise-runtime-page">
       <section className="page-header enterprise-hero">
-        <span className="eyebrow">Canonical Layer</span>
-        <h1>Business Objects</h1>
-        <p>Stable vocabulary for integrations: Customer, Product, Warehouse, orders, shipments, stock and printing jobs.</p>
-        <div className="hero-meta"><Link className="primary-link" to="/resolvers">Open resolvers</Link><span className="microcopy">{rows.length} canonical schemas</span></div>
+        <span className="eyebrow">{t('integration.enterprisePolish.canonicalLayer')}</span>
+        <h1>{t('integration.enterprisePolish.businessObjectsTitle')}</h1>
+        <p>{t('integration.enterprisePolish.businessObjectsDesc')}</p>
+        <div className="hero-meta"><Link className="primary-link" to="/resolvers">{t('integration.enterprisePolish.openResolvers')}</Link><span className="microcopy">{t('integration.enterprisePolish.canonicalSchemas', { count: rows.length })}</span></div>
       </section>
       <section className="runtime-grid">
         <aside className="panel builder-rail">
