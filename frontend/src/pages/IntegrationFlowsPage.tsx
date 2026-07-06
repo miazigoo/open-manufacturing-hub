@@ -69,6 +69,7 @@ export function IntegrationFlowsPage() {
   const create = useMutation({ mutationFn: integrationFlowsApi.create, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const installPreset = useMutation({ mutationFn: integrationFlowsApi.installMarkingPool, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const installBuilderPreset = useMutation({ mutationFn: integrationFlowsApi.installTwoODataToEndpoint, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
+  const installDnpPullCodes = useMutation({ mutationFn: integrationFlowsApi.installDnpPullCodes, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const duplicate = useMutation({ mutationFn: integrationFlowsApi.duplicate, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
   const exportFlow = useMutation({ mutationFn: integrationFlowsApi.export, onSuccess: setResult });
   const exportForProduction = useMutation({
@@ -125,7 +126,7 @@ export function IntegrationFlowsPage() {
         <span className="eyebrow">{t('integration.flowBuilder.eyebrow')}</span>
         <h1>{t('integration.flowBuilder.title')}</h1>
         <p>{t('integration.flowBuilder.description')}</p>
-        <div className="hero-meta" data-tour="flow-presets"><button className="primary-button" onClick={() => installBuilderPreset.mutate()} disabled={installBuilderPreset.isPending}>{t('integration.flowBuilder.installODataPreset')}</button><button className="ghost-button" onClick={() => installPreset.mutate()} disabled={installPreset.isPending}>{t('integration.flowBuilder.installMarkingPreset')}</button><span className="microcopy">{t('integration.flowBuilder.flowPipeline')}</span></div>
+        <div className="hero-meta" data-tour="flow-presets"><button className="primary-button" onClick={() => installDnpPullCodes.mutate()} disabled={installDnpPullCodes.isPending}>Install DNP key flow</button><button className="ghost-button" onClick={() => installBuilderPreset.mutate()} disabled={installBuilderPreset.isPending}>{t('integration.flowBuilder.installODataPreset')}</button><button className="ghost-button" onClick={() => installPreset.mutate()} disabled={installPreset.isPending}>{t('integration.flowBuilder.installMarkingPreset')}</button><span className="microcopy">{t('integration.flowBuilder.flowPipeline')}</span></div>
       </section>
 
       <section className="flow-layout">

@@ -48,7 +48,10 @@ class FlowODataQueryStep:
         scope = _scope(context)
         query = _odata_query(config, scope)
         connector_name = str(config.get("connection") or "")
-        resource = str(config.get("resource") or "")
+        try:
+            resource = str(render_template(config.get("resource") or "", scope))
+        except Exception as exc:
+            return _failed("ODATA_RESOURCE_BUILD_FAILED", str(exc), config, "Check OData resource template and previous step variables.")
         request_artifact = ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "odata_query_request.json", {"connection": connector_name, "resource": resource, "query": query})
         connector = await connector_repository.get_by_name(context.session, connector_name)
         if connector is None:
@@ -228,7 +231,7 @@ def _mock_odata_items(config: dict[str, Any], connector_config: dict[str, Any], 
     if isinstance(config.get("mock_items"), list):
         return [item for item in config["mock_items"] if isinstance(item, dict)]
     mock_odata = (connector_config or {}).get("mock_odata") or {}
-    if not isinstance(mock_odata, dict):
+    if not isinstance(mock_odata, dict) or not mock_odata:
         return None
     response = query_mock_odata(mock_odata, str(config.get("resource") or ""), query)
     items = response.get("value")

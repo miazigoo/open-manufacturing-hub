@@ -196,7 +196,7 @@ export function VisualFlowBuilderPage() {
             {selectedStep.type === 'read_variable' && <ReadVariableEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'apply_transforms' && <TransformStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'evaluate_rules' && <BusinessRuleStepEditor step={selectedStep} update={updateStep} />}
-            {selectedStep.type === 'odata_query' && <ODataStepEditor step={selectedStep} update={updateStep} odataOptions={odataOptions} />}
+            {selectedStep.type === 'odata_query' && <ODataStepEditor step={selectedStep} update={updateStep} odataOptions={odataOptions} steps={builder.steps} />}
             {selectedStep.type === 'resolve_object' && <ResolveObjectEditor step={selectedStep} update={updateStep} resolverOptions={resolverOptions} />}
             {selectedStep.type === 'build_json' && <BuildJsonEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'call_endpoint' && <CallEndpointEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
@@ -222,13 +222,30 @@ export function VisualFlowBuilderPage() {
     return <div className="metadata-grid compact-grid no-margin"><label className="field-label">Save as<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label><label className="field-label">Source path<input value={String(step.path ?? '')} onChange={(event) => update(step.id, { path: event.target.value })} /></label><span className="success-note">Example<span>request.body.inn</span></span></div>;
   }
 
-  function ODataStepEditor({ step, update, odataOptions }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; odataOptions: ODataOption[] }) {
+  function ODataStepEditor({ step, update, odataOptions, steps }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; odataOptions: ODataOption[]; steps: BuilderStep[] }) {
     const filters = Array.isArray(step.filter_builder) && step.filter_builder.length ? step.filter_builder as Array<Record<string, unknown>> : [firstFilter(step)];
     const selectedConnectionId = String(step.connection_id ?? odataOptions.find((item) => item.label === step.connection)?.id ?? '');
     const saveAs = String(step.save_as ?? step.id);
     const resultPath = `{{${saveAs}.Ref_Key}}`;
     const stepPath = `{{steps.${step.id}.first.Ref_Key}}`;
+    const previousODataSteps = steps.slice(0, Math.max(steps.findIndex((item) => item.id === step.id), 0)).filter((item) => item.type === 'odata_query');
+    const [linkSourceStepId, setLinkSourceStepId] = useState(previousODataSteps[0]?.id ?? '');
+    const [linkField, setLinkField] = useState('Ref_Key');
+    const [linkTarget, setLinkTarget] = useState<'resource' | 'filter'>('resource');
+    const [linkFilterIndex, setLinkFilterIndex] = useState(0);
+    const sourceStep = previousODataSteps.find((item) => item.id === linkSourceStepId);
+    const sourceSaveAs = String(sourceStep?.save_as ?? sourceStep?.id ?? '');
+    const sourcePlaceholder = sourceSaveAs ? `{{${sourceSaveAs}.${linkField}}}` : '';
     const updateFilter = (index: number, patch: Record<string, unknown>) => update(step.id, { filter_builder: filters.map((filter, filterIndex) => filterIndex === index ? { ...filter, ...patch } : filter) });
+    const insertLinkedValue = () => {
+      if (!sourcePlaceholder) return;
+      if (linkTarget === 'resource') {
+        update(step.id, { resource: `${String(step.resource ?? '')}${sourcePlaceholder}` });
+        return;
+      }
+      const safeIndex = Math.min(Math.max(linkFilterIndex, 0), filters.length - 1);
+      updateFilter(safeIndex, { value: sourcePlaceholder });
+    };
     return <div className="stack-form">
       <div className="builder-help-card">
         <strong>Что станет переменной OData</strong>
@@ -238,6 +255,17 @@ export function VisualFlowBuilderPage() {
         <label className="field-label">OData connection<select value={selectedConnectionId} onChange={(event) => { const selected = odataOptions.find((item) => item.id === event.target.value); update(step.id, { connection_id: event.target.value, connection: selected?.label ?? '' }); }} title="Named OData profile: ERP, УСП, WMS. Create it once, reuse it in every flow."><option value="">Select OData profile</option>{odataOptions.map((connection) => <option key={connection.id} value={connection.id}>{connection.label} · {connection.base_url}</option>)}</select></label>
         <label className="field-label">Resource<input value={String(step.resource ?? '')} onChange={(event) => update(step.id, { resource: event.target.value })} title="Exact resource from OData Explorer, for example Catalog_Контрагенты or Document_ЗаказКлиента." /></label>
         <label className="field-label">Save as<input value={saveAs} onChange={(event) => update(step.id, { save_as: event.target.value })} title="Variable name for the first OData row. Use it in JSON or next filters: {{contractor.Ref_Key}}." /></label>
+      </div>
+      <div className="builder-help-card">
+        <strong>Связать с предыдущим OData step</strong>
+        <span>Выберите шаг выше, поле результата и место вставки. Платформа вставит placeholder <code>{sourcePlaceholder || '{{previous.Ref_Key}}'}</code>, чтобы следующий resource или filter получил значение из предыдущего ответа 1C.</span>
+      </div>
+      <div className="metadata-grid compact-grid no-margin">
+        <label className="field-label">Source step<select value={linkSourceStepId} onChange={(event) => setLinkSourceStepId(event.target.value)} disabled={previousODataSteps.length === 0}><option value="">No previous OData step</option>{previousODataSteps.map((item) => <option key={item.id} value={item.id}>{item.name ?? item.id} · save as {String(item.save_as ?? item.id)}</option>)}</select></label>
+        <label className="field-label">Field<select value={linkField} onChange={(event) => setLinkField(event.target.value)}><option value="Ref_Key">Ref_Key</option><option value="Number">Number</option><option value="Description">Description</option><option value="Номенклатура_Key">Номенклатура_Key</option><option value="GTIN">GTIN</option><option value="КодМаркировки">КодМаркировки</option></select></label>
+        <label className="field-label">Insert into<select value={linkTarget} onChange={(event) => setLinkTarget(event.target.value as 'resource' | 'filter')}><option value="resource">Resource</option><option value="filter">Filter value</option></select></label>
+        {linkTarget === 'filter' && <label className="field-label">Filter row<select value={String(linkFilterIndex)} onChange={(event) => setLinkFilterIndex(Number(event.target.value) || 0)}>{filters.map((filter, index) => <option key={index} value={index}>{index + 1}. {String(filter.field ?? 'field')}</option>)}</select></label>}
+        <button type="button" className="ghost-button" onClick={insertLinkedValue} disabled={!sourcePlaceholder}>Insert selected value</button>
       </div>
       <div className="odata-filter-builder">
         <div className="panel-toolbar compact-toolbar"><h3>Filters / условия поиска</h3><button type="button" className="ghost-button" onClick={() => update(step.id, { filter_builder: [...filters, { field: '', operator: 'eq', value: '' }] })}>Add filter</button></div>

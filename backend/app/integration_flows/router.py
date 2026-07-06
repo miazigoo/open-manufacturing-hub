@@ -41,6 +41,13 @@ async def install_two_odata_to_endpoint_preset(session: AsyncSession = Depends(g
     return await service._read_flow(flow, session)
 
 
+@router.post("/presets/dnp-pull-codes/install", response_model=IntegrationFlowRead)
+async def install_dnp_pull_codes_preset(session: AsyncSession = Depends(get_session)):
+    flow = await service.install_dnp_pull_codes_preset(session)
+    await session.commit()
+    return await service._read_flow(flow, session)
+
+
 @router.get("/by-slug/{slug}", response_model=IntegrationFlowRead)
 async def get_by_slug(slug: str, session: AsyncSession = Depends(get_session)):
     flow = await repository.get_by_slug(session, slug)

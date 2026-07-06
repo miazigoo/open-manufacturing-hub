@@ -205,7 +205,7 @@ async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, 
         event_id=event.id,
         message_id=message.id if message else None,
         business_object=event.entity_type,
-        operation=(route.operation if route and route.operation else parsed.get("operation") or endpoint.default_event_type),
+        operation=(route.operation if route and route.operation else _operation_key(parsed) or endpoint.default_event_type),
         workflow_id=workflow_id,
         payload=payload,
         endpoint_id=endpoint.id,
@@ -261,7 +261,7 @@ async def select_route_with_trace(session: AsyncSession, endpoint: IntegrationEn
     target_system = parsed.get("target_system") or endpoint.default_target_system
     event_type = parsed.get("event_type") or endpoint.default_event_type
     message_type = parsed.get("message_type") or endpoint.default_entity_type
-    operation = (parsed.get("_omh") or {}).get("operation") if isinstance(parsed.get("_omh"), dict) else parsed.get("operation")
+    operation = _operation_key(parsed)
     result = await session.execute(
         select(IntegrationRoute)
         .where(IntegrationRoute.enabled.is_(True))
@@ -544,6 +544,14 @@ def _matcher_context(parsed: dict[str, Any]) -> dict[str, Any]:
         "headers": parsed.get("_headers") or {},
         "query": parsed.get("_query") or {},
     }
+
+
+def _operation_key(parsed: dict[str, Any]) -> Any:
+    omh = parsed.get("_omh")
+    if isinstance(omh, dict) and omh.get("operation"):
+        return omh.get("operation")
+    payload = parsed.get("payload") if isinstance(parsed.get("payload"), dict) else {}
+    return parsed.get("operation") or parsed.get("sinc") or payload.get("operation") or payload.get("sinc")
 
 
 def _entity_id(parsed: dict[str, Any]) -> str | None:

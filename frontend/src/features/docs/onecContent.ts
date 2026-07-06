@@ -1192,6 +1192,24 @@ const toolPages: PageSeed[] = [
 
 const scenarios: PageSeed[] = [
   scenario({
+    slug: 'dnp-sinc-pull-codes-by-order',
+    title: 'DNP sinc -> 1C OData заказ -> Продукция',
+    description: 'DNP отправляет ключ операции и номер заказа, OMH сам выполняет OData pipeline.',
+    order: 5,
+    goal: 'DNP отправляет JSON с `sinc=dnp_key_connect_odata_pull_codes` и `Number`. OMH выбирает route по ключу операции, находит документ `Document_ЗаказНаПроизводство2_2` по номеру, берет `Ref_Key`, затем читает табличную часть `/Продукция` и возвращает номенклатуру продукции.',
+    when: ['Оператор не должен руками вводить `guid.../Продукция` в OData Explorer.', 'Нужно хранить понятный ключ операции с описанием.', 'Нужно повторять и диагностировать цепочку OData-запросов через Timeline.'],
+    diagram: 'DNP POST {sinc, Number} -> OMH Endpoint -> Route by sinc -> OData find order -> OData read Продукция -> sync response',
+    endpoint: 'POST /api/bus/in/dnp-pull-codes',
+    payloadLanguage: 'json',
+    payload: ['{', '  "sinc": "dnp_key_connect_odata_pull_codes",', '  "Number": "260666/6938"', '}'],
+    target: ['1C OData connection: 1C CHZ OData', 'Resource 1: Document_ЗаказНаПроизводство2_2', "Filter 1: Number eq '<Number>'", "Resource 2: Document_ЗаказНаПроизводство2_2(guid'<Ref_Key>')/Продукция"],
+    success: ['Response contains `order.Ref_Key` and `products[].Номенклатура_Key`.', 'Timeline has `find_order` and `read_products` OData artifacts.'],
+    errors: ['Если `find_order` пустой, проверьте номер заказа в OData Explorer.', 'Если `read_products` падает, проверьте что `Ref_Key` найден и ресурс `/Продукция` опубликован.', 'Если ключ не матчится, проверьте route.operation и входной `sinc`.'],
+    related: ['`/integration-flows`', '`/integration-bus`', '`/docs/onec/tools/odata-explorer`'],
+    screenshots: ['onec.flow.builder', 'events.artifacts.drawer'],
+    openPages: [{ route: '/integration-flows', label: 'Install DNP key flow' }, { route: '/test-console', label: 'Send DNP test payload' }],
+  }),
+  scenario({
     slug: 'onec-to-external-api',
     title: '1C -> внешний API / сайт',
     description: '1C отправляет маркировочный пул, OMH валидирует и отправляет в DNP/API.',

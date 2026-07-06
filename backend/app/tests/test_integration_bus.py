@@ -108,7 +108,8 @@ async def test_bus_xml_endpoint_stores_message_hash_and_preview(client):
 
 async def test_odata_lookup_template_crud_test_and_step(monkeypatch, client):
     async def fake_request(self, method, url, *, params=None, json_payload=None, headers=None):
-        assert params["$filter"] == "ИНН eq '1234567890'"
+        assert params is None
+        assert "$filter=%D0%98%D0%9D%D0%9D%20eq%20'1234567890'" in url
         return httpx.Response(200, json={"value": [{"Ref_Key": "uuid-1", "Description": "ООО Ромашка"}]}), {"method": method, "url": url, "params": params}, None, None
 
     monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
@@ -135,6 +136,50 @@ async def test_odata_lookup_template_crud_test_and_step(monkeypatch, client):
     lookup_step = next(step for step in timeline["runs"][0]["steps"] if step["step_name"] == "odata_lookup")
     result_artifact = next(artifact for artifact in lookup_step["artifacts"] if artifact["name"] == "odata_lookup_result.json")
     assert result_artifact["content_json"]["contractor_uuid"] == "uuid-1"
+
+
+async def test_bus_route_can_match_sinc_operation_key(client):
+    workflow = await _workflow(client, name="DNP sinc route workflow", steps=[{"name": "receive"}], event_type="DnpRequest")
+    route = await client.post(
+        "/api/integration-bus/routes",
+        json={"name": "DNP sinc route", "event_type": "DnpRequest", "operation": "dnp_key_connect_odata_pull_codes", "workflow_id": workflow["id"], "priority": 10},
+    )
+    assert route.status_code == 200
+    endpoint = await client.post(
+        "/api/integration-bus/endpoints",
+        json={"name": "DNP sinc endpoint", "slug": "dnp-sinc-test", "input_mode": "json", "response_mode": "accepted_event", "default_event_type": "DnpRequest"},
+    )
+    assert endpoint.status_code == 200
+    response = await client.post("/api/bus/in/dnp-sinc-test", json={"sinc": "dnp_key_connect_odata_pull_codes", "Number": "260666/6938"})
+    assert response.status_code == 200
+    assert response.json()["route_id"] == route.json()["id"]
+
+
+async def test_dnp_pull_codes_preset_uses_order_ref_in_products_resource(monkeypatch, client):
+    calls = []
+
+    async def fake_request(self, method, url, *, params=None, json_payload=None, headers=None):
+        calls.append(url)
+        if "Document_ЗаказНаПроизводство2_2?" in url and "$filter=Number%20eq%20'260666/6938'" in url:
+            return httpx.Response(200, json={"value": [{"Ref_Key": "order-guid", "Number": "260666/6938", "Date": "2026-04-29T16:38:53", "Posted": True}]}), {"url": url, "params": params}, None, None
+        if "guid'order-guid'" in url and "%D0%9F%D1%80%D0%BE%D0%B4%D1%83%D0%BA%D1%86%D0%B8%D1%8F" in url or "guid'order-guid')/Продукция" in url:
+            return httpx.Response(200, json={"value": [{"Номенклатура_Key": "nom-guid", "Количество": 180, "КоличествоУпаковок": 180}]}), {"url": url, "params": params}, None, None
+        return httpx.Response(404, json={"error": "unexpected url", "url": url}), {"url": url, "params": params}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
+    connector = await client.post(
+        "/api/connectors",
+        json={"name": "1C CHZ OData", "connector_type": "onec", "direction": "bidirectional", "config_json": {"base_url": "https://onec.example.local/odata/standard.odata", "auth": {"type": "none"}}},
+    )
+    assert connector.status_code == 200
+    installed = await client.post("/api/integration-flows/presets/dnp-pull-codes/install")
+    assert installed.status_code == 200, installed.text
+    response = await client.post("/api/bus/in/dnp-pull-codes", json={"sinc": "dnp_key_connect_odata_pull_codes", "Number": "260666/6938"})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True, {"body": body, "calls": calls}
+    assert body["response"]["products"][0]["Номенклатура_Key"] == "nom-guid"
+    assert any("guid'order-guid'" in url for url in calls)
 
 
 async def test_bus_presets_and_print_endpoint(client):

@@ -10,7 +10,7 @@ import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
 import { useT } from '../i18n/useI18n';
 
-const sampleJson = { warehouse_id: 'MAIN', target_order_id: 'SO-1001', items: [] };
+const sampleJson = { operation: 'lookup_order_products', Number: '260666/6938' };
 const sampleXml = '<Документ><Номер>UPD-1001</Номер></Документ>';
 type BusFailureContract = { human_summary?: unknown; timeline_url?: unknown; external_error?: Record<string, unknown> };
 
@@ -21,7 +21,7 @@ export function IntegrationBusPage() {
   const routes = useQuery({ queryKey: ['bus-routes'], queryFn: integrationBusApi.routes });
   const lookups = useQuery({ queryKey: ['bus-lookups'], queryFn: integrationBusApi.lookups });
   const [endpointForm, setEndpointForm] = useState({ name: 'Website contractor lookup', slug: 'site-contractor-lookup-custom', input_mode: 'json', response_mode: 'sync_response', default_event_type: 'ContractorLookupRequested', default_source_system: 'Website', default_target_system: '1C ERP', auth_mode: 'none', token: '' });
-  const [routeForm, setRouteForm] = useState({ name: 'Route contractor lookup', event_type: 'ContractorLookupRequested', target_system: '1C ERP', priority: '50' });
+  const [routeForm, setRouteForm] = useState({ name: 'Route order product lookup', event_type: 'OrderLookupRequested', target_system: '1C OData', operation: 'lookup_order_products', priority: '50' });
   const [consoleForm, setConsoleForm] = useState({ slug: '', input_mode: 'json', headers: '{}', body: asJson(sampleJson) });
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -63,7 +63,7 @@ export function IntegrationBusPage() {
 
   function submitRoute(event: FormEvent) {
     event.preventDefault();
-    createRoute.mutate({ name: routeForm.name, event_type: routeForm.event_type || null, target_system: routeForm.target_system || null, priority: Number(routeForm.priority) || 100 });
+    createRoute.mutate({ name: routeForm.name, event_type: routeForm.event_type || null, target_system: routeForm.target_system || null, operation: routeForm.operation || null, priority: Number(routeForm.priority) || 100 });
   }
 
   function submitTest(event: FormEvent) {
@@ -131,7 +131,7 @@ export function IntegrationBusPage() {
 
       <section className="bus-grid lower">
         <div className="panel"><div className="panel-toolbar"><h2>{t('bus.endpoints')}</h2><span className="microcopy">{endpoints.data?.length ?? 0}</span></div><div className="bus-list">{(endpoints.data ?? []).map((endpoint) => <article className="bus-card" key={endpoint.id} onClick={() => selectEndpoint(endpoint)}><div><strong>{endpoint.name}</strong><span>/api/bus/in/{endpoint.slug}</span><small>{endpoint.input_mode} · {endpoint.response_mode}</small></div><StatusBadge status={endpoint.enabled ? 'ok' : 'unknown'} /></article>)}</div></div>
-        <div className="panel"><div className="panel-toolbar"><h2>{t('bus.routes')}</h2><span className="microcopy">{routes.data?.length ?? 0}</span></div><form className="stack-form inline-create" onSubmit={submitRoute}><input value={routeForm.name} onChange={(event) => setRouteForm({ ...routeForm, name: event.target.value })} placeholder={t('common.name')} /><input value={routeForm.event_type} onChange={(event) => setRouteForm({ ...routeForm, event_type: event.target.value })} placeholder={t('events.eventType')} /><input value={routeForm.target_system} onChange={(event) => setRouteForm({ ...routeForm, target_system: event.target.value })} placeholder={t('common.target')} /><button className="ghost-button" disabled={createRoute.isPending}>{t('common.create')}</button></form><div className="bus-list">{(routes.data ?? []).map((route) => <article className="bus-card" key={route.id}><div><strong>{route.priority} · {route.name}</strong><span>{route.event_type ?? t('common.all')} → {route.target_system ?? t('common.unassigned')}</span><small>{route.operation ?? t('common.none')}</small></div><StatusBadge status={route.enabled ? 'ok' : 'unknown'} /></article>)}</div></div>
+        <div className="panel"><div className="panel-toolbar"><h2>{t('bus.routes')}</h2><span className="microcopy">{routes.data?.length ?? 0}</span></div><form className="stack-form inline-create" onSubmit={submitRoute}><input value={routeForm.name} onChange={(event) => setRouteForm({ ...routeForm, name: event.target.value })} placeholder={t('common.name')} /><input value={routeForm.event_type} onChange={(event) => setRouteForm({ ...routeForm, event_type: event.target.value })} placeholder={t('events.eventType')} /><input value={routeForm.target_system} onChange={(event) => setRouteForm({ ...routeForm, target_system: event.target.value })} placeholder={t('common.target')} /><input value={routeForm.operation} onChange={(event) => setRouteForm({ ...routeForm, operation: event.target.value })} placeholder="sinc / operation key" /><button className="ghost-button" disabled={createRoute.isPending}>{t('common.create')}</button></form><div className="bus-list">{(routes.data ?? []).map((route) => <article className="bus-card" key={route.id}><div><strong>{route.priority} · {route.name}</strong><span>{route.event_type ?? t('common.all')} → {route.target_system ?? t('common.unassigned')}</span><small>{route.operation ?? t('common.none')}</small></div><StatusBadge status={route.enabled ? 'ok' : 'unknown'} /></article>)}</div></div>
       </section>
 
       <section className="panel"><div className="panel-toolbar"><h2>{t('bus.lookups')}</h2><span className="microcopy">{lookups.data?.length ?? 0}</span></div><div className="bus-list lookup-grid">{(lookups.data ?? []).map((lookup) => <article className="bus-card" key={lookup.id}><div><strong>{lookup.name}</strong><span>{lookup.resource}</span><small>{lookup.filter_template}</small></div><JsonBlock title="extract" value={lookup.extract_json} searchable={false} /></article>)}</div></section>

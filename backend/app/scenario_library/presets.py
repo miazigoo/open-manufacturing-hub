@@ -4,6 +4,20 @@ from typing import Any
 
 SCENARIOS: list[dict[str, Any]] = [
     {
+        "code": "dnp_pull_codes_by_order",
+        "title": "DNP key to 1C OData order products",
+        "description": "Inbound DNP JSON uses sinc=dnp_key_connect_odata_pull_codes and Number. OMH routes by the key, finds the 1C production order and reads its Продукция tabular part.",
+        "source": "DNP",
+        "target": "1C CHZ OData",
+        "input_modes": ["json"],
+        "default_slug": "dnp-pull-codes",
+        "event_type": "Flow.dnp-pull-codes",
+        "entity_type": "DnpMarkingCodePull",
+        "workflow_steps": ["read_operation_key", "read_order_number", "find_order", "read_products", "return_order_products"],
+        "operation_code": "dnp.dnp_key_connect_odata_pull_codes",
+        "sample_payload": {"sinc": "dnp_key_connect_odata_pull_codes", "Number": "260666/6938"},
+    },
+    {
         "code": "onec_post_two_odata_to_endpoint",
         "title": "1C POST to DNP with two OData lookups",
         "description": "Visual builder flow: read INN/product code, query contractor and product through 1C OData, build JSON and send it to DNP API.",

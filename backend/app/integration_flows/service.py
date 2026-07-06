@@ -19,7 +19,7 @@ from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
 from app.core.enums import EndpointProcessingMode
 from app.integration_flows import repository
 from app.integration_flows.models import IntegrationFlow
-from app.integration_flows.presets import MARKING_POOL_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
+from app.integration_flows.presets import DNP_PULL_CODES_PRESET, MARKING_POOL_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
 from app.integration_flows.schemas import FlowTestRequest, IntegrationFlowCreate, IntegrationFlowPatch
 from app.matchers.engine import evaluate_matcher_group
 from app.matchers.validators import validate_matcher_group
@@ -203,6 +203,13 @@ async def install_two_odata_to_endpoint_preset(session: AsyncSession) -> Integra
     if existing:
         return existing
     return await create_flow(session, IntegrationFlowCreate(**TWO_ODATA_TO_ENDPOINT_PRESET))
+
+
+async def install_dnp_pull_codes_preset(session: AsyncSession) -> IntegrationFlow:
+    existing = await repository.get_by_slug(session, DNP_PULL_CODES_PRESET["slug"])
+    if existing:
+        return existing
+    return await create_flow(session, IntegrationFlowCreate(**DNP_PULL_CODES_PRESET))
 
 
 async def _upsert_endpoint(session: AsyncSession, request: IntegrationFlowCreate, route_id: UUID, workflow_id: UUID, operation_id: UUID) -> IntegrationEndpoint:
