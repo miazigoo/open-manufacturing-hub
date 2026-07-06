@@ -69,9 +69,10 @@ async def test_onec_odata_read_paginates_and_manual_endpoint(monkeypatch, client
     body = response.json()
     assert body["count"] == 2
     assert [item["Ref_Key"] for item in body["items"]] == ["A", "B"]
-    assert calls[0]["params"]["$top"] == 1
-    assert "$skip" not in calls[0]["params"]
-    assert calls[0]["params"]["$format"] == "json"
+    assert calls[0]["params"] is None
+    assert "$top=1" in calls[0]["url"]
+    assert "$skip" not in calls[0]["url"]
+    assert "$format=json" in calls[0]["url"]
     assert calls[0]["headers"]["Accept"] == "application/json"
     assert calls[1]["params"] is None
 
@@ -98,6 +99,30 @@ async def test_onec_odata_read_accepts_single_entity_response(monkeypatch, clien
     body = response.json()
     assert body["count"] == 1
     assert body["items"][0]["Ref_Key"] == "doc-1"
+
+
+async def test_onec_odata_read_preserves_resource_query(monkeypatch, client):
+    calls = []
+
+    async def fake_request(self, method, url, *, params=None, json_payload=None, headers=None):
+        calls.append({"url": url, "params": params})
+        return httpx.Response(200, json={"value": [{"Ref_Key": "doc-1"}]}), {"url": url, "params": params}, None, None
+
+    monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
+    created = await client.post(
+        "/api/connectors",
+        json={"name": "1C ERP", "connector_type": "onec", "direction": "bidirectional", "config_json": ONEC_CONFIG},
+    )
+    connector = created.json()
+    response = await client.post(
+        f"/api/connectors/{connector['id']}/onec/odata/read",
+        json={"resource": "Document_ЗаказКлиента?$filter=Number eq 'SO-1'", "query": {"$top": 1, "$filter": "Number eq 'SO-2'"}},
+    )
+    assert response.status_code == 200
+    assert calls[0]["params"] is None
+    assert calls[0]["url"].count("$filter=") == 1
+    assert "$filter=Number%20eq%20'SO-1'" in calls[0]["url"]
+    assert "$top=1" in calls[0]["url"]
 
 
 async def test_onec_send_and_dry_run_map_http_errors(monkeypatch):

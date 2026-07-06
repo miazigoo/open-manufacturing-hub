@@ -52,7 +52,8 @@ async def test_odata_explorer_resources_query_and_lookup(monkeypatch, client):
     async def fake_request(self, method, url, *, params=None, json_payload=None, headers=None):
         if url.endswith("$metadata"):
             return httpx.Response(200, text='<Schema><EntitySet Name="Catalog_Контрагенты" /></Schema>'), {"url": url}, None, None
-        assert params["$filter"] == "ИНН eq '1234567890'"
+        assert params is None
+        assert "$filter=%D0%98%D0%9D%D0%9D%20eq%20'1234567890'" in url
         return httpx.Response(200, json={"value": [{"Ref_Key": "uuid-1", "Description": "ООО Ромашка"}]}), {"method": method, "url": url, "params": params}, None, None
 
     monkeypatch.setattr(OneCHTTPClient, "request", fake_request)
