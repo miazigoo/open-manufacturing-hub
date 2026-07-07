@@ -16,6 +16,12 @@ from app.integration_master.schemas import (
     InputParseRequest,
     InputParseResponse,
     IntegrationScenario,
+    ODataStepPreviewResponse,
+    ODataStepRequest,
+    ODataStepSaveRequest,
+    ODataStepSaveResponse,
+    ODataStepTestResponse,
+    ODataStepValidationResponse,
 )
 
 router = APIRouter(prefix="/api/integration-master", tags=["integration-master"])
@@ -46,3 +52,33 @@ async def save_draft(request: InputDraftSaveRequest, session: AsyncSession = Dep
 @router.get("/drafts/{draft_id}", response_model=InputDraftRead)
 async def get_draft(draft_id: UUID, session: AsyncSession = Depends(get_session)):
     return await service.get_draft(session, draft_id)
+
+
+@router.post("/odata-step/validate", response_model=ODataStepValidationResponse)
+async def validate_odata_step(request: ODataStepRequest):
+    return service.validate_odata_step(request)
+
+
+@router.post("/odata-step/preview", response_model=ODataStepPreviewResponse)
+async def preview_odata_step(request: ODataStepRequest):
+    return service.preview_odata_step(request)
+
+
+@router.post("/odata-step/test", response_model=ODataStepTestResponse)
+async def test_odata_step(request: ODataStepRequest, session: AsyncSession = Depends(get_session)):
+    return await service.test_odata_step(session, request)
+
+
+@router.post("/drafts/{draft_id}/odata-steps", response_model=ODataStepSaveResponse)
+async def append_odata_step(draft_id: UUID, request: ODataStepSaveRequest, session: AsyncSession = Depends(get_session)):
+    draft, saved_step = await service.append_odata_step(session, draft_id, request.odata_step)
+    await session.commit()
+    return {
+        "draft": draft,
+        "saved_step": saved_step,
+        "next_steps": [
+            "Добавить второй шаг позже через foreach/tabular helper",
+            "Настроить JSON/XML builder и endpoint отправки",
+            "Запустить Dry Run и проверить Timeline/DLQ",
+        ],
+    }

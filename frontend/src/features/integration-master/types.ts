@@ -1,5 +1,8 @@
 export type InputMode = 'json' | 'xml' | 'raw_text';
 export type OperationKeyType = 'field' | 'endpoint' | 'none';
+export type ODataFilterMode = 'builder' | 'raw';
+export type ODataFilterOperator = 'eq' | 'ne' | 'contains' | 'gt' | 'lt' | 'ge' | 'le';
+export type ODataValueType = 'string' | 'number' | 'boolean' | 'variable' | 'guid' | 'raw';
 
 export interface IntegrationScenario {
   key: string;
@@ -94,6 +97,67 @@ export interface InputContractValidationResponse {
   matcher_preview: Record<string, unknown>;
 }
 
+export interface ODataFilterRule {
+  field: string;
+  operator: ODataFilterOperator;
+  value_type: ODataValueType;
+  value: unknown;
+}
+
+export interface ODataStepConfig {
+  id?: string | null;
+  type?: 'odata_query';
+  connection_id?: string | null;
+  connection_name?: string | null;
+  resource: string;
+  filter_mode: ODataFilterMode;
+  filter_rule?: ODataFilterRule | null;
+  filter?: string | null;
+  select: string[];
+  top?: number | null;
+  orderby?: string | null;
+  paginate: boolean;
+  save_as: string;
+  required: boolean;
+  last_test_status?: string | null;
+}
+
+export interface ODataStepRequest {
+  input_contract: InputContract;
+  sample_input?: unknown;
+  odata_step: ODataStepConfig;
+}
+
+export interface ODataStepValidationResponse {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  template_filter?: string | null;
+  rendered_filter?: string | null;
+  template_url?: string | null;
+  rendered_url?: string | null;
+  variables_after_step: string[];
+}
+
+export interface ODataStepPreviewResponse extends ODataStepValidationResponse {
+  rendered_resource: string;
+  saved_as: string;
+}
+
+export interface ODataStepTestResponse {
+  success: boolean;
+  error_code?: string | null;
+  message?: string | null;
+  hint?: string | null;
+  rendered_resource: string;
+  rendered_filter?: string | null;
+  items_count: number;
+  result_preview?: Record<string, unknown> | null;
+  saved_as: string;
+  variables_after_step: string[];
+  request: Record<string, unknown>;
+}
+
 export interface InputDraftRead {
   id: string;
   name: string;
@@ -102,6 +166,7 @@ export interface InputDraftRead {
   input_mode: InputMode;
   source_system: string;
   contract: InputContract;
+  odata_steps: ODataStepConfig[];
   parse_result?: InputParseResponse | null;
   endpoint_url: string;
   created_at: string;
@@ -110,5 +175,11 @@ export interface InputDraftRead {
 
 export interface InputDraftSaveResponse {
   draft: InputDraftRead;
+  next_steps: string[];
+}
+
+export interface ODataStepSaveResponse {
+  draft: InputDraftRead;
+  saved_step: ODataStepConfig;
   next_steps: string[];
 }

@@ -10,10 +10,11 @@ import { InputTypeSelector } from './InputTypeSelector';
 import { integrationMasterApi } from './api';
 import { MasterStepLayout } from './MasterStepLayout';
 import { OperationKeySelector } from './OperationKeySelector';
+import { ODataStepBuilder } from './odata-step/ODataStepBuilder';
 import { ParsedFieldsTable } from './ParsedFieldsTable';
 import { SampleInputEditor } from './SampleInputEditor';
 import { ScenarioChooser } from './ScenarioChooser';
-import type { BusinessKeySuggestion, InputBusinessKey, InputContract, InputContractField, InputMode, InputOperationKey, InputParseResponse, IntegrationScenario, OperationKeySuggestion } from './types';
+import type { BusinessKeySuggestion, InputBusinessKey, InputContract, InputContractField, InputDraftRead, InputMode, InputOperationKey, InputParseResponse, IntegrationScenario, OperationKeySuggestion } from './types';
 
 export function IntegrationMasterPage() {
   const scenarios = useQuery({ queryKey: ['integration-master-scenarios'], queryFn: integrationMasterApi.scenarios });
@@ -24,6 +25,7 @@ export function IntegrationMasterPage() {
   const [slug, setSlug] = useState('');
   const [sourceSystem, setSourceSystem] = useState('external_api');
   const [parseResult, setParseResult] = useState<InputParseResponse | null>(null);
+  const [savedDraft, setSavedDraft] = useState<InputDraftRead | null>(null);
   const [fields, setFields] = useState<InputContractField[]>([]);
   const [operationKey, setOperationKey] = useState<InputOperationKey>({ type: 'endpoint', field_path: null, value: null, fallback_paths: [], matcher_preview: { mode: 'endpoint', rules: [] } });
   const [businessKey, setBusinessKey] = useState<InputBusinessKey>({ path: null, fallback_paths: [] });
@@ -39,11 +41,13 @@ export function IntegrationMasterPage() {
       setFields(data.fields);
       setOperationKey(operationFromSuggestion(data.suggested_operation_keys[0]));
       setBusinessKey(businessFromSuggestion(data.suggested_business_keys[0]));
+      setSavedDraft(null);
+      saveDraft.reset();
     },
   });
 
   const validation = useMutation({ mutationFn: (contract: InputContract) => integrationMasterApi.validate(contract) });
-  const saveDraft = useMutation({ mutationFn: (contract: InputContract) => integrationMasterApi.saveDraft(contract, parseResult) });
+  const saveDraft = useMutation({ mutationFn: (contract: InputContract) => integrationMasterApi.saveDraft(contract, parseResult), onSuccess: (data) => setSavedDraft(data.draft) });
   const contract = useMemo(() => buildContract({ name, slug, inputMode, sourceSystem, selected, sample: parseResult?.normalized_sample ?? sampleText, fields, operationKey, businessKey }), [name, slug, inputMode, sourceSystem, selected, parseResult, sampleText, fields, operationKey, businessKey]);
 
   if (scenarios.isPending) return <LoadingState label="Загрузка мастера интеграции" />;
@@ -59,6 +63,7 @@ export function IntegrationMasterPage() {
     setSampleText(sampleToText(scenario.sample, mode));
     setParseResult(null);
     setFields([]);
+    setSavedDraft(null);
     setOperationKey({ type: 'endpoint', field_path: null, value: null, fallback_paths: [], matcher_preview: { mode: 'endpoint', rules: [] } });
     setBusinessKey({ path: null, fallback_paths: [] });
     validation.reset();
@@ -70,6 +75,7 @@ export function IntegrationMasterPage() {
     setSampleText(selected && selected.default_input_mode === mode ? sampleToText(selected.sample, mode) : sampleToText(defaultSample(mode), mode));
     setParseResult(null);
     setFields([]);
+    setSavedDraft(null);
     validation.reset();
     saveDraft.reset();
   }
@@ -97,6 +103,7 @@ export function IntegrationMasterPage() {
 
   const parseError = parse.error instanceof Error ? parse.error.message : null;
   const saveError = saveDraft.error instanceof Error ? saveDraft.error.message : validation.error instanceof Error ? validation.error.message : null;
+  const savedResponse = savedDraft ? { draft: savedDraft, next_steps: saveDraft.data?.next_steps ?? [] } : saveDraft.data ?? null;
 
   return (
     <div className="page-stack integration-master-page">
@@ -136,7 +143,9 @@ export function IntegrationMasterPage() {
         <BusinessKeySelector value={businessKey} suggestions={parseResult?.suggested_business_keys ?? []} fields={fields} onChange={setBusinessKey} />
       </MasterStepLayout>
 
-      <InputContractPreview contract={contract} validation={validation.data ?? null} saved={saveDraft.data ?? null} error={saveError} onValidate={validateContract} onSave={saveContractDraft} validating={validation.isPending} saving={saveDraft.isPending} />
+      <InputContractPreview contract={contract} validation={validation.data ?? null} saved={savedResponse} error={saveError} onValidate={validateContract} onSave={saveContractDraft} validating={validation.isPending} saving={saveDraft.isPending} />
+
+      {savedDraft ? <ODataStepBuilder contract={savedDraft.contract} draft={savedDraft} onDraftUpdated={setSavedDraft} /> : null}
     </div>
   );
 }

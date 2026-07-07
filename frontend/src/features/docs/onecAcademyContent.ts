@@ -1160,6 +1160,29 @@ export const academyPackBPages: PageSeed[] = [
     '## Частые ошибки',
     '::common-mistakes{items="Save result as пустой или назван customer, а JSON Builder ожидает contractor|Required выключен и target JSON получает null|Value source указан как product_code|$select не содержит Ref_Key|Не проверили этот filter в OData Master"}',
     '',
+    '## Вариант для `/master` Step 2A: найти заказ по номеру',
+    'Если вы идете через новый Integration Master, после сохранения Input Contract откроется один OData Query Builder. Для заказа на производство используйте:',
+    '',
+    '```text',
+    'Resource: Document_ЗаказНаПроизводство2_2',
+    "Filter: Number eq '{{request.body.Number}}'",
+    '$select: Ref_Key, Number, Date, Posted',
+    '$top: 1',
+    '$orderby: Date desc',
+    'save_as: order',
+    'required: true',
+    '```',
+    '',
+    'Preview должен отрендерить sample value:',
+    '',
+    '```text',
+    "Number eq '260666/6938'",
+    '```',
+    '',
+    'После успешного test query следующие шаги смогут использовать `order.Ref_Key`. Если 1C вернула пустой список и `required=true`, test покажет `ODATA_RESULT_EMPTY`: проверьте точный номер, resource, OData connection и права пользователя 1C.',
+    '',
+    'Подробный разбор: [Найти заказ на производство по номеру](/docs/onec/academy/find-production-order-by-number).',
+    '',
     '## Следующий урок',
     '::next-lesson{label="Добавить второй OData-запрос" href="/docs/onec/academy/second-odata-query-product"}',
   )),
@@ -2067,6 +2090,62 @@ export const academyPages: PageSeed[] = [
     '',
     '::open-page{route="/odata-explorer" label="Открыть Мастер OData"}',
   )),
+  page('academy', 'find-production-order-by-number', 'Найти заказ на производство по номеру', 'Step 2A в /master: один OData Query по Number, save_as=order и диагностика empty result.', 6, mdLines(
+    '# Найти заказ на производство по номеру',
+    '',
+    '::lesson-page{label="Integration Master · Step 2A"}',
+    '',
+    '## Что вы настроите',
+    'В `/master` после Input Contract вы добавите один OData Query: OMH возьмет `request.body.Number`, найдёт документ `Document_ЗаказНаПроизводство2_2` и сохранит первую строку как `order`.',
+    '',
+    '## Входящий sample',
+    '```json',
+    '{',
+    '  "operation": "dnp_sinc_pull_codes",',
+    '  "sinc": "dnp_sinc_pull_codes",',
+    '  "order_name": "26-0666/6938",',
+    '  "Number": "260666/6938"',
+    '}',
+    '```',
+    '',
+    '## OData Query Builder',
+    '```text',
+    'OData connection: 1C ERP OData',
+    'Resource: Document_ЗаказНаПроизводство2_2',
+    "Filter: Number eq '{{request.body.Number}}'",
+    '$select: Ref_Key, Number, Date, Posted',
+    '$top: 1',
+    '$orderby: Date desc',
+    'save_as: order',
+    'required: true',
+    '```',
+    '',
+    '## Preview',
+    'Preview должен показать rendered filter:',
+    '',
+    '```text',
+    "Number eq '260666/6938'",
+    '```',
+    '',
+    'И переменные после шага:',
+    '',
+    '```text',
+    'order.Ref_Key',
+    'order.Number',
+    'order.Date',
+    'order.Posted',
+    '```',
+    '',
+    '## Почему важен Ref_Key',
+    '`Ref_Key` — ссылка 1C на документ. Если следующий шаг должен передать найденный заказ во внешний API или в 1C HTTP service, используйте `order.Ref_Key`, а не человекочитаемый номер.',
+    '',
+    '## Если результат пустой',
+    '`ODATA_RESULT_EMPTY` означает, что запрос выполнился, но 1C вернула `value=[]`. Проверьте точный номер, resource, выбранную OData connection и права пользователя 1C.',
+    '',
+    '::checklist{id="find-production-order-by-number" items="Input Contract содержит request.body.Number|Выбрана OData connection|Resource Document_ЗаказНаПроизводство2_2|Filter Number eq request.body.Number|$select содержит Ref_Key|save_as=order|required=true|Preview показывает order.Ref_Key"}',
+    '',
+    '::next-lesson{label="Первый OData-запрос после Input Contract" href="/docs/onec/academy/first-odata-query-contractor"}',
+  )),
   lesson({
     slug: 'lesson-01-what-is-omh-for-1c-users',
     order: 10,
@@ -2620,6 +2699,10 @@ POST /api/integration-master/input/parse
 POST /api/integration-master/input/validate
 POST /api/integration-master/input/save-draft
 GET  /api/integration-master/drafts/{draft_id}
+POST /api/integration-master/odata-step/preview
+POST /api/integration-master/odata-step/test
+POST /api/integration-master/odata-step/validate
+POST /api/integration-master/drafts/{draft_id}/odata-steps
 ~~~
 
 ## Что поддерживает step 1
@@ -2630,10 +2713,31 @@ GET  /api/integration-master/drafts/{draft_id}
 - Raw text: \`request.raw_text\` и простые \`key=value\`.
 - Endpoint slug validation.
 - Draft сохранение без создания боевой интеграции.
+- Step 2A: один OData Query после Input Contract.
+
+## Step 2A OData example
+
+~~~text
+Resource: Document_ЗаказНаПроизводство2_2
+Filter: Number eq '{{request.body.Number}}'
+$select: Ref_Key, Number, Date, Posted
+$top: 1
+$orderby: Date desc
+save_as: order
+required: true
+~~~
+
+Preview на sample \`Number=260666/6938\` должен показать:
+
+~~~text
+Number eq '260666/6938'
+~~~
+
+После test query следующие шаги смогут использовать \`order.Ref_Key\`. Если результат пустой и \`required=true\`, test вернёт \`ODATA_RESULT_EMPTY\`.
 
 ## Non-goals
 
-На этом шаге не создаются OData steps, foreach, response builder, final action, run test и Timeline.
+На Step 2A не создаются foreach, tabular part helper, response builder, final action, full integration save и Timeline.
 
 ::open-page{route="/master" label="Открыть Мастер интеграции"}
 `)),

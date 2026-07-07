@@ -100,7 +100,7 @@ Package добавляет доменную функциональность: 1C
 
 \`/master\` — первый шаг общего мастера интеграции. Он отвечает на вопрос: кто вызывает OMH и что придет во входящем запросе.
 
-Этот шаг не строит OData, foreach, response builder и final action. Он сохраняет только \`InputContract\`, который следующие шаги мастера смогут использовать дальше.
+Step 1 сохраняет только \`InputContract\`. Step 2A добавляет ровно один OData Query; foreach, response builder и final action остаются следующими шагами мастера.
 
 ## Product route
 
@@ -116,6 +116,10 @@ POST /api/integration-master/input/parse
 POST /api/integration-master/input/validate
 POST /api/integration-master/input/save-draft
 GET  /api/integration-master/drafts/{draft_id}
+POST /api/integration-master/odata-step/preview
+POST /api/integration-master/odata-step/test
+POST /api/integration-master/odata-step/validate
+POST /api/integration-master/drafts/{draft_id}/odata-steps
 \`\`\`
 
 ## Input Contract
@@ -148,6 +152,30 @@ GET  /api/integration-master/drafts/{draft_id}
   }
 }
 \`\`\`
+
+## Step 2A: один OData Query
+
+После сохранения Input Contract в \`/master\` появляется один OData Query Builder.
+
+Пример production order lookup:
+
+\`\`\`text
+Resource: Document_ЗаказНаПроизводство2_2
+Filter: Number eq '{{request.body.Number}}'
+$select: Ref_Key, Number, Date, Posted
+$top: 1
+$orderby: Date desc
+save_as: order
+required: true
+\`\`\`
+
+Preview рендерит sample value:
+
+\`\`\`text
+Number eq '260666/6938'
+\`\`\`
+
+После test query следующие шаги смогут использовать \`order.Ref_Key\`. Если 1C вернула пустой список и \`required=true\`, test вернёт \`ODATA_RESULT_EMPTY\`.
 
 ## Parser rules
 

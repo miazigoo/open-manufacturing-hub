@@ -24,5 +24,6 @@ class IntegrationMasterDraft(TimestampMixin, Base):
     input_mode: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
     source_system: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
     contract_json: Mapped[dict[str, Any]] = mapped_column(JSON_TYPE, nullable=False)
+    odata_steps_json: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON_TYPE, nullable=True)
     parse_result_json: Mapped[dict[str, Any] | None] = mapped_column(JSON_TYPE, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)

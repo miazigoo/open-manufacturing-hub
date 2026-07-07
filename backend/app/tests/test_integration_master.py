@@ -1,6 +1,77 @@
 import pytest
 
 
+async def _create_master_contract(client):
+    parse_response = await client.post(
+        "/api/integration-master/input/parse",
+        json={
+            "input_mode": "json",
+            "scenario_key": "dnp_chz_code_pool",
+            "sample": {
+                "operation": "dnp_sinc_pull_codes",
+                "sinc": "dnp_sinc_pull_codes",
+                "order_name": "26-0666/6938",
+                "Number": "260666/6938",
+            },
+        },
+    )
+    assert parse_response.status_code == 200, parse_response.text
+    parse_result = parse_response.json()
+    contract = {
+        "name": "DnP запрашивает пул кодов Честного знака",
+        "slug": "dnp_sinc_pull_codes",
+        "input_mode": "json",
+        "source_system": "dnp",
+        "scenario_key": "dnp_chz_code_pool",
+        "sample": parse_result["normalized_sample"],
+        "fields": parse_result["fields"],
+        "operation_key": {"type": "field", "field_path": "request.body.sinc", "value": "dnp_sinc_pull_codes", "fallback_paths": ["request.body.operation"]},
+        "business_key": {"path": "request.body.order_name"},
+    }
+    return contract, parse_result
+
+
+async def _create_mock_odata_connector(client):
+    response = await client.post(
+        "/api/connectors",
+        json={
+            "name": "1C CHZ OData ERP",
+            "connector_type": "onec",
+            "direction": "bidirectional",
+            "config_json": {
+                "base_url": "http://mock-1c.local/odata/standard.odata",
+                "auth": {"type": "none"},
+                "odata": {"enabled": True},
+                "mock_odata": {
+                    "Document_ЗаказНаПроизводство2_2": [
+                        {"Ref_Key": "order-guid", "Number": "260666/6938", "Date": "2026-04-29T16:38:53", "Posted": True},
+                        {"Ref_Key": "other-order", "Number": "260666/0000", "Date": "2026-04-30T08:00:00", "Posted": True},
+                    ]
+                },
+            },
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _order_step(connector_id, **overrides):
+    step = {
+        "connection_id": connector_id,
+        "resource": "Document_ЗаказНаПроизводство2_2",
+        "filter_mode": "builder",
+        "filter_rule": {"field": "Number", "operator": "eq", "value_type": "variable", "value": "request.body.Number"},
+        "select": ["Ref_Key", "Number", "Date", "Posted"],
+        "top": 1,
+        "orderby": "Date desc",
+        "paginate": False,
+        "save_as": "order",
+        "required": True,
+    }
+    step.update(overrides)
+    return step
+
+
 async def test_integration_master_scenarios_include_dnp(client):
     response = await client.get("/api/integration-master/scenarios")
     assert response.status_code == 200, response.text
@@ -151,3 +222,107 @@ async def test_save_and_load_input_contract_draft(client):
     assert loaded.status_code == 200, loaded.text
     assert loaded.json()["contract"]["business_key"]["path"] == "request.body.inn"
     assert loaded.json()["parse_result"]["fields"][0]["path"] == "request.body.operation"
+
+
+async def test_odata_step_preview_renders_filter_and_url(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    response = await client.post(
+        "/api/integration-master/odata-step/preview",
+        json={"input_contract": contract, "sample_input": contract["sample"], "odata_step": _order_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert body["template_filter"] == "Number eq '{{request.body.Number}}'"
+    assert body["rendered_filter"] == "Number eq '260666/6938'"
+    assert body["rendered_url"] == "Document_ЗаказНаПроизводство2_2?$filter=Number eq '260666/6938'&$select=Ref_Key,Number,Date,Posted&$top=1&$orderby=Date desc"
+    assert "order.Ref_Key" in body["variables_after_step"]
+
+
+async def test_odata_step_validate_reports_top_and_missing_variable(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    top_response = await client.post(
+        "/api/integration-master/odata-step/validate",
+        json={"input_contract": contract, "sample_input": contract["sample"], "odata_step": _order_step(connector["id"], top=501)},
+    )
+    assert top_response.status_code == 200, top_response.text
+    assert top_response.json()["valid"] is False
+    assert "$top" in "; ".join(top_response.json()["errors"])
+
+    missing_response = await client.post(
+        "/api/integration-master/odata-step/validate",
+        json={"input_contract": contract, "sample_input": contract["sample"], "odata_step": _order_step(connector["id"], filter_mode="raw", filter="Number eq '{{request.body.Missing}}'")},
+    )
+    assert missing_response.status_code == 200, missing_response.text
+    assert missing_response.json()["valid"] is False
+    assert "Переменная request.body.Missing" in "; ".join(missing_response.json()["errors"])
+
+
+async def test_odata_step_test_uses_selected_connection_and_maps_result(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    response = await client.post(
+        "/api/integration-master/odata-step/test",
+        json={"input_contract": contract, "sample_input": contract["sample"], "odata_step": _order_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["items_count"] == 1
+    assert body["result_preview"]["Ref_Key"] == "order-guid"
+    assert body["request"]["resource"] == "Document_ЗаказНаПроизводство2_2"
+    assert body["request"]["params"]["$filter"] == "Number eq '260666/6938'"
+    assert body["request"]["params"]["$select"] == "Ref_Key,Number,Date,Posted"
+    assert "order.Ref_Key" in body["variables_after_step"]
+
+
+async def test_odata_step_test_returns_empty_required_result(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+    empty_step = _order_step(connector["id"], filter_mode="raw", filter="Number eq 'missing-order'")
+
+    response = await client.post(
+        "/api/integration-master/odata-step/test",
+        json={"input_contract": contract, "sample_input": contract["sample"], "odata_step": empty_step},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is False
+    assert body["error_code"] == "ODATA_RESULT_EMPTY"
+    assert body["items_count"] == 0
+
+
+async def test_append_odata_step_to_master_draft(client):
+    contract, parse_result = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+    saved = await client.post("/api/integration-master/input/save-draft", json={"contract": contract, "parse_result": parse_result})
+    assert saved.status_code == 200, saved.text
+    draft_id = saved.json()["draft"]["id"]
+
+    response = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-steps",
+        json={"input_contract": contract, "odata_step": _order_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["saved_step"]["id"] == "find_order"
+    assert body["saved_step"]["filter"] == "Number eq '{{request.body.Number}}'"
+    assert body["saved_step"]["connection_name"] == "1C CHZ OData ERP"
+    assert body["draft"]["odata_steps"][0]["save_as"] == "order"
+    assert body["draft"]["odata_steps"][0]["resource"] == "Document_ЗаказНаПроизводство2_2"
+
+    loaded = await client.get(f"/api/integration-master/drafts/{draft_id}")
+    assert loaded.status_code == 200, loaded.text
+    assert loaded.json()["odata_steps"][0]["select"] == ["Ref_Key", "Number", "Date", "Posted"]
+
+    saved_again = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-steps",
+        json={"input_contract": contract, "odata_step": _order_step(connector["id"])},
+    )
+    assert saved_again.status_code == 200, saved_again.text
+    assert len(saved_again.json()["draft"]["odata_steps"]) == 1

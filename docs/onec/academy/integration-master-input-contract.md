@@ -16,6 +16,7 @@
 8. Выберите business key: для DnP это `order_name`, fallback `Number`.
 9. Проверьте endpoint slug и preview `POST /api/bus/in/<slug>`.
 10. Нажмите `Сохранить draft`.
+11. После сохранения откроется Step 2A: настройка одного OData Query.
 
 ## Что получится
 
@@ -49,12 +50,28 @@ OMH сохранит `InputContract` draft:
 }
 ```
 
-## Что не делаем на этом шаге
+## Следующий шаг: один OData Query
 
-- Не настраиваем OData.
+Если сценарий должен найти заказ 1C по номеру из входящего запроса, настройте Step 2A:
+
+```text
+Resource: Document_ЗаказНаПроизводство2_2
+Filter: Number eq '{{request.body.Number}}'
+$select: Ref_Key, Number, Date, Posted
+save_as: order
+required: true
+```
+
+После test query следующие шаги смогут использовать `order.Ref_Key`.
+
+Подробный урок: [Найти заказ на производство по номеру](./find-production-order-by-number.md).
+
+## Что не делаем на первом шаге
+
+- Не настраиваем больше одного OData-запроса.
 - Не создаём foreach.
 - Не собираем JSON/XML response.
 - Не отправляем данные во внешний endpoint.
 - Не запускаем Timeline.
 
-Эти действия появятся в следующих шагах мастера. Первый шаг должен быть понятным и проверяемым: входящий request → поля → route key → business key → draft contract.
+Эти действия появятся в следующих шагах мастера. Первый шаг должен быть понятным и проверяемым: входящий request → поля → route key → business key → draft contract. Step 2A добавляет только один проверяемый OData query.

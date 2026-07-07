@@ -8,6 +8,9 @@ from pydantic import BaseModel, Field
 
 InputMode = Literal["json", "xml", "raw_text"]
 OperationKeyType = Literal["field", "endpoint", "none"]
+ODataFilterMode = Literal["builder", "raw"]
+ODataFilterOperator = Literal["eq", "ne", "contains", "gt", "lt", "ge", "le"]
+ODataValueType = Literal["string", "number", "boolean", "variable", "guid", "raw"]
 
 
 class IntegrationScenario(BaseModel):
@@ -96,6 +99,72 @@ class InputContract(BaseModel):
     endpoint_url: str | None = None
 
 
+class ODataFilterRule(BaseModel):
+    field: str = ""
+    operator: ODataFilterOperator = "eq"
+    value_type: ODataValueType = "variable"
+    value: Any = None
+
+
+class ODataStepConfig(BaseModel):
+    id: str | None = None
+    type: Literal["odata_query"] = "odata_query"
+    connection_id: UUID | None = None
+    connection_name: str | None = None
+    resource: str = ""
+    filter_mode: ODataFilterMode = "builder"
+    filter_rule: ODataFilterRule | None = None
+    filter: str | None = None
+    select: list[str] = Field(default_factory=list)
+    top: int | None = 1
+    orderby: str | None = None
+    paginate: bool = False
+    save_as: str = "order"
+    required: bool = True
+    last_test_status: str | None = None
+
+
+class ODataStepRequest(BaseModel):
+    input_contract: InputContract
+    sample_input: Any = None
+    odata_step: ODataStepConfig
+
+
+class ODataStepValidationResponse(BaseModel):
+    valid: bool
+    errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    template_filter: str | None = None
+    rendered_filter: str | None = None
+    template_url: str | None = None
+    rendered_url: str | None = None
+    variables_after_step: list[str] = Field(default_factory=list)
+
+
+class ODataStepPreviewResponse(ODataStepValidationResponse):
+    rendered_resource: str
+    saved_as: str
+
+
+class ODataStepTestResponse(BaseModel):
+    success: bool
+    error_code: str | None = None
+    message: str | None = None
+    hint: str | None = None
+    rendered_resource: str
+    rendered_filter: str | None = None
+    items_count: int = 0
+    result_preview: dict[str, Any] | None = None
+    saved_as: str
+    variables_after_step: list[str] = Field(default_factory=list)
+    request: dict[str, Any] = Field(default_factory=dict)
+
+
+class ODataStepSaveRequest(BaseModel):
+    input_contract: InputContract | None = None
+    odata_step: ODataStepConfig
+
+
 class InputContractValidationRequest(BaseModel):
     contract: InputContract
 
@@ -120,10 +189,17 @@ class InputDraftRead(BaseModel):
     input_mode: InputMode
     source_system: str
     contract: InputContract
+    odata_steps: list[ODataStepConfig] = Field(default_factory=list)
     parse_result: InputParseResponse | None = None
     endpoint_url: str
     created_at: datetime
     updated_at: datetime
+
+
+class ODataStepSaveResponse(BaseModel):
+    draft: InputDraftRead
+    saved_step: ODataStepConfig
+    next_steps: list[str]
 
 
 class InputDraftSaveResponse(BaseModel):
