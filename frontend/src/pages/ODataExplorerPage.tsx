@@ -608,17 +608,25 @@ export function ODataExplorerPage() {
 
   function renderSendResultStep() {
     return (
-      <section className="panel form-panel centered-panel">
+      <section className="panel form-panel centered-panel odata-final-step">
         <span className="eyebrow">Final step</span>
         <h1>Куда отправить результат?</h1>
         <p className="microcopy">Укажите адрес внешней системы. Сейчас сохраняем это как настройку интеграции вместе с собранными OData-шагами.</p>
-        <div className="metadata-grid compact-grid">
+        <div className="metadata-grid compact-grid odata-final-grid">
           <label className="field-label">Method<select value={target.method} onChange={(event) => setTarget({ ...target, method: event.target.value })}><option value="POST">POST</option><option value="PUT">PUT</option><option value="PATCH">PATCH</option></select></label>
           <label className="field-label">URL<input value={target.url} onChange={(event) => setTarget({ ...target, url: event.target.value })} placeholder="https://example.local/api/result" /></label>
         </div>
-        <div className="metadata-grid compact-grid">
+        <div className="metadata-grid compact-grid odata-final-grid">
           <label className="field-label">Flow name<input value={flowForm.name} onChange={(event) => setFlowForm({ ...flowForm, name: event.target.value, slug: slugify(event.target.value) })} /></label>
-          <label className="field-label">Slug<input value={flowForm.slug} onChange={(event) => setFlowForm({ ...flowForm, slug: slugify(event.target.value) })} /></label>
+          <label className="field-label">
+            Slug
+            <input
+              value={flowForm.slug}
+              onChange={(event) => setFlowForm({ ...flowForm, slug: slugify(event.target.value) })}
+              title="Технический код интеграции: латиница, цифры и дефисы. Используется как внутренний идентификатор flow и часть endpoint-настроек. Можно оставить автозначение."
+            />
+            <span className="field-hint">Технический код flow: латиница, цифры, дефисы. Можно оставить автозначение.</span>
+          </label>
         </div>
         <label className="field-label">Description<input value={flowForm.description} onChange={(event) => setFlowForm({ ...flowForm, description: event.target.value })} /></label>
         {renderDraftSummary()}

@@ -258,6 +258,8 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
   .flag-button span { display: none; }
   .page-content { padding: 18px; }
   .metric-grid, .filter-bar, .metadata-grid, .compact-health-grid { grid-template-columns: minmax(0, 1fr); }
+  .odata-final-grid { grid-template-columns: minmax(0, 1fr); }
+  .odata-final-step h1 { font-size: 36px; }
   .failure-row, .component-list > div { grid-template-columns: minmax(0, 1fr); }
   .hero-panel, .timeline-hero { display: grid; }
   table { min-width: 860px; }
@@ -391,6 +393,11 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .builder-help-card span { color: #d8ceb8; line-height: 1.55; }
 .builder-help-card code { color: var(--accent-2); background: rgba(0,0,0,.18); padding: 1px 5px; border: 1px solid rgba(143,198,180,.18); }
 .centered-panel { max-width: 900px; width: 100%; margin-inline: auto; }
+.odata-final-step { max-width: 940px; gap: 14px; }
+.odata-final-step h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1.02; max-width: 100%; overflow-wrap: anywhere; }
+.odata-final-step .microcopy { max-width: 720px; }
+.odata-final-grid { grid-template-columns: minmax(150px, .75fr) minmax(260px, 1.5fr); align-items: end; }
+.field-hint { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
 .action-card { width: 100%; text-align: left; appearance: none; cursor: pointer; font: inherit; }
 .action-card:hover:not(:disabled) { border-color: rgba(240,179,90,.58); transform: translateY(-1px); }
 .action-card:disabled { cursor: not-allowed; opacity: .55; }
