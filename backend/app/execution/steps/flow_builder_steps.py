@@ -4,6 +4,7 @@ from typing import Any
 
 from app.connectors import repository as connector_repository
 from app.connectors.builtin.onec.odata import read_odata
+from app.connectors.builtin.rest_connector import RESTConnector
 from app.connectors.manager import ConnectorManager
 from app.core.enums import ArtifactType
 from app.execution.context import PipelineContext
@@ -136,13 +137,27 @@ class FlowCallEndpointStep:
     async def execute(self, context: PipelineContext) -> StepResult:
         config = _config(context)
         connector_name = str(config.get("connector") or context.target_system or "")
+        direct_url = str(config.get("url") or "").strip()
         try:
             body = render_template(config.get("body") or "{{target_payload}}", _scope(context))
         except Exception as exc:
             return _failed("TARGET_BODY_BUILD_FAILED", str(exc), config, "Check call body variable path.")
         payload = body if isinstance(body, dict) else {"body": body}
-        request_payload = {"connector": connector_name, "method": str(config.get("method") or "POST").upper(), "path": config.get("path"), "body": payload}
+        method = str(config.get("method") or "POST").upper()
+        request_payload = {"connector": connector_name or None, "method": method, "url": direct_url or None, "path": config.get("path"), "body": payload}
         request_artifact = ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "outgoing_request.json", request_payload)
+        if direct_url:
+            connector_context = ConnectorContext(event_id=context.event.id, run_id=context.run.id, step_id=context.current_step.id if context.current_step else None, correlation_id=context.correlation_id, source_system=context.source_system, target_system=direct_url, dry_run=context.dry_run, metadata={"step_name": config["step_id"], "url": direct_url, "method": method})
+            result = await RESTConnector().dry_run_send({"url": direct_url, "method": method}, payload, connector_context) if context.dry_run else await RESTConnector().send({"url": direct_url, "method": method}, payload, connector_context)
+            response = {"status_code": result.status_code, "body": result.response_payload or {}}
+            variables = _variables_with_step(context, config["step_id"], {"request": result.request_payload or request_payload, "response": response})
+            variables["response"] = response
+            artifacts = [ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "outgoing_request.json", result.request_payload or request_payload)]
+            if result.response_payload is not None:
+                artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", result.response_payload))
+            if not result.success:
+                return _failed(result.error_code or "TARGET_CALL_FAILED", result.error_message or "Target call failed", config, result.hint or "Check target URL and payload contract.", artifacts)
+            return StepResult.success("Endpoint URL call complete", artifacts=artifacts, variables_update=variables)
         connector = await connector_repository.get_by_name(context.session, connector_name)
         if connector is None:
             return _failed("TARGET_CONNECTOR_NOT_FOUND", f"Target connector {connector_name} not found", config, "Create the target connector or select another one.", [request_artifact])

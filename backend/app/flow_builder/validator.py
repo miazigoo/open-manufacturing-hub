@@ -61,8 +61,8 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
                 errors.append(_error(step_id, "RESOLVER_SAVE_AS_REQUIRED", "Resolve step needs save_as", "Save the canonical object as customer, product or warehouse."))
         if step_type == "build_json" and not (step.get("template") or step.get("fields")):
             errors.append(_error(step_id, "JSON_TEMPLATE_REQUIRED", "Build JSON step needs template or visual fields", "Add target fields or switch to advanced JSON template."))
-        if step_type == "call_endpoint" and not step.get("connector"):
-            errors.append(_error(step_id, "TARGET_CONNECTOR_NOT_SET", "Endpoint step needs connector", "Select a REST/1C target connector."))
+        if step_type == "call_endpoint" and not (step.get("connector") or step.get("url")):
+            errors.append(_error(step_id, "TARGET_CONNECTOR_NOT_SET", "Endpoint step needs connector or URL", "Select a REST/1C target connector or enter a direct HTTP URL."))
     has_terminal_response = any(isinstance(step, dict) and step.get("type") in {"call_endpoint", "return_response", "build_xml_response", "raw_xml_forward"} for step in steps)
     if not has_terminal_response:
         warnings.append(_error(None, "TARGET_STEP_MISSING", "Flow has no target endpoint call", "Add Call Endpoint when this flow should send data out."))

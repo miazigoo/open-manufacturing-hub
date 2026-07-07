@@ -151,6 +151,7 @@ export function ODataExplorerPage() {
   const tabularPart = 'Продукция';
   const [wizardStep, setWizardStep] = useState<WizardStep>('trigger');
   const [target, setTarget] = useState({ method: 'POST', url: '' });
+  const [finalResponseText, setFinalResponseText] = useState('{\n  "ok": true\n}');
   const [inputSampleText, setInputSampleText] = useState('{\n  "operation": "lookup_order_products",\n  "Number": "260666/6938",\n  "device_type": "toodoo"\n}');
   const resources = useQuery({ queryKey: ['odata-resources', connectorId], queryFn: () => odataExplorerApi.resources(connectorId), enabled: Boolean(connectorId) });
   const run = useMutation({
@@ -380,6 +381,9 @@ export function ODataExplorerPage() {
   function buildFlowPayload() {
     if (draftSteps.length === 0) throw new Error('Add at least one OData step');
     const responseBody = draftSteps.reduce<Record<string, string>>((acc, step) => ({ ...acc, [step.save_as]: `{{${step.save_as}}}` }), { operation_key: '{{operation_key}}' });
+    const sendResult = nextAction === 'send_result';
+    const finalResponse = sendResult ? parseInputSample(finalResponseText) : responseBody;
+    if (sendResult && !target.url.trim()) throw new Error('Target URL is required when final action is Send to endpoint');
     const inputFields = requestInputFields();
     const rawSample = parseInputSample(inputSampleText);
     const triggerValue = triggerValueFromSample(rawSample, flowForm.operation);
@@ -400,7 +404,7 @@ export function ODataExplorerPage() {
         version: 1,
         input: { endpoint_slug: flowForm.slug, input_mode: 'json', response_mode: 'sync_response' },
         next_action: nextAction,
-        target: nextAction === 'send_result' ? target : null,
+        target: sendResult ? target : null,
         variables: [{ name: 'operation_key', source: `request.body.${triggerField}` }, ...inputFields.map((field) => ({ name: field.name, source: `request.body.${field.name}` }))],
         steps: [
           { id: 'read_operation_key', type: 'read_variable', name: 'Read operation key', path: `request.body.${triggerField}`, fallback_paths: [triggerField === 'sinc' ? 'request.body.operation' : 'request.body.sinc'], save_as: 'operation_key' },
@@ -417,7 +421,16 @@ export function ODataExplorerPage() {
             save_as: step.save_as,
             required: true,
           })),
-          { id: 'return_response', type: 'return_response', name: 'Return response', body: responseBody },
+          ...(sendResult ? [{
+            id: 'send_result',
+            type: 'call_endpoint',
+            name: 'Send result to endpoint',
+            method: target.method,
+            url: target.url,
+            body: `{{${draftSteps[draftSteps.length - 1].save_as}}}`,
+            response_mode: 'sync_response',
+          }] : []),
+          { id: 'return_response', type: 'return_response', name: sendResult ? 'Return configured response' : 'Return OData result', body: finalResponse },
         ],
       },
       test_payload_json: triggerSample,
@@ -510,12 +523,12 @@ export function ODataExplorerPage() {
             <span>Собрать следующий ресурс, фильтр или select на основе уже полученных данных.</span>
           </button>
           <button type="button" className="builder-help-card action-card" onClick={chooseReturnAll} disabled={draftSteps.length === 0}>
-            <strong>Отправить весь результат</strong>
-            <span>Передать наружу весь результат последнего шага.</span>
+            <strong>Завершить: вернуть ответ</strong>
+            <span>Вернуть вызывающему backend весь результат OData. Внешний URL не нужен.</span>
           </button>
           <button type="button" className="builder-help-card action-card" onClick={chooseSendResult} disabled={draftSteps.length === 0}>
-            <strong>Отправить выбранный результат</strong>
-            <span>Указать внешний URL и метод отправки.</span>
+            <strong>Завершить: отправить на endpoint</strong>
+            <span>Указать внешний URL, отправить туда результат последнего шага и вернуть вызывающему backend короткий JSON-ответ.</span>
           </button>
         </div>
         {latestDraftStep && <div className="success-note">Последний сохраненный результат<span><code>{latestDraftStep.save_as}</code> из {latestDraftStep.resource}</span></div>}
@@ -646,15 +659,19 @@ export function ODataExplorerPage() {
   }
 
   function renderSendResultStep() {
+    const sendResult = nextAction === 'send_result';
     return (
       <section className="panel form-panel centered-panel odata-final-step">
         <span className="eyebrow">Final step</span>
-        <h1>Куда отправить результат?</h1>
-        <p className="microcopy">Укажите адрес внешней системы. Сейчас сохраняем это как настройку интеграции вместе с собранными OData-шагами.</p>
-        <div className="metadata-grid compact-grid odata-final-grid">
-          <label className="field-label">Method<select value={target.method} onChange={(event) => setTarget({ ...target, method: event.target.value })}><option value="POST">POST</option><option value="PUT">PUT</option><option value="PATCH">PATCH</option></select></label>
-          <label className="field-label">URL<input value={target.url} onChange={(event) => setTarget({ ...target, url: event.target.value })} placeholder="https://example.local/api/result" /></label>
-        </div>
+        <h1>{sendResult ? 'Куда отправить результат?' : 'Какой ответ вернуть?'}</h1>
+        <p className="microcopy">{sendResult ? 'Укажите адрес внешней системы. Flow отправит туда результат последнего OData-шагa, затем вернет вызывающему backend JSON-ответ ниже.' : 'Flow не будет отправлять данные во внешний URL. Он вернет вызывающему backend весь собранный результат OData.'}</p>
+        {sendResult && (
+          <div className="metadata-grid compact-grid odata-final-grid">
+            <label className="field-label">Method<select value={target.method} onChange={(event) => setTarget({ ...target, method: event.target.value })}><option value="POST">POST</option><option value="PUT">PUT</option><option value="PATCH">PATCH</option></select></label>
+            <label className="field-label">URL<input value={target.url} onChange={(event) => setTarget({ ...target, url: event.target.value })} placeholder="https://example.local/api/result" /></label>
+          </div>
+        )}
+        {sendResult && <label className="field-label">Ответ вызывающему backend после отправки<CodeEditor value={finalResponseText} onChange={setFinalResponseText} language="json" minRows={4} /></label>}
         <div className="metadata-grid compact-grid odata-final-grid">
           <label className="field-label">Flow name<input value={flowForm.name} onChange={(event) => setFlowForm({ ...flowForm, name: event.target.value, slug: slugify(event.target.value) })} /></label>
           <label className="field-label">
@@ -668,11 +685,11 @@ export function ODataExplorerPage() {
           </label>
         </div>
         <label className="field-label">Description<input value={flowForm.description} onChange={(event) => setFlowForm({ ...flowForm, description: event.target.value })} /></label>
-        <div className="success-note">Сохранение не отправляет POST на внешний URL<span>Сейчас сохраняется настройка flow. Внешний URL будет использоваться только при запуске интеграции входящим запросом или тестовым запуском.</span></div>
+        <div className="success-note">{sendResult ? 'Сохранение не отправляет POST прямо сейчас' : 'Внешний URL не используется'}<span>{sendResult ? 'Сейчас сохраняется настройка flow. Внешний URL будет использоваться только при запуске интеграции входящим запросом или тестовым запуском.' : 'При запуске flow вернет результат OData в HTTP-ответ на входящий запрос.'}</span></div>
         <div className="success-note">Trigger для сохранения<span><code>{triggerFieldFromSample(parseInputSample(inputSampleText))}</code> = <code>{triggerValueFromSample(parseInputSample(inputSampleText), flowForm.operation)}</code></span></div>
         {renderDraftSummary()}
         <div className="action-row wrap-actions">
-          <button type="button" className="primary-button" onClick={() => saveFlow.mutate()} disabled={saveFlow.isPending || draftSteps.length === 0 || !target.url.trim()}>Сохранить интеграцию</button>
+          <button type="button" className="primary-button" onClick={() => saveFlow.mutate()} disabled={saveFlow.isPending || draftSteps.length === 0 || (sendResult && !target.url.trim())}>Сохранить интеграцию</button>
           <button type="button" className="ghost-button" onClick={() => setWizardStep('choose_action')}>Назад</button>
           <Link className="primary-link" to="/integration-flows">Open Integration Flows</Link>
         </div>
@@ -705,6 +722,16 @@ export function ODataExplorerPage() {
             <h1>Trigger key</h1>
             <p className="microcopy">Выберите ключ, который придет от внешней системы в JSON-поле <code>operation</code> или <code>sinc</code>.</p>
             <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => selectOperationKey(event.target.value)}><option value="">Выберите ключ</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
+            <div className="metadata-grid">
+              <button type="button" className={`builder-help-card action-card ${nextAction === 'return_all' ? 'active' : ''}`} onClick={() => setNextAction('return_all')}>
+                <strong>Вернуть ответ</strong>
+                <span>После OData вернуть результат вызывающему backend. Поле URL в финале не появится.</span>
+              </button>
+              <button type="button" className={`builder-help-card action-card ${nextAction === 'send_result' ? 'active' : ''}`} onClick={() => setNextAction('send_result')}>
+                <strong>Отправить на endpoint</strong>
+                <span>После OData отправить результат на внешний URL и вернуть короткий JSON-ответ, например <code>{'{"ok":true}'}</code>.</span>
+              </button>
+            </div>
             <label className="field-label">
               Пример входящего JSON
               <CodeEditor value={inputSampleText} onChange={setInputSampleText} language="json" minRows={6} title="Укажите пример того, что внешний backend будет отправлять в OMH. Поля кроме operation/sinc можно вставлять в OData filter/resource." />

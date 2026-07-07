@@ -97,7 +97,7 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
             elif step_type == "call_endpoint":
                 body = render_template(step.get("body") or "{{target_payload}}", scope)
                 response = {"status_code": 200, "body": step.get("mock_response_json") or {"preview": True}}
-                result = {"would_call": {"connector": step.get("connector"), "method": step.get("method", "POST"), "path": step.get("path"), "body": body}, "response": response}
+                result = {"would_call": {"connector": step.get("connector"), "method": step.get("method", "POST"), "url": step.get("url"), "path": step.get("path"), "body": body}, "response": response}
                 variables["response"] = response
                 target_request = result["would_call"]
                 request_preview = result["would_call"]
