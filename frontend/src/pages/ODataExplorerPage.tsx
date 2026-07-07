@@ -38,6 +38,10 @@ function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[\-_]+|[\-_]+$/g, '').slice(0, 80) || 'odata-chain';
 }
 
+function slugInput(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[\-_]+/g, '').slice(0, 80);
+}
+
 function keyify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 120);
 }
@@ -678,7 +682,7 @@ export function ODataExplorerPage() {
             Slug
             <input
               value={flowForm.slug}
-              onChange={(event) => setFlowForm({ ...flowForm, slug: slugify(event.target.value) })}
+              onChange={(event) => setFlowForm({ ...flowForm, slug: slugInput(event.target.value) })}
               title="Технический код интеграции: латиница, цифры, дефис и нижнее подчеркивание. Используется как часть URL /api/bus/in/<slug>. Символы вроде @ не используются в slug."
             />
             <span className="field-hint">Технический код flow: латиница, цифры, дефис и _. Это часть URL, поэтому @ и пробелы заменяются.</span>
