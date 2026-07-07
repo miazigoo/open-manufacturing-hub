@@ -151,7 +151,7 @@ export function ODataExplorerPage() {
   const [newKey, setNewKey] = useState({ name: 'Lookup order products', operation: 'lookup_order_products', description: 'External system asks OMH to run this flow.', example_request_json: '{\n  "operation": "lookup_order_products",\n  "Number": "260666/6938",\n  "device_type": "toodoo"\n}' });
   const [newKeyTouched, setNewKeyTouched] = useState(false);
   const [showTriggerModal, setShowTriggerModal] = useState(false);
-  const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('send_result');
+  const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('continue_odata');
   const tabularPart = 'Продукция';
   const [wizardStep, setWizardStep] = useState<WizardStep>('trigger');
   const [target, setTarget] = useState({ method: 'POST', url: '' });
@@ -527,12 +527,12 @@ export function ODataExplorerPage() {
             <span>Собрать следующий ресурс, фильтр или select на основе уже полученных данных.</span>
           </button>
           <button type="button" className="builder-help-card action-card" onClick={chooseReturnAll} disabled={draftSteps.length === 0}>
-            <strong>Завершить: вернуть ответ</strong>
-            <span>Вернуть вызывающему backend весь результат OData. Внешний URL не нужен.</span>
+            <strong>Вернуть результат OData</strong>
+            <span>Вернуть вызывающему backend результат собранных OData-шагов. Внешний URL не нужен.</span>
           </button>
           <button type="button" className="builder-help-card action-card" onClick={chooseSendResult} disabled={draftSteps.length === 0}>
-            <strong>Завершить: отправить на endpoint</strong>
-            <span>Указать внешний URL, отправить туда результат последнего шага и вернуть вызывающему backend короткий JSON-ответ.</span>
+            <strong>Отправить на endpoint</strong>
+            <span>Отправить результат последнего OData-шагa на внешний URL и вернуть вызывающему backend указанный JSON, например <code>{'{"ok":true}'}</code>.</span>
           </button>
         </div>
         {latestDraftStep && <div className="success-note">Последний сохраненный результат<span><code>{latestDraftStep.save_as}</code> из {latestDraftStep.resource}</span></div>}
@@ -667,7 +667,7 @@ export function ODataExplorerPage() {
     return (
       <section className="panel form-panel centered-panel odata-final-step">
         <span className="eyebrow">Final step</span>
-        <h1>{sendResult ? 'Куда отправить результат?' : 'Какой ответ вернуть?'}</h1>
+        <h1>{sendResult ? 'Куда отправить результат?' : 'Вернуть результат OData'}</h1>
         <p className="microcopy">{sendResult ? 'Укажите адрес внешней системы. Flow отправит туда результат последнего OData-шагa, затем вернет вызывающему backend JSON-ответ ниже.' : 'Flow не будет отправлять данные во внешний URL. Он вернет вызывающему backend весь собранный результат OData.'}</p>
         {sendResult && (
           <div className="metadata-grid compact-grid odata-final-grid">
@@ -726,18 +726,6 @@ export function ODataExplorerPage() {
             <h1>Trigger key</h1>
             <p className="microcopy">Выберите ключ, который придет от внешней системы в JSON-поле <code>operation</code> или <code>sinc</code>.</p>
             <label className="field-label">Operation key<select value={flowForm.operation} onChange={(event) => selectOperationKey(event.target.value)}><option value="">Выберите ключ</option>{operationKeyRows.map((item) => <option key={item.id} value={item.operation}>{item.operation} · {item.name}</option>)}</select></label>
-            <div className="metadata-grid">
-              <button type="button" className={`builder-help-card action-card ${nextAction === 'return_all' ? 'active' : ''}`} onClick={() => setNextAction('return_all')}>
-                <strong>Вернуть ответ</strong>
-                <span>После OData вернуть результат вызывающему backend. Поле URL в финале не появится.</span>
-                {nextAction === 'return_all' && <em>Выбрано</em>}
-              </button>
-              <button type="button" className={`builder-help-card action-card ${nextAction === 'send_result' ? 'active' : ''}`} onClick={() => setNextAction('send_result')}>
-                <strong>Отправить на endpoint</strong>
-                <span>После OData отправить результат на внешний URL и вернуть короткий JSON-ответ, например <code>{'{"ok":true}'}</code>.</span>
-                {nextAction === 'send_result' && <em>Выбрано</em>}
-              </button>
-            </div>
             <label className="field-label">
               Пример входящего JSON
               <CodeEditor value={inputSampleText} onChange={setInputSampleText} language="json" minRows={6} title="Укажите пример того, что внешний backend будет отправлять в OMH. Поля кроме operation/sinc можно вставлять в OData filter/resource." />
