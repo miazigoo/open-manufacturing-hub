@@ -27,6 +27,7 @@ services:
       OMH_DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
       OMH_SECRET_KEY: ${OMH_SECRET_KEY:?Set OMH_SECRET_KEY in .env.production}
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-${PUBLIC_BASE_URL:-http://localhost:8000}}
       OMH_ALLOW_DEMO_SEED_IN_PRODUCTION: "false"
       OMH_REQUIRE_WORKER_HEARTBEAT: ${OMH_REQUIRE_WORKER_HEARTBEAT:-false}
     volumes:
@@ -66,6 +67,7 @@ services:
       OMH_DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
       OMH_SECRET_KEY: ${OMH_SECRET_KEY:?Set OMH_SECRET_KEY in .env.production}
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-${PUBLIC_BASE_URL:-http://localhost:8000}}
       OMH_ALLOW_DEMO_SEED_IN_PRODUCTION: "false"
     volumes:
       - ./backups:/app/backups

@@ -22,6 +22,7 @@ services:
     environment:
       APP_ENV: development
       OMH_DATABASE_URL: postgresql+asyncpg://omh:omh@postgres:5432/omh
+      PUBLIC_API_BASE_URL: http://localhost:8000
       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     command: >
       sh -c "i=0;

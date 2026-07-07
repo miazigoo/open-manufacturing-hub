@@ -111,22 +111,15 @@ async def install_scenario(session: AsyncSession, code: str, request: ScenarioIn
 
 
 def curl_example(slug: str, input_mode: str, payload: Any) -> str:
+    endpoint_url = flow_service.public_endpoint_url(slug)
     if input_mode == "xml":
-        return f"curl -X POST http://localhost:8000/api/bus/in/{slug} -H 'Content-Type: application/xml' --data-binary @document.xml"
+        return f"curl -X POST {endpoint_url} -H 'Content-Type: application/xml' --data-binary @document.xml"
     body = json.dumps(payload if isinstance(payload, dict) else {"payload": payload}, ensure_ascii=False)
-    return f"curl -X POST http://localhost:8000/api/bus/in/{slug} -H 'Content-Type: application/json' --data '{body}'"
+    return f"curl -X POST {endpoint_url} -H 'Content-Type: application/json' --data '{body}'"
 
 
 def onec_http_example(slug: str, input_mode: str) -> str:
-    content_type = "application/xml" if input_mode == "xml" else "application/json"
-    body = "XMLСтрока" if input_mode == "xml" else "JSONСтрока"
-    return "\n".join([
-        'HTTPСоединение = Новый HTTPСоединение("server", 8000);',
-        f'Запрос = Новый HTTPЗапрос("/api/bus/in/{slug}");',
-        f'Запрос.Заголовки.Вставить("Content-Type", "{content_type}");',
-        f"Запрос.УстановитьТелоИзСтроки({body});",
-        "Ответ = HTTPСоединение.ОтправитьДляОбработки(Запрос);",
-    ])
+    return flow_service.onec_http_example(slug, input_mode)
 
 
 def _scenario_or_error(code: str) -> dict[str, Any]:

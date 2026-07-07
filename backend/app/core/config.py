@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     app_env: str = Field(default="development", validation_alias=AliasChoices("APP_ENV", "OMH_APP_ENV"))
     app_version: str = Field(default="0.1.0", validation_alias=AliasChoices("OMH_APP_VERSION", "APP_VERSION"))
     public_base_url: str | None = Field(default=None, validation_alias=AliasChoices("PUBLIC_BASE_URL", "OMH_PUBLIC_BASE_URL"))
+    public_api_base_url: str | None = Field(default=None, validation_alias=AliasChoices("PUBLIC_API_BASE_URL", "OMH_PUBLIC_API_BASE_URL"))
     production_profile: bool = Field(default=False, validation_alias=AliasChoices("OMH_PRODUCTION_PROFILE", "PRODUCTION_PROFILE"))
     auto_install_packages: str = Field(default="", validation_alias=AliasChoices("OMH_AUTO_INSTALL_PACKAGES", "AUTO_INSTALL_PACKAGES"))
     allow_demo_seed_in_production: bool = Field(default=False, validation_alias=AliasChoices("ALLOW_DEMO_SEED_IN_PRODUCTION", "OMH_ALLOW_DEMO_SEED_IN_PRODUCTION"))

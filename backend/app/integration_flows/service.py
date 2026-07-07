@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlparse
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.models import ConnectorInstance
+from app.core.config import get_settings
 from app.core.enums import ConnectorDirection, ConnectorInstanceStatus, IntegrationFlowTargetType
 from app.core.errors import BadRequestError, NotFoundError
 from app.flow_builder.compiler import FlowCompiler
@@ -34,19 +36,32 @@ def endpoint_url(slug: str) -> str:
     return f"/api/bus/in/{slug}"
 
 
+def public_endpoint_url(slug: str) -> str:
+    return f"{_public_api_base_url()}{endpoint_url(slug)}"
+
+
 def curl_example(slug: str, input_mode: str, sample: dict[str, Any] | str | None, token: str | None = None) -> str:
     content_type = "application/xml" if input_mode == "xml" else "text/plain" if input_mode == "raw_text" else "application/json"
     body = sample if isinstance(sample, str) else json.dumps(sample or {"pool_type": "DNP", "codes": ["..."]}, ensure_ascii=False)
     headers = f'-H "Content-Type: {content_type}"'
     if token:
         headers += f' \\\n  -H "X-OMH-Token: {token}"'
-    return f"curl -X POST http://localhost:8000/api/bus/in/{slug} \\\n  {headers} \\\n  -d '{body}'"
+    return f"curl -X POST {public_endpoint_url(slug)} \\\n  {headers} \\\n  -d '{body}'"
 
 
 def onec_http_example(slug: str, input_mode: str, token: str | None = None) -> str:
     content_type = "application/xml" if input_mode == "xml" else "text/plain" if input_mode == "raw_text" else "application/json"
     token_line = f'\nЗапрос.Заголовки.Вставить("X-OMH-Token", "{token}");' if token else ""
-    return f'HTTPСоединение = Новый HTTPСоединение("omh-server", 8000);\nЗапрос = Новый HTTPЗапрос("/api/bus/in/{slug}");\nЗапрос.Заголовки.Вставить("Content-Type", "{content_type}");{token_line}\nЗапрос.УстановитьТелоИзСтроки(ТелоЗапроса);\nОтвет = HTTPСоединение.ОтправитьДляОбработки(Запрос);'
+    parsed = urlparse(_public_api_base_url())
+    host = parsed.hostname or "omh-server"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    path = f"{parsed.path.rstrip('/') if parsed.path else ''}{endpoint_url(slug)}"
+    return f'HTTPСоединение = Новый HTTPСоединение("{host}", {port});\nЗапрос = Новый HTTPЗапрос("{path}");\nЗапрос.Заголовки.Вставить("Content-Type", "{content_type}");{token_line}\nЗапрос.УстановитьТелоИзСтроки(ТелоЗапроса);\nОтвет = HTTPСоединение.ОтправитьДляОбработки(Запрос);'
+
+
+def _public_api_base_url() -> str:
+    settings = get_settings()
+    return (settings.public_api_base_url or settings.public_base_url or "http://localhost:8000").rstrip("/")
 
 
 async def list_flows(session: AsyncSession) -> list[dict[str, Any]]:
