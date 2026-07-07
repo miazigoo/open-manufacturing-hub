@@ -18,16 +18,21 @@ const draftStorageKey = 'omh.odataExplorer.flowDraft.v1';
 interface DraftStep {
   id: string;
   name: string;
+  type?: 'odata_query' | 'foreach';
   connection: string;
   resource: string;
   filter: string;
   select: string[];
   top: number;
   save_as: string;
+  items?: string;
+  item_as?: string;
+  flatten?: boolean;
   sample: Record<string, unknown> | null;
+  sample_items?: Array<Record<string, unknown>>;
 }
 
-type WizardStep = 'trigger' | 'choose_action' | 'odata' | 'send_result';
+type WizardStep = 'trigger' | 'choose_action' | 'odata' | 'foreach' | 'send_result';
 
 interface InputField {
   name: string;
@@ -95,6 +100,15 @@ function renderDraftPlaceholders(value: string, steps: DraftStep[]) {
       return typeof raw === 'object' ? JSON.stringify(raw) : String(raw);
     });
   }, value);
+}
+
+function renderItemPlaceholders(value: string, itemName: string, item: Record<string, unknown>) {
+  const escaped = itemName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return value.replace(new RegExp(`{{\\s*(?:${escaped}|foreach\\.item)\\.([A-Za-z0-9_А-Яа-яЁё-]+)\\s*}}`, 'g'), (_match, field: string) => {
+    const raw = item[field];
+    if (raw === undefined || raw === null) return '';
+    return typeof raw === 'object' ? JSON.stringify(raw) : String(raw);
+  });
 }
 
 function renderTestPlaceholders(value: string, sample: Record<string, unknown>, steps: DraftStep[]) {
@@ -172,6 +186,8 @@ export function ODataExplorerPage() {
   const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('continue_odata');
   const tabularPart = 'Продукция';
   const [wizardStep, setWizardStep] = useState<WizardStep>('trigger');
+  const [foreachSource, setForeachSource] = useState('');
+  const [foreachItemAs, setForeachItemAs] = useState('item');
   const [target, setTarget] = useState({ method: 'POST', url: '' });
   const [finalResponseText, setFinalResponseText] = useState('{\n  "ok": true\n}');
   const [inputSampleText, setInputSampleText] = useState('{\n  "operation": "lookup_order_products",\n  "Number": "260666/6938",\n  "device_type": "toodoo"\n}');
@@ -187,6 +203,29 @@ export function ODataExplorerPage() {
         orderby: query.orderby || null,
         paginate,
       });
+    },
+  });
+  const runForeach = useMutation({
+    mutationFn: async () => {
+      const sourceStep = draftSteps.find((step) => step.save_as === foreachSource);
+      const sourceItems = sourceStep?.sample_items?.length ? sourceStep.sample_items : sourceStep?.sample ? [sourceStep.sample] : [];
+      const sample = parseInputSample(inputSampleText);
+      const responses = [];
+      const combined: Array<Record<string, unknown>> = [];
+      for (const [index, item] of sourceItems.entries()) {
+        const render = (value: string) => renderItemPlaceholders(renderTestPlaceholders(value, sample, draftSteps), foreachItemAs || 'item', item);
+        const response = await odataExplorerApi.query(connectorId, {
+          resource: render(query.resource),
+          top: Number(query.top) || 10,
+          filter: query.filter ? render(query.filter) : null,
+          select: query.select || null,
+          orderby: query.orderby || null,
+          paginate,
+        });
+        responses.push({ index, item, request: response.request, response: response.response, count: response.count });
+        combined.push(...response.items);
+      }
+      return { items: combined, count: combined.length, source_count: sourceItems.length, responses };
     },
   });
   const createLookup = useMutation({ mutationFn: (extractJson: Record<string, string>) => odataExplorerApi.createLookup(connectorId, { name: lookup.name, resource: query.resource, filter_template: lookup.filter_template, extract_json: extractJson }) });
@@ -340,6 +379,19 @@ export function ODataExplorerPage() {
     setWizardStep('odata');
   }
 
+  function startForEachStep() {
+    const source = latestDraftStep?.save_as || draftSteps[0]?.save_as || '';
+    setNextAction('continue_odata');
+    setForeachSource(source);
+    setForeachItemAs(source.endsWith('s') ? source.slice(0, -1) || 'item' : 'item');
+    setQuery({ resource: '', top: '1000', filter: '', select: '', orderby: '' });
+    setFilters([{ field: '', operator: 'eq', value: '' }]);
+    setStepSaveAs('codes');
+    setStepSaveAsTouched(true);
+    runForeach.reset();
+    setWizardStep('foreach');
+  }
+
   function chooseSendResult() {
     setNextAction('send_result');
     setWizardStep('send_result');
@@ -356,6 +408,7 @@ export function ODataExplorerPage() {
     const step: DraftStep = {
       id: `odata_${draftSteps.length + 1}`,
       name: `OData ${draftSteps.length + 1}: ${query.resource}`,
+      type: 'odata_query',
       connection: selectedConnection.name,
       resource: query.resource,
       filter: query.filter,
@@ -363,9 +416,35 @@ export function ODataExplorerPage() {
       top: Number(query.top) || 10,
       save_as: saveAs,
       sample: run.data.items?.[0] ?? null,
+      sample_items: run.data.items ?? [],
     };
     updateDraft([...draftSteps, step]);
     setStepSaveAs(variableName(query.resource));
+    setStepSaveAsTouched(false);
+    setWizardStep('choose_action');
+  }
+
+  function addForeachAsStep() {
+    if (!selectedConnection || !runForeach.data) return;
+    const saveAs = variableName(stepSaveAs || 'codes');
+    const step: DraftStep = {
+      id: `odata_${draftSteps.length + 1}`,
+      name: `Repeat OData ${draftSteps.length + 1}: ${query.resource}`,
+      type: 'foreach',
+      connection: selectedConnection.name,
+      resource: query.resource,
+      filter: query.filter,
+      select: query.select.split(',').map((item) => item.trim()).filter(Boolean),
+      top: Number(query.top) || 1000,
+      save_as: saveAs,
+      items: foreachSource,
+      item_as: foreachItemAs || 'item',
+      flatten: true,
+      sample: runForeach.data.items?.[0] ?? null,
+      sample_items: runForeach.data.items ?? [],
+    };
+    updateDraft([...draftSteps, step]);
+    setStepSaveAs('odata_result');
     setStepSaveAsTouched(false);
     setWizardStep('choose_action');
   }
@@ -396,8 +475,15 @@ export function ODataExplorerPage() {
     setStepSaveAs(step.save_as);
     setStepSaveAsTouched(true);
     run.reset();
+    runForeach.reset();
     updateDraft(draftSteps.slice(0, index));
-    setWizardStep('odata');
+    if (step.type === 'foreach') {
+      setForeachSource(step.items || '');
+      setForeachItemAs(step.item_as || 'item');
+      setWizardStep('foreach');
+    } else {
+      setWizardStep('odata');
+    }
   }
 
   function buildFlowPayload() {
@@ -431,7 +517,25 @@ export function ODataExplorerPage() {
         steps: [
           { id: 'read_operation_key', type: 'read_variable', name: 'Read operation key', path: `request.body.${triggerField}`, fallback_paths: [triggerField === 'sinc' ? 'request.body.operation' : 'request.body.sinc'], save_as: 'operation_key' },
           ...inputFields.map((field) => ({ id: `read_${variableInput(field.name)}`, type: 'read_variable', name: `Read ${field.name}`, path: `request.body.${field.name}`, save_as: variableInput(field.name) })),
-          ...draftSteps.map((step) => ({
+          ...draftSteps.map((step) => step.type === 'foreach' ? {
+            id: step.id,
+            type: 'foreach',
+            name: step.name,
+            items: step.items,
+            item_as: step.item_as || 'item',
+            save_as: step.save_as,
+            flatten: step.flatten !== false,
+            continue_on_error: false,
+            step: {
+              type: 'odata_query',
+              connection: step.connection,
+              resource: step.resource,
+              filter: step.filter,
+              select: step.select,
+              top: step.top,
+              required: false,
+            },
+          } : {
             id: step.id,
             type: 'odata_query',
             name: step.name,
@@ -442,7 +546,7 @@ export function ODataExplorerPage() {
             top: step.top,
             save_as: step.save_as,
             required: true,
-          })),
+          }),
           ...(sendResult ? [{
             id: 'send_result',
             type: 'call_endpoint',
@@ -523,9 +627,10 @@ export function ODataExplorerPage() {
         {draftSteps.map((step, index) => (
           <button type="button" className="success-note draft-step-card" key={step.id} onClick={() => editDraftStep(index)}>
             <strong>{index + 1}. {step.name}</strong>
-            <span><code>{step.save_as}</code> · {step.connection} · top {step.top}</span>
+            <span><code>{step.save_as}</code> · {step.type === 'foreach' ? `foreach ${step.items} as ${step.item_as || 'item'}` : step.connection} · top {step.top}</span>
             <span>{step.resource}</span>
             {step.filter && <span>$filter: {step.filter}</span>}
+            {step.sample_items && <span>Тестовых строк: {step.sample_items.length}</span>}
             <small>Нажмите, чтобы открыть и изменить этот шаг</small>
           </button>
         ))}
@@ -543,6 +648,10 @@ export function ODataExplorerPage() {
           <button type="button" className="builder-help-card action-card" onClick={startODataStep}>
             <strong>Продолжить работу с OData</strong>
             <span>Собрать следующий ресурс, фильтр или select на основе уже полученных данных.</span>
+          </button>
+          <button type="button" className="builder-help-card action-card" onClick={startForEachStep} disabled={draftSteps.length === 0}>
+            <strong>Повторить OData по массиву</strong>
+            <span>Взять массив из прошлого шага, например <code>products</code>, выполнить OData-запрос для каждой строки и объединить результат.</span>
           </button>
           <button type="button" className="builder-help-card action-card" onClick={chooseReturnAll} disabled={draftSteps.length === 0}>
             <strong>Вернуть результат OData</strong>
@@ -680,6 +789,121 @@ export function ODataExplorerPage() {
     );
   }
 
+  function renderForEachStep() {
+    const sourceStep = draftSteps.find((step) => step.save_as === foreachSource) ?? latestDraftStep;
+    const sourceItems = sourceStep?.sample_items?.length ? sourceStep.sample_items : sourceStep?.sample ? [sourceStep.sample] : [];
+    const firstItem = sourceItems[0] ?? null;
+    const sample = parseInputSample(inputSampleText);
+    const renderNestedPreview = (value: string) => firstItem ? renderItemPlaceholders(renderTestPlaceholders(value, sample, draftSteps), foreachItemAs || 'item', firstItem) : renderTestPlaceholders(value, sample, draftSteps);
+
+    function submitForeach(event: FormEvent) {
+      event.preventDefault();
+      setFormError(null);
+      const resourcePreview = renderNestedPreview(query.resource);
+      const filterPreview = query.filter ? renderNestedPreview(query.filter) : '';
+      const unresolved = [resourcePreview, filterPreview].find(hasUnresolvedPlaceholders);
+      if (!sourceStep) {
+        setFormError('Выберите массив из предыдущего шага.');
+        return;
+      }
+      if (unresolved) {
+        setFormError(`В foreach-запросе осталась неподставленная переменная: ${unresolved}. Проверьте имя элемента и переменные предыдущих шагов.`);
+        return;
+      }
+      runForeach.mutate();
+    }
+
+    return (
+      <section className="panel form-panel">
+        <div className="panel-toolbar">
+          <div>
+            <span className="eyebrow">Loop / map</span>
+            <h1>Повторить OData по массиву</h1>
+            <p className="microcopy">Этот шаг берет массив из прошлого результата, на каждой строке создает переменную элемента и выполняет OData-запрос. Все найденные строки объединяются в один массив.</p>
+          </div>
+          <Link className="primary-link" to="/docs/onec/tools/odata-chaining-fields">Примеры OData</Link>
+        </div>
+        <form className="stack-form" onSubmit={submitForeach}>
+          <div className="metadata-grid compact-grid no-margin">
+            <label className="field-label">
+              Массив из предыдущего шага
+              <select value={foreachSource} onChange={(event) => setForeachSource(event.target.value)}>
+                <option value="">Выберите массив</option>
+                {draftSteps.map((step) => <option key={step.id} value={step.save_as}>{step.save_as} · {step.name}</option>)}
+              </select>
+            </label>
+            <label className="field-label">Имя одной строки<input value={foreachItemAs} onChange={(event) => setForeachItemAs(variableInput(event.target.value) || 'item')} placeholder="product" /></label>
+            <label className="field-label">Сохранить общий результат как<input value={stepSaveAs} onChange={(event) => { setStepSaveAsTouched(true); setStepSaveAs(variableInput(event.target.value)); }} placeholder="codes" /></label>
+          </div>
+          {sourceStep && <div className="success-note">Что будет повторяться<span><code>{sourceStep.save_as}</code>: тестовых строк {sourceItems.length}. Внутри запроса одна строка доступна как <code>{`{{${foreachItemAs || 'item'}.Поле}}`}</code>.</span></div>}
+          {firstItem && (
+            <details className="variable-card" open>
+              <summary>
+                <span>Первый элемент массива</span>
+                <strong>{foreachItemAs || 'item'}</strong>
+                <small>Нажмите поле, чтобы вставить переменную в фильтр</small>
+              </summary>
+              <div className="stack-form">
+                <JsonBlock title={`Artifact: ${foreachItemAs || 'item'}`} value={firstItem} searchable={false} />
+                <div className="hint-chip-row">
+                  {Object.keys(firstItem).slice(0, 18).map((field) => (
+                    <span key={field} className="action-row wrap-actions">
+                      <button type="button" className="hint-chip" onClick={() => setQuery({ ...query, filter: `${query.filter}${query.filter ? ' ' : ''}{{${foreachItemAs || 'item'}.${field}}}` })}>Filter: {field}</button>
+                      <button type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(`{{${foreachItemAs || 'item'}.${field}}}`)}>Copy: {field}</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </details>
+          )}
+          <label className="field-label">
+            {t('integration.odataExplorer.connection')}
+            <select value={connectorId} onChange={(event) => setConnectorId(event.target.value)}>
+              <option value="">{t('integration.odataExplorer.selectConnection')}</option>
+              {enabledConnections.map((connection) => <option key={connection.id} value={connection.id}>{connection.name} · {connection.base_url}</option>)}
+            </select>
+          </label>
+          <label className="field-label">
+            {t('integration.odataExplorer.resource')}
+            <input list="odata-resources" value={query.resource} onChange={(event) => setQuery({ ...query, resource: event.target.value })} placeholder="InformationRegister_ПулКодовМаркировкиСУЗ" />
+            <datalist id="odata-resources">{(resources.data?.resources ?? []).map((resource) => <option key={resource} value={resource} />)}</datalist>
+          </label>
+          <div className="metadata-grid compact-grid no-margin">
+            <label className="field-label">$top<input value={query.top} onChange={(event) => setQuery({ ...query, top: event.target.value })} /></label>
+            <label className="field-label">$select<input value={query.select} onChange={(event) => setQuery({ ...query, select: event.target.value })} placeholder="КодМаркировки,GTIN,Номенклатура_Key" /></label>
+            <label className="field-label">$orderby<input value={query.orderby} onChange={(event) => setQuery({ ...query, orderby: event.target.value })} /></label>
+          </div>
+          <label className="field-label">$filter<input value={query.filter} onChange={(event) => setQuery({ ...query, filter: event.target.value })} placeholder={`Номенклатура_Key eq guid'{{${foreachItemAs || 'item'}.Номенклатура_Key}}'`} /></label>
+          {query.resource && <div className="success-note">Test resource preview<span>{renderNestedPreview(query.resource)}</span></div>}
+          {query.filter && <div className="success-note">Test filter preview<span>{renderNestedPreview(query.filter)}</span></div>}
+          <label className="check-row" title={t('integration.odataExplorer.paginationHint')}>
+            <input type="checkbox" checked={paginate} onChange={(event) => setPaginate(event.target.checked)} />
+            {t('integration.odataExplorer.pagination')}
+          </label>
+          <div className="action-row wrap-actions">
+            <button type="submit" className="primary-button" disabled={!connectorId || !query.resource || !foreachSource || runForeach.isPending}>Запустить повтор</button>
+            <button type="button" className="ghost-button" onClick={() => setWizardStep('choose_action')}>Назад</button>
+          </div>
+        </form>
+        {formError && <div className="error-state compact">{formError}</div>}
+        {runForeach.error instanceof Error && <div className="error-state compact">{runForeach.error.message}</div>}
+        {runForeach.data && (
+          <div className="stack-form">
+            <JsonBlock title="Foreach result" value={normalizeDisplayUrls(runForeach.data)} searchable />
+            <div className="builder-help-card">
+              <strong>Результат подходит?</strong>
+              <span>Сохраните объединенный результат как переменную. В следующих шагах он будет доступен как <code>{`{{${stepSaveAs || 'codes'}}}`}</code>.</span>
+              <div className="metadata-grid compact-grid no-margin">
+                <label className="field-label">Save as<input value={stepSaveAs} onChange={(event) => { setStepSaveAsTouched(true); setStepSaveAs(variableInput(event.target.value)); }} /></label>
+                <button type="button" className="primary-button" onClick={addForeachAsStep} disabled={!selectedConnection}>Следующий шаг</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
+
   function renderSendResultStep() {
     const sendResult = nextAction === 'send_result';
     return (
@@ -767,8 +991,9 @@ export function ODataExplorerPage() {
         )}
         {wizardStep === 'choose_action' && renderActionChoice()}
         {wizardStep === 'odata' && renderODataStep()}
+        {wizardStep === 'foreach' && renderForEachStep()}
         {wizardStep === 'send_result' && renderSendResultStep()}
-        {wizardStep !== 'odata' && <section className="panel form-panel">
+        {wizardStep !== 'odata' && wizardStep !== 'foreach' && <section className="panel form-panel">
           <div className="panel-toolbar">
             <div>
               <span className="eyebrow">Draft</span>
