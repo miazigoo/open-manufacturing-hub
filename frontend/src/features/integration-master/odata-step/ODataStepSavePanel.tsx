@@ -28,6 +28,7 @@ export function ODataStepSavePanel({ draft, step, error, saving, onSave }: OData
 
 function savedStepLabel(step: IntegrationMasterODataStep, index: number) {
   const name = step.id ?? `step_${index + 1}`;
+  if (step.type === 'build_payload') return `${name} · build ${step.body_type} · save_as=${step.save_as}`;
   if (step.type === 'odata_object_query') return `${name} · ${step.base_resource}/${step.nested_resource} · save_as=${step.save_as}`;
   return `${name} · ${step.resource} · save_as=${step.save_as}`;
 }

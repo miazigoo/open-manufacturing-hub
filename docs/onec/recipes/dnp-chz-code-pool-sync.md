@@ -3,8 +3,10 @@
 Сценарий:
 
 ```text
-DnP -> OMH -> 1C OData order -> tabular part Продукция -> foreach code pool -> DnP endpoint -> response
+DnP -> OMH -> 1C OData order -> tabular part Продукция -> foreach code pool -> build target_payload
 ```
+
+Endpoint send to DnP and caller response are the next Integration Master stages and are not part of current Step 3A.
 
 ## Входящий JSON
 
@@ -52,13 +54,62 @@ Merge: flatten
 Save as: codes
 ```
 
-## Финальное действие
+## Step 3A. Собрать JSON payload
+
+Выберите `/master` блок `Шаг 3A — Собираем итоговые данные`.
+
+```text
+Body type: JSON
+Save as: target_payload
+```
+
+DnP JSON:
+
+```json
+{
+  "omh": {
+    "run_id": "{{context.run_id}}",
+    "event_id": "{{context.event_id}}",
+    "entity_id": "{{request.body.order_name}}",
+    "event_type": "ChestniyZnakCodesSyncRequested",
+    "entity_type": "DnPOrder",
+    "source_system": "Open Manufacturing Hub",
+    "target_system": "DnP",
+    "correlation_id": "dnp-chz-sync:{{request.body.order_name}}"
+  },
+  "payload": {
+    "rows": "{{codes}}",
+    "order_id": "{{request.body.order_id}}",
+    "odata_url": "http://172.16.3.19/erp_ptc/odata/standard.odata/InformationRegister_ПулКодовМаркировкиСУЗ",
+    "order_name": "{{request.body.order_name}}",
+    "onec_order_number": "{{order.Number}}",
+    "order_numbers_by_basis": {
+      "{{order.Ref_Key}}": "{{order.Number}}"
+    }
+  }
+}
+```
+
+Rules:
+
+- `"{{codes}}"` keeps `codes` as JSON array.
+- `{{order.Ref_Key}}` in object key renders dynamic JSON key.
+- `codes.length` is available for counters.
+- Missing path returns `VARIABLE_NOT_FOUND`.
+
+## Следующий этап: финальное действие
 
 ```text
 POST http://172.16.3.10/api/v2/integrations/omh/chz/codes/import
 ```
 
-Response to caller:
+Body source:
+
+```text
+target_payload
+```
+
+Expected response to caller after future send stage:
 
 ```json
 {
@@ -66,9 +117,17 @@ Response to caller:
 }
 ```
 
-## Проверка
+## Проверка текущего Step 3A
 
-После сохранения endpoint будет:
+Нажмите `Preview payload` и проверьте:
+
+- `payload.rows` is an array, not a string.
+- `payload.order_numbers_by_basis` has key equal to `order.Ref_Key`.
+- `omh.correlation_id` contains `request.body.order_name`.
+
+## Проверка future full flow
+
+После реализации final action endpoint будет:
 
 ```text
 POST /api/bus/in/dnp_sinc_pull_codes
@@ -79,5 +138,6 @@ POST /api/bus/in/dnp_sinc_pull_codes
 - `odata_query_request.json`
 - `odata_query_response.json`
 - `foreach_result.json`
+- `target_payload.json`
 - `outgoing_request.json`
 - `return_response.json`

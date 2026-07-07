@@ -38,6 +38,9 @@ POST /api/integration-master/foreach-odata-step/preview
 POST /api/integration-master/foreach-odata-step/test
 POST /api/integration-master/foreach-odata-step/validate
 POST /api/integration-master/drafts/{draft_id}/foreach-odata-steps
+POST /api/integration-master/payload/preview
+POST /api/integration-master/payload/validate
+POST /api/integration-master/drafts/{draft_id}/payload-steps
 ```
 
 ## Parse Request
@@ -363,6 +366,86 @@ If the source array is not an array, validation explains that an object should u
 
 The saved draft item has `type=foreach_odata` and is stored in the same `odata_steps_json` list. This is still not full integration compile.
 
+## Step 3A: Payload Builder
+
+After one `foreach_odata` step is saved, `/master` can add one `build_payload` step.
+
+This step builds a body and saves it as a variable:
+
+```text
+save_as: target_payload
+body_type: json | xml | raw_text
+```
+
+Available variables:
+
+```text
+request.body.order_id
+request.body.order_name
+request.body.Number
+order.Ref_Key
+order.Number
+order.Date
+products[]
+products[0].Номенклатура_Key
+codes[]
+codes.length
+codes[0].КодМаркировки
+codes[0].GTIN
+context.run_id
+context.event_id
+```
+
+JSON supports two modes:
+
+- table fields;
+- raw JSON template.
+
+Exact JSON placeholder preserves arrays and objects:
+
+```json
+{
+  "rows": "{{codes}}",
+  "order": "{{order}}"
+}
+```
+
+Mixed template becomes a string:
+
+```json
+{
+  "correlation_id": "dnp-chz-sync:{{request.body.order_name}}"
+}
+```
+
+Dynamic JSON keys are supported:
+
+```json
+{
+  "payload": {
+    "order_numbers_by_basis": {
+      "{{order.Ref_Key}}": "{{order.Number}}"
+    }
+  }
+}
+```
+
+XML template example:
+
+```xml
+<Response><RowsCount>{{codes.length}}</RowsCount></Response>
+```
+
+Raw text example:
+
+```text
+OK order={{order.Number}} codes={{codes.length}}
+```
+
+Missing path returns `VARIABLE_NOT_FOUND` and a friendly message such as `Переменная order.Ref_Key не найдена.`
+
+The saved draft item has `type=build_payload` and is stored in the same `odata_steps_json` list. This step does not send the body anywhere.
+
 ## Parsing Rules
 
 - JSON fields use paths like `request.body.operation`.
@@ -394,6 +477,6 @@ lookup contractor!
 Do not add here:
 
 - final action.
-- response builder.
 - saving full integration.
 - Timeline and full dry-run execution.
+- endpoint send or 1C HTTP service call.

@@ -128,6 +128,9 @@ POST /api/integration-master/foreach-odata-step/preview
 POST /api/integration-master/foreach-odata-step/test
 POST /api/integration-master/foreach-odata-step/validate
 POST /api/integration-master/drafts/{draft_id}/foreach-odata-steps
+POST /api/integration-master/payload/preview
+POST /api/integration-master/payload/validate
+POST /api/integration-master/drafts/{draft_id}/payload-steps
 \`\`\`
 
 ## Input Contract
@@ -240,6 +243,32 @@ codes[0].Номенклатура_Key
 
 Validation проверяет source array, \`$top <= 500\`, collision \`save_as\` и safety limits: \`max_items\`, \`max_requests\`, \`max_result_rows\`.
 
+## Step 3A: payload builder
+
+После сохранения \`foreach_odata\` можно собрать body без финальной отправки:
+
+\`\`\`text
+body_type: json | xml | raw_text
+save_as: target_payload
+template/table fields: request.body, order, products, codes, context
+\`\`\`
+
+JSON exact placeholder сохраняет тип: \`"{{codes}}"\` станет массивом, \`"{{order}}"\` станет объектом. Mixed template всегда строка: \`"dnp:{{request.body.order_name}}"\`.
+
+Dynamic keys поддерживаются для DnP:
+
+\`\`\`json
+{
+  "payload": {
+    "order_numbers_by_basis": {
+      "{{order.Ref_Key}}": "{{order.Number}}"
+    }
+  }
+}
+\`\`\`
+
+Step 3A сохраняет только \`build_payload\`. Endpoint send, caller response, queue, Timeline runtime и full integration compile не выполняются.
+
 ## Parser rules
 
 - JSON paths look like \`request.body.operation\`.
@@ -251,6 +280,85 @@ Validation проверяет source array, \`$top <= 500\`, collision \`save_as
 ## Slug rule
 
 Endpoint slug allows only lowercase letters, numbers, \`-\` and \`_\`, and must start and end with a letter or number.` },
+      { packageId: 'reference', sectionId: 'integration-master', slug: 'payload-builder', title: 'Reference: Payload Builder', description: 'Step 3A build_payload: JSON, XML, raw text, placeholders and dynamic JSON keys.', order: 6, markdown: [
+        '# Reference: Payload Builder',
+        '',
+        'Payload Builder is `/master` Step 3A. It builds a body and saves it as a variable, usually `target_payload`.',
+        '',
+        'It does not send HTTP requests, does not call a 1C HTTP service, does not return caller response, does not compile the full integration and does not touch queue/DLQ/runtime Timeline.',
+        '',
+        '## Endpoints',
+        '',
+        '```text',
+        'POST /api/integration-master/payload/preview',
+        'POST /api/integration-master/payload/validate',
+        'POST /api/integration-master/drafts/{draft_id}/payload-steps',
+        '```',
+        '',
+        '## Variables',
+        '',
+        '- `request.body.*` comes from Input Contract sample.',
+        '- `order.*` comes from Step 2A.',
+        '- `products[]` comes from Step 2B.',
+        '- `codes[]` comes from Step 2C.',
+        '- `context.run_id` and `context.event_id` are runtime context values.',
+        '',
+        'Supported paths include `order.Ref_Key`, `products[0].Номенклатура_Key`, `codes[0].КодМаркировки` and `codes.length`.',
+        '',
+        '## JSON Rules',
+        '',
+        '- Exact placeholder preserves arrays and objects: `"{{codes}}"` renders as JSON array.',
+        '- Exact object placeholder preserves object type: `"{{order}}"` renders as JSON object.',
+        '- Mixed template renders as string: `"dnp:{{request.body.order_name}}"`.',
+        '- Dynamic keys are rendered as strings, so `{ "{{order.Ref_Key}}": "{{order.Number}}" }` is valid.',
+        '- Missing path returns `VARIABLE_NOT_FOUND` and a message like `Переменная order.Ref_Key не найдена.`',
+        '',
+        '## DnP Example',
+        '',
+        '```json',
+        '{',
+        '  "omh": {',
+        '    "run_id": "{{context.run_id}}",',
+        '    "event_id": "{{context.event_id}}",',
+        '    "entity_id": "{{request.body.order_name}}",',
+        '    "event_type": "ChestniyZnakCodesSyncRequested",',
+        '    "entity_type": "DnPOrder",',
+        '    "source_system": "Open Manufacturing Hub",',
+        '    "target_system": "DnP",',
+        '    "correlation_id": "dnp-chz-sync:{{request.body.order_name}}"',
+        '  },',
+        '  "payload": {',
+        '    "rows": "{{codes}}",',
+        '    "order_id": "{{request.body.order_id}}",',
+        '    "order_name": "{{request.body.order_name}}",',
+        '    "onec_order_number": "{{order.Number}}",',
+        '    "order_numbers_by_basis": {',
+        '      "{{order.Ref_Key}}": "{{order.Number}}"',
+        '    }',
+        '  }',
+        '}',
+        '```',
+        '',
+        '## XML and Raw Text',
+        '',
+        'XML template example: `<Response><RowsCount>{{codes.length}}</RowsCount></Response>`. Values are XML-escaped and rendered XML must be well-formed.',
+        '',
+        'Raw text example: `OK order={{order.Number}} codes={{codes.length}}`.',
+        '',
+        '## Save Contract',
+        '',
+        'Saved draft step:',
+        '',
+        '```json',
+        '{',
+        '  "id": "build_dnp_payload",',
+        '  "type": "build_payload",',
+        '  "body_type": "json",',
+        '  "save_as": "target_payload",',
+        '  "last_preview_status": "success"',
+        '}',
+        '```',
+      ].join('\n') },
     ] },
     { id: 'odata-master', title: 'OData Master', description: 'Wizard spec, API и компиляция в Integration Flow.', order: 10, pages: [
       { packageId: 'reference', sectionId: 'odata-master', slug: 'overview', title: 'Reference: OData Master', description: 'Backend endpoints, wizard spec, limits and compiler output.', order: 10, markdown: `# Reference: OData Master

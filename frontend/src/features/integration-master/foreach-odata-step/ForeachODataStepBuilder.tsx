@@ -22,9 +22,10 @@ interface ForeachODataStepBuilderProps {
   draft: InputDraftRead;
   previousVariables: Record<string, unknown>;
   onDraftUpdated: (draft: InputDraftRead) => void;
+  onVariablesUpdated?: (variables: Record<string, unknown>) => void;
 }
 
-export function ForeachODataStepBuilder({ contract, draft, previousVariables, onDraftUpdated }: ForeachODataStepBuilderProps) {
+export function ForeachODataStepBuilder({ contract, draft, previousVariables, onDraftUpdated, onVariablesUpdated }: ForeachODataStepBuilderProps) {
   const [step, setStep] = useState<ForeachODataStepConfig>(() => defaultForeachStep(contract, draft, previousVariables));
   const connections = useQuery({ queryKey: ['odata-connections-options'], queryFn: odataConnectionsApi.options });
   const selectedConnection = (connections.data ?? []).find((item) => item.id === step.connection_id);
@@ -36,7 +37,12 @@ export function ForeachODataStepBuilder({ contract, draft, previousVariables, on
 
   const payload = useMemo<ForeachODataStepRequest>(() => ({ input_contract: contract, previous_variables: previousVariables, foreach_step: step }), [contract, previousVariables, step]);
   const preview = useMutation({ mutationFn: () => integrationMasterApi.previewForeachODataStep(payload) });
-  const test = useMutation({ mutationFn: () => integrationMasterApi.testForeachODataStep(payload) });
+  const test = useMutation({
+    mutationFn: () => integrationMasterApi.testForeachODataStep(payload),
+    onSuccess: (data) => {
+      if (data.success) onVariablesUpdated?.({ [data.saved_as]: data.result_preview ?? [] });
+    },
+  });
   const saveVariables = useMemo(() => withoutVariable(previousVariables, step.save_as), [previousVariables, step.save_as]);
   const save = useMutation({
     mutationFn: () => integrationMasterApi.saveForeachODataStep(draft.id, contract, saveVariables, step),

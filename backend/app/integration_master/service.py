@@ -13,6 +13,7 @@ from app.odata_explorer.schemas import ODataQueryRequest
 from app.odata_connections import service as odata_connections_service
 from app.integration_master.examples import scenario_by_key, scenarios
 from app.integration_master.models import IntegrationMasterDraft
+from app.integration_master.payload_renderer import PayloadRenderError, render_payload_step
 from app.integration_master.parser import parse_input
 from app.integration_master.schemas import (
     BusinessKeySuggestion,
@@ -38,6 +39,10 @@ from app.integration_master.schemas import (
     ODataStepTestResponse,
     ODataStepValidationResponse,
     OperationKeySuggestion,
+    PayloadStepConfig,
+    PayloadStepPreviewResponse,
+    PayloadStepRequest,
+    PayloadStepValidationResponse,
 )
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9_-]{0,158}[a-z0-9])?$")
@@ -608,6 +613,50 @@ async def append_foreach_odata_step(session: AsyncSession, draft_id: UUID, step:
     return _draft_read(draft), saved
 
 
+def validate_payload_step(request: PayloadStepRequest) -> PayloadStepValidationResponse:
+    context = _payload_step_context(request.previous_variables, request.payload_step)
+    return PayloadStepValidationResponse(
+        valid=not context["errors"],
+        errors=context["errors"],
+        warnings=context["warnings"],
+        body_type=request.payload_step.body_type,
+        save_as=request.payload_step.save_as.strip(),
+        variables_after_step=context["variables_after_step"],
+        error_code=context["error_code"],
+    )
+
+
+def preview_payload_step(request: PayloadStepRequest) -> PayloadStepPreviewResponse:
+    context = _payload_step_context(request.previous_variables, request.payload_step)
+    return PayloadStepPreviewResponse(
+        valid=not context["errors"],
+        errors=context["errors"],
+        warnings=context["warnings"],
+        body_type=request.payload_step.body_type,
+        save_as=request.payload_step.save_as.strip(),
+        variables_after_step=context["variables_after_step"],
+        error_code=context["error_code"],
+        rendered_preview=context["rendered_preview"],
+        size_bytes=context["size_bytes"],
+    )
+
+
+async def append_payload_step(session: AsyncSession, draft_id: UUID, step: PayloadStepConfig, previous_variables: dict[str, Any]) -> tuple[InputDraftRead, PayloadStepConfig]:
+    draft = await session.get(IntegrationMasterDraft, draft_id)
+    if draft is None:
+        raise NotFoundError("Integration Master draft not found")
+    validation = validate_payload_step(PayloadStepRequest(input_contract=InputContract(**draft.contract_json), previous_variables=previous_variables, payload_step=step))
+    if not validation.valid:
+        raise BadRequestError("; ".join(validation.errors))
+    saved = _normalized_payload_step(step)
+    existing_steps = [item for item in (draft.odata_steps_json or []) if isinstance(item, dict)]
+    steps = [item for item in existing_steps if item.get("id") != saved.id]
+    steps.append(saved.model_dump(mode="json"))
+    draft.odata_steps_json = steps
+    await session.flush()
+    return _draft_read(draft), saved
+
+
 def endpoint_url(slug: str) -> str:
     return f"/api/bus/in/{slug}"
 
@@ -812,6 +861,53 @@ def _value_type_ru(value: Any) -> str:
     if isinstance(value, (int, float)):
         return "числом"
     return type(value).__name__
+
+
+def _payload_step_context(previous_variables: dict[str, Any], step: PayloadStepConfig) -> dict[str, Any]:
+    errors = _validate_payload_step_fields(step, previous_variables)
+    warnings: list[str] = []
+    rendered_preview: Any = None
+    size_bytes = 0
+    error_code: str | None = None
+    try:
+        result = render_payload_step(step, previous_variables)
+        rendered_preview = result.rendered_preview
+        size_bytes = result.size_bytes
+        warnings.extend(result.warnings)
+    except PayloadRenderError as exc:
+        errors.append(exc.message)
+        error_code = exc.code
+    return {
+        "errors": _dedupe_errors(errors),
+        "warnings": _dedupe_errors(warnings),
+        "rendered_preview": rendered_preview,
+        "size_bytes": size_bytes,
+        "variables_after_step": _variables_after_payload_step(step),
+        "error_code": error_code,
+    }
+
+
+def _validate_payload_step_fields(step: PayloadStepConfig, previous_variables: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    save_as = step.save_as.strip()
+    if not save_as:
+        errors.append("Укажите имя переменной результата, например target_payload.")
+    elif not SAVE_AS_PATTERN.fullmatch(save_as):
+        errors.append("Имя переменной save_as должно содержать латиницу, цифры и underscore, и не начинаться с цифры.")
+    elif save_as in previous_variables and not step.overwrite:
+        errors.append(f"Переменная {save_as} уже существует. Выберите другое имя или подтвердите overwrite.")
+
+    if step.body_type == "json":
+        if step.json_mode == "table" and not step.fields and not step.dynamic_entries:
+            errors.append("Добавьте хотя бы одно поле JSON или dynamic object entry.")
+        if step.json_mode == "raw_template" and not step.template:
+            errors.append("Укажите raw JSON template.")
+    elif step.body_type in {"xml", "raw_text"}:
+        if not step.template:
+            errors.append("Укажите template для body.")
+    else:
+        errors.append("Выберите формат тела: JSON, XML или raw text.")
+    return _dedupe_errors(errors)
 
 
 def _odata_step_context(contract: InputContract, sample_input: Any, step: ODataStepConfig) -> dict[str, Any]:
@@ -1071,6 +1167,10 @@ def _variables_after_foreach_step(step: ForeachODataStepConfig, first_item: dict
     return [f"{save_as}[]"] + [f"{save_as}[0].{field}" for field in fields]
 
 
+def _variables_after_payload_step(step: PayloadStepConfig) -> list[str]:
+    return [step.save_as.strip() or "target_payload"]
+
+
 def _normalized_odata_step(step: ODataStepConfig) -> ODataStepConfig:
     save_as = step.save_as.strip()
     step_id = step.id or f"find_{save_as}"
@@ -1115,6 +1215,25 @@ def _normalized_foreach_odata_step(step: ForeachODataStepConfig) -> ForeachOData
     )
 
 
+def _normalized_payload_step(step: PayloadStepConfig) -> PayloadStepConfig:
+    save_as = step.save_as.strip()
+    step_id = step.id or f"build_{save_as}"
+    step_id = STEP_ID_PATTERN.sub("_", step_id).strip("_") or f"build_{save_as}"
+    return step.model_copy(
+        update={
+            "id": step_id,
+            "save_as": save_as,
+            "fields": [field.model_copy(update={"target_path": field.target_path.strip()}) for field in step.fields if field.target_path.strip()],
+            "dynamic_entries": [
+                entry.model_copy(update={"object_path": entry.object_path.strip(), "key_source": entry.key_source.strip()})
+                for entry in step.dynamic_entries
+                if entry.object_path.strip() and entry.key_source.strip()
+            ],
+            "last_preview_status": "success",
+        }
+    )
+
+
 def _merge_foreach_rows(grouped_rows: list[dict[str, Any]], merge: str) -> Any:
     if merge == "group_by_item":
         return grouped_rows
@@ -1144,7 +1263,9 @@ def _first_foreach_row(grouped_rows: list[dict[str, Any]]) -> dict[str, Any] | N
     return None
 
 
-def _step_read(item: dict[str, Any]) -> ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig:
+def _step_read(item: dict[str, Any]) -> ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig | PayloadStepConfig:
+    if item.get("type") == "build_payload":
+        return PayloadStepConfig(**item)
     if item.get("type") == "foreach_odata":
         return ForeachODataStepConfig(**item)
     if item.get("type") == "odata_object_query":

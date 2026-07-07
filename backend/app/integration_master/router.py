@@ -34,6 +34,11 @@ from app.integration_master.schemas import (
     ODataStepSaveResponse,
     ODataStepTestResponse,
     ODataStepValidationResponse,
+    PayloadStepPreviewResponse,
+    PayloadStepRequest,
+    PayloadStepSaveRequest,
+    PayloadStepSaveResponse,
+    PayloadStepValidationResponse,
 )
 
 router = APIRouter(prefix="/api/integration-master", tags=["integration-master"])
@@ -151,6 +156,31 @@ async def append_foreach_odata_step(draft_id: UUID, request: ForeachODataStepSav
         "next_steps": [
             "JSON/XML builder будет следующим этапом",
             "Endpoint send и full integration compile позже",
+            "Запустить Dry Run и проверить Timeline/DLQ позже",
+        ],
+    }
+
+
+@router.post("/payload/validate", response_model=PayloadStepValidationResponse)
+async def validate_payload_step(request: PayloadStepRequest):
+    return service.validate_payload_step(request)
+
+
+@router.post("/payload/preview", response_model=PayloadStepPreviewResponse)
+async def preview_payload_step(request: PayloadStepRequest):
+    return service.preview_payload_step(request)
+
+
+@router.post("/drafts/{draft_id}/payload-steps", response_model=PayloadStepSaveResponse)
+async def append_payload_step(draft_id: UUID, request: PayloadStepSaveRequest, session: AsyncSession = Depends(get_session)):
+    draft, saved_step = await service.append_payload_step(session, draft_id, request.payload_step, request.previous_variables)
+    await session.commit()
+    return {
+        "draft": draft,
+        "saved_step": saved_step,
+        "next_steps": [
+            "Endpoint send и caller response будут следующими этапами",
+            "Full integration compile пока не выполняется",
             "Запустить Dry Run и проверить Timeline/DLQ позже",
         ],
     }

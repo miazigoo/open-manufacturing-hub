@@ -23,7 +23,7 @@ from app.resolvers.models import ResolverDefinitionV2
 from app.secrets.models import Secret
 from app.secrets.redaction import collect_secret_references, raw_secret_warnings
 
-MIGRATION_HEAD = "0026_env_profiles_changes"
+MIGRATION_HEAD = "0028_im_odata_steps"
 
 
 async def database_revision(session: AsyncSession) -> str | None:

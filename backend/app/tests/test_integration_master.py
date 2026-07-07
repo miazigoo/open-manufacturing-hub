@@ -153,6 +153,65 @@ def _foreach_step(connector_id, **overrides):
     return step
 
 
+def _payload_variables(codes=None, **overrides):
+    variables = _previous_variables_with_products()
+    variables.update(
+        {
+            "request": {
+                "body": {
+                    "operation": "dnp_sinc_pull_codes",
+                    "sinc": "dnp_sinc_pull_codes",
+                    "order_id": 10271,
+                    "order_name": "26-0666/6938",
+                    "Number": "260666/6938",
+                }
+            },
+            "codes": codes
+            or [
+                {"КодМаркировки": "code-001", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"},
+                {"КодМаркировки": "code-002", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"},
+            ],
+            "context": {"run_id": "run-001", "event_id": "evt-001"},
+        }
+    )
+    variables.update(overrides)
+    return variables
+
+
+def _payload_step(**overrides):
+    step = {
+        "id": "build_dnp_payload",
+        "type": "build_payload",
+        "body_type": "json",
+        "save_as": "target_payload",
+        "json_mode": "raw_template",
+        "template": {
+            "omh": {
+                "run_id": "{{context.run_id}}",
+                "event_id": "{{context.event_id}}",
+                "entity_id": "{{request.body.order_name}}",
+                "event_type": "ChestniyZnakCodesSyncRequested",
+                "entity_type": "DnPOrder",
+                "source_system": "Open Manufacturing Hub",
+                "target_system": "DnP",
+                "correlation_id": "dnp-chz-sync:{{request.body.order_name}}",
+            },
+            "payload": {
+                "rows": "{{codes}}",
+                "order": "{{order}}",
+                "order_id": "{{request.body.order_id}}",
+                "order_name": "{{request.body.order_name}}",
+                "codes_count": "{{codes.length}}",
+                "first_gtin": "{{codes[0].GTIN}}",
+                "onec_order_number": "{{order.Number}}",
+                "order_numbers_by_basis": {"{{order.Ref_Key}}": "{{order.Number}}"},
+            },
+        },
+    }
+    step.update(overrides)
+    return step
+
+
 async def test_integration_master_scenarios_include_dnp(client):
     response = await client.get("/api/integration-master/scenarios")
     assert response.status_code == 200, response.text
@@ -756,3 +815,172 @@ async def test_append_foreach_odata_step_to_master_draft(client):
     )
     assert saved_again.status_code == 200, saved_again.text
     assert len(saved_again.json()["draft"]["odata_steps"]) == 3
+
+
+async def test_payload_step_preview_renders_dnp_json_with_type_preserving_placeholders(client):
+    contract, _ = await _create_master_contract(client)
+
+    response = await client.post(
+        "/api/integration-master/payload/preview",
+        json={"input_contract": contract, "previous_variables": _payload_variables(), "payload_step": _payload_step()},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    rendered = body["rendered_preview"]
+    assert rendered["omh"]["run_id"] == "run-001"
+    assert rendered["omh"]["correlation_id"] == "dnp-chz-sync:26-0666/6938"
+    assert isinstance(rendered["payload"]["rows"], list)
+    assert rendered["payload"]["rows"][0]["КодМаркировки"] == "code-001"
+    assert isinstance(rendered["payload"]["order"], dict)
+    assert rendered["payload"]["order"]["Ref_Key"] == ORDER_GUID
+    assert rendered["payload"]["order_id"] == 10271
+    assert rendered["payload"]["codes_count"] == 2
+    assert rendered["payload"]["first_gtin"] == "04601234567890"
+    assert rendered["payload"]["order_numbers_by_basis"] == {ORDER_GUID: "260666/6938"}
+    assert body["variables_after_step"] == ["target_payload"]
+
+
+async def test_payload_step_json_table_builder_supports_dynamic_object_entries(client):
+    contract, _ = await _create_master_contract(client)
+    step = _payload_step(
+        json_mode="table",
+        template=None,
+        fields=[
+            {"target_path": "omh.run_id", "value_source": "context.run_id", "value_type": "variable"},
+            {"target_path": "omh.event_type", "value_source": "ChestniyZnakCodesSyncRequested", "value_type": "constant_string"},
+            {"target_path": "omh.correlation_id", "value_source": "dnp-chz-sync:{{request.body.order_name}}", "value_type": "template_string"},
+            {"target_path": "payload.rows", "value_source": "codes", "value_type": "array"},
+            {"target_path": "payload.order_id", "value_source": "request.body.order_id", "value_type": "variable"},
+            {"target_path": "payload.onec_order_number", "value_source": "order.Number", "value_type": "variable"},
+        ],
+        dynamic_entries=[
+            {"object_path": "payload.order_numbers_by_basis", "key_source": "order.Ref_Key", "value_source": "order.Number", "value_type": "variable"},
+        ],
+    )
+
+    response = await client.post(
+        "/api/integration-master/payload/preview",
+        json={"input_contract": contract, "previous_variables": _payload_variables(), "payload_step": step},
+    )
+    assert response.status_code == 200, response.text
+    rendered = response.json()["rendered_preview"]
+    assert rendered["payload"]["rows"][1]["КодМаркировки"] == "code-002"
+    assert rendered["payload"]["order_numbers_by_basis"][ORDER_GUID] == "260666/6938"
+    assert rendered["omh"]["correlation_id"] == "dnp-chz-sync:26-0666/6938"
+
+
+async def test_payload_step_raw_json_template_string_is_validated_before_render(client):
+    contract, _ = await _create_master_contract(client)
+
+    invalid = await client.post(
+        "/api/integration-master/payload/validate",
+        json={"input_contract": contract, "previous_variables": _payload_variables(), "payload_step": _payload_step(template='{"payload": ')},
+    )
+    assert invalid.status_code == 200, invalid.text
+    assert invalid.json()["valid"] is False
+    assert invalid.json()["error_code"] == "PAYLOAD_JSON_INVALID"
+    assert "JSON template" in "; ".join(invalid.json()["errors"])
+
+    valid = await client.post(
+        "/api/integration-master/payload/preview",
+        json={"input_contract": contract, "previous_variables": _payload_variables(), "payload_step": _payload_step(template='{"rows":"{{codes}}","keyed":{"{{order.Ref_Key}}":"{{order.Number}}"}}')},
+    )
+    assert valid.status_code == 200, valid.text
+    rendered = valid.json()["rendered_preview"]
+    assert rendered["rows"][0]["КодМаркировки"] == "code-001"
+    assert rendered["keyed"][ORDER_GUID] == "260666/6938"
+
+
+async def test_payload_step_missing_variable_returns_friendly_error_code(client):
+    contract, _ = await _create_master_contract(client)
+
+    response = await client.post(
+        "/api/integration-master/payload/preview",
+        json={"input_contract": contract, "previous_variables": _payload_variables(), "payload_step": _payload_step(template={"payload": {"basis": "{{order.Missing}}"}})},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is False
+    assert body["error_code"] == "VARIABLE_NOT_FOUND"
+    assert body["errors"] == ["Переменная order.Missing не найдена."]
+
+
+async def test_payload_step_xml_and_raw_text_render(client):
+    contract, _ = await _create_master_contract(client)
+
+    xml_response = await client.post(
+        "/api/integration-master/payload/preview",
+        json={
+            "input_contract": contract,
+            "previous_variables": _payload_variables(order={"Ref_Key": ORDER_GUID, "Number": "260666&6938"}),
+            "payload_step": {
+                "type": "build_payload",
+                "body_type": "xml",
+                "save_as": "target_payload",
+                "template": "<Response><RowsCount>{{codes.length}}</RowsCount><Order>{{order.Number}}</Order></Response>",
+            },
+        },
+    )
+    assert xml_response.status_code == 200, xml_response.text
+    assert xml_response.json()["valid"] is True
+    assert xml_response.json()["rendered_preview"] == "<Response><RowsCount>2</RowsCount><Order>260666&amp;6938</Order></Response>"
+
+    raw_response = await client.post(
+        "/api/integration-master/payload/preview",
+        json={
+            "input_contract": contract,
+            "previous_variables": _payload_variables(),
+            "payload_step": {
+                "type": "build_payload",
+                "body_type": "raw_text",
+                "save_as": "target_payload",
+                "template": "OK order={{order.Number}} codes={{codes.length}}",
+            },
+        },
+    )
+    assert raw_response.status_code == 200, raw_response.text
+    assert raw_response.json()["rendered_preview"] == "OK order=260666/6938 codes=2"
+
+
+async def test_append_payload_step_to_master_draft(client):
+    contract, parse_result = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+    saved = await client.post("/api/integration-master/input/save-draft", json={"contract": contract, "parse_result": parse_result})
+    assert saved.status_code == 200, saved.text
+    draft_id = saved.json()["draft"]["id"]
+
+    first_step = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-steps",
+        json={"input_contract": contract, "odata_step": _order_step(connector["id"])},
+    )
+    assert first_step.status_code == 200, first_step.text
+
+    second_step = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-object-steps",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "odata_object_step": _object_step(connector["id"])},
+    )
+    assert second_step.status_code == 200, second_step.text
+
+    third_step = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/foreach-odata-steps",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(), "foreach_step": _foreach_step(connector["id"])},
+    )
+    assert third_step.status_code == 200, third_step.text
+
+    response = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/payload-steps",
+        json={"input_contract": contract, "previous_variables": _payload_variables(), "payload_step": _payload_step()},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["saved_step"]["id"] == "build_dnp_payload"
+    assert body["saved_step"]["type"] == "build_payload"
+    assert body["saved_step"]["body_type"] == "json"
+    assert body["saved_step"]["save_as"] == "target_payload"
+    assert body["saved_step"]["last_preview_status"] == "success"
+    assert body["draft"]["odata_steps"][3]["type"] == "build_payload"
+
+    loaded = await client.get(f"/api/integration-master/drafts/{draft_id}")
+    assert loaded.status_code == 200, loaded.text
+    assert loaded.json()["odata_steps"][3]["save_as"] == "target_payload"

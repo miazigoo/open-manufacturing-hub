@@ -1,6 +1,6 @@
 """integration master odata step drafts
 
-Revision ID: 0028_integration_master_odata_steps
+Revision ID: 0028_im_odata_steps
 Revises: 0027_integration_master_drafts
 Create Date: 2026-07-07
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0028_integration_master_odata_steps"
+revision: str = "0028_im_odata_steps"
 down_revision: str | None = "0027_integration_master_drafts"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

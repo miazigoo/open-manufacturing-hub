@@ -13,6 +13,18 @@ ODataFilterOperator = Literal["eq", "ne", "contains", "gt", "lt", "ge", "le"]
 ODataValueType = Literal["string", "number", "boolean", "variable", "guid", "raw"]
 ODataObjectKeyType = Literal["guid", "string", "number", "raw"]
 ForeachODataMergeMode = Literal["flatten", "group_by_item", "first_per_item"]
+PayloadBodyType = Literal["json", "xml", "raw_text"]
+JsonPayloadMode = Literal["table", "raw_template"]
+JsonPayloadValueType = Literal[
+    "variable",
+    "template_string",
+    "constant_string",
+    "constant_number",
+    "constant_boolean",
+    "constant_null",
+    "object",
+    "array",
+]
 
 
 class IntegrationScenario(BaseModel):
@@ -174,6 +186,32 @@ class ForeachODataStepConfig(BaseModel):
     last_test_status: str | None = None
 
 
+class JsonPayloadFieldConfig(BaseModel):
+    target_path: str = ""
+    value_source: Any = None
+    value_type: JsonPayloadValueType = "variable"
+
+
+class JsonPayloadDynamicEntryConfig(BaseModel):
+    object_path: str = ""
+    key_source: str = ""
+    value_source: Any = None
+    value_type: JsonPayloadValueType = "variable"
+
+
+class PayloadStepConfig(BaseModel):
+    id: str | None = None
+    type: Literal["build_payload"] = "build_payload"
+    body_type: PayloadBodyType = "json"
+    save_as: str = "target_payload"
+    json_mode: JsonPayloadMode = "table"
+    template: Any = None
+    fields: list[JsonPayloadFieldConfig] = Field(default_factory=list)
+    dynamic_entries: list[JsonPayloadDynamicEntryConfig] = Field(default_factory=list)
+    overwrite: bool = False
+    last_preview_status: str | None = None
+
+
 class ResourceRenderResult(BaseModel):
     template_resource: str
     rendered_resource: str | None = None
@@ -195,6 +233,12 @@ class ForeachODataStepRequest(BaseModel):
     input_contract: InputContract
     previous_variables: dict[str, Any] = Field(default_factory=dict)
     foreach_step: ForeachODataStepConfig
+
+
+class PayloadStepRequest(BaseModel):
+    input_contract: InputContract | None = None
+    previous_variables: dict[str, Any] = Field(default_factory=dict)
+    payload_step: PayloadStepConfig
 
 
 class ODataStepValidationResponse(BaseModel):
@@ -250,6 +294,21 @@ class ForeachODataStepPreviewResponse(ForeachODataStepValidationResponse):
     items: str
     item_as: str
     merge: ForeachODataMergeMode
+
+
+class PayloadStepValidationResponse(BaseModel):
+    valid: bool
+    errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    body_type: PayloadBodyType
+    save_as: str
+    error_code: str | None = None
+    variables_after_step: list[str] = Field(default_factory=list)
+
+
+class PayloadStepPreviewResponse(PayloadStepValidationResponse):
+    rendered_preview: Any = None
+    size_bytes: int = 0
 
 
 class ODataStepTestResponse(BaseModel):
@@ -313,6 +372,12 @@ class ForeachODataStepSaveRequest(BaseModel):
     foreach_step: ForeachODataStepConfig
 
 
+class PayloadStepSaveRequest(BaseModel):
+    input_contract: InputContract | None = None
+    previous_variables: dict[str, Any] = Field(default_factory=dict)
+    payload_step: PayloadStepConfig
+
+
 class InputContractValidationRequest(BaseModel):
     contract: InputContract
 
@@ -337,7 +402,7 @@ class InputDraftRead(BaseModel):
     input_mode: InputMode
     source_system: str
     contract: InputContract
-    odata_steps: list[ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig] = Field(default_factory=list)
+    odata_steps: list[ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig | PayloadStepConfig] = Field(default_factory=list)
     parse_result: InputParseResponse | None = None
     endpoint_url: str
     created_at: datetime
@@ -359,6 +424,12 @@ class ODataObjectStepSaveResponse(BaseModel):
 class ForeachODataStepSaveResponse(BaseModel):
     draft: InputDraftRead
     saved_step: ForeachODataStepConfig
+    next_steps: list[str]
+
+
+class PayloadStepSaveResponse(BaseModel):
+    draft: InputDraftRead
+    saved_step: PayloadStepConfig
     next_steps: list[str]
 
 

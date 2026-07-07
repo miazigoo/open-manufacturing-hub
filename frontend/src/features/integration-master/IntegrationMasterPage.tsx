@@ -13,6 +13,7 @@ import { MasterStepLayout } from './MasterStepLayout';
 import { ODataObjectStepBuilder } from './odata-object-step/ODataObjectStepBuilder';
 import { OperationKeySelector } from './OperationKeySelector';
 import { ODataStepBuilder } from './odata-step/ODataStepBuilder';
+import { PayloadBuilder } from './payload-builder/PayloadBuilder';
 import { ParsedFieldsTable } from './ParsedFieldsTable';
 import { SampleInputEditor } from './SampleInputEditor';
 import { ScenarioChooser } from './ScenarioChooser';
@@ -113,6 +114,7 @@ export function IntegrationMasterPage() {
   const savedResponse = savedDraft ? { draft: savedDraft, next_steps: saveDraft.data?.next_steps ?? [] } : saveDraft.data ?? null;
   const hasSavedODataQuery = Boolean(savedDraft?.odata_steps.some((step) => !step.type || step.type === 'odata_query'));
   const hasSavedObjectStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'odata_object_query'));
+  const hasSavedForeachStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'foreach_odata'));
 
   return (
     <div className="page-stack integration-master-page">
@@ -158,7 +160,9 @@ export function IntegrationMasterPage() {
 
       {savedDraft && hasSavedODataQuery ? <ODataObjectStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
 
-      {savedDraft && hasSavedObjectStep ? <ForeachODataStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} /> : null}
+      {savedDraft && hasSavedObjectStep ? <ForeachODataStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
+
+      {savedDraft && hasSavedForeachStep ? <PayloadBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
     </div>
   );
 }
@@ -227,8 +231,15 @@ function defaultSample(mode: InputMode) {
 }
 
 function deriveVariablesFromDraft(draft: InputDraftRead | null): Record<string, unknown> {
-  const variables: Record<string, unknown> = {};
+  const variables: Record<string, unknown> = draft ? {
+    request: requestVariableFromDraft(draft),
+    context: { run_id: 'preview-run-001', event_id: 'preview-event-001' },
+  } : {};
   for (const step of draft?.odata_steps ?? []) {
+    if (step.type === 'build_payload') {
+      variables[step.save_as] = step.body_type === 'json' ? {} : '';
+      continue;
+    }
     if (step.type === 'odata_object_query') {
       variables[step.save_as] = [];
       continue;
@@ -241,4 +252,14 @@ function deriveVariablesFromDraft(draft: InputDraftRead | null): Record<string, 
     variables[step.save_as] = Object.fromEntries(fields.map((field) => [field, null]));
   }
   return variables;
+}
+
+function requestVariableFromDraft(draft: InputDraftRead) {
+  if (draft.contract.input_mode === 'json' && draft.contract.sample && typeof draft.contract.sample === 'object') {
+    return { body: draft.contract.sample };
+  }
+  if (draft.contract.input_mode === 'raw_text') {
+    return { body: {}, raw_text: String(draft.contract.sample ?? '') };
+  }
+  return { body: {}, xml: String(draft.contract.sample ?? '') };
 }

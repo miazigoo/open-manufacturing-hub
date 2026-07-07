@@ -5,6 +5,9 @@ export type ODataFilterOperator = 'eq' | 'ne' | 'contains' | 'gt' | 'lt' | 'ge' 
 export type ODataValueType = 'string' | 'number' | 'boolean' | 'variable' | 'guid' | 'raw';
 export type ODataObjectKeyType = 'guid' | 'string' | 'number' | 'raw';
 export type ForeachODataMergeMode = 'flatten' | 'group_by_item' | 'first_per_item';
+export type PayloadBodyType = 'json' | 'xml' | 'raw_text';
+export type JsonPayloadMode = 'table' | 'raw_template';
+export type JsonPayloadValueType = 'variable' | 'template_string' | 'constant_string' | 'constant_number' | 'constant_boolean' | 'constant_null' | 'object' | 'array';
 
 export interface IntegrationScenario {
   key: string;
@@ -172,7 +175,33 @@ export interface ForeachODataStepConfig {
   last_test_status?: string | null;
 }
 
-export type IntegrationMasterODataStep = ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig;
+export interface JsonPayloadFieldConfig {
+  target_path: string;
+  value_source: unknown;
+  value_type: JsonPayloadValueType;
+}
+
+export interface JsonPayloadDynamicEntryConfig {
+  object_path: string;
+  key_source: string;
+  value_source: unknown;
+  value_type: JsonPayloadValueType;
+}
+
+export interface PayloadStepConfig {
+  id?: string | null;
+  type: 'build_payload';
+  body_type: PayloadBodyType;
+  save_as: string;
+  json_mode: JsonPayloadMode;
+  template?: unknown;
+  fields: JsonPayloadFieldConfig[];
+  dynamic_entries: JsonPayloadDynamicEntryConfig[];
+  overwrite?: boolean;
+  last_preview_status?: string | null;
+}
+
+export type IntegrationMasterODataStep = ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig | PayloadStepConfig;
 
 export interface ODataStepRequest {
   input_contract: InputContract;
@@ -190,6 +219,12 @@ export interface ForeachODataStepRequest {
   input_contract: InputContract;
   previous_variables: Record<string, unknown>;
   foreach_step: ForeachODataStepConfig;
+}
+
+export interface PayloadStepRequest {
+  input_contract?: InputContract | null;
+  previous_variables: Record<string, unknown>;
+  payload_step: PayloadStepConfig;
 }
 
 export interface ODataStepValidationResponse {
@@ -245,6 +280,21 @@ export interface ForeachODataStepPreviewResponse extends ForeachODataStepValidat
   items: string;
   item_as: string;
   merge: ForeachODataMergeMode;
+}
+
+export interface PayloadStepValidationResponse {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  body_type: PayloadBodyType;
+  save_as: string;
+  error_code?: string | null;
+  variables_after_step: string[];
+}
+
+export interface PayloadStepPreviewResponse extends PayloadStepValidationResponse {
+  rendered_preview?: unknown;
+  size_bytes: number;
 }
 
 export interface ODataStepTestResponse {
@@ -326,5 +376,11 @@ export interface ODataObjectStepSaveResponse {
 export interface ForeachODataStepSaveResponse {
   draft: InputDraftRead;
   saved_step: ForeachODataStepConfig;
+  next_steps: string[];
+}
+
+export interface PayloadStepSaveResponse {
+  draft: InputDraftRead;
+  saved_step: PayloadStepConfig;
   next_steps: string[];
 }
