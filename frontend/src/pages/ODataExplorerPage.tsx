@@ -147,7 +147,7 @@ export function ODataExplorerPage() {
   const [newKey, setNewKey] = useState({ name: 'Lookup order products', operation: 'lookup_order_products', description: 'External system asks OMH to run this flow.', example_request_json: '{\n  "operation": "lookup_order_products",\n  "Number": "260666/6938",\n  "device_type": "toodoo"\n}' });
   const [newKeyTouched, setNewKeyTouched] = useState(false);
   const [showTriggerModal, setShowTriggerModal] = useState(false);
-  const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('continue_odata');
+  const [nextAction, setNextAction] = useState<'continue_odata' | 'return_all' | 'send_result'>('send_result');
   const tabularPart = 'Продукция';
   const [wizardStep, setWizardStep] = useState<WizardStep>('trigger');
   const [target, setTarget] = useState({ method: 'POST', url: '' });
@@ -726,10 +726,12 @@ export function ODataExplorerPage() {
               <button type="button" className={`builder-help-card action-card ${nextAction === 'return_all' ? 'active' : ''}`} onClick={() => setNextAction('return_all')}>
                 <strong>Вернуть ответ</strong>
                 <span>После OData вернуть результат вызывающему backend. Поле URL в финале не появится.</span>
+                {nextAction === 'return_all' && <em>Выбрано</em>}
               </button>
               <button type="button" className={`builder-help-card action-card ${nextAction === 'send_result' ? 'active' : ''}`} onClick={() => setNextAction('send_result')}>
                 <strong>Отправить на endpoint</strong>
                 <span>После OData отправить результат на внешний URL и вернуть короткий JSON-ответ, например <code>{'{"ok":true}'}</code>.</span>
+                {nextAction === 'send_result' && <em>Выбрано</em>}
               </button>
             </div>
             <label className="field-label">
