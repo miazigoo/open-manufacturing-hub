@@ -12,6 +12,7 @@ export const docLinks: Record<string, string> = {
   'onec.visual-flow-builder': '/docs/onec/tools/visual-flow-builder',
   'onec.troubleshooting': '/docs/onec/support/errors-timeline-artifacts',
   'integration-flows': '/docs/onec/tools/visual-flow-builder',
+  'integration-master': '/docs/reference/integration-master/overview',
   'test-console': '/docs/onec/scenarios/onec-post-two-odata-json-endpoint',
   'timeline.errors': '/docs/onec/support/errors-timeline-artifacts',
   'queue': '/docs/core/start/concepts',

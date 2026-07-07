@@ -94,7 +94,74 @@ Package добавляет доменную функциональность: 1C
   onecPackageSeed,
   {
     id: 'reference', title: 'Reference', description: 'API и runtime contracts для интеграций.', order: 25, accent: 'green',
-    sections: [{ id: 'odata-master', title: 'OData Master', description: 'Wizard spec, API и компиляция в Integration Flow.', order: 10, pages: [
+    sections: [
+      { id: 'integration-master', title: 'Integration Master', description: 'Scenario chooser и Input Contract первого шага.', order: 5, pages: [
+      { packageId: 'reference', sectionId: 'integration-master', slug: 'overview', title: 'Reference: Integration Master', description: 'Scenario chooser, input parser, endpoint slug и draft Input Contract.', order: 5, markdown: `# Reference: Integration Master
+
+\`/master\` — первый шаг общего мастера интеграции. Он отвечает на вопрос: кто вызывает OMH и что придет во входящем запросе.
+
+Этот шаг не строит OData, foreach, response builder и final action. Он сохраняет только \`InputContract\`, который следующие шаги мастера смогут использовать дальше.
+
+## Product route
+
+\`\`\`text
+/master
+\`\`\`
+
+## Backend endpoints
+
+\`\`\`text
+GET  /api/integration-master/scenarios
+POST /api/integration-master/input/parse
+POST /api/integration-master/input/validate
+POST /api/integration-master/input/save-draft
+GET  /api/integration-master/drafts/{draft_id}
+\`\`\`
+
+## Input Contract
+
+\`\`\`json
+{
+  "name": "DnP запрашивает пул кодов Честного знака",
+  "slug": "dnp_sinc_pull_codes",
+  "input_mode": "json",
+  "source_system": "dnp",
+  "scenario_key": "dnp_chz_code_pool",
+  "fields": [
+    {
+      "name": "Number",
+      "path": "request.body.Number",
+      "type": "string",
+      "required": true,
+      "example": "260666/6938"
+    }
+  ],
+  "operation_key": {
+    "type": "field",
+    "field_path": "request.body.sinc",
+    "value": "dnp_sinc_pull_codes",
+    "fallback_paths": ["request.body.operation"]
+  },
+  "business_key": {
+    "path": "request.body.order_name",
+    "fallback_paths": ["request.body.Number"]
+  }
+}
+\`\`\`
+
+## Parser rules
+
+- JSON paths look like \`request.body.operation\`.
+- Arrays expose \`request.body.items[]\` and first item paths such as \`request.body.items[0].sku\`.
+- XML paths look like \`xml./Документ/Номер\`, with display path \`/Документ/Номер\`.
+- Raw text exposes \`request.raw_text\` and simple \`key=value\` fields when possible.
+- Sample size limit is 256 KB.
+
+## Slug rule
+
+Endpoint slug allows only lowercase letters, numbers, \`-\` and \`_\`, and must start and end with a letter or number.` },
+    ] },
+    { id: 'odata-master', title: 'OData Master', description: 'Wizard spec, API и компиляция в Integration Flow.', order: 10, pages: [
       { packageId: 'reference', sectionId: 'odata-master', slug: 'overview', title: 'Reference: OData Master', description: 'Backend endpoints, wizard spec, limits and compiler output.', order: 10, markdown: `# Reference: OData Master
 
 Backend endpoints:

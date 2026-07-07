@@ -2605,6 +2605,38 @@ DLQ -> inspect artifacts, fix, replay
 ].map(withSelfCheck).map(withPedagogicalPass);
 
 export const referencePages: PageSeed[] = [
+  page('reference', 'integration-master', 'Reference — Integration Master', 'Первый шаг мастера: scenario chooser, sample parser и Input Contract.', 4, md(`
+# Reference — Integration Master
+
+\`/master\` — общий мастер интеграции. В первом шаге пользователь выбирает сценарий, формат входящего запроса и пример body.
+
+Результат шага — \`InputContract\`: fields, route key, business key и endpoint slug.
+
+## Endpoints
+
+~~~text
+GET  /api/integration-master/scenarios
+POST /api/integration-master/input/parse
+POST /api/integration-master/input/validate
+POST /api/integration-master/input/save-draft
+GET  /api/integration-master/drafts/{draft_id}
+~~~
+
+## Что поддерживает step 1
+
+- JSON paths: \`request.body.operation\`.
+- Arrays: \`request.body.items[]\`, \`request.body.items[0].sku\`.
+- XML paths: \`xml./Документ/Номер\`.
+- Raw text: \`request.raw_text\` и простые \`key=value\`.
+- Endpoint slug validation.
+- Draft сохранение без создания боевой интеграции.
+
+## Non-goals
+
+На этом шаге не создаются OData steps, foreach, response builder, final action, run test и Timeline.
+
+::open-page{route="/master" label="Открыть Мастер интеграции"}
+`)),
   page('reference', 'odata-master', 'Reference - OData Master', 'Wizard spec, backend API и compilation в Integration Flow.', 5, md(`
 # Reference - OData Master
 

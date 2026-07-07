@@ -1218,3 +1218,21 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.integration-master-hero {
+  background: radial-gradient(circle at 12% 8%, rgba(240,179,90,.2), transparent 26%), radial-gradient(circle at 88% 18%, rgba(143,198,180,.18), transparent 28%), linear-gradient(135deg, rgba(247,239,218,.09), rgba(0,0,0,.18));
+}
+.integration-master-step { background: linear-gradient(145deg, rgba(247,239,218,.075), rgba(143,198,180,.045)); }
+.integration-scenario-grid .scenario-choice-card { text-align: left; cursor: pointer; font: inherit; }
+.integration-scenario-grid .scenario-choice-card.selected { transform: translateY(-2px); }
+.builder-help-card.active, .input-mode-card.active { border-color: rgba(240,179,90,.72); background: radial-gradient(circle at 100% 0%, rgba(240,179,90,.2), transparent 36%), linear-gradient(135deg, rgba(240,179,90,.12), rgba(143,198,180,.08)); }
+.input-mode-card:disabled { opacity: .52; cursor: not-allowed; }
+.integration-fields-table { overflow-x: auto; }
+.integration-fields-table table { min-width: 1080px; }
+.integration-fields-table code { color: var(--accent-2); font-size: 12px; }
+.integration-fields-table input { min-width: 220px; }
+.compact-check { gap: 8px; white-space: nowrap; }
+.input-contract-preview .json-panel { margin-top: 0; }
+@media (max-width: 860px) {
+  .integration-master-page .metadata-grid, .integration-master-page .compact-grid { grid-template-columns: minmax(0, 1fr); }
+}

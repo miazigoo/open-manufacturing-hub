@@ -14,6 +14,7 @@ export interface HelpTopic {
 export const helpTopics: Record<string, HelpTopic> = {
   dashboard: { id: 'dashboard', title: 'Where should I start?', description: 'Use onboarding when this is the first environment or when you need a repeatable setup path.', actions: ['Open onboarding', 'Install packages', 'Create connector', 'Run first example'], docId: 'core.overview' },
   'onec-cockpit': { id: 'onec-cockpit', title: '1C Cockpit', description: 'Cockpit is the command center for 1C integrations: presets, health, recent events and quick starts.', actions: ['Create integration', 'Check connector health', 'Open recent timeline'], example: 'Run 1C POST -> API example', docId: 'onec.cockpit', tourId: 'onec-cockpit-first-tour' },
+  'integration-master': { id: 'integration-master', title: 'Мастер интеграции', description: 'Начинайте интеграцию с входящего контракта: сценарий, sample, поля, route key, business key и endpoint slug.', actions: ['Выберите сценарий', 'Разберите sample', 'Проверьте поля', 'Сохраните draft'], example: 'DnP CHZ input contract', docId: 'integration-master' },
   'odata-explorer': { id: 'odata-explorer', title: 'Мастер OData-интеграции', description: 'Соберите входящий запрос, OData-шаги, foreach, payload и сохраните рабочую интеграцию.', actions: ['Вставьте пример запроса', 'Добавьте OData-шаги', 'Выберите итоговое действие', 'Проверьте и сохраните'], example: 'DnP CHZ code pool sync', docId: 'onec.odata-master', tourId: 'odata-explorer-first-tour' },
   'xml-tools': { id: 'xml-tools', title: 'XML Tools', description: 'Validate, hash, diff and forward raw XML without losing the original payload.', actions: ['Paste XML', 'Validate structure', 'Compare hash', 'Forward raw body'], example: 'Run XML raw bridge example', docId: 'onec.xml-tools' },
   'integration-flows': { id: 'integration-flows', title: 'Integration Flow Builder', description: 'Create no-code integration flows with endpoint, matcher, lookup, transform and target action.', actions: ['Install visual preset', 'Create flow', 'Test matcher', 'Open visual builder'], example: 'Run 1C POST -> API example', docId: 'integration-flows', tourId: 'visual-flow-builder-first-tour' },
@@ -31,6 +32,7 @@ export const helpTopics: Record<string, HelpTopic> = {
 export function helpForPath(pathname: string): HelpTopic | null {
   if (pathname === '/') return helpTopics.dashboard;
   if (pathname.startsWith('/onec-cockpit')) return helpTopics['onec-cockpit'];
+  if (pathname.startsWith('/master')) return helpTopics['integration-master'];
   if (pathname.startsWith('/odata-explorer')) return helpTopics['odata-explorer'];
   if (pathname.startsWith('/xml-tools')) return helpTopics['xml-tools'];
   if (pathname.startsWith('/integration-flows')) return helpTopics['integration-flows'];

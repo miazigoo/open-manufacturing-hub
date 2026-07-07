@@ -18,6 +18,7 @@ const PackageDetailsPage = lazy(() => import('./pages/PackageDetailsPage').then(
 const PluginStorePage = lazy(() => import('./pages/PluginStorePage').then((m) => ({ default: m.PluginStorePage })));
 const IntegrationBusPage = lazy(() => import('./pages/IntegrationBusPage').then((m) => ({ default: m.IntegrationBusPage })));
 const IntegrationFlowsPage = lazy(() => import('./pages/IntegrationFlowsPage').then((m) => ({ default: m.IntegrationFlowsPage })));
+const IntegrationMasterPage = lazy(() => import('./features/integration-master/IntegrationMasterPage').then((m) => ({ default: m.IntegrationMasterPage })));
 const OperationKeysPage = lazy(() => import('./pages/OperationKeysPage').then((m) => ({ default: m.OperationKeysPage })));
 const VisualFlowBuilderPage = lazy(() => import('./pages/VisualFlowBuilderPage').then((m) => ({ default: m.VisualFlowBuilderPage })));
 const IntegrationDesignerPage = lazy(() => import('./pages/IntegrationDesignerPage').then((m) => ({ default: m.IntegrationDesignerPage })));
@@ -107,6 +108,7 @@ export function App() {
           <Route path="onec-cockpit" element={onec(<OneCCockpitPage />)} />
           <Route path="onec-cockpit/new" element={onec(<OneCCockpitWizardPage />)} />
           <Route path="integration-bus" element={<IntegrationBusPage />} />
+          <Route path="master" element={<IntegrationMasterPage />} />
           <Route path="integration-flows" element={<IntegrationFlowsPage />} />
           <Route path="operation-keys" element={<OperationKeysPage />} />
           <Route path="integration-flows/:flowId/builder" element={<VisualFlowBuilderPage />} />

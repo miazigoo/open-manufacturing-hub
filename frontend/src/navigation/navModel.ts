@@ -40,11 +40,12 @@ export const navModel: NavModelItem[] = [
   nav('health', 'Operate', 'Health', '/health', 'nav.health', simple, 70),
 
   nav('onec-cockpit', 'Build', '1C Cockpit', '/onec-cockpit', 'nav.onecCockpit', simple, 10, 'omh-package-onec'),
-  nav('request-response', 'Build', 'Request/Response Workbench', '/test-console', 'nav.testConsole', simple, 20),
-  nav('odata-connections', 'Build', 'OData Connections', '/odata-connections', 'onec.odataConnections', simple, 30, 'omh-package-onec'),
-  nav('odata-explorer', 'Build', 'Мастер OData', '/odata-explorer', 'nav.odataExplorer', simple, 40, 'omh-package-onec'),
-  nav('integration-flows', 'Build', 'Integration Flows', '/integration-flows', 'nav.integrationFlows', simple, 50),
-  nav('printing', 'Build', 'Printing', '/printing', 'nav.printing', advanced, 60, 'omh-package-printer'),
+  nav('integration-master', 'Build', 'Мастер интеграции', '/master', 'nav.integrationMaster', simple, 20),
+  nav('request-response', 'Build', 'Request/Response Workbench', '/test-console', 'nav.testConsole', simple, 30),
+  nav('odata-connections', 'Build', 'OData Connections', '/odata-connections', 'onec.odataConnections', simple, 40, 'omh-package-onec'),
+  nav('odata-explorer', 'Build', 'Мастер OData', '/odata-explorer', 'nav.odataExplorer', simple, 50, 'omh-package-onec'),
+  nav('integration-flows', 'Build', 'Integration Flows', '/integration-flows', 'nav.integrationFlows', simple, 60),
+  nav('printing', 'Build', 'Printing', '/printing', 'nav.printing', advanced, 70, 'omh-package-printer'),
 
   nav('packages', 'Packages', 'Packages', '/packages', 'nav.packages', simple, 10),
   nav('production', 'Packages', 'Production', '/production', 'nav.production', simple, 20),

@@ -21,6 +21,7 @@ from app.notifications.models import NotificationDelivery, NotificationRule  # n
 from app.onboarding.models import OnboardingState  # noqa: F401
 from app.maintenance.models import MaintenanceWindow  # noqa: F401
 from app.incidents.models import Incident, IncidentEvent  # noqa: F401
+from app.integration_master.models import IntegrationMasterDraft  # noqa: F401
 from app.health.models import AgentHeartbeat, HealthCheck, Site  # noqa: F401
 from app.mappings.models import MappingDefinition, MappingVersion  # noqa: F401
 from app.polling.models import PollingJob, PollingJobRun, SourceEventCursor  # noqa: F401

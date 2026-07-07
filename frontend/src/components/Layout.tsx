@@ -141,12 +141,12 @@ function TopBar({ onCreateIntegration }: { onCreateIntegration: () => void }) {
 
 const scenarioCards = [
   {
-    title: 'Внешний сервис обращается к нам',
-    input: 'HTTP запрос: JSON, XML или текст',
-    output: 'Синхронный ответ JSON/XML/raw или event_id',
-    does: 'OMH принимает запрос, при необходимости идет в OData, собирает ответ и показывает timeline.',
-    best: 'Сайт, WMS, терминал или внешний API ждёт ответ сразу.',
-    to: '/test-console?mode=build',
+    title: 'Начать с входящего контракта',
+    input: 'JSON, XML или raw text от 1C, WMS, DnP, сайта или внешнего API',
+    output: 'Input Contract draft: поля, route key, business key и endpoint slug',
+    does: 'OMH разбирает пример запроса и готовит понятный контракт для следующих шагов мастера.',
+    best: 'Любая новая интеграция, где сначала нужно понять входящее сообщение.',
+    to: '/master',
     primary: true,
   },
   {
