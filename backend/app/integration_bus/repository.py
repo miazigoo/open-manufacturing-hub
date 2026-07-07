@@ -22,6 +22,11 @@ async def get_endpoint_by_slug(session: AsyncSession, slug: str) -> IntegrationE
     return result.scalar_one_or_none()
 
 
+async def get_endpoint_by_name(session: AsyncSession, name: str) -> IntegrationEndpoint | None:
+    result = await session.execute(select(IntegrationEndpoint).where(IntegrationEndpoint.name == name))
+    return result.scalar_one_or_none()
+
+
 async def list_routes(session: AsyncSession) -> list[IntegrationRoute]:
     result = await session.execute(select(IntegrationRoute).order_by(IntegrationRoute.priority, IntegrationRoute.name))
     return list(result.scalars().all())

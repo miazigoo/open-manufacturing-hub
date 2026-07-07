@@ -35,7 +35,7 @@ interface InputField {
 }
 
 function slugify(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'odata-chain';
+  return value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[\-_]+|[\-_]+$/g, '').slice(0, 80) || 'odata-chain';
 }
 
 function keyify(value: string) {
@@ -662,12 +662,13 @@ export function ODataExplorerPage() {
             <input
               value={flowForm.slug}
               onChange={(event) => setFlowForm({ ...flowForm, slug: slugify(event.target.value) })}
-              title="Технический код интеграции: латиница, цифры и дефисы. Используется как внутренний идентификатор flow и часть endpoint-настроек. Можно оставить автозначение."
+              title="Технический код интеграции: латиница, цифры, дефис и нижнее подчеркивание. Используется как часть URL /api/bus/in/<slug>. Символы вроде @ не используются в slug."
             />
-            <span className="field-hint">Технический код flow: латиница, цифры, дефисы. Можно оставить автозначение.</span>
+            <span className="field-hint">Технический код flow: латиница, цифры, дефис и _. Это часть URL, поэтому @ и пробелы заменяются.</span>
           </label>
         </div>
         <label className="field-label">Description<input value={flowForm.description} onChange={(event) => setFlowForm({ ...flowForm, description: event.target.value })} /></label>
+        <div className="success-note">Сохранение не отправляет POST на внешний URL<span>Сейчас сохраняется настройка flow. Внешний URL будет использоваться только при запуске интеграции входящим запросом или тестовым запуском.</span></div>
         <div className="success-note">Trigger для сохранения<span><code>{triggerFieldFromSample(parseInputSample(inputSampleText))}</code> = <code>{triggerValueFromSample(parseInputSample(inputSampleText), flowForm.operation)}</code></span></div>
         {renderDraftSummary()}
         <div className="action-row wrap-actions">

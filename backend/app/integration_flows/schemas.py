@@ -18,7 +18,7 @@ class EndpointBuilderConfig(BaseModel):
 
 class IntegrationFlowCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
-    slug: str = Field(min_length=1, max_length=160, pattern=r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$")
+    slug: str = Field(min_length=1, max_length=160, pattern=r"^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$")
     description: str | None = None
     enabled: bool = True
     source_type: IntegrationFlowSourceType = IntegrationFlowSourceType.ONEC

@@ -230,9 +230,10 @@ async def install_dnp_pull_codes_preset(session: AsyncSession) -> IntegrationFlo
 
 
 async def _upsert_endpoint(session: AsyncSession, request: IntegrationFlowCreate, route_id: UUID, workflow_id: UUID, operation_id: UUID) -> IntegrationEndpoint:
-    endpoint = await bus_repository.get_endpoint_by_slug(session, request.slug)
+    endpoint_name = f"Flow {request.name} Endpoint"
+    endpoint = await bus_repository.get_endpoint_by_slug(session, request.slug) or await bus_repository.get_endpoint_by_name(session, endpoint_name)
     data = {
-        "name": f"Flow {request.name} Endpoint",
+        "name": endpoint_name,
         "slug": request.slug,
         "enabled": request.enabled,
         "description": request.description,
