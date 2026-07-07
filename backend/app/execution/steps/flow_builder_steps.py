@@ -356,6 +356,8 @@ async def _read_odata_items(context: PipelineContext, config: dict[str, Any], qu
     mock_items = _mock_odata_items(config, connector_config, query)
     if mock_items is not None:
         return mock_items, {"mock": True, "value": mock_items}
+    if config.get("paginate") is False:
+        connector_config = {**connector_config, "odata": {**(connector_config.get("odata") or {}), "max_pages": 1}}
     result = await read_odata(connector_config, resource, query)
     response_payload = result.response_payload or {"items_count": len(result.items)}
     if not result.success:

@@ -397,6 +397,7 @@ export function IntegrationFlowsPage() {
                             <div><dt>$filter</dt><dd>{String(step.filter ?? '') || 'не задан'}</dd></div>
                             <div><dt>$select</dt><dd>{Array.isArray(step.select) ? step.select.join(', ') : String(step.select ?? '') || 'не задан'}</dd></div>
                             <div><dt>$top</dt><dd>{String(step.top ?? '') || 'не задан'}</dd></div>
+                            <div><dt>Pagination</dt><dd>{step.paginate ? 'читать следующие страницы' : 'только первая страница'}</dd></div>
                           </dl>
                         )}
                         {isForEach && (
@@ -409,6 +410,7 @@ export function IntegrationFlowsPage() {
                             <div><dt>Nested $filter</dt><dd>{String(nestedStep.filter ?? '') || 'не задан'}</dd></div>
                             <div><dt>Nested $select</dt><dd>{Array.isArray(nestedStep.select) ? nestedStep.select.join(', ') : String(nestedStep.select ?? '') || 'не задан'}</dd></div>
                             <div><dt>Nested $top</dt><dd>{String(nestedStep.top ?? '') || 'не задан'}</dd></div>
+                            <div><dt>Nested pagination</dt><dd>{nestedStep.paginate ? 'читать следующие страницы' : 'только первая страница'}</dd></div>
                           </dl>
                         )}
                         {unresolved.length > 0 && <em>Значения появятся после выполнения предыдущих шагов: {unresolved.join(', ')}</em>}

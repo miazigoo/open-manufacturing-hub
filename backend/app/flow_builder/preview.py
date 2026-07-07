@@ -229,6 +229,8 @@ async def _preview_odata_items(session: AsyncSession, step: dict[str, Any], quer
     if connector is None:
         raise ValueError(f"ODATA_CONNECTION_NOT_FOUND: {step.get('connection')}")
     connector_config = await SecretResolver(session).resolve_config(connector.config_json)
+    if step.get("paginate") is False:
+        connector_config = {**connector_config, "odata": {**(connector_config.get("odata") or {}), "max_pages": 1}}
     result = await read_odata(connector_config, str(step.get("resource")), query)
     if not result.success:
         raise ValueError(result.error_message or result.error_code or "ODATA_QUERY_FAILED")

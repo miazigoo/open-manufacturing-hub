@@ -25,6 +25,7 @@ interface DraftStep {
   filter: string;
   select: string[];
   top: number;
+  paginate?: boolean;
   save_as: string;
   items?: string;
   item_as?: string;
@@ -420,6 +421,7 @@ export function ODataExplorerPage() {
       filter: query.filter,
       select: query.select.split(',').map((item) => item.trim()).filter(Boolean),
       top: topValue(query.top),
+      paginate,
       save_as: saveAs,
       sample: run.data.items?.[0] ?? null,
       sample_items: run.data.items ?? [],
@@ -442,6 +444,7 @@ export function ODataExplorerPage() {
       filter: query.filter,
       select: query.select.split(',').map((item) => item.trim()).filter(Boolean),
       top: topValue(query.top),
+      paginate,
       save_as: saveAs,
       items: foreachSource,
       item_as: foreachItemAs || 'item',
@@ -539,6 +542,7 @@ export function ODataExplorerPage() {
               filter: step.filter,
               select: step.select,
               top: step.top,
+              paginate: step.paginate ?? false,
               required: false,
             },
           } : {
@@ -550,6 +554,7 @@ export function ODataExplorerPage() {
             filter: step.filter,
             select: step.select,
             top: step.top,
+            paginate: step.paginate ?? false,
             save_as: step.save_as,
             required: true,
           }),
@@ -591,6 +596,16 @@ export function ODataExplorerPage() {
   const latestDraftStep = draftSteps[draftSteps.length - 1] ?? null;
   const inputFields = requestInputFields();
   const inputSample = parseInputSample(inputSampleText);
+
+  function renderPaginationControl() {
+    return (
+      <label className="success-note check-row" title="Если 1C вернула полную страницу, OMH запросит следующую через $skip. Количество страниц ограничено настройкой max_pages в OData Connection.">
+        <input type="checkbox" checked={paginate} onChange={(event) => setPaginate(event.target.checked)} />
+        <strong>Загружать следующие страницы</strong>
+        <span>$top — это размер одной страницы, максимум {ODATA_EXPLORER_TOP_MAX}. Если включено, OMH будет читать следующие страницы через $skip до лимита max_pages в подключении.</span>
+      </label>
+    );
+  }
 
   function goToActionChoice() {
     run.reset();
@@ -767,10 +782,7 @@ export function ODataExplorerPage() {
             ))}
             <div className="action-row wrap-actions"><button type="button" className="ghost-button" onClick={applyFilters}>{t('integration.odataExplorer.applyFilter')}</button><span className="microcopy">{t('integration.odataExplorer.conditionsJoined')}</span></div>
           </div>
-          <label className="check-row" title={t('integration.odataExplorer.paginationHint')}>
-            <input type="checkbox" checked={paginate} onChange={(event) => setPaginate(event.target.checked)} />
-            {t('integration.odataExplorer.pagination')}
-          </label>
+          {renderPaginationControl()}
           <div className="action-row wrap-actions">
             <button type="submit" className="primary-button" disabled={!connectorId || !query.resource || run.isPending}>{t('integration.odataExplorer.runQuery')}</button>
             <button type="button" className="ghost-button" onClick={() => setWizardStep('choose_action')}>Назад</button>
@@ -883,10 +895,7 @@ export function ODataExplorerPage() {
           <label className="field-label">$filter<input value={query.filter} onChange={(event) => setQuery({ ...query, filter: event.target.value })} placeholder={`Номенклатура_Key eq guid'{{${foreachItemAs || 'item'}.Номенклатура_Key}}'`} /></label>
           {query.resource && <div className="success-note">Test resource preview<span>{renderNestedPreview(query.resource)}</span></div>}
           {query.filter && <div className="success-note">Test filter preview<span>{renderNestedPreview(query.filter)}</span></div>}
-          <label className="check-row" title={t('integration.odataExplorer.paginationHint')}>
-            <input type="checkbox" checked={paginate} onChange={(event) => setPaginate(event.target.checked)} />
-            {t('integration.odataExplorer.pagination')}
-          </label>
+          {renderPaginationControl()}
           <div className="action-row wrap-actions">
             <button type="submit" className="primary-button" disabled={!connectorId || !query.resource || !foreachSource || runForeach.isPending}>Запустить повтор</button>
             <button type="button" className="ghost-button" onClick={() => setWizardStep('choose_action')}>Назад</button>
