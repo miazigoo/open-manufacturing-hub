@@ -101,9 +101,16 @@ async def test_odata_master_json_response_preserves_arrays_and_saves_flow(client
 
     tested = await client.post("/api/odata-master/run-test", json={"flow_id": saved_body["integration_flow"]["id"]})
     assert tested.status_code == 200, tested.text
-    result = tested.json()["result"]
+    tested_body = tested.json()
+    result = tested_body["result"]
     assert result["bus_response"]["status"] == "completed"
     assert result["bus_response"]["response"]["products"][0]["Количество"] == 180
+    diagnostics = tested_body["diagnostics"]
+    assert diagnostics["event_id"] == result["bus_response"]["event_id"]
+    assert diagnostics["timeline_url"] == result["bus_response"]["timeline_url"]
+    artifact_names = {name for item in diagnostics["artifact_checklist"] for name in item["artifacts"]}
+    assert {"odata_query_request.json", "odata_query_response.json", "return_response.json"} <= artifact_names
+    assert any("Replay" in action or "Dry Run" in action for action in diagnostics["next_actions"])
 
 
 async def test_odata_master_xml_response_template(client):

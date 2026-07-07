@@ -123,6 +123,17 @@ All endpoints belong to \`omh-package-onec\`.
 
 The compiler creates a normal \`IntegrationFlow\`: endpoint, route, compiled workflow, \`builder_json\` and saved test case.
 
+## Run test diagnostics
+
+\`POST /api/odata-master/run-test\` returns \`diagnostics\` with:
+
+- \`event_id\`
+- \`timeline_url\`
+- \`artifact_checklist\`
+- \`next_actions\`
+
+Use \`artifact_checklist\` to guide the user to \`odata_query_request.json\`, \`odata_query_response.json\`, \`foreach_result.json\`, \`outgoing_request.json\` and \`return_response.json\` in Timeline.
+
 ## Limits
 
 - OData \`$top <= 500\`.

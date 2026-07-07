@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { odataMasterApi } from '../../api/odataMaster';
 import { ErrorState } from '../../components/ErrorState';
-import { JsonBlock } from '../../components/JsonBlock';
 import { LoadingState } from '../../components/LoadingState';
 import type { ODataWizardStep } from './types';
 import { FinalActionStep } from './components/FinalActionStep';
@@ -12,6 +11,7 @@ import { IntegrationSaveSuccess } from './components/IntegrationSaveSuccess';
 import { ODataForeachStepEditor } from './components/ODataForeachStepEditor';
 import { ODataStepEditor } from './components/ODataStepEditor';
 import { SourceSystemStep } from './components/SourceSystemStep';
+import { RunTestDiagnostics } from './components/RunTestDiagnostics';
 import { VariablePicker } from './components/VariablePicker';
 import { WizardStepSummary } from './components/WizardStepSummary';
 import { useODataConnections } from './hooks/useODataConnections';
@@ -112,7 +112,7 @@ export function ODataIntegrationWizard() {
             {runTest.error instanceof Error && <div className="error-state compact">{runTest.error.message}</div>}
           </section>
           <IntegrationPreview preview={preview.data} error={preview.error instanceof Error ? preview.error : null} pending={preview.isPending} />
-          {runTest.data && <JsonBlock title="Run test result" value={runTest.data.result} searchable />}
+          <RunTestDiagnostics result={runTest.data} />
         </>
       )}
 

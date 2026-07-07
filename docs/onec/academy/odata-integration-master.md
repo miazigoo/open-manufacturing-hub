@@ -29,7 +29,27 @@
 5. Нажмите `Проверить интеграцию`.
 6. Нажмите `Сохранить интеграцию`.
 7. Скопируйте endpoint вида `POST /api/bus/in/<slug>`.
-8. После теста откройте Timeline по `event_id`.
+8. Нажмите `Run test`.
+9. Откройте Timeline по ссылке из блока диагностики.
+10. Проверьте artifacts из checklist.
+
+## Что смотреть после Run test
+
+`Run test` возвращает не только raw JSON, но и диагностический блок:
+
+- `event_id` - идентификатор события.
+- `timeline_url` - прямая ссылка на Timeline.
+- `artifact_checklist` - список artifacts по каждому шагу.
+- `next_actions` - что делать после теста.
+
+Минимальный набор artifacts для OData flow:
+
+- `odata_query_request.json`
+- `odata_query_response.json`
+- `odata_query_result.json`
+- `foreach_result.json`, если используется foreach.
+- `outgoing_request.json`, если есть отправка на endpoint.
+- `return_response.json`
 
 ## Pagination
 

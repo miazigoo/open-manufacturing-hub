@@ -182,6 +182,23 @@ class ODataMasterSaveResponse(BaseModel):
     next_steps: list[str]
 
 
+class ODataMasterArtifactChecklistItem(BaseModel):
+    step_id: str
+    step_name: str
+    step_type: str
+    artifacts: list[str]
+    notes: list[str] = Field(default_factory=list)
+
+
+class ODataMasterRunDiagnostics(BaseModel):
+    status: str | None = None
+    event_id: UUID | None = None
+    timeline_url: str | None = None
+    artifact_checklist: list[ODataMasterArtifactChecklistItem] = Field(default_factory=list)
+    next_actions: list[str] = Field(default_factory=list)
+
+
 class ODataMasterRunTestResponse(BaseModel):
     mode: Literal["preview", "saved_flow"]
     result: dict[str, Any]
+    diagnostics: ODataMasterRunDiagnostics | None = None

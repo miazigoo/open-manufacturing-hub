@@ -10,6 +10,7 @@ from app.flow_builder.preview import preview_builder
 from app.integration_flows import service as flow_service
 from app.integration_flows.schemas import FlowTestRequest, IntegrationFlowCreate
 from app.odata_master.compiler import compile_wizard_spec
+from app.odata_master.diagnostics import artifact_checklist, run_next_actions
 from app.odata_master.examples import examples
 from app.odata_master.preview import preview_wizard
 from app.odata_master.schemas import (
@@ -81,11 +82,23 @@ async def run_test(request: ODataMasterRunTestRequest, session: AsyncSession = D
             ),
         )
         await session.commit()
-        return {"mode": "saved_flow", "result": result}
+        return {"mode": "saved_flow", "result": result, "diagnostics": _diagnostics(flow.builder_json or {}, result)}
 
     if request.spec is None:
         raise BadRequestError("Передайте spec или flow_id.")
     compiled = compile_wizard_spec(request.spec)
     sample = request.payload_json or compiled["flow_payload"].get("test_payload_json") or {}
     result = await preview_builder(session, compiled["builder_json"], sample, run_real_queries=request.run_real_queries)
-    return {"mode": "preview", "result": {"compiled": compiled, "preview": result}}
+    return {"mode": "preview", "result": {"compiled": compiled, "preview": result}, "diagnostics": _diagnostics(compiled["builder_json"], None)}
+
+
+def _diagnostics(builder_json: dict, result: dict | None) -> dict:
+    bus_response = result.get("bus_response") if isinstance(result, dict) and isinstance(result.get("bus_response"), dict) else None
+    timeline_url = str(bus_response.get("timeline_url")) if bus_response and bus_response.get("timeline_url") else None
+    return {
+        "status": str(bus_response.get("status")) if bus_response and bus_response.get("status") else "preview",
+        "event_id": bus_response.get("event_id") if bus_response else None,
+        "timeline_url": timeline_url,
+        "artifact_checklist": artifact_checklist(builder_json),
+        "next_actions": run_next_actions(timeline_url=timeline_url),
+    }

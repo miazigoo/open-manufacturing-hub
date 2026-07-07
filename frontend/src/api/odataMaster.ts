@@ -18,7 +18,9 @@ export interface ODataWizardSpec { name: string; slug: string; description?: str
 export interface ODataMasterExample { key: string; title: string; description: string; spec: ODataWizardSpec }
 export interface ODataMasterPreviewResponse { builder_json: Record<string, unknown>; flow_payload: Record<string, unknown>; validation: Record<string, unknown>; preview: Record<string, unknown> }
 export interface ODataMasterSaveResponse { integration_flow: Record<string, unknown>; endpoint_url: string; next_steps: string[] }
-export interface ODataMasterRunTestResponse { mode: 'preview' | 'saved_flow'; result: Record<string, unknown> }
+export interface ODataMasterArtifactChecklistItem { step_id: string; step_name: string; step_type: string; artifacts: string[]; notes: string[] }
+export interface ODataMasterRunDiagnostics { status?: string | null; event_id?: string | null; timeline_url?: string | null; artifact_checklist: ODataMasterArtifactChecklistItem[]; next_actions: string[] }
+export interface ODataMasterRunTestResponse { mode: 'preview' | 'saved_flow'; result: Record<string, unknown>; diagnostics?: ODataMasterRunDiagnostics | null }
 
 export const odataMasterApi = {
   examples: () => request<ODataMasterExample[]>('/api/odata-master/examples'),

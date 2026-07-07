@@ -5,6 +5,8 @@ export type {
   ODataForeachStep,
   ODataInputMode,
   ODataMasterExample,
+  ODataMasterArtifactChecklistItem,
+  ODataMasterRunDiagnostics,
   ODataMasterPreviewResponse,
   ODataMasterRunTestResponse,
   ODataMasterSaveResponse,

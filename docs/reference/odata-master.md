@@ -46,6 +46,34 @@ Supported final actions:
 
 Compiler output is an existing `IntegrationFlow` with `builder_json`, compiled workflow, endpoint, route and saved test case.
 
+## Run test diagnostics
+
+`POST /api/odata-master/run-test` returns:
+
+```json
+{
+  "mode": "saved_flow",
+  "result": {},
+  "diagnostics": {
+    "status": "completed",
+    "event_id": "00000000-0000-0000-0000-000000000000",
+    "timeline_url": "/events/00000000-0000-0000-0000-000000000000",
+    "artifact_checklist": [
+      {
+        "step_id": "step_1_order",
+        "step_name": "Find order",
+        "step_type": "odata_query",
+        "artifacts": ["odata_query_request.json", "odata_query_response.json", "odata_query_result.json"],
+        "notes": ["Check connection, resource, query and row count."]
+      }
+    ],
+    "next_actions": ["Open Timeline and inspect artifacts."]
+  }
+}
+```
+
+Preview-mode run test has no `event_id` or `timeline_url`; it still returns `artifact_checklist` so the UI can explain what will appear after saving and running the flow.
+
 ## Limits
 
 - OData `$top` must be `<= 500`.
