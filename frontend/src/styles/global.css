@@ -338,9 +338,22 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .flow-wizard { background: linear-gradient(145deg, rgba(247,239,218,.08), rgba(143,198,180,.055)); }
 .wizard-step { border: 1px solid var(--line); background: rgba(0,0,0,.14); padding: 14px; display: grid; gap: 12px; }
 .flow-detail { display: grid; gap: 16px; }
+.flow-overview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.flow-overview-grid span { border: 1px solid var(--line); background: rgba(0,0,0,.14); padding: 12px; color: var(--muted); display: grid; gap: 7px; min-width: 0; }
+.flow-overview-grid strong { color: var(--ink); overflow-wrap: anywhere; }
+.flow-operator-grid { display: grid; grid-template-columns: minmax(280px, .85fr) minmax(360px, 1.15fr); gap: 14px; align-items: start; }
+.flow-operator-card { border: 1px solid rgba(143,198,180,.24); background: rgba(143,198,180,.07); padding: 14px; display: grid; gap: 12px; min-width: 0; }
+.flow-step-list { display: grid; gap: 10px; }
+.flow-step-card { border: 1px solid var(--line); background: rgba(0,0,0,.18); padding: 12px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; }
+.flow-step-card > span { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid rgba(240,179,90,.46); color: var(--accent); font-family: var(--font-mono); font-weight: 700; }
+.flow-step-card div { display: grid; gap: 5px; min-width: 0; }
+.flow-step-card small { color: var(--accent-2); font-family: var(--font-mono); overflow-wrap: anywhere; }
 .flow-output-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.technical-details { border: 1px solid var(--line); background: rgba(0,0,0,.12); padding: 12px; }
+.technical-details summary { cursor: pointer; color: var(--accent); font-weight: 700; }
+.technical-details .flow-output-grid { margin-top: 12px; }
 @media (max-width: 1180px) {
-  .flow-layout, .flow-output-grid { grid-template-columns: minmax(0, 1fr); }
+  .flow-layout, .flow-output-grid, .flow-operator-grid, .flow-overview-grid { grid-template-columns: minmax(0, 1fr); }
   .flow-list-panel { position: static; }
 }
 .no-margin { margin: 0; }

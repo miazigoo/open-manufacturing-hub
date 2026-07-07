@@ -34,6 +34,41 @@ function actionFor(kind: string, target: string, path: string) {
   return { type: 'call_rest_api', target_connector: target || 'DNP Service', method: 'POST', path: path || '/api/marking/codes/pool', body_mode: 'json', payload_source: 'incoming_payload', response_mode: 'proxy_response' };
 }
 
+function humanType(value: string) {
+  const labels: Record<string, string> = {
+    external_api: 'Входящий HTTP-запрос',
+    odata_lookup: 'Цепочка OData',
+    onec: '1C',
+    website: 'Сайт',
+    wms: 'WMS',
+    printer: 'Принтер',
+    internal: 'Внутренний flow',
+    manual: 'Ручной запуск',
+    webhook: 'Webhook',
+  };
+  return labels[value] ?? value;
+}
+
+function getBodyPathEquals(matcher: Record<string, unknown>, path: string) {
+  const rules = Array.isArray(matcher.rules) ? matcher.rules : [];
+  const rule = rules.find((item) => item && typeof item === 'object' && (item as Record<string, unknown>).type === 'body_path_equals' && (item as Record<string, unknown>).path === path) as Record<string, unknown> | undefined;
+  return typeof rule?.value === 'string' ? rule.value : null;
+}
+
+function builderSteps(builder: Record<string, unknown> | null) {
+  const steps = builder && Array.isArray(builder.steps) ? builder.steps : [];
+  return steps.filter((step): step is Record<string, unknown> => Boolean(step && typeof step === 'object'));
+}
+
+function stepSummary(step: Record<string, unknown>, index: number) {
+  const type = String(step.type ?? '');
+  if (type === 'read_variable') return { title: `Прочитать ${String(step.save_as ?? step.path ?? 'поле')}`, detail: String(step.path ?? '') };
+  if (type === 'odata_query') return { title: `OData: ${String(step.name ?? step.resource ?? `шаг ${index + 1}`)}`, detail: String(step.resource ?? '') };
+  if (type === 'return_response') return { title: 'Вернуть результат вызывающей системе', detail: 'Синхронный ответ из собранных данных' };
+  if (type === 'call_endpoint') return { title: 'Отправить результат во внешнюю систему', detail: String(step.url ?? step.target ?? '') };
+  return { title: String((step.name ?? type) || `Шаг ${index + 1}`), detail: type };
+}
+
 export function IntegrationFlowsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -154,7 +189,61 @@ export function IntegrationFlowsPage() {
       </section>
 
       {selected && <VersionHistoryPanel objectType="integration_flow" objectId={selected.id} compact onChanged={refresh} />}
-      {selected && <section className="panel flow-detail" data-tour="flow-detail"><div className="panel-toolbar"><div><span className="eyebrow">{t('integration.flowBuilder.selectedFlow')}</span><h2>{selected.name}</h2><p>{selected.description}</p></div><StatusBadge status={selected.enabled ? 'ok' : 'cancelled'} label={selected.enabled ? t('integration.flowBuilder.enabled') : t('integration.flowBuilder.disabled')} /></div><div className="metadata-grid compact-grid"><span>Endpoint<strong>{selected.endpoint_url}</strong></span><span>{t('integration.flowBuilder.source')}<strong>{selected.source_type}</strong></span><span>{t('integration.flowBuilder.target')}<strong>{selected.target_type}</strong></span></div><div className="action-row"><Link className="primary-button" to={`/integration-flows/${selected.id}/builder`}>{t('integration.flowBuilder.openVisualBuilder')}</Link><button className="primary-button" onClick={() => exportForProduction.mutate(selected)} disabled={exportForProduction.isPending}>{t('integration.flowBuilder.exportProduction')}</button><Link className="ghost-button" to={`/config-history/integration_flow/${selected.id}`}>{t('integration.flowBuilder.releaseControl')}</Link><button className="primary-button" onClick={() => runSelectedFlow(selected)} disabled={testFlow.isPending}>{t('integration.flowBuilder.testThisFlow')}</button><button className="ghost-button" onClick={() => navigator.clipboard?.writeText(selected.endpoint_url)}>{t('integration.flowBuilder.copyUrl')}</button><button className="ghost-button" onClick={() => duplicate.mutate(selected.id)} disabled={duplicate.isPending}>{t('integration.flowBuilder.duplicate')}</button><button className="ghost-button" onClick={() => exportFlow.mutate(selected.id)} disabled={exportFlow.isPending}>{t('integration.flowBuilder.export')}</button>{selected.endpoint_id && <Link className="primary-link" to="/test-console">{t('integration.flowBuilder.openTestConsole')}</Link>}</div>{exportForProduction.error instanceof Error && <div className="error-state compact">{exportForProduction.error.message}</div>}<section className="flow-output-grid"><JsonBlock title="Matcher" value={selected.matcher_group_json} searchable={false} /><JsonBlock title="Builder JSON" value={selected.builder_json ?? selected.action_json} searchable={false} /><CodeBlock title="curl" code={selected.curl_example} language="bash" /><CodeBlock title="1C HTTP" code={selected.onec_http_example} language="bash" /></section></section>}
+      {selected && (
+        <section className="panel flow-detail" data-tour="flow-detail">
+          <div className="panel-toolbar">
+            <div>
+              <span className="eyebrow">{t('integration.flowBuilder.selectedFlow')}</span>
+              <h2>{selected.name}</h2>
+              <p>{selected.description}</p>
+            </div>
+            <StatusBadge status={selected.enabled ? 'ok' : 'cancelled'} label={selected.enabled ? t('integration.flowBuilder.enabled') : t('integration.flowBuilder.disabled')} />
+          </div>
+          <div className="flow-overview-grid">
+            <span>Endpoint<strong>{selected.endpoint_url}</strong></span>
+            <span>Trigger key<strong>{(getBodyPathEquals(selected.matcher_group_json, 'operation') ?? getBodyPathEquals(selected.matcher_group_json, 'sinc')) || 'Не задан'}</strong></span>
+            <span>{t('integration.flowBuilder.source')}<strong>{humanType(selected.source_type)}</strong></span>
+            <span>{t('integration.flowBuilder.target')}<strong>{humanType(selected.target_type)}</strong></span>
+          </div>
+          <div className="action-row">
+            <Link className="primary-button" to={`/integration-flows/${selected.id}/builder`}>{t('integration.flowBuilder.openVisualBuilder')}</Link>
+            <button className="primary-button" onClick={() => exportForProduction.mutate(selected)} disabled={exportForProduction.isPending}>{t('integration.flowBuilder.exportProduction')}</button>
+            <Link className="ghost-button" to={`/config-history/integration_flow/${selected.id}`}>{t('integration.flowBuilder.releaseControl')}</Link>
+            <button className="primary-button" onClick={() => runSelectedFlow(selected)} disabled={testFlow.isPending}>{t('integration.flowBuilder.testThisFlow')}</button>
+            <button className="ghost-button" onClick={() => navigator.clipboard?.writeText(selected.endpoint_url)}>{t('integration.flowBuilder.copyUrl')}</button>
+            <button className="ghost-button" onClick={() => duplicate.mutate(selected.id)} disabled={duplicate.isPending}>{t('integration.flowBuilder.duplicate')}</button>
+            <button className="ghost-button" onClick={() => exportFlow.mutate(selected.id)} disabled={exportFlow.isPending}>{t('integration.flowBuilder.export')}</button>
+            {selected.endpoint_id && <Link className="primary-link" to="/test-console">{t('integration.flowBuilder.openTestConsole')}</Link>}
+          </div>
+          {exportForProduction.error instanceof Error && <div className="error-state compact">{exportForProduction.error.message}</div>}
+          <section className="flow-operator-grid">
+            <article className="flow-operator-card">
+              <span className="eyebrow">Входной JSON</span>
+              <JsonBlock title="Test payload" value={selected.test_payload_json ?? {}} searchable={false} />
+            </article>
+            <article className="flow-operator-card">
+              <span className="eyebrow">Цепочка шагов</span>
+              <div className="flow-step-list">
+                {builderSteps(selected.builder_json).length === 0 ? <span className="microcopy">Шаги не описаны в builder JSON.</span> : builderSteps(selected.builder_json).map((step, index) => {
+                  const summary = stepSummary(step, index);
+                  return <div className="flow-step-card" key={`${String(step.id ?? step.type)}-${index}`}><span>{index + 1}</span><div><strong>{summary.title}</strong><small>{summary.detail}</small></div></div>;
+                })}
+              </div>
+            </article>
+          </section>
+          <section className="flow-output-grid">
+            <CodeBlock title="curl" code={selected.curl_example} language="bash" />
+            <CodeBlock title="1C HTTP" code={selected.onec_http_example} language="bash" />
+          </section>
+          <details className="technical-details">
+            <summary>Технические настройки JSON</summary>
+            <section className="flow-output-grid">
+              <JsonBlock title="Matcher" value={selected.matcher_group_json} searchable={false} />
+              <JsonBlock title="Builder JSON" value={selected.builder_json ?? selected.action_json} searchable={false} />
+            </section>
+          </details>
+        </section>
+      )}
       {result !== null && <JsonBlock title={t('integration.flowBuilder.flowResult')} value={(result as Record<string, unknown>) ?? {}} searchable />}
     </div>
   );
