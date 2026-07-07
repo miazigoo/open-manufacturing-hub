@@ -60,13 +60,87 @@ function builderSteps(builder: Record<string, unknown> | null) {
   return steps.filter((step): step is Record<string, unknown> => Boolean(step && typeof step === 'object'));
 }
 
-function stepSummary(step: Record<string, unknown>, index: number) {
+function readPath(source: unknown, path: string) {
+  return path.split('.').reduce<unknown>((current, part) => {
+    if (current && typeof current === 'object' && part in current) return (current as Record<string, unknown>)[part];
+    return undefined;
+  }, source);
+}
+
+function formatPreviewValue(value: unknown) {
+  if (value === undefined) return 'не найдено в примере';
+  if (value === null) return 'null';
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+}
+
+function renderTemplatePreview(value: string, scope: Record<string, unknown>) {
+  return value.replace(/{{\s*([A-Za-z0-9_А-Яа-яЁё.-]+)\s*}}/g, (match, path: string) => {
+    const resolved = readPath(scope, path);
+    return resolved === undefined || resolved === null ? match : String(resolved);
+  });
+}
+
+function unresolvedTemplates(value: string) {
+  return Array.from(value.matchAll(/{{\s*([^}]+)\s*}}/g)).map((match) => match[1].trim());
+}
+
+function odataPath(step: Record<string, unknown>, scope: Record<string, unknown>) {
+  const resource = renderTemplatePreview(String(step.resource ?? ''), scope);
+  const params = new URLSearchParams();
+  const top = step.top === undefined || step.top === null ? '' : String(step.top);
+  const filter = renderTemplatePreview(String(step.filter ?? ''), scope);
+  const select = Array.isArray(step.select) ? step.select.join(',') : String(step.select ?? '');
+  if (top) params.set('$top', top);
+  if (filter) params.set('$filter', filter);
+  if (select) params.set('$select', select);
+  params.set('$format', 'json');
+  const query = params.toString().replaceAll('%24', '$').replaceAll('%2C', ',').replaceAll('%7B%7B', '{{').replaceAll('%7D%7D', '}}');
+  return query ? `${resource}?${query}` : resource;
+}
+
+function stepSummary(step: Record<string, unknown>, index: number, scope: Record<string, unknown>) {
   const type = String(step.type ?? '');
-  if (type === 'read_variable') return { title: `Прочитать ${String(step.save_as ?? step.path ?? 'поле')}`, detail: String(step.path ?? '') };
-  if (type === 'odata_query') return { title: `OData: ${String(step.name ?? step.resource ?? `шаг ${index + 1}`)}`, detail: String(step.resource ?? '') };
+  if (type === 'read_variable') {
+    const path = String(step.path ?? '');
+    const value = readPath(scope, path);
+    return { title: `Прочитать ${String((step.save_as ?? path) || 'поле')}`, detail: path, preview: formatPreviewValue(value), unresolved: [] };
+  }
+  if (type === 'odata_query') {
+    const resource = String(step.resource ?? '');
+    const filter = String(step.filter ?? '');
+    const renderedResource = renderTemplatePreview(resource, scope);
+    const renderedFilter = filter ? renderTemplatePreview(filter, scope) : '';
+    const pathPreview = odataPath(step, scope);
+    return {
+      title: `OData: ${String(step.name ?? resource ?? `шаг ${index + 1}`)}`,
+      detail: resource,
+      preview: pathPreview,
+      unresolved: [...unresolvedTemplates(renderedResource), ...unresolvedTemplates(renderedFilter), ...unresolvedTemplates(pathPreview)],
+    };
+  }
   if (type === 'return_response') return { title: 'Вернуть результат вызывающей системе', detail: 'Синхронный ответ из собранных данных' };
   if (type === 'call_endpoint') return { title: 'Отправить результат во внешнюю систему', detail: String(step.url ?? step.target ?? '') };
   return { title: String((step.name ?? type) || `Шаг ${index + 1}`), detail: type };
+}
+
+function flowStepSummaries(builder: Record<string, unknown> | null, testPayload: Record<string, unknown> | null) {
+  const scope: Record<string, unknown> = { request: { body: testPayload ?? {} } };
+  return builderSteps(builder).map((step, index) => {
+    const summary = stepSummary(step, index, scope);
+    if (String(step.type ?? '') === 'read_variable') {
+      const saveAs = String(step.save_as ?? '');
+      const path = String(step.path ?? '');
+      if (saveAs) scope[saveAs] = readPath(scope, path);
+    }
+    return { step, summary };
+  });
+}
+
+function targetSummary(builder: Record<string, unknown> | null) {
+  const target = builder?.target;
+  if (!target || typeof target !== 'object') return null;
+  const data = target as Record<string, unknown>;
+  return { method: String(data.method ?? 'POST'), url: String(data.url ?? '') };
 }
 
 export function IntegrationFlowsPage() {
@@ -224,13 +298,41 @@ export function IntegrationFlowsPage() {
             <article className="flow-operator-card">
               <span className="eyebrow">Цепочка шагов</span>
               <div className="flow-step-list">
-                {builderSteps(selected.builder_json).length === 0 ? <span className="microcopy">Шаги не описаны в builder JSON.</span> : builderSteps(selected.builder_json).map((step, index) => {
-                  const summary = stepSummary(step, index);
-                  return <div className="flow-step-card" key={`${String(step.id ?? step.type)}-${index}`}><span>{index + 1}</span><div><strong>{summary.title}</strong><small>{summary.detail}</small></div></div>;
+                {flowStepSummaries(selected.builder_json, selected.test_payload_json).length === 0 ? <span className="microcopy">Шаги не описаны в builder JSON.</span> : flowStepSummaries(selected.builder_json, selected.test_payload_json).map(({ step, summary }, index) => {
+                  const isOData = String(step.type ?? '') === 'odata_query';
+                  const unresolved = 'unresolved' in summary ? summary.unresolved ?? [] : [];
+                  return (
+                    <div className="flow-step-card" key={`${String(step.id ?? step.type)}-${index}`}>
+                      <span>{index + 1}</span>
+                      <div>
+                        <strong>{summary.title}</strong>
+                        <small>{summary.detail}</small>
+                        {'preview' in summary && summary.preview && <code>{summary.preview}</code>}
+                        {isOData && (
+                          <dl className="flow-step-settings">
+                            <div><dt>Connection</dt><dd>{String(step.connection ?? '')}</dd></div>
+                            <div><dt>Resource</dt><dd>{String(step.resource ?? '')}</dd></div>
+                            <div><dt>$filter</dt><dd>{String(step.filter ?? '') || 'не задан'}</dd></div>
+                            <div><dt>$select</dt><dd>{Array.isArray(step.select) ? step.select.join(', ') : String(step.select ?? '') || 'не задан'}</dd></div>
+                            <div><dt>$top</dt><dd>{String(step.top ?? '') || 'не задан'}</dd></div>
+                          </dl>
+                        )}
+                        {unresolved.length > 0 && <em>Значения появятся после выполнения предыдущих шагов: {unresolved.join(', ')}</em>}
+                      </div>
+                    </div>
+                  );
                 })}
               </div>
             </article>
           </section>
+          {targetSummary(selected.builder_json) && (
+            <section className="flow-target-card">
+              <span className="eyebrow">Финальная отправка</span>
+              <strong>{targetSummary(selected.builder_json)?.method} {targetSummary(selected.builder_json)?.url || 'URL не задан'}</strong>
+              <p className="microcopy">Это адрес, куда flow отправит собранный результат. Чтобы изменить его, откройте визуальный builder.</p>
+              <Link className="ghost-button" to={`/integration-flows/${selected.id}/builder`}>Редактировать настройки</Link>
+            </section>
+          )}
           <section className="flow-output-grid">
             <CodeBlock title="curl" code={selected.curl_example} language="bash" />
             <CodeBlock title="1C HTTP" code={selected.onec_http_example} language="bash" />

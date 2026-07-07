@@ -348,6 +348,15 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .flow-step-card > span { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid rgba(240,179,90,.46); color: var(--accent); font-family: var(--font-mono); font-weight: 700; }
 .flow-step-card div { display: grid; gap: 5px; min-width: 0; }
 .flow-step-card small { color: var(--accent-2); font-family: var(--font-mono); overflow-wrap: anywhere; }
+.flow-step-card code { color: var(--ink); background: rgba(0,0,0,.24); border: 1px solid rgba(143,198,180,.2); padding: 8px; overflow-wrap: anywhere; white-space: normal; }
+.flow-step-card em { color: var(--muted); font-style: normal; font-size: 12px; }
+.flow-step-settings { display: grid; gap: 6px; margin: 4px 0 0; }
+.flow-step-settings div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 8px; align-items: start; }
+.flow-step-settings dt { color: var(--muted); font-size: 12px; }
+.flow-step-settings dd { margin: 0; color: var(--ink); font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.flow-target-card { border: 1px solid rgba(240,179,90,.3); background: rgba(240,179,90,.08); padding: 14px; display: grid; gap: 10px; }
+.flow-target-card strong { overflow-wrap: anywhere; }
+.flow-target-card .ghost-button { width: fit-content; }
 .flow-output-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .technical-details { border: 1px solid var(--line); background: rgba(0,0,0,.12); padding: 12px; }
 .technical-details summary { cursor: pointer; color: var(--accent); font-weight: 700; }
