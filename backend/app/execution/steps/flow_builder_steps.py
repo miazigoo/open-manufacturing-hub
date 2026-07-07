@@ -144,11 +144,13 @@ class FlowCallEndpointStep:
             return _failed("TARGET_BODY_BUILD_FAILED", str(exc), config, "Check call body variable path.")
         payload = body if isinstance(body, dict) else {"body": body}
         method = str(config.get("method") or "POST").upper()
-        request_payload = {"connector": connector_name or None, "method": method, "url": direct_url or None, "path": config.get("path"), "body": payload}
+        headers = config.get("headers") if isinstance(config.get("headers"), dict) else {}
+        request_payload = {"connector": connector_name or None, "method": method, "url": direct_url or None, "path": config.get("path"), "headers": headers, "body": payload}
         request_artifact = ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "outgoing_request.json", request_payload)
         if direct_url:
             connector_context = ConnectorContext(event_id=context.event.id, run_id=context.run.id, step_id=context.current_step.id if context.current_step else None, correlation_id=context.correlation_id, source_system=context.source_system, target_system=direct_url, dry_run=context.dry_run, metadata={"step_name": config["step_id"], "url": direct_url, "method": method})
-            result = await RESTConnector().dry_run_send({"url": direct_url, "method": method}, payload, connector_context) if context.dry_run else await RESTConnector().send({"url": direct_url, "method": method}, payload, connector_context)
+            connector_config = {"url": direct_url, "method": method, "headers": headers}
+            result = await RESTConnector().dry_run_send(connector_config, payload, connector_context) if context.dry_run else await RESTConnector().send(connector_config, payload, connector_context)
             response = {"status_code": result.status_code, "body": result.response_payload or {}}
             variables = _variables_with_step(context, config["step_id"], {"request": result.request_payload or request_payload, "response": response})
             variables["response"] = response

@@ -20,6 +20,12 @@ def test_json_builder_preserves_types():
     assert result == {"pool_id": "POOL-001", "codes": ["c1"], "comment": "Pool POOL-001"}
 
 
+def test_json_builder_renders_template_keys():
+    scope = build_runtime_scope(request_body={}, variables={"order": {"Ref_Key": "order-guid", "Number": "260666/6938"}})
+    result = build_json_from_template({"order_numbers_by_basis": {"{{order.Ref_Key}}": "{{order.Number}}"}}, scope)
+    assert result == {"order_numbers_by_basis": {"order-guid": "260666/6938"}}
+
+
 async def test_visual_flow_builder_preset_preview_compile_and_dispatch(client):
     installed = await client.post("/api/scenario-library/onec-post-two-odata-to-endpoint/install")
     assert installed.status_code == 200, installed.text

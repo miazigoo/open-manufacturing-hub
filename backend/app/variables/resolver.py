@@ -37,7 +37,10 @@ def render_template(value: Any, scope: dict[str, Any]) -> Any:
     if isinstance(value, list):
         return [render_template(item, scope) for item in value]
     if isinstance(value, dict):
-        return {key: render_template(item, scope) for key, item in value.items()}
+        return {
+            _stringify(render_template(key, scope)) if isinstance(key, str) else key: render_template(item, scope)
+            for key, item in value.items()
+        }
     return value
 
 
