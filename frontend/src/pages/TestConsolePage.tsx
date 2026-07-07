@@ -72,13 +72,18 @@ function variableNameFromXmlPath(path: string, index = 0) {
 }
 
 function parseJsonObject(value: string, label: string): Record<string, unknown> {
-  const parsed = JSON.parse(value || '{}') as unknown;
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(`${label} must be a JSON object`);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value || '{}') as unknown;
+  } catch {
+    throw new Error(`${label}: JSON не читается. Проверьте кавычки, запятые и закрывающие скобки.`);
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(`${label}: нужен JSON-объект вида {"key":"value"}, а не массив или строка.`);
   return parsed as Record<string, unknown>;
 }
 
 function parseSample(inputMode: string, sample: string): Record<string, unknown> {
-  if (inputMode === 'json') return parseJsonObject(sample, 'Sample request');
+  if (inputMode === 'json') return parseJsonObject(sample, 'Пример входящего запроса');
   if (inputMode === 'xml') return { xml: sample };
   return { text: sample };
 }
@@ -86,7 +91,7 @@ function parseSample(inputMode: string, sample: string): Record<string, unknown>
 function extractFields(inputMode: string, sample: string): ExtractedField[] {
   if (inputMode === 'json') {
     try {
-      const parsed = parseJsonObject(sample, 'Sample request');
+      const parsed = parseJsonObject(sample, 'Пример входящего запроса');
       return flattenJson(parsed).map(([path, value]) => ({ path: `request.body.${path}`, value }));
     } catch {
       return [];
@@ -185,10 +190,10 @@ export function TestConsolePage() {
   });
   const testCreated = useMutation({
     mutationFn: () => {
-      if (!createdFlow) throw new Error('Create integration first');
+      if (!createdFlow) throw new Error('Сначала сохраните интеграцию, потом отправьте тестовый запрос.');
       return integrationFlowsApi.test(createdFlow.id, {
         input_mode: wizard.inputMode,
-        payload_json: wizard.inputMode === 'json' ? parseJsonObject(wizard.sample, 'Sample request') : null,
+        payload_json: wizard.inputMode === 'json' ? parseJsonObject(wizard.sample, 'Пример входящего запроса') : null,
         payload_text: wizard.inputMode === 'json' ? null : wizard.sample,
         headers_json: headersForWizard(),
         dry_run: false,
@@ -275,7 +280,7 @@ export function TestConsolePage() {
   }
 
   function headersForWizard(): Record<string, string> {
-    return parseJsonObject(wizard.headers, 'Headers') as Record<string, string>;
+    return parseJsonObject(wizard.headers, 'Заголовки ответа') as Record<string, string>;
   }
 
   function sampleForPreview() {
@@ -283,7 +288,7 @@ export function TestConsolePage() {
   }
 
   function buildBuilderJson() {
-    const responseBody = wizard.responseType === 'json' ? parseJsonObject(wizard.responseBody, 'Response body') : undefined;
+    const responseBody = wizard.responseType === 'json' ? parseJsonObject(wizard.responseBody, 'Тело ответа') : undefined;
     const headers = headersForWizard();
     const readSteps = wizard.inputMode === 'xml'
       ? [{
@@ -316,7 +321,7 @@ export function TestConsolePage() {
 
   function buildFlowPayload() {
     setBuilderError(null);
-    const sample = wizard.inputMode === 'json' ? parseJsonObject(wizard.sample, 'Sample request') : null;
+    const sample = wizard.inputMode === 'json' ? parseJsonObject(wizard.sample, 'Пример входящего запроса') : null;
     const builder = buildBuilderJson();
     return {
       name: wizard.name,
@@ -337,12 +342,12 @@ export function TestConsolePage() {
 
   function safePreview() {
     setBuilderError(null);
-    try { preview.mutate(); } catch (error) { setBuilderError(error instanceof Error ? error.message : 'Cannot preview integration'); }
+    try { preview.mutate(); } catch (error) { setBuilderError(error instanceof Error ? error.message : 'Не удалось собрать preview интеграции. Проверьте входящий JSON, заголовки и тело ответа.'); }
   }
 
   function safeCreate() {
     setBuilderError(null);
-    try { createFlow.mutate(); } catch (error) { setBuilderError(error instanceof Error ? error.message : 'Cannot create integration'); }
+    try { createFlow.mutate(); } catch (error) { setBuilderError(error instanceof Error ? error.message : 'Не удалось сохранить интеграцию. Проверьте обязательные поля и OData-шаги.'); }
   }
 
   function addXmlMapping(field: XmlPathItem) {
@@ -371,14 +376,14 @@ export function TestConsolePage() {
     return (
       <div className="two-column-page">
         <form className="panel form-panel stack-form" onSubmit={submit}>
-          <span className="eyebrow">Quick Send</span>
+          <span className="eyebrow">Быстрая проверка</span>
           <h2>Проверить существующий endpoint</h2>
-          <p className="microcopy">Оставлено как быстрый режим: выберите endpoint, вставьте JSON/XML/raw body и посмотрите ответ с Timeline.</p>
+          <p className="microcopy">Быстрый режим: выберите endpoint, вставьте JSON/XML/raw body и посмотрите ответ с Timeline.</p>
           {loadedExample && <div className="docs-example-loaded"><strong>{t(trainingExample.data ? 'integration.loadedTrainingExample' : 'integration.loadedDocsExample', { title: loadedExample.title[language] ?? loadedExample.title.en ?? loadedExample.id })}</strong><span>{t('integration.endpointSlug', { slug: loadedExample.endpoint_slug })}</span>{!form.endpoint_id && <small>{t('integration.endpointMissing')}</small>}</div>}
           {docsExample.error instanceof Error && <div className="error-state compact">{docsExample.error.message}</div>}
           {trainingExample.error instanceof Error && <div className="error-state compact">{trainingExample.error.message}</div>}
           <label className="field-label" data-tour="test-endpoint">{t('integration.endpoint')}<select value={form.endpoint_id} onChange={(event) => { const endpoint = endpoints.data?.find((item) => item.id === event.target.value); const nextMode = endpoint?.input_mode ?? form.input_mode; setForm({ ...form, endpoint_id: event.target.value, input_mode: nextMode, body: sampleForMode(nextMode) }); }}><option value="">{t('integration.selectEndpoint')}</option>{(endpoints.data ?? []).map((endpoint) => <option key={endpoint.id} value={endpoint.id}>{endpointLabel(endpoint)}</option>)}</select></label>
-          {selectedEndpoint && <div className="endpoint-select-preview"><strong>{endpointDisplayName(selectedEndpoint)}</strong><span>/api/bus/in/{selectedEndpoint.slug}</span><small>{selectedEndpoint.input_mode.toUpperCase()} · {responseModeLabel(selectedEndpoint.response_mode)} · {selectedEndpoint.auth_mode === 'static_token' ? 'token protected' : 'no UI auth required'}</small></div>}
+          {selectedEndpoint && <div className="endpoint-select-preview"><strong>{endpointDisplayName(selectedEndpoint)}</strong><span>/api/bus/in/{selectedEndpoint.slug}</span><small>{selectedEndpoint.input_mode.toUpperCase()} · {responseModeLabel(selectedEndpoint.response_mode)} · {selectedEndpoint.auth_mode === 'static_token' ? 'защищено token' : 'без token для входящего запроса'}</small></div>}
           <label className="field-label">{t('integration.inputMode')}<select value={form.input_mode} onChange={(event) => setForm({ ...form, input_mode: event.target.value, body: sampleForMode(event.target.value) })}><option value="json">json</option><option value="xml">xml</option><option value="raw_text">raw_text</option></select></label>
           <label className="field-label">{t('integration.headersJson')}<CodeEditor value={form.headers_json} onChange={(value) => setForm({ ...form, headers_json: value })} language="json" minRows={5} /></label>
           <label className="field-label" data-tour="test-body">{t('integration.body')}<CodeEditor value={form.body} onChange={(value) => setForm({ ...form, body: value })} language={form.input_mode === 'json' ? 'json' : form.input_mode === 'xml' ? 'xml' : 'text'} minRows={11} /></label>
@@ -401,12 +406,12 @@ export function TestConsolePage() {
       <div className="request-response-grid">
         <section className="panel stack-form request-response-builder">
           <WizardStep index="01" title="Кто будет вызывать OMH" description="Опишите внешний сервис и endpoint, который он будет дергать.">
-            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Source system<select value={wizard.source} onChange={(event) => updateWizard({ source: event.target.value })}><option value="external_api">External API / Website</option><option value="onec">1C</option><option value="wms">WMS</option><option value="webhook">Webhook</option><option value="manual">Other</option></select></label><label className="field-label">Integration name<input value={wizard.name} onChange={(event) => updateWizard({ name: event.target.value, slug: slugify(event.target.value) })} /></label><label className="field-label">Endpoint slug<input value={wizard.slug} onChange={(event) => updateWizard({ slug: slugify(event.target.value) })} /></label></div>
-            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Auth<select value={wizard.authMode} onChange={(event) => updateWizard({ authMode: event.target.value })}><option value="none">none</option><option value="static_token">static token</option></select></label>{wizard.authMode === 'static_token' && <label className="field-label">Token<input value={wizard.token} onChange={(event) => updateWizard({ token: event.target.value })} /></label>}<span className="success-note">Endpoint preview<span>POST /api/bus/in/{slugify(wizard.slug)}</span></span></div>
+            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Кто обращается<select value={wizard.source} onChange={(event) => updateWizard({ source: event.target.value })}><option value="external_api">Внешний API / сайт</option><option value="onec">1C</option><option value="wms">WMS</option><option value="webhook">Webhook</option><option value="manual">Другое</option></select></label><label className="field-label">Название интеграции<input value={wizard.name} onChange={(event) => updateWizard({ name: event.target.value, slug: slugify(event.target.value) })} /></label><label className="field-label">Адрес endpoint<input value={wizard.slug} onChange={(event) => updateWizard({ slug: slugify(event.target.value) })} /></label></div>
+            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Защита входящего запроса<select value={wizard.authMode} onChange={(event) => updateWizard({ authMode: event.target.value })}><option value="none">без token</option><option value="static_token">статический token</option></select></label>{wizard.authMode === 'static_token' && <label className="field-label">Token<input value={wizard.token} onChange={(event) => updateWizard({ token: event.target.value })} /></label>}<span className="success-note">Куда отправлять запрос<span>POST /api/bus/in/{slugify(wizard.slug)}</span></span></div>
           </WizardStep>
 
           <WizardStep index="02" title="Что приходит во входящем запросе" description="Вставьте пример JSON, XML или raw text. Ниже сразу появятся поля, которые можно использовать в OData filter и ответе.">
-            <label className="field-label">Input mode<select value={wizard.inputMode} onChange={(event) => changeInputMode(event.target.value)}><option value="json">JSON</option><option value="xml">XML</option><option value="raw_text">raw text</option></select></label>
+            <label className="field-label">Формат входящего запроса<select value={wizard.inputMode} onChange={(event) => changeInputMode(event.target.value)}><option value="json">JSON</option><option value="xml">XML</option><option value="raw_text">raw text</option></select></label>
             <CodeEditor value={wizard.sample} onChange={(value) => updateWizard({ sample: value })} language={wizard.inputMode === 'json' ? 'json' : wizard.inputMode === 'xml' ? 'xml' : 'text'} minRows={8} />
             {wizard.inputMode === 'xml' && <XmlPathPicker xml={wizard.sample} onUseField={addXmlMapping} compact />}
             {wizard.inputMode === 'xml' && <SelectedXmlMappings mappings={xmlFieldsForBuild} onRemove={(path) => setXmlMappings(xmlMappings.filter((item) => item.path !== path))} />}
@@ -415,7 +420,15 @@ export function TestConsolePage() {
 
           <WizardStep index="03" title="Что должен сделать OMH" description="Для этой задачи полноценно реализованы один или несколько OData-запросов. Остальные действия оставлены как будущие расширения.">
             <div className="metadata-grid request-action-cards">
-              {['Only return incoming request', 'Make OData query', 'Make several OData queries', 'Call external API', 'Call 1C HTTP service', 'Print', 'Create event only'].map((action) => <button type="button" key={action} className={`builder-help-card action-card ${action.includes('OData') ? 'active' : ''}`} disabled={!action.includes('OData')} onClick={() => updateWizard({ action: action.includes('several') ? 'odata_multiple' : 'odata_single' })}><strong>{action}</strong><span>{action.includes('OData') ? 'Доступно сейчас' : 'Будет позже, через advanced builder'}</span></button>)}
+              {[
+                { title: 'Сразу вернуть входящий запрос', enabled: false },
+                { title: 'Сделать один OData-запрос', enabled: true, value: 'odata_single' },
+                { title: 'Сделать несколько OData-запросов', enabled: true, value: 'odata_multiple' },
+                { title: 'Вызвать внешний API', enabled: false },
+                { title: 'Вызвать HTTP-сервис 1C', enabled: false },
+                { title: 'Напечатать этикетку', enabled: false },
+                { title: 'Только создать событие', enabled: false },
+              ].map((action) => <button type="button" key={action.title} className={`builder-help-card action-card ${action.enabled ? 'active' : ''}`} disabled={!action.enabled} onClick={() => updateWizard({ action: action.value ?? 'odata_multiple' })}><strong>{action.title}</strong><span>{action.enabled ? 'Доступно сейчас' : 'Будет позже, через advanced builder'}</span></button>)}
             </div>
             <div className="stack-form">
               {odataSteps.map((step, index) => <ODataStepEditor key={step.id} index={index} step={step} connections={odataConnections.data ?? []} fields={extractedFields} onChange={(patch) => updateODataStep(index, patch)} onRemove={() => setODataSteps(odataSteps.filter((_, itemIndex) => itemIndex !== index))} />)}
@@ -424,29 +437,29 @@ export function TestConsolePage() {
           </WizardStep>
 
           <WizardStep index="04" title="Что вернуть внешнему сервису" description="Выберите sync/proxy/accepted mode и соберите тело ответа. JSON, XML и raw text поддерживаются здесь же.">
-            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Response mode<select value={wizard.responseMode} onChange={(event) => updateWizard({ responseMode: event.target.value })}><option value="sync_response">sync_response: вернуть свой ответ</option><option value="proxy_response">proxy_response: вернуть ответ target</option><option value="accepted_event">accepted_event: принять в очередь</option></select></label><label className="field-label">Response body type<select value={wizard.responseType} onChange={(event) => changeResponseType(event.target.value as ResponseBodyType)}><option value="json">JSON</option><option value="xml">XML</option><option value="raw_text">raw text</option></select></label><label className="field-label">HTTP status<input value={wizard.statusCode} onChange={(event) => updateWizard({ statusCode: event.target.value })} /></label></div>
-            <label className="field-label">Headers<CodeEditor value={wizard.headers} onChange={(value) => updateWizard({ headers: value })} language="json" minRows={4} /></label>
+            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Как отвечать<select value={wizard.responseMode} onChange={(event) => updateWizard({ responseMode: event.target.value })}><option value="sync_response">Вернуть свой ответ сразу</option><option value="proxy_response">Вернуть ответ target-системы</option><option value="accepted_event">Принять в очередь и вернуть event_id</option></select></label><label className="field-label">Формат ответа<select value={wizard.responseType} onChange={(event) => changeResponseType(event.target.value as ResponseBodyType)}><option value="json">JSON</option><option value="xml">XML</option><option value="raw_text">raw text</option></select></label><label className="field-label">HTTP статус<input value={wizard.statusCode} onChange={(event) => updateWizard({ statusCode: event.target.value })} /></label></div>
+            <label className="field-label">Заголовки ответа<CodeEditor value={wizard.headers} onChange={(value) => updateWizard({ headers: value })} language="json" minRows={4} /></label>
             {wizard.responseType === 'xml'
               ? <XmlResponseBuilder value={wizard.responseBody} onChange={(value) => updateWizard({ responseBody: value })} variables={previewVariables(wizard.sample, wizard.inputMode, odataSteps, extractedFields)} hints={['{{order.Ref_Key}}', '{{order.Number}}', '{{products}}', '{{number}}']} />
-              : <label className="field-label">Response body<CodeEditor value={wizard.responseBody} onChange={(value) => updateWizard({ responseBody: value })} language={wizard.responseType === 'json' ? 'json' : 'text'} minRows={8} /></label>}
+              : <label className="field-label">Тело ответа<CodeEditor value={wizard.responseBody} onChange={(value) => updateWizard({ responseBody: value })} language={wizard.responseType === 'json' ? 'json' : 'text'} minRows={8} /></label>}
             <div className="hint-chip-row">{['{{order.Ref_Key}}', '{{order.Number}}', '{{products}}', '{{steps.get_order.first.Ref_Key}}', '{{request.body.Number}}'].map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)}>{hint}</button>)}</div>
             <ResponsePreview type={wizard.responseType} value={responsePreview} status={wizard.statusCode} headers={wizard.headers} />
           </WizardStep>
 
           <WizardStep index="05" title="Проверить, сохранить и протестировать" description="Сначала preview без реального запроса, потом создать integration flow и отправить тестовый запрос с этой же страницы.">
-            <div className="action-row wrap-actions"><button type="button" className="ghost-button" onClick={safePreview} disabled={preview.isPending}>Preview / Dry Run</button><button type="button" className="primary-button" onClick={safeCreate} disabled={createFlow.isPending || odataSteps.length === 0}>Create integration</button><button type="button" className="primary-button" onClick={() => testCreated.mutate()} disabled={!createdFlow || testCreated.isPending}>Send test request</button>{createdFlow && <Link className="primary-link" to="/integration-flows">Open Integration Flows</Link>}{testTimelineUrl && <Link className="primary-link" to={testTimelineUrl}>Open Timeline</Link>}</div>
+            <div className="action-row wrap-actions"><button type="button" className="ghost-button" onClick={safePreview} disabled={preview.isPending}>Проверить без сохранения</button><button type="button" className="primary-button" onClick={safeCreate} disabled={createFlow.isPending || odataSteps.length === 0}>Сохранить интеграцию</button><button type="button" className="primary-button" onClick={() => testCreated.mutate()} disabled={!createdFlow || testCreated.isPending}>Отправить тестовый запрос</button>{createdFlow && <Link className="primary-link" to="/integration-flows">Открыть список интеграций</Link>}{testTimelineUrl && <Link className="primary-link" to={testTimelineUrl}>Открыть Timeline</Link>}</div>
             {builderError && <div className="error-state compact">{builderError}</div>}
             {preview.error instanceof Error && <div className="error-state compact">{preview.error.message}</div>}
             {createFlow.error instanceof Error && <div className="error-state compact">{createFlow.error.message}</div>}
             {testCreated.error instanceof Error && <div className="error-state compact">{testCreated.error.message}</div>}
-            {createdFlow && <div className="success-note"><strong>Created integration</strong><span>{createdFlow.endpoint_url} · {wizard.responseMode} · {wizard.responseType}</span></div>}
+            {createdFlow && <div className="success-note"><strong>Интеграция сохранена</strong><span>{createdFlow.endpoint_url} · {wizard.responseMode} · {wizard.responseType}</span></div>}
           </WizardStep>
         </section>
 
         <aside className="request-response-sidecar">
-          <section className="panel stack-form"><div className="panel-toolbar"><div><span className="eyebrow">Human preview</span><h2>Что будет происходить</h2></div><Link className="primary-link" to="/odata-explorer">Open OData Explorer</Link></div><PreviewStory fields={extractedFields} steps={odataSteps} responseType={wizard.responseType} endpointSlug={slugify(wizard.slug)} /></section>
-          {builderResult ? <JsonBlock title="Preview / result" value={builderResult} searchable /> : <div className="test-console-empty-response"><span className="eyebrow">Preview</span><strong>Пока ничего не запускали</strong><p>Нажмите Preview / Dry Run, чтобы увидеть переменные, OData-запросы и rendered response.</p></div>}
-          {createdFlow && <section className="panel stack-form"><h2>Copy snippets</h2><CodeEditor value={createdFlow.curl_example} onChange={() => undefined} language="bash" minRows={6} /><CodeEditor value={createdFlow.onec_http_example} onChange={() => undefined} language="text" minRows={7} /></section>}
+          <section className="panel stack-form"><div className="panel-toolbar"><div><span className="eyebrow">Понятный preview</span><h2>Что будет происходить</h2></div><Link className="primary-link" to="/odata-explorer">Открыть OData Explorer</Link></div><PreviewStory fields={extractedFields} steps={odataSteps} responseType={wizard.responseType} endpointSlug={slugify(wizard.slug)} /></section>
+          {builderResult ? <JsonBlock title="Preview / результат" value={builderResult} searchable /> : <div className="test-console-empty-response"><span className="eyebrow">Preview</span><strong>Пока ничего не запускали</strong><p>Нажмите “Проверить без сохранения”, чтобы увидеть переменные, OData-запросы и готовый ответ.</p></div>}
+          {createdFlow && <section className="panel stack-form"><h2>Готовые примеры запросов</h2><CodeEditor value={createdFlow.curl_example} onChange={() => undefined} language="bash" minRows={6} /><CodeEditor value={createdFlow.onec_http_example} onChange={() => undefined} language="text" minRows={7} /></section>}
         </aside>
       </div>
     );
@@ -462,19 +475,19 @@ function ExtractedFields({ fields }: { fields: ExtractedField[] }) {
 }
 
 function ODataStepEditor({ index, step, connections, fields, onChange, onRemove }: { index: number; step: ODataStepDraft; connections: Array<{ id: string; name: string; enabled: boolean }>; fields: ExtractedField[]; onChange: (patch: Partial<ODataStepDraft>) => void; onRemove: () => void }) {
-  return <article className="builder-help-card odata-workbench-step"><div className="panel-toolbar compact-toolbar"><div><span className="eyebrow">OData {index + 1}</span><h3>{step.name}</h3></div><button type="button" className="ghost-button danger" onClick={onRemove} disabled={index === 0}>Remove</button></div><div className="metadata-grid compact-grid no-margin"><label className="field-label">Name<input value={step.name} onChange={(event) => onChange({ name: event.target.value })} /></label><label className="field-label">OData connection<select value={step.connection} onChange={(event) => onChange({ connection: event.target.value })}><option value="">Select OData connection</option>{connections.filter((item) => item.enabled).map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label><label className="field-label">Save as<input value={step.save_as} onChange={(event) => onChange({ save_as: variableName(event.target.value) })} /></label></div><label className="field-label">Resource<input value={step.resource} onChange={(event) => onChange({ resource: event.target.value })} placeholder="Document_ЗаказНаПроизводство2_2" /></label><div className="metadata-grid compact-grid no-margin"><label className="field-label">$filter<input value={step.filter} onChange={(event) => onChange({ filter: event.target.value })} placeholder="Number eq '{{request.body.Number}}'" /></label><label className="field-label">$select<input value={step.select} onChange={(event) => onChange({ select: event.target.value })} placeholder="Ref_Key,Number" /></label><label className="field-label">$top<input value={step.top} onChange={(event) => onChange({ top: event.target.value })} /></label></div><label className="check-row"><input type="checkbox" checked={step.required} onChange={(event) => onChange({ required: event.target.checked })} /> Required: stop flow if OData returns empty</label><div className="hint-chip-row">{fields.slice(0, 8).map((field) => <button type="button" className="hint-chip" key={field.path} onClick={() => onChange({ filter: `${field.path.split('.').pop()} eq '{{${field.path}}}'` })}>Filter from {field.path}</button>)}<button type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(`{{${step.save_as}.Ref_Key}}`)}>{`{{${step.save_as}.Ref_Key}}`}</button><button type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(`{{steps.${step.id}.first.Ref_Key}}`)}>{`{{steps.${step.id}.first.Ref_Key}}`}</button></div></article>;
+  return <article className="builder-help-card odata-workbench-step"><div className="panel-toolbar compact-toolbar"><div><span className="eyebrow">OData {index + 1}</span><h3>{step.name}</h3></div><button type="button" className="ghost-button danger" onClick={onRemove} disabled={index === 0}>Удалить</button></div><div className="metadata-grid compact-grid no-margin"><label className="field-label">Название шага<input value={step.name} onChange={(event) => onChange({ name: event.target.value })} /></label><label className="field-label">OData-подключение<select value={step.connection} onChange={(event) => onChange({ connection: event.target.value })}><option value="">Выберите OData-подключение</option>{connections.filter((item) => item.enabled).map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label><label className="field-label">Сохранить результат как<input value={step.save_as} onChange={(event) => onChange({ save_as: variableName(event.target.value) })} /></label></div><label className="field-label">Ресурс OData<input value={step.resource} onChange={(event) => onChange({ resource: event.target.value })} placeholder="Document_ЗаказНаПроизводство2_2" /></label><div className="metadata-grid compact-grid no-margin"><label className="field-label">$filter<input value={step.filter} onChange={(event) => onChange({ filter: event.target.value })} placeholder="Number eq '{{request.body.Number}}'" /></label><label className="field-label">$select<input value={step.select} onChange={(event) => onChange({ select: event.target.value })} placeholder="Ref_Key,Number" /></label><label className="field-label">$top<input value={step.top} onChange={(event) => onChange({ top: event.target.value })} /></label></div><label className="check-row"><input type="checkbox" checked={step.required} onChange={(event) => onChange({ required: event.target.checked })} /> Обязательный шаг: остановить интеграцию, если OData ничего не вернула</label><div className="hint-chip-row">{fields.slice(0, 8).map((field) => <button type="button" className="hint-chip" key={field.path} onClick={() => onChange({ filter: `${field.path.split('.').pop()} eq '{{${field.path}}}'` })}>Фильтр из {field.path}</button>)}<button type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(`{{${step.save_as}.Ref_Key}}`)}>{`{{${step.save_as}.Ref_Key}}`}</button><button type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(`{{steps.${step.id}.first.Ref_Key}}`)}>{`{{steps.${step.id}.first.Ref_Key}}`}</button></div></article>;
 }
 
 function ResponsePreview({ type, value, status, headers }: { type: ResponseBodyType; value: unknown; status: string; headers: string }) {
-  return <div className="builder-help-card"><strong>Rendered response preview</strong><span>HTTP {status || 200} · {contentTypeFor(type)}</span>{type === 'json' ? <JsonBlock title="JSON response" value={value as Record<string, unknown>} searchable={false} /> : <CodeEditor value={String(value ?? '')} onChange={() => undefined} language={type === 'xml' ? 'xml' : 'text'} minRows={6} />}<details><summary>Headers</summary><CodeEditor value={headers} onChange={() => undefined} language="json" minRows={4} /></details></div>;
+  return <div className="builder-help-card"><strong>Preview готового ответа</strong><span>HTTP {status || 200} · {contentTypeFor(type)}</span>{type === 'json' ? <JsonBlock title="JSON ответ" value={value as Record<string, unknown>} searchable={false} /> : <CodeEditor value={String(value ?? '')} onChange={() => undefined} language={type === 'xml' ? 'xml' : 'text'} minRows={6} />}<details><summary>Заголовки</summary><CodeEditor value={headers} onChange={() => undefined} language="json" minRows={4} /></details></div>;
 }
 
 function PreviewStory({ fields, steps, responseType, endpointSlug }: { fields: ExtractedField[]; steps: ODataStepDraft[]; responseType: ResponseBodyType; endpointSlug: string }) {
-  return <div className="request-preview-list"><div className="success-note"><strong>1. Incoming request</strong><span>POST /api/bus/in/{endpointSlug}</span></div><div className="success-note"><strong>2. Extracted variables</strong><span>{fields.slice(0, 5).map((field) => field.path).join(' · ') || 'нет полей'}</span></div>{steps.map((step, index) => <div className="success-note" key={step.id}><strong>{index + 3}. OData request: {step.save_as}</strong><span>{step.connection || 'OData connection'} · {step.resource} · {step.filter || 'no filter'}</span></div>)}<div className="success-note"><strong>{steps.length + 3}. Return response</strong><span>{responseType.toUpperCase()} response to caller</span></div></div>;
+  return <div className="request-preview-list"><div className="success-note"><strong>1. Входящий запрос</strong><span>POST /api/bus/in/{endpointSlug}</span></div><div className="success-note"><strong>2. Извлечённые переменные</strong><span>{fields.slice(0, 5).map((field) => field.path).join(' · ') || 'нет полей'}</span></div>{steps.map((step, index) => <div className="success-note" key={step.id}><strong>{index + 3}. Запрос в OData: {step.save_as}</strong><span>{step.connection || 'OData-подключение'} · {step.resource} · {step.filter || 'без фильтра'}</span></div>)}<div className="success-note"><strong>{steps.length + 3}. Вернуть ответ</strong><span>{responseType.toUpperCase()} ответ вызывающей системе</span></div></div>;
 }
 
 function SelectedXmlMappings({ mappings, onRemove }: { mappings: XmlMappingDraft[]; onRemove: (path: string) => void }) {
-  return <div className="builder-help-card xml-selected-fields"><strong>XML → variables</strong><span>Эти переменные будут созданы шагом `xml_extract` перед OData. Если ничего не выбирать вручную, Workbench возьмет первые распознанные XML-поля.</span><div className="variable-card-list compact-list">{mappings.length === 0 ? <span className="microcopy">Пока XML-поля не выбраны.</span> : mappings.map((field) => <button key={field.path} type="button" className="hint-chip active" onClick={() => onRemove(field.path)} title="Click to remove">{field.name} ← {field.path}</button>)}</div></div>;
+  return <div className="builder-help-card xml-selected-fields"><strong>XML → переменные</strong><span>Эти переменные будут созданы шагом `xml_extract` перед OData. Если ничего не выбирать вручную, Workbench возьмет первые распознанные XML-поля.</span><div className="variable-card-list compact-list">{mappings.length === 0 ? <span className="microcopy">Пока XML-поля не выбраны.</span> : mappings.map((field) => <button key={field.path} type="button" className="hint-chip active" onClick={() => onRemove(field.path)} title="Нажмите, чтобы убрать поле">{field.name} ← {field.path}</button>)}</div></div>;
 }
 
 function previewVariables(sample: string, inputMode: string, steps: ODataStepDraft[], fields: ExtractedField[]) {
@@ -490,7 +503,7 @@ function renderLocalResponsePreview(template: string, type: ResponseBodyType, sa
     return value === undefined || value === null ? '' : String(value);
   });
   if (type !== 'json') return rendered;
-  try { return JSON.parse(rendered) as Record<string, unknown>; } catch { return { preview_error: 'Response JSON is not valid yet', rendered }; }
+  try { return JSON.parse(rendered) as Record<string, unknown>; } catch { return { preview_error: 'JSON ответа пока невалидный. Проверьте кавычки, запятые и переменные в шаблоне.', rendered }; }
 }
 
 function previewScope(sample: string, inputMode: string, steps: ODataStepDraft[], fields: ExtractedField[]) {
@@ -527,8 +540,8 @@ function endpointDisplayName(endpoint: IntegrationEndpoint) {
 }
 
 function responseModeLabel(mode: string) {
-  if (mode === 'sync_response') return 'sync response';
-  if (mode === 'proxy_response') return 'proxy target response';
-  if (mode === 'accepted_message') return 'accepted message';
-  return 'accepted event';
+  if (mode === 'sync_response') return 'сразу вернуть свой ответ';
+  if (mode === 'proxy_response') return 'вернуть ответ target-системы';
+  if (mode === 'accepted_message') return 'принято сообщением';
+  return 'принято событием';
 }
