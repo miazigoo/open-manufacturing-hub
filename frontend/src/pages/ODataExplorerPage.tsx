@@ -14,6 +14,7 @@ import { LoadingState } from '../components/LoadingState';
 import { useI18n } from '../i18n/useI18n';
 
 const draftStorageKey = 'omh.odataExplorer.flowDraft.v1';
+const ODATA_EXPLORER_TOP_MAX = 500;
 
 interface DraftStep {
   id: string;
@@ -161,6 +162,11 @@ function normalizeTriggerSample(sample: Record<string, unknown>, operation: stri
   return next;
 }
 
+function topValue(value: string | number | null | undefined) {
+  const parsed = Number(value) || 10;
+  return Math.max(1, Math.min(ODATA_EXPLORER_TOP_MAX, parsed));
+}
+
 export function ODataExplorerPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -197,7 +203,7 @@ export function ODataExplorerPage() {
       const sample = parseInputSample(inputSampleText);
       return odataExplorerApi.query(connectorId, {
         resource: renderTestPlaceholders(query.resource, sample, draftSteps),
-        top: Number(query.top) || 10,
+        top: topValue(query.top),
         filter: query.filter ? renderTestPlaceholders(query.filter, sample, draftSteps) : null,
         select: query.select || null,
         orderby: query.orderby || null,
@@ -216,7 +222,7 @@ export function ODataExplorerPage() {
         const render = (value: string) => renderItemPlaceholders(renderTestPlaceholders(value, sample, draftSteps), foreachItemAs || 'item', item);
         const response = await odataExplorerApi.query(connectorId, {
           resource: render(query.resource),
-          top: Number(query.top) || 10,
+          top: topValue(query.top),
           filter: query.filter ? render(query.filter) : null,
           select: query.select || null,
           orderby: query.orderby || null,
@@ -384,7 +390,7 @@ export function ODataExplorerPage() {
     setNextAction('continue_odata');
     setForeachSource(source);
     setForeachItemAs(source.endsWith('s') ? source.slice(0, -1) || 'item' : 'item');
-    setQuery({ resource: '', top: '1000', filter: '', select: '', orderby: '' });
+    setQuery({ resource: '', top: String(ODATA_EXPLORER_TOP_MAX), filter: '', select: '', orderby: '' });
     setFilters([{ field: '', operator: 'eq', value: '' }]);
     setStepSaveAs('codes');
     setStepSaveAsTouched(true);
@@ -413,7 +419,7 @@ export function ODataExplorerPage() {
       resource: query.resource,
       filter: query.filter,
       select: query.select.split(',').map((item) => item.trim()).filter(Boolean),
-      top: Number(query.top) || 10,
+      top: topValue(query.top),
       save_as: saveAs,
       sample: run.data.items?.[0] ?? null,
       sample_items: run.data.items ?? [],
@@ -435,7 +441,7 @@ export function ODataExplorerPage() {
       resource: query.resource,
       filter: query.filter,
       select: query.select.split(',').map((item) => item.trim()).filter(Boolean),
-      top: Number(query.top) || 1000,
+      top: topValue(query.top),
       save_as: saveAs,
       items: foreachSource,
       item_as: foreachItemAs || 'item',
@@ -742,7 +748,7 @@ export function ODataExplorerPage() {
             <datalist id="odata-resources">{(resources.data?.resources ?? []).map((resource) => <option key={resource} value={resource} />)}</datalist>
           </label>
           <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">$top<input value={query.top} onChange={(event) => setQuery({ ...query, top: event.target.value })} /></label>
+            <label className="field-label">$top<input value={query.top} onChange={(event) => setQuery({ ...query, top: event.target.value })} /><span className="field-hint">Максимум {ODATA_EXPLORER_TOP_MAX} за один тестовый запрос. Для больших выборок включите пагинацию.</span></label>
             <label className="field-label">$select<input value={query.select} onChange={(event) => setQuery({ ...query, select: event.target.value })} placeholder="Ref_Key,Number,Date,Posted" /></label>
             <label className="field-label">$orderby<input value={query.orderby} onChange={(event) => setQuery({ ...query, orderby: event.target.value })} /></label>
           </div>
@@ -836,6 +842,7 @@ export function ODataExplorerPage() {
             <label className="field-label">Сохранить общий результат как<input value={stepSaveAs} onChange={(event) => { setStepSaveAsTouched(true); setStepSaveAs(variableInput(event.target.value)); }} placeholder="codes" /></label>
           </div>
           {sourceStep && <div className="success-note">Что будет повторяться<span><code>{sourceStep.save_as}</code>: тестовых строк {sourceItems.length}. Внутри запроса одна строка доступна как <code>{`{{${foreachItemAs || 'item'}.Поле}}`}</code>.</span></div>}
+          <div className="success-note">Режим объединения<span>Объединить все найденные строки в один массив <code>{stepSaveAs || 'codes'}</code>. Это нужно, чтобы коды из разных строк продукции ушли дальше одним списком.</span></div>
           {firstItem && (
             <details className="variable-card" open>
               <summary>
@@ -869,7 +876,7 @@ export function ODataExplorerPage() {
             <datalist id="odata-resources">{(resources.data?.resources ?? []).map((resource) => <option key={resource} value={resource} />)}</datalist>
           </label>
           <div className="metadata-grid compact-grid no-margin">
-            <label className="field-label">$top<input value={query.top} onChange={(event) => setQuery({ ...query, top: event.target.value })} /></label>
+            <label className="field-label">$top<input value={query.top} onChange={(event) => setQuery({ ...query, top: event.target.value })} /><span className="field-hint">Максимум {ODATA_EXPLORER_TOP_MAX} за один тестовый запрос. Для больших выборок включите пагинацию.</span></label>
             <label className="field-label">$select<input value={query.select} onChange={(event) => setQuery({ ...query, select: event.target.value })} placeholder="КодМаркировки,GTIN,Номенклатура_Key" /></label>
             <label className="field-label">$orderby<input value={query.orderby} onChange={(event) => setQuery({ ...query, orderby: event.target.value })} /></label>
           </div>

@@ -13,6 +13,16 @@ export class ApiError extends Error {
 
 function errorMessage(status: number, detail: unknown): string {
   if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail.map((item) => {
+      if (!item || typeof item !== 'object') return String(item);
+      const record = item as Record<string, unknown>;
+      const loc = Array.isArray(record.loc) ? record.loc.join('.') : '';
+      const message = typeof record.msg === 'string' ? record.msg : JSON.stringify(record);
+      return loc ? `${loc}: ${message}` : message;
+    }).filter(Boolean);
+    if (messages.length) return messages.join('; ');
+  }
   if (detail && typeof detail === 'object' && 'message' in detail && typeof (detail as { message?: unknown }).message === 'string') return (detail as { message: string }).message;
   if (detail && typeof detail === 'object' && 'error' in detail && typeof (detail as { error?: unknown }).error === 'string') return (detail as { error: string }).error;
   return `API request failed with ${status}`;
