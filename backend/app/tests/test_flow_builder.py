@@ -135,6 +135,60 @@ async def test_flow_builder_odata_chaining_selects_fields_and_ignores_empty_filt
     }
 
 
+async def test_flow_builder_foreach_combines_nested_odata_results(client):
+    builder = {
+        "version": 1,
+        "steps": [
+            {
+                "id": "product_lookup",
+                "type": "odata_query",
+                "connection": "Demo 1C ERP",
+                "resource": "Document_Order(guid'{{request.body.order_ref}}')/Products",
+                "top": 10,
+                "save_as": "products",
+                "mock_items": [
+                    {"Номенклатура_Key": "product-1"},
+                    {"Номенклатура_Key": "product-2"},
+                ],
+            },
+            {
+                "id": "codes_lookup",
+                "type": "foreach",
+                "items": "products",
+                "item_as": "product",
+                "save_as": "codes",
+                "flatten": True,
+                "step": {
+                    "type": "odata_query",
+                    "connection": "Demo 1C ERP",
+                    "resource": "InformationRegister_Codes",
+                    "filter": "Product_Key eq guid'{{product.Номенклатура_Key}}'",
+                    "top": 100,
+                    "required": False,
+                    "mock_items": [{"КодМаркировки": "code-row"}],
+                },
+            },
+            {
+                "id": "build_payload",
+                "type": "build_json",
+                "save_as": "target_payload",
+                "template": {"codes": "{{codes}}"},
+            },
+        ],
+    }
+
+    response = await client.post("/api/flow-builder/preview", json={"builder_json": builder, "sample_request": {"order_ref": "order-1"}})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    foreach = body["steps"][1]
+    assert foreach["request_preview"]["items_count"] == 2
+    assert len(foreach["result_preview"]) == 2
+    assert body["variables"]["steps"]["codes_lookup"]["source_items_count"] == 2
+    assert body["final_payload_preview"] == {"codes": [{"КодМаркировки": "code-row"}, {"КодМаркировки": "code-row"}]}
+
+
 async def test_flow_builder_return_response_preview_supports_xml_without_target_warning(client):
     builder = {
         "version": 1,

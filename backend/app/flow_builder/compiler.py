@@ -13,6 +13,7 @@ HANDLERS = {
     "raw_xml_forward": "raw_xml_forward",
     "resolve_object": "resolve_object",
     "build_json": "flow_build_json",
+    "foreach": "flow_foreach",
     "build_xml_response": "flow_return_response",
     "condition": "flow_condition",
     "call_endpoint": "flow_call_endpoint",

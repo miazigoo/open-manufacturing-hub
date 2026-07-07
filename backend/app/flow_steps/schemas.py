@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-BuilderStepType = Literal["read_variable", "odata_query", "build_json", "condition", "call_endpoint", "return_response"]
+BuilderStepType = Literal["read_variable", "odata_query", "build_json", "foreach", "condition", "call_endpoint", "return_response"]
 
 
 class FlowStep(BaseModel):

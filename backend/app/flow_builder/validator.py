@@ -61,6 +61,20 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
                 errors.append(_error(step_id, "RESOLVER_SAVE_AS_REQUIRED", "Resolve step needs save_as", "Save the canonical object as customer, product or warehouse."))
         if step_type == "build_json" and not (step.get("template") or step.get("fields")):
             errors.append(_error(step_id, "JSON_TEMPLATE_REQUIRED", "Build JSON step needs template or visual fields", "Add target fields or switch to advanced JSON template."))
+        if step_type == "foreach":
+            nested = step.get("step") or step.get("do")
+            if not step.get("items"):
+                errors.append(_error(step_id, "FOREACH_ITEMS_REQUIRED", "Foreach step needs an items path", "Example: products or steps.product_lookup.items."))
+            if not step.get("save_as"):
+                errors.append(_error(step_id, "FOREACH_SAVE_AS_REQUIRED", "Foreach step needs save_as", "Save combined results as codes, rows or payload_items."))
+            if not isinstance(nested, dict):
+                errors.append(_error(step_id, "FOREACH_STEP_REQUIRED", "Foreach step needs one nested step", "Add a nested OData query step."))
+            elif nested.get("type") != "odata_query":
+                errors.append(_error(step_id, "FOREACH_STEP_UNSUPPORTED", "Foreach currently supports nested odata_query", "Use type=odata_query inside step."))
+            else:
+                for field, code in (("connection", "ODATA_CONNECTION_NOT_SET"), ("resource", "ODATA_RESOURCE_NOT_SET")):
+                    if not nested.get(field):
+                        errors.append(_error(step_id, code, f"Nested OData step needs {field}", "Select connector/resource for the repeated lookup."))
         if step_type == "call_endpoint" and not (step.get("connector") or step.get("url")):
             errors.append(_error(step_id, "TARGET_CONNECTOR_NOT_SET", "Endpoint step needs connector or URL", "Select a REST/1C target connector or enter a direct HTTP URL."))
     has_terminal_response = any(isinstance(step, dict) and step.get("type") in {"call_endpoint", "return_response", "build_xml_response", "raw_xml_forward"} for step in steps)

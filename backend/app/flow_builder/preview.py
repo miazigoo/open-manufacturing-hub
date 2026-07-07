@@ -68,6 +68,35 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 items = await _preview_odata_items(session, step, query, run_real_queries)
                 result = _saved_odata_result(items, step)
                 variables[str(step["save_as"])] = result
+            elif step_type == "foreach":
+                source_items = _collection(step.get("items"), scope)
+                nested = step.get("step") or step.get("do") or {}
+                if not isinstance(nested, dict) or nested.get("type") != "odata_query":
+                    raise ValueError("Foreach currently supports nested odata_query")
+                item_as = str(step.get("item_as") or "item")
+                index_as = str(step.get("index_as") or "index")
+                flatten = bool(step.get("flatten", True))
+                combined: list[Any] = []
+                iterations: list[dict[str, Any]] = []
+                for index, item in enumerate(source_items):
+                    iteration_scope = dict(scope)
+                    iteration_scope[item_as] = item
+                    iteration_scope[index_as] = index
+                    iteration_scope["foreach"] = {"item": item, "index": index}
+                    query = _odata_query(nested, iteration_scope)
+                    resource = str(render_template(nested.get("resource") or "", iteration_scope))
+                    nested_for_preview = dict(nested)
+                    nested_for_preview["resource"] = resource
+                    items = await _preview_odata_items(session, nested_for_preview, query, run_real_queries)
+                    if flatten:
+                        combined.extend(items)
+                    else:
+                        combined.append(_saved_odata_result(items, nested))
+                    iterations.append({"index": index, "item": item, "resource": resource, "query": query, "items_count": len(items)})
+                result = combined
+                variables[str(step.get("save_as") or step_id)] = result
+                request_preview = {"items": step.get("items"), "items_count": len(source_items), "item_as": item_as, "nested_type": nested.get("type")}
+                variables.setdefault("steps", {})[step_id] = {"items": result, "iterations": iterations, "items_count": len(result), "source_items_count": len(source_items)}
             elif step_type == "xml_extract":
                 raw_xml = _sample_xml(sample_request)
                 fields = [field for field in step.get("fields") or [] if isinstance(field, dict)]
@@ -120,7 +149,8 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
             else:
                 result = None
                 request_preview = None
-            variables.setdefault("steps", {})[step_id] = result if step_type != "odata_query" else {"items": result if isinstance(result, list) else [result] if result else [], "first": result}
+            if step_type != "foreach":
+                variables.setdefault("steps", {})[step_id] = result if step_type != "odata_query" else {"items": result if isinstance(result, list) else [result] if result else [], "first": result}
             steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "success", "request_preview": request_preview, "result_preview": result})
         except Exception as exc:
             steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "failed", "error": _preview_error(step_id, exc)})
@@ -138,6 +168,20 @@ def _sample_xml(sample_request: dict[str, Any]) -> str:
         if value:
             return str(value)
     raise ValueError("XML sample is empty. Paste a real XML request before preview.")
+
+
+def _collection(value: Any, scope: dict[str, Any]) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        expression = value.strip()
+        resolved = render_template(expression, scope) if "{{" in expression else resolve_path(scope, expression)
+        if isinstance(resolved, list):
+            return resolved
+        if resolved is None:
+            return []
+        raise ValueError(f"Foreach items resolved to {type(resolved).__name__}, expected array")
+    raise ValueError("Foreach items must be an array or a path/template string")
 
 
 def _odata_query(step: dict[str, Any], scope: dict[str, Any]) -> dict[str, Any]:

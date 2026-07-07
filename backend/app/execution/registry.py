@@ -48,7 +48,7 @@ def register_builtin_steps() -> None:
     from app.execution.steps.create_incident import CreateIncidentStep
     from app.execution.steps.apply_transforms import ApplyTransformsStep
     from app.execution.steps.evaluate_rules import EvaluateRulesStep
-    from app.execution.steps.flow_builder_steps import FlowBuildJsonStep, FlowCallEndpointStep, FlowConditionStep, FlowODataQueryStep, FlowReadVariableStep, FlowReturnResponseStep
+    from app.execution.steps.flow_builder_steps import FlowBuildJsonStep, FlowCallEndpointStep, FlowConditionStep, FlowForEachStep, FlowODataQueryStep, FlowReadVariableStep, FlowReturnResponseStep
     from app.execution.steps.handle_response import HandleResponseStep
     from app.execution.steps.maintenance_guard import MaintenanceGuardStep
     from app.execution.steps.map_payload import MapPayloadStep
@@ -69,6 +69,7 @@ def register_builtin_steps() -> None:
     registry.register(BuildXMLStep())
     registry.register(FlowReadVariableStep())
     registry.register(FlowODataQueryStep())
+    registry.register(FlowForEachStep())
     registry.register(FlowBuildJsonStep())
     registry.register(FlowConditionStep())
     registry.register(FlowCallEndpointStep())

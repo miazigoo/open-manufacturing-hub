@@ -107,6 +107,12 @@ function odataPath(step: Record<string, unknown>, scope: Record<string, unknown>
   return decodeDisplayUrl(query ? `${resource}?${query}` : resource);
 }
 
+function mockODataValue(step: Record<string, unknown>) {
+  const mockItems = Array.isArray(step.mock_items) ? step.mock_items : null;
+  if (!mockItems) return undefined;
+  return Number(step.top ?? 1) === 1 ? mockItems[0] ?? null : mockItems;
+}
+
 function stepSummary(step: Record<string, unknown>, index: number, scope: Record<string, unknown>) {
   const type = String(step.type ?? '');
   if (type === 'read_variable') {
@@ -127,6 +133,24 @@ function stepSummary(step: Record<string, unknown>, index: number, scope: Record
       unresolved: [...unresolvedTemplates(renderedResource), ...unresolvedTemplates(renderedFilter), ...unresolvedTemplates(pathPreview)],
     };
   }
+  if (type === 'foreach') {
+    const nested = (step.step && typeof step.step === 'object' ? step.step : step.do && typeof step.do === 'object' ? step.do : {}) as Record<string, unknown>;
+    const source = String(step.items ?? '');
+    const itemAs = String(step.item_as ?? 'item');
+    let preview = '';
+    const sourceItems = readPath(scope, source);
+    if (Array.isArray(sourceItems) && sourceItems.length > 0) {
+      preview = odataPath(nested, { ...scope, [itemAs]: sourceItems[0], foreach: { item: sourceItems[0], index: 0 } });
+    } else if (nested.resource) {
+      preview = odataPath(nested, scope);
+    }
+    return {
+      title: `Повтор по массиву: ${String(step.name ?? step.save_as ?? `шаг ${index + 1}`)}`,
+      detail: `${source || 'массив не задан'} -> ${String(step.save_as ?? step.id ?? 'result')}`,
+      preview,
+      unresolved: preview ? unresolvedTemplates(preview) : [],
+    };
+  }
   if (type === 'return_response') return { title: 'Вернуть результат вызывающей системе', detail: 'Синхронный ответ из собранных данных' };
   if (type === 'call_endpoint') return { title: 'Отправить результат во внешнюю систему', detail: String(step.url ?? step.target ?? '') };
   return { title: String((step.name ?? type) || `Шаг ${index + 1}`), detail: type };
@@ -140,6 +164,19 @@ function flowStepSummaries(builder: Record<string, unknown> | null, testPayload:
       const saveAs = String(step.save_as ?? '');
       const path = String(step.path ?? '');
       if (saveAs) scope[saveAs] = readPath(scope, path);
+    }
+    if (String(step.type ?? '') === 'odata_query') {
+      const saveAs = String(step.save_as ?? '');
+      const value = mockODataValue(step);
+      if (saveAs && value !== undefined) scope[saveAs] = value;
+    }
+    if (String(step.type ?? '') === 'foreach') {
+      const nested = (step.step && typeof step.step === 'object' ? step.step : step.do && typeof step.do === 'object' ? step.do : {}) as Record<string, unknown>;
+      const source = readPath(scope, String(step.items ?? ''));
+      const nestedValue = mockODataValue(nested);
+      if (String(step.save_as ?? '') && Array.isArray(source) && nestedValue !== undefined) {
+        scope[String(step.save_as)] = source.flatMap(() => Array.isArray(nestedValue) ? nestedValue : nestedValue ? [nestedValue] : []);
+      }
     }
     return { step, summary };
   });
@@ -343,6 +380,8 @@ export function IntegrationFlowsPage() {
               <div className="flow-step-list">
                 {flowStepSummaries(selected.builder_json, selected.test_payload_json).length === 0 ? <span className="microcopy">Шаги не описаны в builder JSON.</span> : flowStepSummaries(selected.builder_json, selected.test_payload_json).map(({ step, summary }, index) => {
                   const isOData = String(step.type ?? '') === 'odata_query';
+                  const isForEach = String(step.type ?? '') === 'foreach';
+                  const nestedStep = (step.step && typeof step.step === 'object' ? step.step : step.do && typeof step.do === 'object' ? step.do : {}) as Record<string, unknown>;
                   const unresolved = 'unresolved' in summary ? summary.unresolved ?? [] : [];
                   return (
                     <div className="flow-step-card" key={`${String(step.id ?? step.type)}-${index}`}>
@@ -358,6 +397,18 @@ export function IntegrationFlowsPage() {
                             <div><dt>$filter</dt><dd>{String(step.filter ?? '') || 'не задан'}</dd></div>
                             <div><dt>$select</dt><dd>{Array.isArray(step.select) ? step.select.join(', ') : String(step.select ?? '') || 'не задан'}</dd></div>
                             <div><dt>$top</dt><dd>{String(step.top ?? '') || 'не задан'}</dd></div>
+                          </dl>
+                        )}
+                        {isForEach && (
+                          <dl className="flow-step-settings">
+                            <div><dt>Array</dt><dd>{String(step.items ?? '') || 'не задан'}</dd></div>
+                            <div><dt>Item variable</dt><dd>{String(step.item_as ?? 'item')}</dd></div>
+                            <div><dt>Save as</dt><dd>{String(step.save_as ?? step.id ?? '')}</dd></div>
+                            <div><dt>Mode</dt><dd>{step.flatten === false ? 'сохранить результат каждой итерации отдельно' : 'объединить все строки в один массив'}</dd></div>
+                            <div><dt>Nested OData resource</dt><dd>{String(nestedStep.resource ?? '') || 'не задан'}</dd></div>
+                            <div><dt>Nested $filter</dt><dd>{String(nestedStep.filter ?? '') || 'не задан'}</dd></div>
+                            <div><dt>Nested $select</dt><dd>{Array.isArray(nestedStep.select) ? nestedStep.select.join(', ') : String(nestedStep.select ?? '') || 'не задан'}</dd></div>
+                            <div><dt>Nested $top</dt><dd>{String(nestedStep.top ?? '') || 'не задан'}</dd></div>
                           </dl>
                         )}
                         {unresolved.length > 0 && <em>Значения появятся после выполнения предыдущих шагов: {unresolved.join(', ')}</em>}

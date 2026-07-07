@@ -20,6 +20,15 @@ from app.variables.resolver import build_runtime_scope, render_template
 from app.xml_toolkit.renderer import render_xml_template
 
 
+class ODataStepError(RuntimeError):
+    def __init__(self, code: str, message: str, hint: str, response_payload: Any | None = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.hint = hint
+        self.response_payload = response_payload or {}
+
+
 class FlowReadVariableStep:
     name = "flow_read_variable"
     display_name = "Read Field"
@@ -66,25 +75,13 @@ class FlowODataQueryStep:
         except Exception as exc:
             return _failed("ODATA_RESOURCE_BUILD_FAILED", str(exc), config, "Check OData resource template and previous step variables.")
         request_artifact = ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "odata_query_request.json", {"connection": connector_name, "resource": resource, "query": query})
-        connector = await connector_repository.get_by_name(context.session, connector_name)
-        if connector is None:
-            return _failed("ODATA_CONNECTION_NOT_FOUND", f"OData connection {connector_name} not found", config, "Create or select a 1C connector with OData enabled.", [request_artifact])
-        if connector.connector_type != "onec":
-            return _failed("ODATA_CONNECTION_NOT_FOUND", f"Connector {connector_name} is not a 1C/OData connector", config, "Select connector_type=onec.", [request_artifact])
-        connector_config = await SecretResolver(context.session).resolve_config(connector.config_json)
-        mock_items = _mock_odata_items(config, connector_config, query)
-        if mock_items is not None:
-            items = mock_items
-            response_payload = {"mock": True, "value": items}
-        else:
-            result = await read_odata(connector_config, resource, query)
-            response_payload = result.response_payload or {"items_count": len(result.items)}
-            if not result.success:
-                return _failed(result.error_code or "ODATA_QUERY_FAILED", result.error_message or "OData query failed", config, "Check OData resource, filter, credentials and 1C availability.", [request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "odata_query_response.json", _as_dict(response_payload))])
-            items = result.items
+        try:
+            items, response_payload = await _read_odata_items(context, config, query, resource)
+        except ODataStepError as exc:
+            return _failed(exc.code, exc.message, config, exc.hint, [request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "odata_query_response.json", _as_dict(exc.response_payload))])
         if not items and config.get("required", True):
             return _failed("ODATA_RESULT_EMPTY", f"OData step {config['step_id']} returned no rows", config, "Check source value, resource and filter.", [request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "odata_query_response.json", _as_dict(response_payload))])
-        saved = items[0] if int(config.get("top") or 1) == 1 else items
+        saved = _saved_odata_value(items, config)
         save_as = str(config.get("save_as") or config["step_id"])
         step_value = {"items": items, "first": items[0] if items else None, "query": query}
         variables = _variables_with_step(context, config["step_id"], step_value)
@@ -92,6 +89,110 @@ class FlowODataQueryStep:
         return StepResult.success(
             "OData query complete",
             artifacts=[request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "odata_query_response.json", _as_dict(response_payload)), ArtifactCreate(ArtifactType.CANONICAL_PAYLOAD.value, "odata_query_result.json", {"save_as": save_as, "result": saved, "items_count": len(items)})],
+            variables_update=variables,
+        )
+
+
+class FlowForEachStep:
+    name = "flow_foreach"
+    display_name = "For Each"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        scope = _scope(context)
+        try:
+            source_items = _collection(config.get("items"), scope)
+        except Exception as exc:
+            return _failed("FOREACH_ITEMS_BUILD_FAILED", str(exc), config, "Check foreach items path. It must resolve to an array.")
+
+        nested = config.get("step") or config.get("do") or {}
+        if not isinstance(nested, dict) or nested.get("type") != "odata_query":
+            return _failed("FOREACH_STEP_UNSUPPORTED", "Foreach currently supports nested odata_query", config, "Set step.type to odata_query.")
+
+        item_as = str(config.get("item_as") or "item")
+        index_as = str(config.get("index_as") or "index")
+        save_as = str(config.get("save_as") or config["step_id"])
+        flatten = bool(config.get("flatten", True))
+        continue_on_error = bool(config.get("continue_on_error", False))
+
+        combined: list[Any] = []
+        iterations: list[dict[str, Any]] = []
+        artifacts: list[ArtifactCreate] = [
+            ArtifactCreate(
+                ArtifactType.VALIDATION_RESULT.value,
+                "foreach_input.json",
+                {"items_path": config.get("items"), "items_count": len(source_items), "item_as": item_as},
+            )
+        ]
+        errors: list[dict[str, Any]] = []
+
+        for index, item in enumerate(source_items):
+            iteration_scope = dict(scope)
+            iteration_scope[item_as] = item
+            iteration_scope[index_as] = index
+            iteration_scope["foreach"] = {"item": item, "index": index}
+            try:
+                query = _odata_query(nested, iteration_scope)
+                resource = str(render_template(nested.get("resource") or "", iteration_scope))
+                nested_config = dict(nested)
+                nested_config["resource"] = resource
+                items, response_payload = await _read_odata_items(context, nested_config, query, resource)
+                if not items and nested.get("required", True):
+                    raise ValueError(f"Nested OData query returned no rows for item #{index + 1}")
+                result_value: Any = items if flatten else _saved_odata_value(items, nested)
+                if flatten:
+                    combined.extend(items)
+                else:
+                    combined.append(result_value)
+                iterations.append(
+                    {
+                        "index": index,
+                        "item": item,
+                        "resource": resource,
+                        "query": query,
+                        "items_count": len(items),
+                    }
+                )
+                artifacts.append(
+                    ArtifactCreate(
+                        ArtifactType.OUTGOING_REQUEST.value,
+                        f"foreach_{index + 1}_odata_request.json",
+                        {"connection": nested.get("connection"), "resource": resource, "query": query},
+                    )
+                )
+                artifacts.append(
+                    ArtifactCreate(
+                        ArtifactType.INCOMING_RESPONSE.value,
+                        f"foreach_{index + 1}_odata_response.json",
+                        _as_dict(response_payload),
+                    )
+                )
+            except Exception as exc:
+                error = {"index": index, "item": item, "error": str(exc)}
+                errors.append(error)
+                if not continue_on_error:
+                    artifacts.append(ArtifactCreate(ArtifactType.ERROR_DETAILS.value, "foreach_error.json", {"errors": errors}))
+                    return _failed("FOREACH_ITERATION_FAILED", str(exc), config, "Open foreach artifacts and check the failed item/resource/filter.", artifacts)
+
+        step_value = {
+            "items": combined,
+            "iterations": iterations,
+            "items_count": len(combined),
+            "source_items_count": len(source_items),
+            "errors": errors,
+        }
+        variables = _variables_with_step(context, config["step_id"], step_value)
+        variables[save_as] = combined
+        return StepResult.success(
+            "Foreach complete",
+            artifacts=[
+                *artifacts,
+                ArtifactCreate(
+                    ArtifactType.CANONICAL_PAYLOAD.value,
+                    "foreach_result.json",
+                    {"save_as": save_as, "items_count": len(combined), "source_items_count": len(source_items), "errors": errors},
+                ),
+            ],
             variables_update=variables,
         )
 
@@ -242,6 +343,50 @@ def _variables_with_step(context: PipelineContext, step_id: str, value: Any) -> 
     steps = dict(context.variables.get("steps") or {})
     steps[step_id] = value
     return {"steps": steps}
+
+
+async def _read_odata_items(context: PipelineContext, config: dict[str, Any], query: dict[str, Any], resource: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    connector_name = str(config.get("connection") or "")
+    connector = await connector_repository.get_by_name(context.session, connector_name)
+    if connector is None:
+        raise ODataStepError("ODATA_CONNECTION_NOT_FOUND", f"OData connection {connector_name} not found", "Create or select a 1C connector with OData enabled.")
+    if connector.connector_type != "onec":
+        raise ODataStepError("ODATA_CONNECTION_NOT_FOUND", f"Connector {connector_name} is not a 1C/OData connector", "Select connector_type=onec.")
+    connector_config = await SecretResolver(context.session).resolve_config(connector.config_json)
+    mock_items = _mock_odata_items(config, connector_config, query)
+    if mock_items is not None:
+        return mock_items, {"mock": True, "value": mock_items}
+    result = await read_odata(connector_config, resource, query)
+    response_payload = result.response_payload or {"items_count": len(result.items)}
+    if not result.success:
+        raise ODataStepError(
+            result.error_code or "ODATA_QUERY_FAILED",
+            result.error_message or "OData query failed",
+            "Check OData resource, filter, credentials and 1C availability.",
+            response_payload,
+        )
+    return result.items, response_payload
+
+
+def _saved_odata_value(items: list[dict[str, Any]], config: dict[str, Any]) -> Any:
+    return items[0] if int(config.get("top") or 1) == 1 else items
+
+
+def _collection(value: Any, scope: dict[str, Any]) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        expression = value.strip()
+        if "{{" in expression:
+            resolved = render_template(expression, scope)
+        else:
+            resolved = resolve_path(scope, expression)
+        if isinstance(resolved, list):
+            return resolved
+        if resolved is None:
+            return []
+        raise ValueError(f"Foreach items resolved to {type(resolved).__name__}, expected array")
+    raise ValueError("Foreach items must be an array or a path/template string")
 
 
 def _odata_query(config: dict[str, Any], scope: dict[str, Any]) -> dict[str, Any]:
