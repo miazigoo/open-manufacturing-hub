@@ -129,12 +129,14 @@ export function TestConsolePage() {
   const [searchParams] = useSearchParams();
   const exampleId = searchParams.get('exampleId');
   const trainingExampleId = searchParams.get('trainingExampleId');
+  const requestedMode = searchParams.get('mode') === 'build' ? 'build' : 'quick';
+  const requestedInput = searchParams.get('input') === 'xml' ? 'xml' : searchParams.get('input') === 'raw_text' ? 'raw_text' : 'json';
   const endpoints = useQuery({ queryKey: ['bus-endpoints'], queryFn: integrationBusApi.endpoints });
   const odataConnections = useQuery({ queryKey: ['odata-connections'], queryFn: odataConnectionsApi.list });
   const docsExample = useQuery({ queryKey: ['docs-example', exampleId], queryFn: () => testConsoleApi.docsExample(exampleId!), enabled: Boolean(exampleId) });
   const trainingExample = useQuery({ queryKey: ['training-example', trainingExampleId], queryFn: () => testConsoleApi.trainingExample(trainingExampleId!), enabled: Boolean(trainingExampleId) });
-  const [mode, setMode] = useState<PageMode>('quick');
-  const [form, setForm] = useState({ endpoint_id: '', input_mode: 'json', headers_json: '{}', body: jsonSample });
+  const [mode, setMode] = useState<PageMode>(requestedMode);
+  const [form, setForm] = useState({ endpoint_id: '', input_mode: requestedInput, headers_json: '{}', body: sampleForMode(requestedInput) });
   const [formError, setFormError] = useState<string | null>(null);
   const [builderError, setBuilderError] = useState<string | null>(null);
   const [createdFlow, setCreatedFlow] = useState<IntegrationFlow | null>(null);
@@ -145,14 +147,14 @@ export function TestConsolePage() {
     slug: 'lookup-order-products',
     authMode: 'none',
     token: '',
-    inputMode: 'json',
-    sample: jsonSample,
+    inputMode: requestedInput,
+    sample: sampleForMode(requestedInput),
     action: 'odata_multiple',
     responseMode: 'sync_response',
-    responseType: 'json' as ResponseBodyType,
+    responseType: (requestedInput === 'xml' ? 'xml' : 'json') as ResponseBodyType,
     statusCode: '200',
-    headers: '{\n  "Content-Type": "application/json"\n}',
-    responseBody: defaultJsonResponse,
+    headers: `{\n  "Content-Type": "${requestedInput === 'xml' ? 'application/xml' : 'application/json'}"\n}`,
+    responseBody: requestedInput === 'xml' ? defaultXmlResponse : defaultJsonResponse,
   });
   const [odataSteps, setODataSteps] = useState<ODataStepDraft[]>([
     { id: 'get_order', name: 'Найти заказ по номеру', connection: '', resource: 'Document_ЗаказНаПроизводство2_2', filter: "Number eq '{{request.body.Number}}'", select: 'Ref_Key,Number,Date,Posted', top: '1', save_as: 'order', required: true },

@@ -129,6 +129,12 @@ export function IntegrationFlowsPage() {
         <div className="hero-meta" data-tour="flow-presets"><button className="primary-button" onClick={() => installOperationKeyODataChain.mutate()} disabled={installOperationKeyODataChain.isPending}>Install OData chain flow</button><button className="ghost-button" onClick={() => installBuilderPreset.mutate()} disabled={installBuilderPreset.isPending}>{t('integration.flowBuilder.installODataPreset')}</button><button className="ghost-button" onClick={() => installPreset.mutate()} disabled={installPreset.isPending}>{t('integration.flowBuilder.installMarkingPreset')}</button><span className="microcopy">{t('integration.flowBuilder.flowPipeline')}</span></div>
       </section>
 
+      <section className="panel purpose-banner">
+        <span className="eyebrow">Назначение страницы</span>
+        <h2>Здесь живут уже собранные интеграции</h2>
+        <p>Если вы начинаете с бизнес-задачи, лучше открыть “Создать интеграцию” или Workbench. Эта страница нужна для просмотра, теста, дублирования, экспорта в продакшен и тонкой настройки потоков, которые уже появились после мастера.</p>
+      </section>
+
       <section className="flow-layout">
         <section className="panel flow-list-panel">
           <div className="panel-toolbar"><h2>{t('integration.flowBuilder.flows')}</h2><span className="microcopy">{flows.data?.length ?? 0}</span></div>

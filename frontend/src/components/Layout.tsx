@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../api/client';
-import { uiApi, type UINavigationItem } from '../api/ui';
+import { uiApi } from '../api/ui';
 import { ProductionBanner } from './ProductionBanner';
 import { UserMenu } from '../features/auth/UserMenu';
 import { ContextHelpButton } from '../features/help/ContextHelpButton';
@@ -10,114 +10,30 @@ import { helpForPath } from '../features/help/helpRegistry';
 import { useI18n, useT } from '../i18n/useI18n';
 import { languageMeta } from '../i18n/dictionary';
 import type { Language } from '../i18n/dictionary';
+import { fallbackNavigation, groupKey, groupOrder, modeAllows, normalizeNavigation, routeKey, type UIMode, uiModes, uiModeStorageKey } from '../navigation/navModel';
 
 const languages: Language[] = ['ru', 'en', 'zh'];
-type UIMode = 'simple' | 'advanced' | 'developer';
-const uiModes: UIMode[] = ['simple', 'advanced', 'developer'];
-const uiModeStorageKey = 'omh.ui.mode.v1';
-
-const fallbackNavigation: UINavigationItem[] = [
-  { group: 'Operate', title: 'Documentation', route: '/docs', package_id: null, enabled: true, advanced: false },
-  { group: 'Operate', title: 'Onboarding', route: '/onboarding', package_id: null, enabled: true, advanced: false },
-  { group: 'Operate', title: 'Dashboard', route: '/', package_id: null, enabled: true, advanced: false },
-  { group: 'Operate', title: 'Transaction Monitor', route: '/runtime/monitor', package_id: null, enabled: true, advanced: false },
-  { group: 'Operate', title: 'Audit Log', route: '/audit', package_id: null, enabled: true, advanced: false },
-  { group: 'Operate', title: 'Event Journal', route: '/events', package_id: null, enabled: true, advanced: false },
-  { group: 'Build', title: '1C Integration Cockpit', route: '/onec-cockpit', package_id: 'omh-package-onec', enabled: false, installed: false, advanced: false },
-  { group: 'Build', title: 'Request/Response Workbench', route: '/test-console', package_id: null, enabled: true, advanced: false },
-  { group: 'Build', title: 'Integration Flows', route: '/integration-flows', package_id: null, enabled: true, advanced: false },
-  { group: 'Data Tools', title: 'OData Connections', route: '/odata-connections', package_id: 'omh-package-onec', enabled: false, installed: false, advanced: false },
-  { group: 'Data Tools', title: 'OData Explorer', route: '/odata-explorer', package_id: 'omh-package-onec', enabled: false, installed: false, advanced: false },
-  { group: 'Build', title: 'Training Sandbox', route: '/training', package_id: 'omh-package-training', enabled: false, installed: false, advanced: false },
-  { group: 'Packages', title: 'Packages', route: '/packages', package_id: null, enabled: true, advanced: true },
-  { group: 'Advanced', title: 'Connectors', route: '/connectors', package_id: null, enabled: true, advanced: true },
-  { group: 'Advanced', title: 'Secrets', route: '/secrets', package_id: 'omh-package-secrets', enabled: false, installed: false, advanced: true },
-  { group: 'Advanced', title: 'Environments', route: '/environments', package_id: null, enabled: true, advanced: true },
-  { group: 'Advanced', title: 'Change Sets', route: '/change-sets', package_id: null, enabled: true, advanced: true },
-  { group: 'Developer', title: 'i18n Debug', route: '/i18n-debug', package_id: null, enabled: true, advanced: true },
-];
-
-const groupKey: Record<string, string> = {
-  Operate: 'nav.sectionOperate',
-  Build: 'nav.sectionBuild',
-  'Data Tools': 'nav.sectionDataTools',
-  Packages: 'nav.sectionPackages',
-  Settings: 'nav.sectionSettings',
-  Advanced: 'nav.sectionAdvanced',
-  Developer: 'nav.sectionDeveloper',
-};
-
-const routeKey: Record<string, string> = {
-  '/docs': 'nav.documentation',
-  '/onboarding': 'nav.onboarding',
-  '/': 'nav.dashboard',
-  '/runtime/monitor': 'nav.transactionMonitor',
-  '/runtime/queue': 'nav.integrationQueue',
-  '/runtime/dlq': 'nav.deadLetterQueue',
-  '/audit': 'nav.auditLog',
-  '/events': 'nav.events',
-  '/incidents': 'nav.incidents',
-  '/health': 'nav.health',
-  '/onec-cockpit': 'nav.onecCockpit',
-  '/integration-flows': 'nav.integrationFlows',
-  '/operation-keys': 'nav.operationKeys',
-  '/training': 'nav.training',
-  '/test-console': 'nav.testConsole',
-  '/test-cases': 'nav.savedTestCases',
-  '/odata-connections': 'onec.odataConnections',
-  '/odata-explorer': 'nav.odataExplorer',
-  '/xml-tools': 'nav.xmlTools',
-  '/mappings': 'nav.mappings',
-  '/business-objects': 'nav.businessObjects',
-  '/resolvers': 'nav.resolvers',
-  '/resolvers/cache': 'nav.resolvers',
-  '/runtime/resolvers': 'nav.resolvers',
-  '/transforms': 'nav.transforms',
-  '/business-rules': 'nav.businessRules',
-  '/runtime/transforms': 'nav.transforms',
-  '/runtime/business-rules': 'nav.businessRules',
-  '/packages': 'nav.packages',
-  '/plugin-store': 'nav.pluginStore',
-  '/packages/omh-package-onec': 'nav.onecPackage',
-  '/packages/omh-package-printer': 'nav.printerPackage',
-  '/packages/omh-package-training': 'nav.trainingPackage',
-  '/connectors': 'nav.connectors',
-  '/secrets': 'nav.secrets',
-  '/integration-bus': 'nav.integrationBus',
-  '/workflows': 'nav.workflows',
-  '/execution/steps': 'nav.executionSteps',
-  '/maintenance': 'nav.maintenance',
-  '/environments': 'nav.environments',
-  '/change-sets': 'nav.changeSets',
-  '/production': 'nav.production',
-  '/retention': 'nav.retention',
-  '/notifications': 'nav.notifications',
-  '/users': 'nav.users',
-  '/auth-settings': 'nav.authSettings',
-  '/i18n-debug': 'navigation.i18nDebug',
-};
-
-const groupOrder = ['Operate', 'Build', 'Data Tools', 'Packages', 'Settings', 'Advanced', 'Developer'];
-const modeRank: Record<UIMode, number> = { simple: 0, advanced: 1, developer: 2 };
-const simpleRoutes = new Set(['/docs', '/onboarding', '/', '/runtime/monitor', '/events', '/onec-cockpit', '/integration-flows', '/training', '/test-console', '/odata-connections', '/odata-explorer']);
-const developerRoutes = new Set(['/workflows', '/execution/steps', '/i18n-debug']);
 
 export function Layout() {
   const t = useT();
   const navigation = useQuery({ queryKey: ['ui-navigation'], queryFn: uiApi.navigation, retry: false });
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(['Operate', 'Build', 'Data Tools', 'Packages']));
+  const [scenarioChooserOpen, setScenarioChooserOpen] = useState(false);
   const [uiMode, setUiMode] = useState<UIMode>(() => {
     const saved = localStorage.getItem(uiModeStorageKey);
-    return saved === 'simple' || saved === 'advanced' || saved === 'developer' ? saved : 'advanced';
+    return saved === 'simple' || saved === 'advanced' || saved === 'developer' ? saved : 'simple';
   });
-  const items = navigation.data?.length ? navigation.data : fallbackNavigation;
+  const items = normalizeNavigation(navigation.data?.length ? navigation.data : fallbackNavigation);
   const sections = useMemo(() => {
-    const grouped = new Map<string, UINavigationItem[]>();
+    const grouped = new Map<string, typeof items>();
     items.filter((item) => item.enabled && modeAllows(item, uiMode)).forEach((item) => {
-      const group = developerRoutes.has(item.route) ? 'Developer' : item.group;
-      grouped.set(group, [...(grouped.get(group) ?? []), item]);
+      grouped.set(item.group, [...(grouped.get(item.group) ?? []), item]);
     });
-    return Array.from(grouped.entries()).sort(([left], [right]) => (groupOrder.indexOf(left) === -1 ? 99 : groupOrder.indexOf(left)) - (groupOrder.indexOf(right) === -1 ? 99 : groupOrder.indexOf(right)));
+    const groupIndex = (group: string) => {
+      const index = groupOrder.indexOf(group as (typeof groupOrder)[number]);
+      return index === -1 ? 99 : index;
+    };
+    return Array.from(grouped.entries()).sort(([left], [right]) => groupIndex(left) - groupIndex(right));
   }, [items, uiMode]);
 
   function toggle(group: string) {
@@ -155,6 +71,7 @@ export function Layout() {
                 </button>
               ))}
             </div>
+            <small>{t(`nav.modeHint.${uiMode}`)}</small>
           </div>
           {sections.map(([group, groupItems]) => {
             const isExpanded = expanded.has(group);
@@ -166,7 +83,7 @@ export function Layout() {
                   <strong>{groupItems.length}</strong>
                 </button>
                 {isExpanded && groupItems.map((item) => {
-                  const labelKey = routeKey[item.route];
+                  const labelKey = item.titleKey || routeKey[item.route];
                   return (
                     <NavLink key={`${item.group}:${item.route}`} to={item.route} end={item.route === '/'} className={({ isActive }) => `nav-link ${item.advanced ? 'advanced' : ''} ${isActive ? 'active' : ''}`}>
                       <span className="nav-dot" />
@@ -185,23 +102,18 @@ export function Layout() {
         </div>
       </aside>
       <main className="content-shell">
-        <TopBar />
+        <TopBar onCreateIntegration={() => setScenarioChooserOpen(true)} />
         <ProductionBanner />
         <div className="page-content">
           <Outlet />
         </div>
       </main>
+      {scenarioChooserOpen && <ScenarioChooser onClose={() => setScenarioChooserOpen(false)} />}
     </div>
   );
 }
 
-function modeAllows(item: UINavigationItem, mode: UIMode) {
-  if (simpleRoutes.has(item.route)) return true;
-  const minimumMode: UIMode = developerRoutes.has(item.route) ? 'developer' : item.advanced ? 'advanced' : 'simple';
-  return modeRank[mode] >= modeRank[minimumMode];
-}
-
-function TopBar() {
+function TopBar({ onCreateIntegration }: { onCreateIntegration: () => void }) {
   const { language, setLanguage, t } = useI18n();
   const location = useLocation();
   const topic = helpForPath(location.pathname);
@@ -211,6 +123,7 @@ function TopBar() {
         <span className="topbar-kicker">OMH</span>
         <strong>{t('topbar.product')}</strong>
       </div>
+      <button type="button" className="create-integration-button" onClick={onCreateIntegration}>{t('nav.createIntegration')}</button>
       <div className="language-switcher" aria-label={t('topbar.language')}>
         <span className="microcopy">{t('topbar.language')}</span>
         {languages.map((item) => (
@@ -223,6 +136,89 @@ function TopBar() {
       <ContextHelpButton topic={topic} />
       <UserMenu />
     </header>
+  );
+}
+
+const scenarioCards = [
+  {
+    title: 'Внешний сервис обращается к нам',
+    input: 'HTTP запрос: JSON, XML или текст',
+    output: 'Синхронный ответ JSON/XML/raw или event_id',
+    does: 'OMH принимает запрос, при необходимости идет в OData, собирает ответ и показывает timeline.',
+    best: 'Сайт, WMS, терминал или внешний API ждёт ответ сразу.',
+    to: '/test-console?mode=build',
+    primary: true,
+  },
+  {
+    title: '1C отправляет данные во внешний API',
+    input: 'Документ или событие из 1C',
+    output: 'POST/PUT в внешний сервис',
+    does: 'OMH помогает выбрать источник, авторизацию, тело запроса и тестовый прогон.',
+    best: 'Маркировка, DNP, CRM, WMS, личный кабинет.',
+    to: '/onec-cockpit/new',
+  },
+  {
+    title: 'Нужно прочитать данные из 1C OData',
+    input: 'Поля входящего запроса или ручной фильтр',
+    output: 'Найденные поля, JSON-выборка или шаг для интеграции',
+    does: 'OMH ведёт по подключению, ресурсу, фильтрам $select/$filter и сохранению результата.',
+    best: 'Найти заказ, контрагента, остатки или строки табличной части.',
+    to: '/odata-explorer',
+  },
+  {
+    title: 'Интеграция с XML',
+    input: 'XML от 1C, EDI, банка или старой системы',
+    output: 'XML ответ, JSON ответ или пересылка дальше',
+    does: 'OMH разбирает XML, даёт выбрать поля и собрать ответ без ручного XPath с нуля.',
+    best: 'HTTP-сервисы 1C, УПД, SOAP-подобные обмены, legacy.',
+    to: '/test-console?mode=build&input=xml',
+  },
+  {
+    title: 'Печать этикеток',
+    input: 'Событие, заказ, пул кодов или ручной тест',
+    output: 'Задание на принтер и событие в журнале',
+    does: 'OMH связывает сценарий интеграции с установленным пакетом печати.',
+    best: 'Склад, производство, маркировка, Zebra/этикетки.',
+    to: '/printing',
+  },
+  {
+    title: 'Сначала разобраться и потренироваться',
+    input: 'Учебный пример',
+    output: 'Понятный сценарий без риска для продакшена',
+    does: 'OMH открывает обучение, где можно повторить интеграцию по шагам.',
+    best: 'Первый запуск, новый сотрудник, проверка перед боевым контуром.',
+    to: '/training',
+  },
+];
+
+function ScenarioChooser({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="scenario-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="scenario-modal" role="dialog" aria-modal="true" aria-labelledby="scenario-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="panel-toolbar">
+          <div>
+            <span className="eyebrow">Новая интеграция</span>
+            <h2 id="scenario-modal-title">Что вы хотите интегрировать?</h2>
+            <p>Выберите рабочий сценарий. Низкоуровневые маршруты, шаги и ключи OMH создаст или подскажет под капотом.</p>
+          </div>
+          <button type="button" className="ghost-button" onClick={onClose}>Закрыть</button>
+        </div>
+        <div className="scenario-card-grid compact-scenario-grid">
+          {scenarioCards.map((card) => (
+            <Link key={card.title} className={`scenario-card ${card.primary ? 'primary' : ''}`} to={card.to} onClick={onClose}>
+              <span className="eyebrow">{card.primary ? 'Рекомендуемый старт' : 'Сценарий'}</span>
+              <h3>{card.title}</h3>
+              <dl>
+                <div><dt>Что приходит</dt><dd>{card.input}</dd></div>
+                <div><dt>Что вернуть/сделать</dt><dd>{card.output}</dd></div>
+                <div><dt>Что делает OMH</dt><dd>{card.does}</dd></div>
+                <div><dt>Лучше всего для</dt><dd>{card.best}</dd></div>
+              </dl>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
 
