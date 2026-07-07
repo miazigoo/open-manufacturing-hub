@@ -106,6 +106,25 @@ function formatInputValue(value: unknown) {
   return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
+function triggerFieldFromSample(sample: Record<string, unknown>) {
+  if (Object.prototype.hasOwnProperty.call(sample, 'sinc')) return 'sinc';
+  return 'operation';
+}
+
+function triggerValueFromSample(sample: Record<string, unknown>, fallback: string) {
+  const field = triggerFieldFromSample(sample);
+  const value = sample[field];
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+function normalizeTriggerSample(sample: Record<string, unknown>, operation: string) {
+  const field = triggerFieldFromSample(sample);
+  const next = { ...sample, [field]: operation };
+  if (field === 'sinc' && next.operation === operation) delete next.operation;
+  if (field === 'operation' && next.sinc === operation) delete next.sinc;
+  return next;
+}
+
 export function ODataExplorerPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -253,13 +272,15 @@ export function ODataExplorerPage() {
 
   function operationExample(operationKey: OperationTemplate) {
     const example = operationKey.example_request_json && Object.keys(operationKey.example_request_json).length > 0 ? operationKey.example_request_json : operationKey.request_template_json;
-    return { ...example, operation: operationKey.operation };
+    return normalizeTriggerSample(example, operationKey.operation);
   }
 
   function selectOperationKey(operation: string) {
-    setFlowForm({ ...flowForm, operation });
     const operationKey = operationKeyRows.find((item) => item.operation === operation);
-    if (operationKey) setInputSampleText(asJson(operationExample(operationKey)));
+    const sample = operationKey ? operationExample(operationKey) : normalizeTriggerSample(parseInputSample(inputSampleText), operation);
+    const triggerValue = triggerValueFromSample(sample, operation);
+    setFlowForm({ ...flowForm, operation: triggerValue, name: flowForm.name, slug: flowForm.slug });
+    setInputSampleText(asJson(normalizeTriggerSample(sample, triggerValue)));
   }
 
   function requestInputFields(): InputField[] {
@@ -360,6 +381,10 @@ export function ODataExplorerPage() {
     if (draftSteps.length === 0) throw new Error('Add at least one OData step');
     const responseBody = draftSteps.reduce<Record<string, string>>((acc, step) => ({ ...acc, [step.save_as]: `{{${step.save_as}}}` }), { operation_key: '{{operation_key}}' });
     const inputFields = requestInputFields();
+    const rawSample = parseInputSample(inputSampleText);
+    const triggerValue = triggerValueFromSample(rawSample, flowForm.operation);
+    const triggerSample = normalizeTriggerSample(rawSample, triggerValue);
+    const triggerField = triggerFieldFromSample(triggerSample);
     return {
       name: flowForm.name,
       slug: flowForm.slug,
@@ -368,17 +393,17 @@ export function ODataExplorerPage() {
       source_type: 'external_api',
       target_type: 'odata_lookup',
       endpoint: { input_mode: 'json', response_mode: 'sync_response', auth_mode: 'none', auth_config_json: {} },
-      matcher_group_json: { mode: 'any', rules: [{ type: 'body_path_equals', path: 'operation', value: flowForm.operation }, { type: 'body_path_equals', path: 'sinc', value: flowForm.operation }] },
-      action_json: { type: 'create_event_only', operation: flowForm.operation, business_object: 'ODataChainedLookup', description: flowForm.description },
+      matcher_group_json: { mode: 'any', rules: [{ type: 'body_path_equals', path: triggerField, value: triggerValue }, { type: 'body_path_equals', path: triggerField === 'sinc' ? 'operation' : 'sinc', value: triggerValue }] },
+      action_json: { type: 'create_event_only', operation: triggerValue, business_object: 'ODataChainedLookup', description: flowForm.description },
       response_config_json: { response_mode: 'sync_response' },
       builder_json: {
         version: 1,
         input: { endpoint_slug: flowForm.slug, input_mode: 'json', response_mode: 'sync_response' },
         next_action: nextAction,
         target: nextAction === 'send_result' ? target : null,
-        variables: [{ name: 'operation_key', source: 'request.body.operation' }, ...inputFields.map((field) => ({ name: field.name, source: `request.body.${field.name}` }))],
+        variables: [{ name: 'operation_key', source: `request.body.${triggerField}` }, ...inputFields.map((field) => ({ name: field.name, source: `request.body.${field.name}` }))],
         steps: [
-          { id: 'read_operation_key', type: 'read_variable', name: 'Read operation key', path: 'request.body.operation', fallback_paths: ['request.body.sinc'], save_as: 'operation_key' },
+          { id: 'read_operation_key', type: 'read_variable', name: 'Read operation key', path: `request.body.${triggerField}`, fallback_paths: [triggerField === 'sinc' ? 'request.body.operation' : 'request.body.sinc'], save_as: 'operation_key' },
           ...inputFields.map((field) => ({ id: `read_${variableInput(field.name)}`, type: 'read_variable', name: `Read ${field.name}`, path: `request.body.${field.name}`, save_as: variableInput(field.name) })),
           ...draftSteps.map((step) => ({
             id: step.id,
@@ -395,7 +420,7 @@ export function ODataExplorerPage() {
           { id: 'return_response', type: 'return_response', name: 'Return response', body: responseBody },
         ],
       },
-      test_payload_json: { ...parseInputSample(inputSampleText), operation: flowForm.operation },
+      test_payload_json: triggerSample,
     };
   }
 
@@ -643,6 +668,7 @@ export function ODataExplorerPage() {
           </label>
         </div>
         <label className="field-label">Description<input value={flowForm.description} onChange={(event) => setFlowForm({ ...flowForm, description: event.target.value })} /></label>
+        <div className="success-note">Trigger для сохранения<span><code>{triggerFieldFromSample(parseInputSample(inputSampleText))}</code> = <code>{triggerValueFromSample(parseInputSample(inputSampleText), flowForm.operation)}</code></span></div>
         {renderDraftSummary()}
         <div className="action-row wrap-actions">
           <button type="button" className="primary-button" onClick={() => saveFlow.mutate()} disabled={saveFlow.isPending || draftSteps.length === 0 || !target.url.trim()}>Сохранить интеграцию</button>
