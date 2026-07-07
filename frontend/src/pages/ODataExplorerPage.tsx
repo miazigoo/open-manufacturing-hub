@@ -97,6 +97,10 @@ function renderTestPlaceholders(value: string, sample: Record<string, unknown>, 
   return renderDraftPlaceholders(renderInputPlaceholders(value, sample), steps);
 }
 
+function hasUnresolvedPlaceholders(value: string) {
+  return /{{[^}]+}}/.test(value);
+}
+
 function formatInputValue(value: unknown) {
   if (value === undefined || value === null) return '';
   return typeof value === 'object' ? JSON.stringify(value) : String(value);
@@ -199,6 +203,14 @@ export function ODataExplorerPage() {
   function submit(event: FormEvent) {
     event.preventDefault();
     setFormError(null);
+    const sample = parseInputSample(inputSampleText);
+    const resourcePreview = renderTestPlaceholders(query.resource, sample, draftSteps);
+    const filterPreview = query.filter ? renderTestPlaceholders(query.filter, sample, draftSteps) : '';
+    const unresolved = [resourcePreview, filterPreview].find(hasUnresolvedPlaceholders);
+    if (unresolved) {
+      setFormError(`В запросе осталась неподставленная переменная: ${unresolved}. Откройте карточку предыдущего шага и вставьте переменную с точным именем из заголовка.`);
+      return;
+    }
     run.mutate();
   }
 
@@ -575,6 +587,7 @@ export function ODataExplorerPage() {
             <button type="button" className="ghost-button" onClick={() => setWizardStep('choose_action')}>Назад</button>
           </div>
         </form>
+        {formError && <div className="error-state compact">{formError}</div>}
         {run.error instanceof Error && <div className="error-state compact">{run.error.message}</div>}
         {run.data && (
           <div className="stack-form">
