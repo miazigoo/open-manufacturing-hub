@@ -9,6 +9,7 @@ import { InputContractPreview } from './InputContractPreview';
 import { InputTypeSelector } from './InputTypeSelector';
 import { integrationMasterApi } from './api';
 import { MasterStepLayout } from './MasterStepLayout';
+import { ODataObjectStepBuilder } from './odata-object-step/ODataObjectStepBuilder';
 import { OperationKeySelector } from './OperationKeySelector';
 import { ODataStepBuilder } from './odata-step/ODataStepBuilder';
 import { ParsedFieldsTable } from './ParsedFieldsTable';
@@ -26,6 +27,7 @@ export function IntegrationMasterPage() {
   const [sourceSystem, setSourceSystem] = useState('external_api');
   const [parseResult, setParseResult] = useState<InputParseResponse | null>(null);
   const [savedDraft, setSavedDraft] = useState<InputDraftRead | null>(null);
+  const [previousVariables, setPreviousVariables] = useState<Record<string, unknown>>({});
   const [fields, setFields] = useState<InputContractField[]>([]);
   const [operationKey, setOperationKey] = useState<InputOperationKey>({ type: 'endpoint', field_path: null, value: null, fallback_paths: [], matcher_preview: { mode: 'endpoint', rules: [] } });
   const [businessKey, setBusinessKey] = useState<InputBusinessKey>({ path: null, fallback_paths: [] });
@@ -42,13 +44,15 @@ export function IntegrationMasterPage() {
       setOperationKey(operationFromSuggestion(data.suggested_operation_keys[0]));
       setBusinessKey(businessFromSuggestion(data.suggested_business_keys[0]));
       setSavedDraft(null);
+      setPreviousVariables({});
       saveDraft.reset();
     },
   });
 
   const validation = useMutation({ mutationFn: (contract: InputContract) => integrationMasterApi.validate(contract) });
-  const saveDraft = useMutation({ mutationFn: (contract: InputContract) => integrationMasterApi.saveDraft(contract, parseResult), onSuccess: (data) => setSavedDraft(data.draft) });
+  const saveDraft = useMutation({ mutationFn: (contract: InputContract) => integrationMasterApi.saveDraft(contract, parseResult), onSuccess: (data) => { setSavedDraft(data.draft); setPreviousVariables({}); } });
   const contract = useMemo(() => buildContract({ name, slug, inputMode, sourceSystem, selected, sample: parseResult?.normalized_sample ?? sampleText, fields, operationKey, businessKey }), [name, slug, inputMode, sourceSystem, selected, parseResult, sampleText, fields, operationKey, businessKey]);
+  const objectVariables = useMemo(() => ({ ...deriveVariablesFromDraft(savedDraft), ...previousVariables }), [savedDraft, previousVariables]);
 
   if (scenarios.isPending) return <LoadingState label="Загрузка мастера интеграции" />;
   if (scenarios.error) return <ErrorState error={scenarios.error} />;
@@ -64,6 +68,7 @@ export function IntegrationMasterPage() {
     setParseResult(null);
     setFields([]);
     setSavedDraft(null);
+    setPreviousVariables({});
     setOperationKey({ type: 'endpoint', field_path: null, value: null, fallback_paths: [], matcher_preview: { mode: 'endpoint', rules: [] } });
     setBusinessKey({ path: null, fallback_paths: [] });
     validation.reset();
@@ -76,6 +81,7 @@ export function IntegrationMasterPage() {
     setParseResult(null);
     setFields([]);
     setSavedDraft(null);
+    setPreviousVariables({});
     validation.reset();
     saveDraft.reset();
   }
@@ -104,6 +110,7 @@ export function IntegrationMasterPage() {
   const parseError = parse.error instanceof Error ? parse.error.message : null;
   const saveError = saveDraft.error instanceof Error ? saveDraft.error.message : validation.error instanceof Error ? validation.error.message : null;
   const savedResponse = savedDraft ? { draft: savedDraft, next_steps: saveDraft.data?.next_steps ?? [] } : saveDraft.data ?? null;
+  const hasSavedODataQuery = Boolean(savedDraft?.odata_steps.some((step) => step.type !== 'odata_object_query'));
 
   return (
     <div className="page-stack integration-master-page">
@@ -145,7 +152,9 @@ export function IntegrationMasterPage() {
 
       <InputContractPreview contract={contract} validation={validation.data ?? null} saved={savedResponse} error={saveError} onValidate={validateContract} onSave={saveContractDraft} validating={validation.isPending} saving={saveDraft.isPending} />
 
-      {savedDraft ? <ODataStepBuilder contract={savedDraft.contract} draft={savedDraft} onDraftUpdated={setSavedDraft} /> : null}
+      {savedDraft ? <ODataStepBuilder contract={savedDraft.contract} draft={savedDraft} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
+
+      {savedDraft && hasSavedODataQuery ? <ODataObjectStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} /> : null}
     </div>
   );
 }
@@ -211,4 +220,16 @@ function defaultSample(mode: InputMode) {
   if (mode === 'xml') return '<Документ>\n  <Тип>УПД</Тип>\n  <Номер>123</Номер>\n  <ИНН>7707083893</ИНН>\n</Документ>';
   if (mode === 'raw_text') return 'operation=dnp_sinc_pull_codes;Number=260666/6938';
   return { operation: 'lookup_contractor', inn: '7707083893' };
+}
+
+function deriveVariablesFromDraft(draft: InputDraftRead | null): Record<string, unknown> {
+  const variables: Record<string, unknown> = {};
+  for (const step of draft?.odata_steps ?? []) {
+    if (step.type === 'odata_object_query') {
+      continue;
+    }
+    const fields = step.select.length ? step.select : ['Ref_Key'];
+    variables[step.save_as] = Object.fromEntries(fields.map((field) => [field, null]));
+  }
+  return variables;
 }

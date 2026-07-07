@@ -1,5 +1,11 @@
 import pytest
 
+from app.integration_master.service import render_1c_object_resource
+
+
+ORDER_GUID = "c3335ee4-43d0-11f1-8388-000c29b755c7"
+PRODUCT_GUID = "ff22288c-2da4-11f1-8388-000c29b755c7"
+
 
 async def _create_master_contract(client):
     parse_response = await client.post(
@@ -44,9 +50,12 @@ async def _create_mock_odata_connector(client):
                 "odata": {"enabled": True},
                 "mock_odata": {
                     "Document_ЗаказНаПроизводство2_2": [
-                        {"Ref_Key": "order-guid", "Number": "260666/6938", "Date": "2026-04-29T16:38:53", "Posted": True},
+                        {"Ref_Key": ORDER_GUID, "Number": "260666/6938", "Date": "2026-04-29T16:38:53", "Posted": True},
                         {"Ref_Key": "other-order", "Number": "260666/0000", "Date": "2026-04-30T08:00:00", "Posted": True},
-                    ]
+                    ],
+                    f"Document_ЗаказНаПроизводство2_2(guid'{ORDER_GUID}')/Продукция": [
+                        {"Номенклатура_Key": PRODUCT_GUID, "Количество": 180, "КоличествоУпаковок": 180},
+                    ],
                 },
             },
         },
@@ -66,6 +75,37 @@ def _order_step(connector_id, **overrides):
         "orderby": "Date desc",
         "paginate": False,
         "save_as": "order",
+        "required": True,
+    }
+    step.update(overrides)
+    return step
+
+
+def _previous_variables(**overrides):
+    variables = {
+        "order": {
+            "Ref_Key": ORDER_GUID,
+            "Number": "260666/6938",
+            "Date": "2026-04-29T16:38:53",
+            "Posted": True,
+        }
+    }
+    variables.update(overrides)
+    return variables
+
+
+def _object_step(connector_id, **overrides):
+    step = {
+        "connection_id": connector_id,
+        "object_variable": "order",
+        "key_field": "Ref_Key",
+        "key_type": "guid",
+        "base_resource": "Document_ЗаказНаПроизводство2_2",
+        "nested_resource": "Продукция",
+        "select": ["Номенклатура_Key", "Количество", "КоличествоУпаковок"],
+        "top": 100,
+        "paginate": False,
+        "save_as": "products",
         "required": True,
     }
     step.update(overrides)
@@ -274,7 +314,7 @@ async def test_odata_step_test_uses_selected_connection_and_maps_result(client):
     body = response.json()
     assert body["success"] is True
     assert body["items_count"] == 1
-    assert body["result_preview"]["Ref_Key"] == "order-guid"
+    assert body["result_preview"]["Ref_Key"] == ORDER_GUID
     assert body["request"]["resource"] == "Document_ЗаказНаПроизводство2_2"
     assert body["request"]["params"]["$filter"] == "Number eq '260666/6938'"
     assert body["request"]["params"]["$select"] == "Ref_Key,Number,Date,Posted"
@@ -326,3 +366,153 @@ async def test_append_odata_step_to_master_draft(client):
     )
     assert saved_again.status_code == 200, saved_again.text
     assert len(saved_again.json()["draft"]["odata_steps"]) == 1
+
+
+def test_render_1c_object_resource_guid_template_and_variables():
+    rendered = render_1c_object_resource(
+        "Document_ЗаказНаПроизводство2_2",
+        "{{order.Ref_Key}}",
+        "guid",
+        "Продукция",
+        _previous_variables(),
+    )
+    assert rendered.template_resource == "Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция"
+    assert rendered.rendered_resource == f"Document_ЗаказНаПроизводство2_2(guid'{ORDER_GUID}')/Продукция"
+
+
+async def test_odata_object_step_preview_renders_template_and_url(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    response = await client.post(
+        "/api/integration-master/odata-object-step/preview",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "odata_object_step": _object_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert body["template_resource"] == "Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция"
+    assert body["rendered_resource"] == f"Document_ЗаказНаПроизводство2_2(guid'{ORDER_GUID}')/Продукция"
+    assert body["rendered_url"] == f"Document_ЗаказНаПроизводство2_2(guid'{ORDER_GUID}')/Продукция?$select=Номенклатура_Key,Количество,КоличествоУпаковок&$top=100"
+    assert body["key_preview"] == ORDER_GUID
+    assert "products[0].Номенклатура_Key" in body["variables_after_step"]
+
+
+async def test_odata_object_step_validate_friendly_errors(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    missing_object = await client.post(
+        "/api/integration-master/odata-object-step/validate",
+        json={"input_contract": contract, "previous_variables": {}, "odata_object_step": _object_step(connector["id"], object_variable="")},
+    )
+    assert missing_object.status_code == 200, missing_object.text
+    assert missing_object.json()["valid"] is False
+    assert "Выберите объект" in "; ".join(missing_object.json()["errors"])
+
+    array_object = await client.post(
+        "/api/integration-master/odata-object-step/validate",
+        json={"input_contract": contract, "previous_variables": {"products": []}, "odata_object_step": _object_step(connector["id"], object_variable="products")},
+    )
+    assert array_object.status_code == 200, array_object.text
+    assert array_object.json()["valid"] is False
+    assert "является массивом" in "; ".join(array_object.json()["errors"])
+
+    missing_ref = await client.post(
+        "/api/integration-master/odata-object-step/validate",
+        json={"input_contract": contract, "previous_variables": {"order": {"Number": "260666/6938"}}, "odata_object_step": _object_step(connector["id"])},
+    )
+    assert missing_ref.status_code == 200, missing_ref.text
+    assert missing_ref.json()["valid"] is False
+    assert "нет поля Ref_Key" in "; ".join(missing_ref.json()["errors"])
+
+    invalid_guid = await client.post(
+        "/api/integration-master/odata-object-step/validate",
+        json={"input_contract": contract, "previous_variables": {"order": {"Ref_Key": "not-a-guid"}}, "odata_object_step": _object_step(connector["id"])},
+    )
+    assert invalid_guid.status_code == 200, invalid_guid.text
+    assert invalid_guid.json()["valid"] is False
+    assert "не похоже на GUID" in "; ".join(invalid_guid.json()["errors"])
+
+    invalid_top = await client.post(
+        "/api/integration-master/odata-object-step/validate",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "odata_object_step": _object_step(connector["id"], top=501)},
+    )
+    assert invalid_top.status_code == 200, invalid_top.text
+    assert invalid_top.json()["valid"] is False
+    assert "$top" in "; ".join(invalid_top.json()["errors"])
+
+
+async def test_odata_object_step_test_reads_tabular_part(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    response = await client.post(
+        "/api/integration-master/odata-object-step/test",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "odata_object_step": _object_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["items_count"] == 1
+    assert body["rendered_resource"] == f"Document_ЗаказНаПроизводство2_2(guid'{ORDER_GUID}')/Продукция"
+    assert body["result_preview"][0]["Номенклатура_Key"] == PRODUCT_GUID
+    assert body["request"]["resource"] == f"Document_ЗаказНаПроизводство2_2(guid'{ORDER_GUID}')/Продукция"
+    assert body["request"]["params"]["$select"] == "Номенклатура_Key,Количество,КоличествоУпаковок"
+    assert "products[]" in body["variables_after_step"]
+    assert "products[0].Количество" in body["variables_after_step"]
+
+
+async def test_odata_object_step_test_returns_empty_required_result(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    response = await client.post(
+        "/api/integration-master/odata-object-step/test",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "odata_object_step": _object_step(connector["id"], nested_resource="Материалы")},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is False
+    assert body["error_code"] == "ODATA_TABULAR_PART_EMPTY"
+    assert body["items_count"] == 0
+    assert "Материалы" in body["message"]
+
+
+async def test_append_odata_object_step_to_master_draft(client):
+    contract, parse_result = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+    saved = await client.post("/api/integration-master/input/save-draft", json={"contract": contract, "parse_result": parse_result})
+    assert saved.status_code == 200, saved.text
+    draft_id = saved.json()["draft"]["id"]
+
+    first_step = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-steps",
+        json={"input_contract": contract, "odata_step": _order_step(connector["id"])},
+    )
+    assert first_step.status_code == 200, first_step.text
+
+    response = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-object-steps",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "odata_object_step": _object_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["saved_step"]["id"] == "read_products"
+    assert body["saved_step"]["type"] == "odata_object_query"
+    assert body["saved_step"]["resource_template"] == "Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция"
+    assert body["saved_step"]["connection_name"] == "1C CHZ OData ERP"
+    assert body["draft"]["odata_steps"][0]["type"] == "odata_query"
+    assert body["draft"]["odata_steps"][1]["type"] == "odata_object_query"
+    assert body["draft"]["odata_steps"][1]["save_as"] == "products"
+
+    loaded = await client.get(f"/api/integration-master/drafts/{draft_id}")
+    assert loaded.status_code == 200, loaded.text
+    assert loaded.json()["odata_steps"][1]["nested_resource"] == "Продукция"
+
+    saved_again = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-object-steps",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "odata_object_step": _object_step(connector["id"])},
+    )
+    assert saved_again.status_code == 200, saved_again.text
+    assert len(saved_again.json()["draft"]["odata_steps"]) == 2

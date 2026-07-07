@@ -17,9 +17,10 @@ interface ODataStepBuilderProps {
   contract: InputContract;
   draft: InputDraftRead;
   onDraftUpdated: (draft: InputDraftRead) => void;
+  onVariablesUpdated?: (variables: Record<string, unknown>) => void;
 }
 
-export function ODataStepBuilder({ contract, draft, onDraftUpdated }: ODataStepBuilderProps) {
+export function ODataStepBuilder({ contract, draft, onDraftUpdated, onVariablesUpdated }: ODataStepBuilderProps) {
   const [step, setStep] = useState<ODataStepConfig>(() => defaultStep(contract));
   const connections = useQuery({ queryKey: ['odata-connections-options'], queryFn: odataConnectionsApi.options });
   const selectedConnection = (connections.data ?? []).find((item) => item.id === step.connection_id);
@@ -31,7 +32,12 @@ export function ODataStepBuilder({ contract, draft, onDraftUpdated }: ODataStepB
 
   const payload = useMemo<ODataStepRequest>(() => ({ input_contract: contract, sample_input: contract.sample, odata_step: step }), [contract, step]);
   const preview = useMutation({ mutationFn: () => integrationMasterApi.previewODataStep(payload) });
-  const test = useMutation({ mutationFn: () => integrationMasterApi.testODataStep(payload) });
+  const test = useMutation({
+    mutationFn: () => integrationMasterApi.testODataStep(payload),
+    onSuccess: (data) => {
+      if (data.success && data.result_preview) onVariablesUpdated?.({ [data.saved_as]: data.result_preview });
+    },
+  });
   const save = useMutation({
     mutationFn: () => integrationMasterApi.saveODataStep(draft.id, contract, step),
     onSuccess: (data) => {

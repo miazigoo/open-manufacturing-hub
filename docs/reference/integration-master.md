@@ -30,6 +30,10 @@ POST /api/integration-master/odata-step/preview
 POST /api/integration-master/odata-step/test
 POST /api/integration-master/odata-step/validate
 POST /api/integration-master/drafts/{draft_id}/odata-steps
+POST /api/integration-master/odata-object-step/preview
+POST /api/integration-master/odata-object-step/test
+POST /api/integration-master/odata-object-step/validate
+POST /api/integration-master/drafts/{draft_id}/odata-object-steps
 ```
 
 ## Parse Request
@@ -199,6 +203,63 @@ If the result is empty and `required=true`, test returns `ODATA_RESULT_EMPTY`. T
 
 The draft stores OData steps in `odata_steps_json` and returns them as `draft.odata_steps`.
 
+## Step 2B: 1C Object / Tabular Part Query
+
+After one `odata_query` step is saved, `/master` can add one `odata_object_query` step.
+
+This step reads a nested 1C object resource such as:
+
+```text
+Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция
+```
+
+Example request:
+
+```json
+{
+  "input_contract": {},
+  "previous_variables": {
+    "order": {
+      "Ref_Key": "c3335ee4-43d0-11f1-8388-000c29b755c7",
+      "Number": "260666/6938"
+    }
+  },
+  "odata_object_step": {
+    "connection_id": "11111111-1111-1111-1111-111111111111",
+    "object_variable": "order",
+    "key_field": "Ref_Key",
+    "key_type": "guid",
+    "base_resource": "Document_ЗаказНаПроизводство2_2",
+    "nested_resource": "Продукция",
+    "select": ["Номенклатура_Key", "Количество", "КоличествоУпаковок"],
+    "top": 100,
+    "paginate": false,
+    "save_as": "products",
+    "required": true
+  }
+}
+```
+
+Preview returns:
+
+```text
+Template: Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция
+Rendered: Document_ЗаказНаПроизводство2_2(guid'c3335ee4-43d0-11f1-8388-000c29b755c7')/Продукция
+```
+
+Successful test returns array rows and future variables:
+
+```text
+products[]
+products[0].Номенклатура_Key
+products[0].Количество
+products[0].КоличествоУпаковок
+```
+
+If `required=true` and the tabular part is empty, test returns `ODATA_TABULAR_PART_EMPTY`.
+
+The saved draft item has `type=odata_object_query` and is stored in the same `odata_steps_json` list. This is not full integration compile.
+
 ## Parsing Rules
 
 - JSON fields use paths like `request.body.operation`.
@@ -225,14 +286,14 @@ DnP Codes
 lookup contractor!
 ```
 
-## Non-goals For Step 1
+## Non-goals For Current Master Steps
 
 Do not add here:
 
-- more than one OData step.
 - foreach OData.
-- tabular part helper.
+- foreach over tabular part rows.
+- nested code pool query for each product.
 - final action.
 - response builder.
 - saving full integration.
-- run test or Timeline.
+- Timeline and full dry-run execution.

@@ -2144,7 +2144,64 @@ export const academyPages: PageSeed[] = [
     '',
     '::checklist{id="find-production-order-by-number" items="Input Contract содержит request.body.Number|Выбрана OData connection|Resource Document_ЗаказНаПроизводство2_2|Filter Number eq request.body.Number|$select содержит Ref_Key|save_as=order|required=true|Preview показывает order.Ref_Key"}',
     '',
-    '::next-lesson{label="Первый OData-запрос после Input Contract" href="/docs/onec/academy/first-odata-query-contractor"}',
+    '::next-lesson{label="Читаем табличную часть документа 1С" href="/docs/onec/academy/read-tabular-part"}',
+  )),
+  page('academy', 'read-tabular-part', 'Читаем табличную часть документа 1С через OData', 'Step 2B в /master: собрать Document_...(guid...)\/Продукция, протестировать и сохранить массив products.', 7, mdLines(
+    '# Читаем табличную часть документа 1С через OData',
+    '',
+    '::lesson-page{label="Integration Master · Step 2B"}',
+    '',
+    '## Что такое табличная часть',
+    'В документах 1С есть вложенные строки: товары, продукция, материалы, услуги. В OData они читаются как nested resource объекта.',
+    '',
+    '```text',
+    "Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция",
+    '```',
+    '',
+    '`Document_ЗаказНаПроизводство2_2` — базовый resource документа. `order.Ref_Key` — внутренняя ссылка 1С на найденный объект. `Продукция` — имя табличной части.',
+    '',
+    '## Настройка Step 2B',
+    '```text',
+    'Какой объект 1С читать: order',
+    'Поле ссылки 1С: Ref_Key',
+    'Тип ключа: GUID',
+    'Базовый OData Resource: Document_ЗаказНаПроизводство2_2',
+    'Табличная часть / вложенный ресурс: Продукция',
+    'Какие поля получить: Номенклатура_Key, Количество, КоличествоУпаковок',
+    '$top: 100',
+    'Сохранить строки как: products',
+    'Ошибка, если строк нет: true',
+    '```',
+    '',
+    '## Preview',
+    'Template resource:',
+    '',
+    '```text',
+    "Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция",
+    '```',
+    '',
+    'Rendered resource:',
+    '',
+    '```text',
+    "Document_ЗаказНаПроизводство2_2(guid'c3335ee4-43d0-11f1-8388-000c29b755c7')/Продукция",
+    '```',
+    '',
+    '## Result',
+    'OMH сохранит массив как `products`.',
+    '',
+    '```text',
+    'products[]',
+    'products[0].Номенклатура_Key',
+    'products[0].Количество',
+    'products[0].КоличествоУпаковок',
+    '```',
+    '',
+    'Следующий будущий шаг сможет пройти по `products` и выполнить OData-запрос для каждой строки. Foreach не входит в Step 2B.',
+    '',
+    '## Empty result',
+    'Если строк нет и `required=true`, test вернёт `ODATA_TABULAR_PART_EMPTY`. Проверьте `order.Ref_Key`, имя табличной части, права OData пользователя и базовый resource.',
+    '',
+    '::checklist{id="read-tabular-part" items="Выбрал order|Выбрал Ref_Key|Key type GUID|Указал Document_ЗаказНаПроизводство2_2|Указал Продукция|Preview показывает template и rendered resource|Test вернул products[]|Сохранил odata_object_query"}',
   )),
   lesson({
     slug: 'lesson-01-what-is-omh-for-1c-users',
@@ -2703,6 +2760,10 @@ POST /api/integration-master/odata-step/preview
 POST /api/integration-master/odata-step/test
 POST /api/integration-master/odata-step/validate
 POST /api/integration-master/drafts/{draft_id}/odata-steps
+POST /api/integration-master/odata-object-step/preview
+POST /api/integration-master/odata-object-step/test
+POST /api/integration-master/odata-object-step/validate
+POST /api/integration-master/drafts/{draft_id}/odata-object-steps
 ~~~
 
 ## Что поддерживает step 1
@@ -2714,6 +2775,7 @@ POST /api/integration-master/drafts/{draft_id}/odata-steps
 - Endpoint slug validation.
 - Draft сохранение без создания боевой интеграции.
 - Step 2A: один OData Query после Input Contract.
+- Step 2B: чтение табличной части найденного объекта 1С.
 
 ## Step 2A OData example
 
@@ -2735,9 +2797,39 @@ Number eq '260666/6938'
 
 После test query следующие шаги смогут использовать \`order.Ref_Key\`. Если результат пустой и \`required=true\`, test вернёт \`ODATA_RESULT_EMPTY\`.
 
+## Step 2B OData object example
+
+~~~text
+Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция
+~~~
+
+Config:
+
+~~~text
+object_variable: order
+key_field: Ref_Key
+key_type: guid
+base_resource: Document_ЗаказНаПроизводство2_2
+nested_resource: Продукция
+$select: Номенклатура_Key, Количество, КоличествоУпаковок
+save_as: products
+required: true
+~~~
+
+Future variables:
+
+~~~text
+products[]
+products[0].Номенклатура_Key
+products[0].Количество
+products[0].КоличествоУпаковок
+~~~
+
+Пустая табличная часть при \`required=true\` возвращает \`ODATA_TABULAR_PART_EMPTY\`.
+
 ## Non-goals
 
-На Step 2A не создаются foreach, tabular part helper, response builder, final action, full integration save и Timeline.
+На Step 2B не создаются foreach, JSON/XML builder, response builder, final action, full integration save и Timeline.
 
 ::open-page{route="/master" label="Открыть Мастер интеграции"}
 `)),

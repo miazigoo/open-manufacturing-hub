@@ -120,6 +120,10 @@ POST /api/integration-master/odata-step/preview
 POST /api/integration-master/odata-step/test
 POST /api/integration-master/odata-step/validate
 POST /api/integration-master/drafts/{draft_id}/odata-steps
+POST /api/integration-master/odata-object-step/preview
+POST /api/integration-master/odata-object-step/test
+POST /api/integration-master/odata-object-step/validate
+POST /api/integration-master/drafts/{draft_id}/odata-object-steps
 \`\`\`
 
 ## Input Contract
@@ -176,6 +180,36 @@ Number eq '260666/6938'
 \`\`\`
 
 После test query следующие шаги смогут использовать \`order.Ref_Key\`. Если 1C вернула пустой список и \`required=true\`, test вернёт \`ODATA_RESULT_EMPTY\`.
+
+## Step 2B: табличная часть объекта 1С
+
+После сохранения \`odata_query\` можно прочитать вложенный resource найденного объекта:
+
+\`\`\`text
+Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция
+\`\`\`
+
+Настройка:
+
+\`\`\`text
+object_variable: order
+key_field: Ref_Key
+key_type: guid
+base_resource: Document_ЗаказНаПроизводство2_2
+nested_resource: Продукция
+$select: Номенклатура_Key, Количество, КоличествоУпаковок
+save_as: products
+\`\`\`
+
+Будущие переменные:
+
+\`\`\`text
+products[]
+products[0].Номенклатура_Key
+products[0].Количество
+\`\`\`
+
+Если строк нет и \`required=true\`, test вернёт \`ODATA_TABULAR_PART_EMPTY\`.
 
 ## Parser rules
 

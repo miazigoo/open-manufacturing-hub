@@ -21,6 +21,12 @@ from app.integration_master.schemas import (
     InputParseResponse,
     InputParseRequest,
     ODataFilterRule,
+    ODataObjectStepConfig,
+    ODataObjectStepPreviewResponse,
+    ODataObjectStepRequest,
+    ODataObjectStepTestResponse,
+    ODataObjectStepValidationResponse,
+    ResourceRenderResult,
     ODataStepConfig,
     ODataStepPreviewResponse,
     ODataStepRequest,
@@ -33,6 +39,7 @@ SLUG_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9_-]{0,158}[a-z0-9])?$")
 SAVE_AS_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 STEP_ID_PATTERN = re.compile(r"[^A-Za-z0-9_]+")
 PLACEHOLDER_RE = re.compile(r"{{\s*([^}]+?)\s*}}")
+GUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 BUSINESS_KEY_PRIORITY = [
     "order_name",
     "number",
@@ -232,6 +239,139 @@ async def append_odata_step(session: AsyncSession, draft_id: UUID, step: ODataSt
     return _draft_read(draft), saved
 
 
+def validate_odata_object_step(request: ODataObjectStepRequest) -> ODataObjectStepValidationResponse:
+    context = _odata_object_step_context(request.previous_variables, request.odata_object_step)
+    return ODataObjectStepValidationResponse(
+        valid=not context["errors"],
+        errors=context["errors"],
+        warnings=context["warnings"],
+        template_resource=context["template_resource"],
+        rendered_resource=context["rendered_resource"],
+        template_filter=context["template_filter"],
+        rendered_filter=context["rendered_filter"],
+        template_url=context["template_url"],
+        rendered_url=context["rendered_url"],
+        variables_after_step=context["variables_after_step"],
+    )
+
+
+def preview_odata_object_step(request: ODataObjectStepRequest) -> ODataObjectStepPreviewResponse:
+    context = _odata_object_step_context(request.previous_variables, request.odata_object_step)
+    return ODataObjectStepPreviewResponse(
+        valid=not context["errors"],
+        errors=context["errors"],
+        warnings=context["warnings"],
+        template_resource=context["template_resource"],
+        rendered_resource=context["rendered_resource"],
+        template_filter=context["template_filter"],
+        rendered_filter=context["rendered_filter"],
+        template_url=context["template_url"],
+        rendered_url=context["rendered_url"],
+        variables_after_step=context["variables_after_step"],
+        saved_as=request.odata_object_step.save_as.strip(),
+        object_variable=request.odata_object_step.object_variable.strip(),
+        key_preview=context["key_preview"],
+    )
+
+
+async def test_odata_object_step(session: AsyncSession, request: ODataObjectStepRequest) -> ODataObjectStepTestResponse:
+    preview = preview_odata_object_step(request)
+    if not preview.valid:
+        return ODataObjectStepTestResponse(
+            success=False,
+            error_code="ODATA_OBJECT_STEP_INVALID",
+            message="; ".join(preview.errors),
+            hint="Исправьте параметры чтения табличной части и повторите проверку.",
+            rendered_resource=preview.rendered_resource or preview.template_resource or "",
+            rendered_filter=preview.rendered_filter,
+            saved_as=preview.saved_as,
+            variables_after_step=preview.variables_after_step,
+        )
+    connection_id = request.odata_object_step.connection_id
+    if connection_id is None:
+        return ODataObjectStepTestResponse(
+            success=False,
+            error_code="ODATA_CONNECTION_REQUIRED",
+            message="Выберите OData-подключение.",
+            rendered_resource=preview.rendered_resource or "",
+            rendered_filter=preview.rendered_filter,
+            saved_as=preview.saved_as,
+            variables_after_step=preview.variables_after_step,
+        )
+    try:
+        result = await odata_explorer_service.query(
+            session,
+            connection_id,
+            ODataQueryRequest(
+                resource=preview.rendered_resource or "",
+                top=request.odata_object_step.top,
+                filter=preview.rendered_filter,
+                select=",".join(request.odata_object_step.select) if request.odata_object_step.select else None,
+                paginate=request.odata_object_step.paginate,
+            ),
+        )
+    except BadRequestError as exc:
+        return ODataObjectStepTestResponse(
+            success=False,
+            error_code="ODATA_TABULAR_PART_QUERY_FAILED",
+            message=str(exc),
+            hint="Проверьте resource, nested resource, Ref_Key и права пользователя 1С.",
+            rendered_resource=preview.rendered_resource or "",
+            rendered_filter=preview.rendered_filter,
+            saved_as=preview.saved_as,
+            variables_after_step=preview.variables_after_step,
+        )
+    items = result.get("items") if isinstance(result.get("items"), list) else []
+    if not items and request.odata_object_step.required:
+        return ODataObjectStepTestResponse(
+            success=False,
+            error_code="ODATA_TABULAR_PART_EMPTY",
+            message=f"1C OData не вернула строк табличной части {request.odata_object_step.nested_resource.strip()}.",
+            hint=f"Проверьте, что документ найден правильно и в нём есть строки {request.odata_object_step.nested_resource.strip()}.",
+            rendered_resource=preview.rendered_resource or "",
+            rendered_filter=preview.rendered_filter,
+            items_count=0,
+            saved_as=preview.saved_as,
+            variables_after_step=preview.variables_after_step,
+            request=result.get("request") if isinstance(result.get("request"), dict) else {},
+        )
+    preview_items = [item for item in items[:5] if isinstance(item, dict)]
+    return ODataObjectStepTestResponse(
+        success=True,
+        message=f"1С вернула {len(items)} строк",
+        rendered_resource=preview.rendered_resource or "",
+        rendered_filter=preview.rendered_filter,
+        items_count=len(items),
+        result_preview=preview_items,
+        saved_as=preview.saved_as,
+        variables_after_step=_variables_after_object_step(request.odata_object_step, preview_items[0] if preview_items else None),
+        request=result.get("request") if isinstance(result.get("request"), dict) else {},
+    )
+
+
+async def append_odata_object_step(session: AsyncSession, draft_id: UUID, step: ODataObjectStepConfig, previous_variables: dict[str, Any]) -> tuple[InputDraftRead, ODataObjectStepConfig]:
+    draft = await session.get(IntegrationMasterDraft, draft_id)
+    if draft is None:
+        raise NotFoundError("Integration Master draft not found")
+    contract = InputContract(**draft.contract_json)
+    validation = validate_odata_object_step(ODataObjectStepRequest(input_contract=contract, previous_variables=previous_variables, odata_object_step=step))
+    if not validation.valid:
+        raise BadRequestError("; ".join(validation.errors))
+    saved = _normalized_odata_object_step(step)
+    if saved.connection_id and not saved.connection_name:
+        try:
+            connection = await odata_connections_service.get_connection(session, saved.connection_id)
+            saved.connection_name = connection.name
+        except NotFoundError:
+            saved.connection_name = None
+    existing_steps = [item for item in (draft.odata_steps_json or []) if isinstance(item, dict)]
+    steps = [item for item in existing_steps if item.get("id") != saved.id]
+    steps.append(saved.model_dump(mode="json"))
+    draft.odata_steps_json = steps
+    await session.flush()
+    return _draft_read(draft), saved
+
+
 def endpoint_url(slug: str) -> str:
     return f"/api/bus/in/{slug}"
 
@@ -239,6 +379,88 @@ def endpoint_url(slug: str) -> str:
 def validate_slug(slug: str) -> None:
     if not SLUG_PATTERN.fullmatch(slug):
         raise BadRequestError("Endpoint slug должен содержать только lowercase letters, numbers, '-' и '_', без пробелов и спецсимволов.")
+
+
+def render_1c_object_resource(base_resource: str, key_template: str, key_type: str, nested_resource: str, variables: dict[str, Any]) -> ResourceRenderResult:
+    template_key = _object_key_expression(_normalize_placeholder(key_template), key_type)
+    template_resource = f"{base_resource.strip()}({template_key})/{nested_resource.strip().strip('/')}"
+    try:
+        rendered_resource = _render_previous_template(template_resource, variables)
+    except BadRequestError:
+        rendered_resource = None
+    return ResourceRenderResult(template_resource=template_resource, rendered_resource=rendered_resource)
+
+
+def _odata_object_step_context(previous_variables: dict[str, Any], step: ODataObjectStepConfig) -> dict[str, Any]:
+    errors = _validate_odata_object_step_fields(step, previous_variables)
+    warnings: list[str] = []
+    object_variable = step.object_variable.strip()
+    key_field = step.key_field.strip() or "Ref_Key"
+    key_template = f"{{{{{object_variable}.{key_field}}}}}" if object_variable else "{{object.Ref_Key}}"
+    render = render_1c_object_resource(step.base_resource, key_template, step.key_type, step.nested_resource, previous_variables)
+    rendered_resource = render.rendered_resource
+    key_preview = _object_key_preview(previous_variables, object_variable, key_field)
+    if step.key_type == "guid" and rendered_resource and key_preview is not None and not GUID_PATTERN.fullmatch(str(key_preview)):
+        errors.append(f"Значение {object_variable}.{key_field} не похоже на GUID. Проверьте, что предыдущий шаг вернул правильный Ref_Key.")
+    template_filter = (step.filter or "").strip() or None
+    rendered_filter: str | None = None
+    try:
+        rendered_filter = _render_previous_template(template_filter, previous_variables)
+    except BadRequestError as exc:
+        errors.append(str(exc))
+    template_url = _odata_object_url(render.template_resource, template_filter, step)
+    rendered_url = _odata_object_url(rendered_resource, rendered_filter, step)
+    if step.paginate:
+        warnings.append("Pagination сохранится в draft. Runtime будет читать следующие страницы через $skip.")
+    return {
+        "errors": _dedupe_errors(errors),
+        "warnings": warnings,
+        "template_resource": render.template_resource,
+        "rendered_resource": rendered_resource,
+        "template_filter": template_filter,
+        "rendered_filter": rendered_filter,
+        "template_url": template_url,
+        "rendered_url": rendered_url,
+        "variables_after_step": _variables_after_object_step(step),
+        "key_preview": key_preview,
+    }
+
+
+def _validate_odata_object_step_fields(step: ODataObjectStepConfig, previous_variables: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if step.connection_id is None:
+        errors.append("Выберите OData-подключение.")
+    object_variable = step.object_variable.strip()
+    key_field = step.key_field.strip() or "Ref_Key"
+    if not object_variable:
+        errors.append("Выберите объект, у которого нужно прочитать табличную часть.")
+    elif object_variable not in previous_variables:
+        errors.append(f"Переменная {object_variable} не найдена среди результатов предыдущих шагов.")
+    else:
+        value = previous_variables[object_variable]
+        if isinstance(value, list):
+            errors.append(f"Переменная {object_variable} является массивом. Для массива используйте шаг \"Повторить OData по массиву\", он будет следующим этапом.")
+        elif not isinstance(value, dict):
+            errors.append(f"Переменная {object_variable} должна быть объектом 1С.")
+        elif key_field not in value:
+            errors.append(f"В переменной {object_variable} нет поля {key_field}. Проверьте Select предыдущего OData-запроса. Нужно получить {key_field}.")
+        elif step.key_type == "guid" and not GUID_PATTERN.fullmatch(str(value.get(key_field) or "")):
+            errors.append(f"Значение {object_variable}.{key_field} не похоже на GUID. Проверьте, что предыдущий шаг вернул правильный Ref_Key.")
+    if not step.base_resource.strip():
+        errors.append("Укажите базовый OData Resource, например Document_ЗаказНаПроизводство2_2.")
+    if not step.nested_resource.strip():
+        errors.append("Укажите табличную часть / вложенный ресурс, например Продукция.")
+    if step.top is None:
+        errors.append("$top должен быть от 1 до 500.")
+    elif step.top < 1 or step.top > 500:
+        errors.append("$top должен быть от 1 до 500.")
+    if not step.save_as.strip():
+        errors.append("Укажите имя массива, например products.")
+    elif not SAVE_AS_PATTERN.fullmatch(step.save_as.strip()):
+        errors.append("Имя переменной save_as должно содержать латиницу, цифры и underscore, и не начинаться с цифры.")
+    elif step.save_as.strip() in previous_variables and not step.overwrite:
+        errors.append(f"Переменная {step.save_as.strip()} уже существует. Выберите другое имя или подтвердите overwrite.")
+    return _dedupe_errors(errors)
 
 
 def _odata_step_context(contract: InputContract, sample_input: Any, step: ODataStepConfig) -> dict[str, Any]:
@@ -380,6 +602,53 @@ def _get_nested(value: Any, path: str) -> Any:
     return current
 
 
+def _render_previous_template(template: str | None, variables: dict[str, Any]) -> str | None:
+    if not template:
+        return None
+
+    def replace(match: re.Match[str]) -> str:
+        path = match.group(1).strip()
+        value = _resolve_previous_value(path, variables)
+        return _escape_odata_string(str(value))
+
+    return PLACEHOLDER_RE.sub(replace, template)
+
+
+def _resolve_previous_value(path: str, variables: dict[str, Any]) -> Any:
+    root, _, tail = path.partition(".")
+    if not root or root not in variables:
+        raise BadRequestError(f"Переменная {path} не найдена среди результатов предыдущих шагов.")
+    value = variables[root]
+    if not tail:
+        return value
+    try:
+        return _get_nested(value, tail)
+    except KeyError as exc:
+        raise BadRequestError(f"Переменная {path} не найдена среди результатов предыдущих шагов.") from exc
+
+
+def _object_key_preview(variables: dict[str, Any], object_variable: str, key_field: str) -> Any:
+    value = variables.get(object_variable)
+    if isinstance(value, dict):
+        return value.get(key_field)
+    return None
+
+
+def _normalize_placeholder(value: str) -> str:
+    placeholder = value.strip()
+    if not placeholder.startswith("{{"):
+        placeholder = "{{" + placeholder + "}}"
+    return placeholder
+
+
+def _object_key_expression(key_template: str, key_type: str) -> str:
+    if key_type == "guid":
+        return f"guid'{key_template}'"
+    if key_type == "string":
+        return f"'{key_template}'"
+    return key_template
+
+
 def _odata_url(resource: str, filter_value: str | None, step: ODataStepConfig) -> str:
     if not resource:
         return ""
@@ -397,6 +666,21 @@ def _odata_url(resource: str, filter_value: str | None, step: ODataStepConfig) -
     return resource if not params else f"{resource}?{'&'.join(params)}"
 
 
+def _odata_object_url(resource: str | None, filter_value: str | None, step: ODataObjectStepConfig) -> str | None:
+    if not resource:
+        return None
+    params: list[str] = []
+    if filter_value:
+        params.append(f"$filter={filter_value}")
+    if step.select:
+        params.append(f"$select={','.join(step.select)}")
+    if step.top:
+        params.append(f"$top={step.top}")
+    if step.paginate:
+        params.append("paginate=true")
+    return resource if not params else f"{resource}?{'&'.join(params)}"
+
+
 def _variables_after_step(step: ODataStepConfig, first_item: dict[str, Any] | None = None) -> list[str]:
     save_as = step.save_as.strip() or "result"
     fields = list(first_item.keys()) if first_item else list(step.select)
@@ -405,11 +689,55 @@ def _variables_after_step(step: ODataStepConfig, first_item: dict[str, Any] | No
     return [f"{save_as}.{field}" for field in fields]
 
 
+def _variables_after_object_step(step: ODataObjectStepConfig, first_item: dict[str, Any] | None = None) -> list[str]:
+    save_as = step.save_as.strip() or "items"
+    fields = list(first_item.keys()) if first_item else list(step.select)
+    if not fields:
+        fields = ["Номенклатура_Key", "Количество"]
+    return [f"{save_as}[]"] + [f"{save_as}[0].{field}" for field in fields]
+
+
 def _normalized_odata_step(step: ODataStepConfig) -> ODataStepConfig:
     save_as = step.save_as.strip()
     step_id = step.id or f"find_{save_as}"
     step_id = STEP_ID_PATTERN.sub("_", step_id).strip("_") or f"find_{save_as}"
     return step.model_copy(update={"id": step_id, "save_as": save_as, "filter": _compile_step_filter(step), "select": [item.strip() for item in step.select if item.strip()]})
+
+
+def _normalized_odata_object_step(step: ODataObjectStepConfig) -> ODataObjectStepConfig:
+    save_as = step.save_as.strip()
+    step_id = step.id or f"read_{save_as}"
+    step_id = STEP_ID_PATTERN.sub("_", step_id).strip("_") or f"read_{save_as}"
+    key_template = f"{{{{{step.object_variable.strip()}.{(step.key_field.strip() or 'Ref_Key')}}}}}"
+    template = render_1c_object_resource(step.base_resource, key_template, step.key_type, step.nested_resource, {}).template_resource
+    return step.model_copy(
+        update={
+            "id": step_id,
+            "save_as": save_as,
+            "key_field": step.key_field.strip() or "Ref_Key",
+            "base_resource": step.base_resource.strip(),
+            "nested_resource": step.nested_resource.strip().strip("/"),
+            "resource_template": template,
+            "filter": (step.filter or "").strip() or None,
+            "select": [item.strip() for item in step.select if item.strip()],
+        }
+    )
+
+
+def _step_read(item: dict[str, Any]) -> ODataStepConfig | ODataObjectStepConfig:
+    if item.get("type") == "odata_object_query":
+        return ODataObjectStepConfig(**item)
+    return ODataStepConfig(**item)
+
+
+def _dedupe_errors(errors: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for error in errors:
+        if error not in seen:
+            seen.add(error)
+            result.append(error)
+    return result
 
 
 def _escape_odata_string(value: str) -> str:
@@ -534,7 +862,7 @@ def _relative_matcher_path(path: str) -> str:
 def _draft_read(draft: IntegrationMasterDraft) -> InputDraftRead:
     contract = InputContract(**draft.contract_json)
     parse_result = InputParseResponse(**draft.parse_result_json) if draft.parse_result_json else None
-    odata_steps = [ODataStepConfig(**item) for item in (draft.odata_steps_json or []) if isinstance(item, dict)]
+    odata_steps = [_step_read(item) for item in (draft.odata_steps_json or []) if isinstance(item, dict)]
     return InputDraftRead(
         id=draft.id,
         name=draft.name,

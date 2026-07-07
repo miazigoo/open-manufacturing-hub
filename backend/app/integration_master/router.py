@@ -16,6 +16,12 @@ from app.integration_master.schemas import (
     InputParseRequest,
     InputParseResponse,
     IntegrationScenario,
+    ODataObjectStepPreviewResponse,
+    ODataObjectStepRequest,
+    ODataObjectStepSaveRequest,
+    ODataObjectStepSaveResponse,
+    ODataObjectStepTestResponse,
+    ODataObjectStepValidationResponse,
     ODataStepPreviewResponse,
     ODataStepRequest,
     ODataStepSaveRequest,
@@ -80,5 +86,35 @@ async def append_odata_step(draft_id: UUID, request: ODataStepSaveRequest, sessi
             "Добавить второй шаг позже через foreach/tabular helper",
             "Настроить JSON/XML builder и endpoint отправки",
             "Запустить Dry Run и проверить Timeline/DLQ",
+        ],
+    }
+
+
+@router.post("/odata-object-step/validate", response_model=ODataObjectStepValidationResponse)
+async def validate_odata_object_step(request: ODataObjectStepRequest):
+    return service.validate_odata_object_step(request)
+
+
+@router.post("/odata-object-step/preview", response_model=ODataObjectStepPreviewResponse)
+async def preview_odata_object_step(request: ODataObjectStepRequest):
+    return service.preview_odata_object_step(request)
+
+
+@router.post("/odata-object-step/test", response_model=ODataObjectStepTestResponse)
+async def test_odata_object_step(request: ODataObjectStepRequest, session: AsyncSession = Depends(get_session)):
+    return await service.test_odata_object_step(session, request)
+
+
+@router.post("/drafts/{draft_id}/odata-object-steps", response_model=ODataObjectStepSaveResponse)
+async def append_odata_object_step(draft_id: UUID, request: ODataObjectStepSaveRequest, session: AsyncSession = Depends(get_session)):
+    draft, saved_step = await service.append_odata_object_step(session, draft_id, request.odata_object_step, request.previous_variables)
+    await session.commit()
+    return {
+        "draft": draft,
+        "saved_step": saved_step,
+        "next_steps": [
+            "Повторить OData по массиву products будет следующим этапом",
+            "Настроить JSON/XML builder позже",
+            "Запустить Dry Run и проверить Timeline/DLQ позже",
         ],
     }

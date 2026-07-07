@@ -11,6 +11,7 @@ OperationKeyType = Literal["field", "endpoint", "none"]
 ODataFilterMode = Literal["builder", "raw"]
 ODataFilterOperator = Literal["eq", "ne", "contains", "gt", "lt", "ge", "le"]
 ODataValueType = Literal["string", "number", "boolean", "variable", "guid", "raw"]
+ODataObjectKeyType = Literal["guid", "string", "number", "raw"]
 
 
 class IntegrationScenario(BaseModel):
@@ -124,10 +125,42 @@ class ODataStepConfig(BaseModel):
     last_test_status: str | None = None
 
 
+class ODataObjectStepConfig(BaseModel):
+    id: str | None = None
+    type: Literal["odata_object_query"] = "odata_object_query"
+    connection_id: UUID | None = None
+    connection_name: str | None = None
+    object_variable: str = ""
+    key_field: str = "Ref_Key"
+    key_type: ODataObjectKeyType = "guid"
+    base_resource: str = ""
+    nested_resource: str = ""
+    resource_template: str | None = None
+    filter: str | None = None
+    select: list[str] = Field(default_factory=list)
+    top: int | None = 100
+    paginate: bool = False
+    save_as: str = "products"
+    required: bool = True
+    overwrite: bool = False
+    last_test_status: str | None = None
+
+
+class ResourceRenderResult(BaseModel):
+    template_resource: str
+    rendered_resource: str | None = None
+
+
 class ODataStepRequest(BaseModel):
     input_contract: InputContract
     sample_input: Any = None
     odata_step: ODataStepConfig
+
+
+class ODataObjectStepRequest(BaseModel):
+    input_contract: InputContract
+    previous_variables: dict[str, Any] = Field(default_factory=dict)
+    odata_object_step: ODataObjectStepConfig
 
 
 class ODataStepValidationResponse(BaseModel):
@@ -146,6 +179,25 @@ class ODataStepPreviewResponse(ODataStepValidationResponse):
     saved_as: str
 
 
+class ODataObjectStepValidationResponse(BaseModel):
+    valid: bool
+    errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    template_resource: str | None = None
+    rendered_resource: str | None = None
+    template_filter: str | None = None
+    rendered_filter: str | None = None
+    template_url: str | None = None
+    rendered_url: str | None = None
+    variables_after_step: list[str] = Field(default_factory=list)
+
+
+class ODataObjectStepPreviewResponse(ODataObjectStepValidationResponse):
+    saved_as: str
+    object_variable: str
+    key_preview: Any = None
+
+
 class ODataStepTestResponse(BaseModel):
     success: bool
     error_code: str | None = None
@@ -160,9 +212,29 @@ class ODataStepTestResponse(BaseModel):
     request: dict[str, Any] = Field(default_factory=dict)
 
 
+class ODataObjectStepTestResponse(BaseModel):
+    success: bool
+    error_code: str | None = None
+    message: str | None = None
+    hint: str | None = None
+    rendered_resource: str
+    rendered_filter: str | None = None
+    items_count: int = 0
+    result_preview: list[dict[str, Any]] = Field(default_factory=list)
+    saved_as: str
+    variables_after_step: list[str] = Field(default_factory=list)
+    request: dict[str, Any] = Field(default_factory=dict)
+
+
 class ODataStepSaveRequest(BaseModel):
     input_contract: InputContract | None = None
     odata_step: ODataStepConfig
+
+
+class ODataObjectStepSaveRequest(BaseModel):
+    input_contract: InputContract | None = None
+    previous_variables: dict[str, Any] = Field(default_factory=dict)
+    odata_object_step: ODataObjectStepConfig
 
 
 class InputContractValidationRequest(BaseModel):
@@ -189,7 +261,7 @@ class InputDraftRead(BaseModel):
     input_mode: InputMode
     source_system: str
     contract: InputContract
-    odata_steps: list[ODataStepConfig] = Field(default_factory=list)
+    odata_steps: list[ODataStepConfig | ODataObjectStepConfig] = Field(default_factory=list)
     parse_result: InputParseResponse | None = None
     endpoint_url: str
     created_at: datetime
@@ -199,6 +271,12 @@ class InputDraftRead(BaseModel):
 class ODataStepSaveResponse(BaseModel):
     draft: InputDraftRead
     saved_step: ODataStepConfig
+    next_steps: list[str]
+
+
+class ODataObjectStepSaveResponse(BaseModel):
+    draft: InputDraftRead
+    saved_step: ODataObjectStepConfig
     next_steps: list[str]
 
 

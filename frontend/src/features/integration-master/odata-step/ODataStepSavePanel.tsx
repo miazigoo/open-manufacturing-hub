@@ -1,4 +1,4 @@
-import type { InputDraftRead, ODataStepConfig } from '../types';
+import type { InputDraftRead, IntegrationMasterODataStep, ODataStepConfig } from '../types';
 
 interface ODataStepSavePanelProps {
   draft: InputDraftRead;
@@ -21,7 +21,13 @@ export function ODataStepSavePanel({ draft, step, error, saving, onSave }: OData
         <span><small>save_as</small><strong>{step.save_as || 'order'}</strong></span>
         <span><small>Сохранённых OData steps</small><strong>{draft.odata_steps.length}</strong></span>
       </div>
-      {draft.odata_steps.length ? <div className="odata-saved-list">{draft.odata_steps.map((savedStep, index) => <code key={`${savedStep.id ?? index}-${savedStep.save_as}`}>{savedStep.id ?? `step_${index + 1}`} · {savedStep.resource} · save_as={savedStep.save_as}</code>)}</div> : null}
+      {draft.odata_steps.length ? <div className="odata-saved-list">{draft.odata_steps.map((savedStep, index) => <code key={`${savedStep.id ?? index}-${savedStep.save_as}`}>{savedStepLabel(savedStep, index)}</code>)}</div> : null}
     </section>
   );
+}
+
+function savedStepLabel(step: IntegrationMasterODataStep, index: number) {
+  const name = step.id ?? `step_${index + 1}`;
+  if (step.type === 'odata_object_query') return `${name} · ${step.base_resource}/${step.nested_resource} · save_as=${step.save_as}`;
+  return `${name} · ${step.resource} · save_as=${step.save_as}`;
 }

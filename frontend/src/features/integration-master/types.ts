@@ -3,6 +3,7 @@ export type OperationKeyType = 'field' | 'endpoint' | 'none';
 export type ODataFilterMode = 'builder' | 'raw';
 export type ODataFilterOperator = 'eq' | 'ne' | 'contains' | 'gt' | 'lt' | 'ge' | 'le';
 export type ODataValueType = 'string' | 'number' | 'boolean' | 'variable' | 'guid' | 'raw';
+export type ODataObjectKeyType = 'guid' | 'string' | 'number' | 'raw';
 
 export interface IntegrationScenario {
   key: string;
@@ -122,10 +123,39 @@ export interface ODataStepConfig {
   last_test_status?: string | null;
 }
 
+export interface ODataObjectStepConfig {
+  id?: string | null;
+  type: 'odata_object_query';
+  connection_id?: string | null;
+  connection_name?: string | null;
+  object_variable: string;
+  key_field: string;
+  key_type: ODataObjectKeyType;
+  base_resource: string;
+  nested_resource: string;
+  resource_template?: string | null;
+  filter?: string | null;
+  select: string[];
+  top?: number | null;
+  paginate: boolean;
+  save_as: string;
+  required: boolean;
+  overwrite?: boolean;
+  last_test_status?: string | null;
+}
+
+export type IntegrationMasterODataStep = ODataStepConfig | ODataObjectStepConfig;
+
 export interface ODataStepRequest {
   input_contract: InputContract;
   sample_input?: unknown;
   odata_step: ODataStepConfig;
+}
+
+export interface ODataObjectStepRequest {
+  input_contract: InputContract;
+  previous_variables: Record<string, unknown>;
+  odata_object_step: ODataObjectStepConfig;
 }
 
 export interface ODataStepValidationResponse {
@@ -144,6 +174,25 @@ export interface ODataStepPreviewResponse extends ODataStepValidationResponse {
   saved_as: string;
 }
 
+export interface ODataObjectStepValidationResponse {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  template_resource?: string | null;
+  rendered_resource?: string | null;
+  template_filter?: string | null;
+  rendered_filter?: string | null;
+  template_url?: string | null;
+  rendered_url?: string | null;
+  variables_after_step: string[];
+}
+
+export interface ODataObjectStepPreviewResponse extends ODataObjectStepValidationResponse {
+  saved_as: string;
+  object_variable: string;
+  key_preview?: unknown;
+}
+
 export interface ODataStepTestResponse {
   success: boolean;
   error_code?: string | null;
@@ -158,6 +207,20 @@ export interface ODataStepTestResponse {
   request: Record<string, unknown>;
 }
 
+export interface ODataObjectStepTestResponse {
+  success: boolean;
+  error_code?: string | null;
+  message?: string | null;
+  hint?: string | null;
+  rendered_resource: string;
+  rendered_filter?: string | null;
+  items_count: number;
+  result_preview: Array<Record<string, unknown>>;
+  saved_as: string;
+  variables_after_step: string[];
+  request: Record<string, unknown>;
+}
+
 export interface InputDraftRead {
   id: string;
   name: string;
@@ -166,7 +229,7 @@ export interface InputDraftRead {
   input_mode: InputMode;
   source_system: string;
   contract: InputContract;
-  odata_steps: ODataStepConfig[];
+  odata_steps: IntegrationMasterODataStep[];
   parse_result?: InputParseResponse | null;
   endpoint_url: string;
   created_at: string;
@@ -181,5 +244,11 @@ export interface InputDraftSaveResponse {
 export interface ODataStepSaveResponse {
   draft: InputDraftRead;
   saved_step: ODataStepConfig;
+  next_steps: string[];
+}
+
+export interface ODataObjectStepSaveResponse {
+  draft: InputDraftRead;
+  saved_step: ODataObjectStepConfig;
   next_steps: string[];
 }
