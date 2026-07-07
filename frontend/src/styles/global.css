@@ -356,6 +356,7 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .flow-step-settings dd { margin: 0; color: var(--ink); font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
 .flow-target-card { border: 1px solid rgba(240,179,90,.3); background: rgba(240,179,90,.08); padding: 14px; display: grid; gap: 10px; }
 .flow-target-card strong { overflow-wrap: anywhere; }
+.flow-target-card code { display: block; width: fit-content; max-width: 100%; color: var(--accent-2); background: rgba(0,0,0,.2); border: 1px solid var(--line); padding: 8px 10px; overflow-wrap: anywhere; white-space: normal; }
 .flow-target-card .ghost-button { width: fit-content; }
 .flow-output-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .technical-details { border: 1px solid var(--line); background: rgba(0,0,0,.12); padding: 12px; }

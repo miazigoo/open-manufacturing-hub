@@ -143,6 +143,39 @@ function targetSummary(builder: Record<string, unknown> | null) {
   return { method: String(data.method ?? 'POST'), url: String(data.url ?? '') };
 }
 
+function publicEndpointFromCurl(flow: IntegrationFlow) {
+  const match = flow.curl_example.match(/curl\s+-X\s+POST\s+(\S+)/);
+  return match?.[1] ?? flow.endpoint_url;
+}
+
+function finalActionSummary(flow: IntegrationFlow) {
+  const builder = flow.builder_json;
+  const target = targetSummary(builder);
+  if (target?.url) {
+    return {
+      title: 'Отправить результат во внешнюю систему',
+      line: `${target.method} ${target.url}`,
+      detail: 'После выполнения OData-шагов flow отправит собранный результат на этот внешний URL.',
+      missingTarget: false,
+    };
+  }
+  const nextAction = String(builder?.next_action ?? '');
+  if (nextAction === 'send_result') {
+    return {
+      title: 'Отправка наружу не завершена',
+      line: 'URL внешней системы не задан',
+      detail: 'Flow был выбран как отправка результата, но target URL не сохранился. Откройте builder и укажите Method + URL.',
+      missingTarget: true,
+    };
+  }
+  return {
+    title: 'Вернуть результат вызывающей системе',
+    line: `Ответ на входящий POST ${publicEndpointFromCurl(flow)}`,
+    detail: 'Отдельного внешнего URL нет: результат возвращается в HTTP-ответ тому, кто вызвал этот endpoint.',
+    missingTarget: false,
+  };
+}
+
 export function IntegrationFlowsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -193,6 +226,7 @@ export function IntegrationFlowsPage() {
 
   const matcher = { mode: form.matcher_mode, rules: [{ type: form.matcher_type, path: form.matcher_type.startsWith('body_path') ? form.matcher_path : undefined, value: form.matcher_value }, { type: form.second_matcher_type, value: form.second_matcher_value }] };
   const action = actionFor(form.action_type, form.target_connector, form.target_path);
+  const selectedFinalAction = selected ? finalActionSummary(selected) : null;
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -325,11 +359,12 @@ export function IntegrationFlowsPage() {
               </div>
             </article>
           </section>
-          {targetSummary(selected.builder_json) && (
-            <section className="flow-target-card">
-              <span className="eyebrow">Финальная отправка</span>
-              <strong>{targetSummary(selected.builder_json)?.method} {targetSummary(selected.builder_json)?.url || 'URL не задан'}</strong>
-              <p className="microcopy">Это адрес, куда flow отправит собранный результат. Чтобы изменить его, откройте визуальный builder.</p>
+          {selectedFinalAction && (
+            <section className={`flow-target-card ${selectedFinalAction.missingTarget ? 'warning-card' : ''}`}>
+              <span className="eyebrow">Финальное действие</span>
+              <strong>{selectedFinalAction.title}</strong>
+              <code>{selectedFinalAction.line}</code>
+              <p className="microcopy">{selectedFinalAction.detail}</p>
               <Link className="ghost-button" to={`/integration-flows/${selected.id}/builder`}>Редактировать настройки</Link>
             </section>
           )}
