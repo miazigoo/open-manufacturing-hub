@@ -280,7 +280,7 @@ export function VisualFlowBuilderPage() {
       </div>
       <div className="metadata-grid compact-grid no-margin">
         <label className="field-label">OData connection<select value={selectedConnectionId} onChange={(event) => { const selected = odataOptions.find((item) => item.id === event.target.value); update(step.id, { connection_id: event.target.value, connection: selected?.label ?? '' }); }} title="Named OData profile: ERP, УСП, WMS. Create it once, reuse it in every flow."><option value="">Select OData profile</option>{odataOptions.map((connection) => <option key={connection.id} value={connection.id}>{connection.label} · {connection.base_url}</option>)}</select></label>
-        <label className="field-label">Resource<input value={String(step.resource ?? '')} onChange={(event) => update(step.id, { resource: event.target.value })} title="Exact resource from OData Explorer, for example Catalog_Контрагенты or Document_ЗаказКлиента." /></label>
+        <label className="field-label">Resource<input value={String(step.resource ?? '')} onChange={(event) => update(step.id, { resource: event.target.value })} title="Exact resource from OData Master, for example Catalog_Контрагенты or Document_ЗаказКлиента." /></label>
         <label className="field-label">Save as<input value={saveAs} onChange={(event) => update(step.id, { save_as: event.target.value })} title="Variable name for the first OData row. Use it in JSON or next filters: {{contractor.Ref_Key}}." /></label>
       </div>
       <div className="builder-help-card">

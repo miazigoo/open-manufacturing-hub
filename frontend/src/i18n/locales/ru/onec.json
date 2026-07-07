@@ -3,6 +3,6 @@
   "connector": "1C connector",
   "cockpit": "1C Cockpit",
   "odataConnections": "OData подключения",
-  "odataExplorer": "OData Explorer",
+  "odataExplorer": "Мастер OData",
   "xmlTools": "XML Tools"
 }

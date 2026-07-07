@@ -75,7 +75,7 @@ export function OperationKeysPage() {
           {formError && <div className="error-state compact">{formError}</div>}
           {create.error instanceof Error && <div className="error-state compact">{create.error.message}</div>}
         </form>
-        {rows.length === 0 ? <EmptyState title="No operation keys" detail="Create the first key, then use it when saving a draft flow from OData Explorer." /> : <section className="card-grid runtime-card-grid">{rows.map((item) => <OperationKeyCard key={item.id} item={item} onDelete={() => remove.mutate(item.id)} busy={remove.isPending} />)}</section>}
+        {rows.length === 0 ? <EmptyState title="No operation keys" detail="Create the first key, then use it when saving a draft flow from OData Master." /> : <section className="card-grid runtime-card-grid">{rows.map((item) => <OperationKeyCard key={item.id} item={item} onDelete={() => remove.mutate(item.id)} busy={remove.isPending} />)}</section>}
       </section>
     </div>
   );

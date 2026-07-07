@@ -1,6 +1,6 @@
 import type { Language } from '../../i18n/dictionary';
 
-export type DocsPackageId = 'core' | 'onec' | 'printer' | 'auth' | 'secrets' | 'packages';
+export type DocsPackageId = 'core' | 'onec' | 'reference' | 'printer' | 'auth' | 'secrets' | 'packages';
 
 export interface DocsPageRecord {
   id: string;

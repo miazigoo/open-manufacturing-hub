@@ -5,6 +5,7 @@ export const docLinks: Record<string, string> = {
   'onec.overview': '/docs/onec/overview/overview',
   'onec.connector': '/docs/onec/tools/connector',
   'onec.odata-explorer': '/docs/onec/tools/odata-explorer',
+  'onec.odata-master': '/docs/onec/academy/odata-integration-master',
   'onec.odata-chaining': '/docs/onec/tools/odata-chaining-fields',
   'onec.xml-tools': '/docs/onec/tools/xml-tools',
   'onec.cockpit': '/docs/onec/tools/cockpit',

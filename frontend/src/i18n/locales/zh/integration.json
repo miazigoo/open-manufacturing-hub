@@ -89,7 +89,7 @@
     "title": "OData 连接目录",
     "description": "创建 OData ERP、OData USP、OData WMS 等命名配置。Pipeline 可选择清晰的业务连接，而不是通用 JSON。",
     "openLesson": "打开课程",
-    "testExplorer": "在 OData Explorer 中测试",
+    "testExplorer": "在 OData Master 中测试",
     "create": "创建",
     "newConnection": "新建 OData 连接",
     "newConnectionHint": "选择 OMH 查询数据的 1C 基础库。",
@@ -108,7 +108,7 @@
     "tags": "标签",
     "saved": "已保存的 OData 连接",
     "emptyTitle": "暂无 OData 连接",
-    "emptyDetail": "先创建 OData ERP 或 OData USP，然后在 OData Explorer 和 Visual Flow Builder 中使用。",
+    "emptyDetail": "先创建 OData ERP 或 OData USP，然后在 OData Master 和 Visual Flow Builder 中使用。",
     "selected": "选中的连接",
     "user": "用户",
     "passwordState": "密码",
@@ -122,8 +122,8 @@
     "lastOperation": "最后 OData 操作"
   },
   "odataExplorer": {
-    "loading": "正在加载 OData Explorer",
-    "eyebrow": "OData Explorer",
+    "loading": "正在加载 OData Master",
+    "eyebrow": "OData Master",
     "title": "安全查询 1C OData",
     "description": "选择 1C 基础库，构建 resource 和 filter，运行查询，查看 JSON，并保存 lookup template 给 pipeline 使用。",
     "createConnection": "创建 OData 连接",

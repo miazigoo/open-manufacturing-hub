@@ -15,7 +15,7 @@ from app.onboarding.schemas import OnboardingExampleRunResponse, OnboardingState
 CHECKLIST: list[dict[str, str | None]] = [
     {"key": "install_onec_package", "title": "Install required packages", "description": "Install and enable the 1C package before building 1C routes.", "route": "/plugin-store", "docs_url": "/docs/packages/packages/plugin-store"},
     {"key": "create_first_onec_connector", "title": "Create 1C connector", "description": "Register OData and HTTP-service URLs for your first 1C database.", "route": "/connectors", "docs_url": "/docs/onec/tools/connector"},
-    {"key": "test_onec_connection", "title": "Test OData connection", "description": "Open OData Explorer, load resources and run a safe query.", "route": "/odata-explorer", "docs_url": "/docs/onec/tools/odata-explorer"},
+    {"key": "test_onec_connection", "title": "Test OData connection", "description": "Open OData Master, load resources and run a safe query.", "route": "/odata-explorer", "docs_url": "/docs/onec/academy/odata-integration-master"},
     {"key": "create_first_integration_flow", "title": "Create first integration flow", "description": "Build the first route: 1C POST -> OData lookup -> JSON -> endpoint.", "route": "/onboarding/first-integration", "docs_url": "/docs/onec/tools/visual-flow-builder"},
     {"key": "run_first_test_case", "title": "Run test request", "description": "Send a known payload through Test Console and inspect the response.", "route": "/test-console", "docs_url": "/docs/onec/scenarios/onec-post-two-odata-json-endpoint"},
     {"key": "open_first_timeline", "title": "Open timeline", "description": "Check artifacts, steps and external errors for the test request.", "route": "/events", "docs_url": "/docs/core/start/overview"},

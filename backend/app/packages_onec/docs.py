@@ -1,3 +1,3 @@
-README = """# OMH 1C Integration Package\n\nProvides 1C ERP/WMS/OData/XML tooling for Open Manufacturing Hub.\n\nIncluded capabilities: 1C connector, OData Explorer, XML tools, 1C Workbench, scenario presets, operation templates and visual flow builder presets.\n"""
+README = """# OMH 1C Integration Package\n\nProvides 1C ERP/WMS/OData/XML tooling for Open Manufacturing Hub.\n\nIncluded capabilities: 1C connector, OData Master, XML tools, 1C Workbench, scenario presets, operation templates and visual flow builder presets.\n"""
 
 QUICK_START = """# 1C Package Quick Start\n\n1. Install or enable `omh-package-onec`.\n2. Open 1C Quick Setup or 1C Workbench.\n3. Configure a 1C connector with OData/HTTP service settings.\n4. Install the visual preset `1C POST -> two OData queries -> JSON -> endpoint`.\n5. Send a saved test case and inspect timeline artifacts.\n"""

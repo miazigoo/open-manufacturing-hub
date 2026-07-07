@@ -8,7 +8,7 @@ const repoRoot = path.resolve(frontendDir, '..');
 
 const requiredPages = [
   'start-here/start-in-15-minutes', 'start-here/what-you-will-build', 'start-here/concepts', 'start-here/glossary', 'start-here/beginner-path',
-  'academy/create-odata-connection', 'academy/test-odata-explorer', 'academy/find-contractor-by-inn',
+  'academy/odata-integration-master', 'academy/create-odata-connection', 'academy/test-odata-explorer', 'academy/find-contractor-by-inn',
   'academy/lesson-01-what-is-omh-for-1c-users', 'academy/lesson-02-create-odata-connection',
   'academy/lesson-03-test-odata-in-odata-explorer', 'academy/lesson-04-create-inbound-endpoint-for-1c-post',
   'academy/lesson-05-read-values-from-incoming-request', 'academy/lesson-06-first-odata-lookup-contractor-by-inn',
@@ -23,7 +23,7 @@ const requiredPages = [
   'exercises/build-target-json', 'exercises/run-flow-with-dry-run', 'exercises/run-flow-with-real-send',
   'exercises/find-original-error-in-timeline', 'exercises/move-dlq-item-back-to-retry',
   'exercises/fix-missing-contractor-error',
-  'reference/odata-connection', 'reference/endpoint', 'reference/integration-flow', 'reference/visual-flow-builder',
+  'reference/odata-master', 'reference/odata-connection', 'reference/endpoint', 'reference/integration-flow', 'reference/visual-flow-builder',
   'reference/json-builder', 'reference/timeline', 'reference/queue-dlq', 'reference/secrets',
   'troubleshooting/index', 'troubleshooting/odata-connection-test-failed', 'troubleshooting/onec-returned-401',
   'troubleshooting/odata-metadata-does-not-load', 'troubleshooting/odata-resource-not-found', 'troubleshooting/odata-empty-result',
@@ -35,7 +35,7 @@ const requiredPages = [
   'troubleshooting/event-stuck-in-queue', 'troubleshooting/event-moved-to-dlq',
   'troubleshooting/retry-does-not-happen', 'troubleshooting/worker-not-processing',
   'troubleshooting/printer-unavailable', 'troubleshooting/zpl-label-wrong', 'troubleshooting/print-job-not-printed',
-  'recipes/recipe-01-onec-marking-pool-to-external-api', 'recipes/recipe-02-onec-post-two-odata-lookups',
+  'recipes/dnp-chz-code-pool-sync', 'recipes/recipe-01-onec-marking-pool-to-external-api', 'recipes/recipe-02-onec-post-two-odata-lookups',
   'recipes/recipe-03-onec-xml-raw-forwarding', 'recipes/recipe-04-onec-xml-inn-lookup',
   'recipes/recipe-05-onec-print-request-to-zebra', 'recipes/recipe-06-website-api-query-onec-odata',
   'recipes/recipe-07-wms-shipment-fact-to-onec', 'recipes/recipe-08-route-by-key-phrase-value',
@@ -78,7 +78,13 @@ const docsPage = read('frontend/src/features/docs/DocumentationPage.tsx');
 const screenshotPlaceholder = read('frontend/src/features/docs/ScreenshotPlaceholder.tsx');
 const testConsolePage = read('frontend/src/pages/TestConsolePage.tsx');
 const odataConnectionsPage = read('frontend/src/pages/ODataConnectionsPage.tsx');
-const odataExplorerPage = read('frontend/src/pages/ODataExplorerPage.tsx');
+const odataExplorerPage = [
+  read('frontend/src/pages/ODataExplorerPage.tsx'),
+  read('frontend/src/features/odata-master/ODataMasterShell.tsx'),
+  read('frontend/src/features/odata-master/ODataIntegrationWizard.tsx'),
+  read('frontend/src/features/odata-master/ODataQuickTestMode.tsx'),
+  read('frontend/src/features/odata-master/components/SourceSystemStep.tsx'),
+].join('\n');
 const odataLookupBlockEditor = read('frontend/src/components/integration/ODataLookupBlockEditor.tsx');
 const service = read('backend/app/docs_portal/service.py');
 const makefile = read('Makefile');
@@ -326,7 +332,7 @@ for (const troubleshootingRequired of [
   '## Example',
   '## Related lessons',
   'OMH reached 1C successfully, but 1C did not return matching records.',
-  'Copy the generated filter from Timeline and run it in OData Explorer.',
+  'Copy the generated filter from Timeline and run it in OData Master.',
   'Artifact `odata_query_request`',
   'Artifact `odata_query_response`',
   '1C receives 404 from OMH',
@@ -403,7 +409,7 @@ for (const task049Required of [
 assert(!onecDocsContent.includes('"username": "Администратор"'), 'Task 049 forbids Administrator username in primary docs examples');
 assert(!onecDocsContent.includes('"password": "123"'), 'Task 049 forbids raw 123 password in primary docs examples');
 assert(odataConnectionsPage.includes('Create OData Connection') && odataConnectionsPage.includes('Choose the 1C base where OMH will search data.'), 'OData Connections UI wording must guide users to OData Connection');
-assert(odataExplorerPage.includes('Create OData Connection') && odataExplorerPage.includes('Choose the 1C base where OMH will search data.') && odataExplorerPage.includes('/docs/onec/academy/test-odata-explorer'), 'OData Explorer UI wording must guide users to OData Connection and lesson');
+assert(odataExplorerPage.includes('Мастер OData-интеграции') && odataExplorerPage.includes('Собрать интеграцию') && odataExplorerPage.includes('Быстро проверить OData') && odataExplorerPage.includes('/docs/onec/academy/odata-integration-master'), 'OData Master UI wording must guide users to the wizard, quick test mode and lesson');
 assert(odataLookupBlockEditor.includes('OData Connection') && odataLookupBlockEditor.includes('Select OData Connection'), 'OData lookup builder must say OData Connection, not generic connector');
 for (const section of ['case-studies', 'request-examples', 'error-playbooks']) assert(onecContent.includes(`id: '${section}'`), `1C docs missing ${section} section`);
 for (const section of ['academy', 'exercises', 'recipes', 'reference', 'troubleshooting', 'readiness-checklist']) assert(onecContent.includes(`id: '${section}'`), `1C docs missing ${section} section`);

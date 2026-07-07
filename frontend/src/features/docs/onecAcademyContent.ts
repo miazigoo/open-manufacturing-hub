@@ -98,7 +98,7 @@ ${nextBlock}
 
 const defaultBefore = [
   'Пакет 1C установлен и enabled в Plugin Store.',
-  'Вы открыли веб-интерфейс OMH и можете перейти в OData Connections, OData Explorer, Integration Flows, Test Console и Event Timeline.',
+  'Вы открыли веб-интерфейс OMH и можете перейти в OData Connections, OData Master, Integration Flows, Test Console и Event Timeline.',
   'Для OData уроков опубликован OData сервис 1C и известен URL вида http://server/base/odata/standard.odata.',
 ];
 
@@ -111,7 +111,7 @@ const academySelfCheckQuestions: Record<string, string[]> = {
   'test-odata-explorer': [
     'Зачем сначала выполнить `Catalog_Контрагенты?$top=5` без сложного фильтра?',
     'Где вы увидите точный resource name из metadata?',
-    'Почему OData Explorer должен использовать ту же connection, что и будущий flow?',
+    'Почему OData Master должен использовать ту же connection, что и будущий flow?',
   ],
   'find-contractor-by-inn': [
     'Что обычно означает `Ref_Key` в ответе 1C OData?',
@@ -279,7 +279,7 @@ const pedagogyBySlug: Record<string, PedagogyBlock> = {
       'Проверка подключения (`Test $metadata`) показывает, может ли OMH прочитать структуру опубликованной базы 1C.',
     ],
     variables: [
-      'Переменных потока пока нет. Вы создаете reusable connection, которую потом выберете в OData Explorer и Flow Builder.',
+      'Переменных потока пока нет. Вы создаете reusable connection, которую потом выберете в OData Master и Flow Builder.',
       'Имя `OData ERP` должно сразу отвечать пользователю: в какую базу 1C пойдет OMH.',
     ],
     artifacts: [
@@ -289,7 +289,7 @@ const pedagogyBySlug: Record<string, PedagogyBlock> = {
     shouldSee: [
       'OData connection появилась в списке.',
       'Test $metadata показывает success или понятную внешнюю ошибку 1C.',
-      'Это подключение можно выбрать в OData Explorer.',
+      'Это подключение можно выбрать в OData Master.',
     ],
     fieldTable: [
       '| UI field | Пример | Что означает |',
@@ -337,7 +337,7 @@ const pedagogyBySlug: Record<string, PedagogyBlock> = {
   },
   'find-contractor-by-inn': {
     intermediate: [
-      'OData Explorer возвращает одну строку контрагента.',
+      'OData Master возвращает одну строку контрагента.',
       'В этой строке есть `Ref_Key`, который дальше станет UUID контрагента в итоговом JSON.',
     ],
     variables: [
@@ -446,7 +446,7 @@ const pedagogyBySlug: Record<string, PedagogyBlock> = {
     errors: [
       'Пустой результат: проверьте connection, resource, field name, значение ИНН и права пользователя 1C.',
       '401: исправляйте логин/пароль OData connection.',
-      'Resource not found: скопируйте имя из OData Explorer, а не из памяти.',
+      'Resource not found: скопируйте имя из OData Master, а не из памяти.',
     ],
   },
   'second-odata-query-product': {
@@ -667,7 +667,7 @@ export const academyPackAPages: PageSeed[] = [
     '- `Training Printer` — печатает на `TRAINING-PRINTER-01` и специально падает на `TRAINING-OFFLINE`.',
     '',
     '::open-page{route="/training" label="Открыть Training Sandbox"}',
-    '::open-page{route="/odata-explorer" label="Открыть OData Explorer"}',
+    '::open-page{route="/odata-explorer" label="Открыть OData Master"}',
     '',
     '## Быстрый запуск',
     '1. Откройте `/training`.',
@@ -679,7 +679,7 @@ export const academyPackAPages: PageSeed[] = [
     '::example{exampleId="training.onec.post_two_odata_to_dnp"}',
     '',
     '## Как проверить OData отдельно',
-    '1. Откройте `OData Explorer`.',
+    '1. Откройте `OData Master`.',
     '2. Если training connection еще нет, нажмите `Install Training Sandbox`.',
     '3. Нажмите `Use Training OData ERP`.',
     '4. Оставьте resource `Catalog_Контрагенты`.',
@@ -701,7 +701,7 @@ export const academyPackAPages: PageSeed[] = [
     '::example{exampleId="training.errors.printer_offline"}',
     '',
     '## Что дальше',
-    'После sandbox переходите к созданию настоящего OData connection. Логика та же: сначала проверяете OData Explorer, потом переносите resource/filter/select в Flow Builder, затем запускаете Test Console и читаете Timeline.',
+    'После sandbox переходите к созданию настоящего OData connection. Логика та же: сначала проверяете OData Master, потом переносите resource/filter/select в Flow Builder, затем запускаете Test Console и читаете Timeline.',
   )),
   page('academy', 'create-odata-connection', 'Создаём OData-подключение к 1С', 'Подробный урок: создать OData ERP connection, понять поля формы, secrets и healthcheck.', 21, mdLines(
     '# Создаём OData-подключение к 1С',
@@ -771,19 +771,19 @@ export const academyPackAPages: PageSeed[] = [
     'Для локального учебного стенда можно временно ввести raw password, например `123`, но в описании connection прямо пометьте, что это test-only.',
     '',
     '## Что должно получиться',
-    '::expected-result{items="В списке появилась connection OData ERP|Healthcheck/Test $metadata вернул OK или понятную ошибку 1C|Connection можно выбрать в OData Explorer|Пользователь понимает, что это подключение к конкретной базе 1C, а не generic connector"}',
+    '::expected-result{items="В списке появилась connection OData ERP|Healthcheck/Test $metadata вернул OK или понятную ошибку 1C|Connection можно выбрать в OData Master|Пользователь понимает, что это подключение к конкретной базе 1C, а не generic connector"}',
     '',
     '## Проверьте себя',
     '::checklist{id="pack-a-create-odata-connection" items="Открыл OData Connections|Заполнил Name|Заполнил Base URL с /odata/standard.odata|Указал username|Использовал secret для production password|Нажал Create connection|Нажал Test $metadata"}',
     '',
     '## Частые ошибки',
-    '::common-mistakes{items="Wrong base URL: указан адрес web-клиента 1C вместо OData publication|Пропущен хвост /odata/standard.odata|OData в 1C не опубликована|Неверный user/password|Пользователь 1C не имеет прав читать справочники|Создали generic Connector и не понимают, почему его неудобно выбрать в OData Explorer"}',
+    '::common-mistakes{items="Wrong base URL: указан адрес web-клиента 1C вместо OData publication|Пропущен хвост /odata/standard.odata|OData в 1C не опубликована|Неверный user/password|Пользователь 1C не имеет прав читать справочники|Создали generic Connector и не понимают, почему его неудобно выбрать в OData Master"}',
     '',
     '## Следующий урок',
-    '::next-lesson{label="Проверить OData в OData Explorer" href="/docs/onec/academy/test-odata-explorer"}',
+    '::next-lesson{label="Проверить OData в OData Master" href="/docs/onec/academy/test-odata-explorer"}',
   )),
-  page('academy', 'test-odata-explorer', 'Проверяем OData-запрос в OData Explorer', 'Подробный урок: выбрать OData ERP, загрузить resources и выполнить первый безопасный query.', 31, mdLines(
-    '# Проверяем OData-запрос в OData Explorer',
+  page('academy', 'test-odata-explorer', 'Проверяем OData-запрос в OData Master', 'Подробный урок: выбрать OData ERP, загрузить resources и выполнить первый безопасный query.', 31, mdLines(
+    '# Проверяем OData-запрос в OData Master',
     '',
     '::lesson-page{label="Пакет уроков A · Основы OData"}',
     '',
@@ -791,7 +791,7 @@ export const academyPackAPages: PageSeed[] = [
     'Вы проверите, что OMH действительно может читать данные из 1C через созданную connection `OData ERP`.',
     '',
     '## Зачем это нужно',
-    'Если простой запрос `Catalog_Контрагенты?$top=5` не работает в OData Explorer, не нужно строить pipeline. Сначала чините connection, публикацию OData, права пользователя или имя ресурса.',
+    'Если простой запрос `Catalog_Контрагенты?$top=5` не работает в OData Master, не нужно строить pipeline. Сначала чините connection, публикацию OData, права пользователя или имя ресурса.',
     '',
     '## Что нужно заранее',
     '- Создана OData Connection `OData ERP`.',
@@ -799,7 +799,7 @@ export const academyPackAPages: PageSeed[] = [
     '- В 1C есть хотя бы несколько контрагентов, доступных пользователю `exchange_user`.',
     '',
     '## Пошаговая настройка',
-    '1. Откройте `OData Explorer`.',
+    '1. Откройте `OData Master`.',
     '2. В поле `OData connection` выберите `OData ERP`.',
     '3. Нажмите или дождитесь `Load resources` / загрузки resources из metadata.',
     '4. В поле `Resource` выберите `Catalog_Контрагенты`.',
@@ -834,7 +834,7 @@ export const academyPackAPages: PageSeed[] = [
     '::expected-result{items="В Query result видны несколько контрагентов|У каждой строки есть Ref_Key и Description|OMH показывает request и response без скрытого ручного кода|Пользователь понимает: если это работает, OMH может читать данные из 1C"}',
     '',
     '## Проверьте себя',
-    '::checklist{id="pack-a-test-odata-explorer" items="Открыл OData Explorer|Выбрал OData ERP|Загрузил resources|Выбрал Catalog_Контрагенты|Поставил $top=5|Нажал Run query|Увидел несколько контрагентов"}',
+    '::checklist{id="pack-a-test-odata-explorer" items="Открыл OData Master|Выбрал OData ERP|Загрузил resources|Выбрал Catalog_Контрагенты|Поставил $top=5|Нажал Run query|Увидел несколько контрагентов"}',
     '',
     '## Частые ошибки',
     '::common-mistakes{items="Выбрана не та OData connection, например WMS вместо ERP|Resource введен по памяти и не совпадает с metadata|$top пустой или слишком большой|Пользователь 1C видит metadata, но не имеет прав на сам справочник|Путают Query result с уже настроенным pipeline"}',
@@ -859,7 +859,7 @@ export const academyPackAPages: PageSeed[] = [
     '- В базе есть контрагент с ИНН `7707083893` или вы заменили значение на реальный ИНН из вашей базы.',
     '',
     '## Пошаговая настройка',
-    '1. Откройте `OData Explorer`.',
+    '1. Откройте `OData Master`.',
     '2. Выберите `OData ERP`.',
     '3. Resource: `Catalog_Контрагенты`.',
     '4. В filter builder укажите Поле: `ИНН`.',
@@ -1090,7 +1090,7 @@ export const academyPackBPages: PageSeed[] = [
     '',
     '## Что нужно заранее',
     '- Создана OData Connection `OData ERP`.',
-    '- В OData Explorer работает query contractor by INN.',
+    '- В OData Master работает query contractor by INN.',
     '- В flow уже прочитан `inn` из `request.body.inn`.',
     '',
     '## Настройка шага',
@@ -1158,7 +1158,7 @@ export const academyPackBPages: PageSeed[] = [
     '::checklist{id="pack-b-first-odata-query-contractor" items="Выбрал OData Query|Выбрал OData ERP|Указал Catalog_Контрагенты|Настроил filter by ИНН|Top=1|Save result as contractor|Required=yes|Preview показывает contractor"}',
     '',
     '## Частые ошибки',
-    '::common-mistakes{items="Save result as пустой или назван customer, а JSON Builder ожидает contractor|Required выключен и target JSON получает null|Value source указан как product_code|$select не содержит Ref_Key|Не проверили этот filter в OData Explorer"}',
+    '::common-mistakes{items="Save result as пустой или назван customer, а JSON Builder ожидает contractor|Required выключен и target JSON получает null|Value source указан как product_code|$select не содержит Ref_Key|Не проверили этот filter в OData Master"}',
     '',
     '## Следующий урок',
     '::next-lesson{label="Добавить второй OData-запрос" href="/docs/onec/academy/second-odata-query-product"}',
@@ -1177,7 +1177,7 @@ export const academyPackBPages: PageSeed[] = [
     '## Что нужно заранее',
     '- Первый OData query сохраняет `contractor`.',
     '- В flow уже есть `product_code`.',
-    '- В OData Explorer проверен resource номенклатуры и field `Артикул`.',
+    '- В OData Master проверен resource номенклатуры и field `Артикул`.',
     '',
     '## Настройка шага',
     '```text',
@@ -1560,7 +1560,7 @@ export const academyPackBPages: PageSeed[] = [
     '| --- | --- | --- |',
     '| Step name | `get_product` | Отдельный шаг, не перезаписывающий `contractor` |',
     '| Connection | `OData ERP` or `OData WMS` | Выбирайте базу, где реально есть номенклатура |',
-    '| Resource | `Catalog_Номенклатура` | Техническое имя из OData Explorer |',
+    '| Resource | `Catalog_Номенклатура` | Техническое имя из OData Master |',
     '| Field | `Артикул` | Поле товара, соответствующее `product_code` |',
     '| Value source | `request.body.product_code` | Значение приходит из исходного POST |',
     '| Save as | `product` | JSON Builder будет читать `product.Ref_Key` |',
@@ -1788,11 +1788,11 @@ export const academyPackBPages: PageSeed[] = [
     '| Failed step | Где смотреть | Что обычно исправлять |',
     '| --- | --- | --- |',
     '| `get_contractor` failed | `odata.get_contractor.request.json`, `odata.get_contractor.response.json` | Неверная OData connection, поле `ИНН` называется иначе, ИНН с пробелами, нет прав 1С на `Catalog_Контрагенты` |',
-    '| `get_product` failed | `odata.get_product.request.json`, OData Explorer для `Catalog_Номенклатура` | Выбрана ERP вместо WMS, поле `Артикул` называется иначе, product_code не существует |',
+    '| `get_product` failed | `odata.get_product.request.json`, OData Master для `Catalog_Номенклатура` | Выбрана ERP вместо WMS, поле `Артикул` называется иначе, product_code не существует |',
     '| `build_target_payload` failed | `target_payload.json` preview, JSON Builder mapping | Ошибка в source path, например `contractor.uuid` вместо `contractor.Ref_Key`, массив `codes` превращен в строку |',
     '| `send_to_dnp` failed | `target.request.json`, `target.response.json`, external error | Неверный connector `DNP Service`, неправильный path `/api/marking/pools`, 401/403 target API, timeout |',
     '',
-    'Правило диагностики: если OData response пустой, сначала повторите тот же filter в OData Explorer. Если в Explorer тоже пусто, проблема не во Flow Builder, а в connection/resource/filter/data.',
+    'Правило диагностики: если OData response пустой, сначала повторите тот же filter в OData Master. Если в Explorer тоже пусто, проблема не во Flow Builder, а в connection/resource/filter/data.',
     '',
     '## 13. Финальная проверка',
     'Перед тем как считать настройку готовой, проверьте:',
@@ -1975,7 +1975,7 @@ export const academyPackBPages: PageSeed[] = [
     'Save as: products',
     '```',
     '',
-    'Если нужно сначала проверить resource или filter отдельно, откройте `OData Explorer`, выполните query, затем вернитесь в мастер и перенесите проверенные значения.',
+    'Если нужно сначала проверить resource или filter отдельно, откройте `OData Master`, выполните query, затем вернитесь в мастер и перенесите проверенные значения.',
     '',
     '## Шаг 4. Что вернуть внешнему сервису',
     '',
@@ -2040,6 +2040,31 @@ export const academyPackBPages: PageSeed[] = [
 ].map(withSelfCheck).map(withPedagogicalPass);
 
 export const academyPages: PageSeed[] = [
+  page('academy', 'odata-integration-master', 'Мастер OData-интеграции', 'Как собрать входящий request -> OData -> JSON/XML/raw response или endpoint без raw builder JSON.', 5, mdLines(
+    '# Мастер OData-интеграции',
+    '',
+    'Открывайте `/odata-explorer`, когда внешний сервис вызывает OMH, а OMH должен сходить в 1C OData, собрать ответ или отправить результат дальше.',
+    '',
+    '## Когда использовать',
+    '- DnP, WMS, сайт или терминал отправляет JSON/XML/raw request в OMH.',
+    '- Нужно найти документ в 1C OData по полю входящего запроса.',
+    '- Нужно прочитать табличную часть 1C object resource.',
+    '- Нужно выполнить OData foreach по массиву предыдущего шага.',
+    '- Нужно вернуть JSON/XML/raw или отправить результат на endpoint.',
+    '',
+    '## Основной путь',
+    '```text',
+    'Входящий запрос -> OData-шаги -> Итоговое действие -> Проверка -> Сохранение',
+    '```',
+    '',
+    '## Pagination',
+    '`$top` не может быть больше 500. Для больших выборок включайте pagination: OMH использует `$skip` до `max_pages` из OData connection.',
+    '',
+    '## Timeline',
+    'После сохранения и теста откройте Timeline по `event_id`. Проверяйте artifacts `odata_query_request.json`, `odata_query_response.json`, `foreach_result.json`, `outgoing_request.json` и `return_response.json`.',
+    '',
+    '::open-page{route="/odata-explorer" label="Открыть Мастер OData"}',
+  )),
   lesson({
     slug: 'lesson-01-what-is-omh-for-1c-users',
     order: 10,
@@ -2110,7 +2135,7 @@ export const academyPages: PageSeed[] = [
     expected: [
       'В списке OData Connections появился `OData ERP training`.',
       'Metadata test показывает success или точную ошибку 1C.',
-      'Connection доступен в OData Explorer и Flow Builder.'
+      'Connection доступен в OData Master и Flow Builder.'
     ],
     mistakes: [
       'Указывать URL базы без `/odata/standard.odata`.',
@@ -2118,18 +2143,18 @@ export const academyPages: PageSeed[] = [
       'Оставлять пароль `123` в production вместо Secrets Store.'
     ],
     checklist: ['Создал OData connection', 'Проверил base URL', 'Проверил $metadata', 'Понял где хранить пароль'],
-    next: '[Урок 03 — Проверяем OData-запрос в OData Explorer](/docs/onec/academy/lesson-03-test-odata-in-odata-explorer).'
+    next: '[Урок 03 — Проверяем OData-запрос в OData Master](/docs/onec/academy/lesson-03-test-odata-in-odata-explorer).'
   }),
   lesson({
     slug: 'lesson-03-test-odata-in-odata-explorer',
     order: 30,
-    title: 'Урок 03 — Проверяем OData-запрос в OData Explorer',
+    title: 'Урок 03 — Проверяем OData-запрос в OData Master',
     description: 'Проверка resource, filter, select и sample response до настройки flow.',
     build: 'Вы выполните первый запрос к `Catalog_Контрагенты` и сохраните точные поля, которые потом нужны для contractor lookup.',
     why: 'Flow не должен быть местом угадывания имен ресурсов. Сначала пользователь проверяет запрос в Explorer и только потом переносит его в builder.',
     before: ['Пройден урок 02.', 'Есть OData connection `OData ERP training`.', 'Пользователь 1C имеет права читать справочник контрагентов.'],
     steps: [
-      'Откройте OData Explorer.',
+      'Откройте OData Master.',
       'Выберите connection `OData ERP training`.',
       'Загрузите resources из metadata.',
       'Найдите resource контрагентов, например `Catalog_Контрагенты`.',
@@ -2246,7 +2271,7 @@ Variables after read:
     description: 'Первый lookup Golden Scenario: найти контрагента в 1C ERP по ИНН.',
     build: 'Вы добавите OData step, который берет variable \`inn\`, ищет контрагента и сохраняет результат как `contractor`.',
     why: 'DNP API не должен получать только ИНН, если ему нужен UUID/Ref_Key контрагента. OMH дочитывает данные из 1C и сохраняет artifact запроса.',
-    before: ['Пройден урок 05.', 'В OData Explorer проверен filter для `Catalog_Контрагенты`.', 'В flow есть variable \`inn\`.'],
+    before: ['Пройден урок 05.', 'В OData Master проверен filter для `Catalog_Контрагенты`.', 'В flow есть variable \`inn\`.'],
     steps: [
       'Добавьте step OData lookup.',
       'Выберите connection `OData ERP training`.',
@@ -2276,7 +2301,7 @@ Variables after read:
     mistakes: [
       'Не ставить Required result и отправлять target JSON с пустым contractor_uuid.',
       'Использовать \`product_code\` вместо \`inn\` в filter.',
-      'Писать filter вручную иначе, чем он прошел в OData Explorer.'
+      'Писать filter вручную иначе, чем он прошел в OData Master.'
     ],
     checklist: ['Выбрал connection', 'Настроил resource', 'Настроил filter by INN', 'Сохранил as contractor', 'Включил Required'],
     next: '[Урок 07 — Вторая выборка OData: ищем товар по артикулу](/docs/onec/academy/lesson-07-second-odata-lookup-product-by-article).'
@@ -2288,7 +2313,7 @@ Variables after read:
     description: 'Второй lookup Golden Scenario: найти товар по product_code.',
     build: 'Вы добавите второй OData lookup, который ищет номенклатуру в ERP или WMS и сохраняет результат как `product`.',
     why: 'Один flow может использовать несколько OData sources. Главное — явно назвать connection и save_as, чтобы следующий step не перепутал contractor и product.',
-    before: ['Пройден урок 06.', 'В OData Explorer проверен resource номенклатуры.', 'В flow есть variable \`product_code\`.'],
+    before: ['Пройден урок 06.', 'В OData Master проверен resource номенклатуры.', 'В flow есть variable \`product_code\`.'],
     steps: [
       'Добавьте второй OData lookup после contractor lookup.',
       'Выберите connection `OData ERP training` или `OData WMS training`, если товар хранится в WMS.',
@@ -2478,11 +2503,11 @@ Artifacts to read:
     description: 'Первые действия при 401, resource not found, empty lookup, target error и DLQ.',
     build: 'Вы получите короткий алгоритм исправления Golden Scenario без паники: где смотреть, что менять и когда делать replay.',
     why: 'В production важна не только настройка happy path. Пользователь должен понимать, какие ошибки исправляются данными, какие конфигурацией, а какие retry.',
-    before: ['Пройден урок 11.', 'Есть доступ к Timeline, OData Connections, OData Explorer и DLQ.', 'Пользователь понимает разницу inbound token, OData credentials и target API auth.'],
+    before: ['Пройден урок 11.', 'Есть доступ к Timeline, OData Connections, OData Master и DLQ.', 'Пользователь понимает разницу inbound token, OData credentials и target API auth.'],
     steps: [
       'Если входной endpoint вернул 401, проверьте \`X-OMH-Token\`.',
       'Если OData вернула 401, проверьте OData Connection credentials или secret.',
-      'Если resource не найден, откройте OData Explorer и выберите resource из metadata.',
+      'Если resource не найден, откройте OData Master и выберите resource из metadata.',
       'Если contractor/product lookup пустой, скопируйте filter из artifact и повторите в Explorer.',
       'Если target API вернул ошибку, откройте target.response и проверьте business message.',
       'Если event в DLQ, сначала прочитайте root cause, потом исправьте данные/config и только затем Replay from DLQ.',
@@ -2504,7 +2529,7 @@ DLQ -> inspect artifacts, fix, replay
     ],
     mistakes: [
       'Нажимать retry на auth ошибку без изменения credentials.',
-      'Менять flow filter, не проверив его в OData Explorer.',
+      'Менять flow filter, не проверив его в OData Master.',
       'Удалять DLQ событие до разбора artifacts.'
     ],
     checklist: ['Понял 401 inbound', 'Понял 401 OData', 'Понял empty lookup', 'Понял target error', 'Понял DLQ replay']
@@ -2548,7 +2573,7 @@ DLQ -> inspect artifacts, fix, replay
     'Теперь в следующих шагах можно использовать `{{number}}`.',
     '',
     '## 3. Настройте OData',
-    'Выберите OData connection, например `OData ERP production`. Resource укажите из OData Explorer, не из памяти.',
+    'Выберите OData connection, например `OData ERP production`. Resource укажите из OData Master, не из памяти.',
     '',
     '| Поле | Значение |',
     '| --- | --- |',
@@ -2578,10 +2603,45 @@ DLQ -> inspect artifacts, fix, replay
 ].map(withSelfCheck).map(withPedagogicalPass);
 
 export const referencePages: PageSeed[] = [
+  page('reference', 'odata-master', 'Reference - OData Master', 'Wizard spec, backend API и compilation в Integration Flow.', 5, md(`
+# Reference - OData Master
+
+Backend endpoints:
+
+~~~text
+GET  /api/odata-master/examples
+POST /api/odata-master/preview
+POST /api/odata-master/save
+POST /api/odata-master/run-test
+~~~
+
+Все endpoints относятся к package \`omh-package-onec\`.
+
+## Step types
+
+- \`odata_query\`
+- \`odata_object_query\`
+- \`foreach_odata\`
+
+## Final actions
+
+- \`return_response\`
+- \`send_endpoint\`
+- \`send_onec_http_service\`
+- \`async_accepted\`
+
+Compiler создает обычный \`IntegrationFlow\`: endpoint, route, compiled workflow, builder_json и saved test case.
+
+## Limits
+
+- \`$top <= 500\`.
+- Pagination использует \`$skip\` до \`max_pages\` из OData connection.
+- Exact JSON placeholder \`"{{codes}}"\` сохраняет массив/object тип.
+`)),
   page('reference', 'odata-connection', 'Reference — OData Connection', 'Что хранит OData connection и где он используется.', 10, md(`
 # Reference — OData Connection
 
-OData Connection — сохраненное подключение к конкретной публикации 1C OData. Пользователь создает его один раз, а потом выбирает из списка в OData Explorer и Flow Builder.
+OData Connection — сохраненное подключение к конкретной публикации 1C OData. Пользователь создает его один раз, а потом выбирает из списка в OData Master и Flow Builder.
 
 ## Примеры имен
 - OData ERP production
@@ -2788,7 +2848,7 @@ type SymptomPageConfig = {
 
 function russianSymptomExplanation(slug: string): string {
   const explanations: Record<string, string> = {
-    'odata-empty-result': 'По-русски: OMH дошел до 1C, авторизация и ресурс сработали, но фильтр не нашел ни одной строки. Не меняйте весь flow. Сначала откройте `odata_query_request`, скопируйте filter в OData Explorer и проверьте value из `incoming.request.json`.',
+    'odata-empty-result': 'По-русски: OMH дошел до 1C, авторизация и ресурс сработали, но фильтр не нашел ни одной строки. Не меняйте весь flow. Сначала откройте `odata_query_request`, скопируйте filter в OData Master и проверьте value из `incoming.request.json`.',
     'onec-returned-401': 'По-русски: Неверный логин или пароль для подключения к 1C, если failed step — `odata_query`; неверный `X-OMH-Token`, если failed step — `receive`; неверные credentials target-сервиса, если failed step — `call_endpoint`.',
     'event-moved-to-dlq': 'По-русски: DLQ — это не причина ошибки, а безопасная остановка после неуспешных попыток. Причина находится в первом failed step Timeline и его artifacts. Сначала исправьте данные, secret, config или target, потом делайте Replay from DLQ.',
   };
@@ -2835,7 +2895,7 @@ const troubleshootingIndex = page('troubleshooting', 'index', 'Troubleshooting �
   '::open-page{route="/test-console" label="Открыть Test Console"}',
   '::open-page{route="/events" label="Открыть Event Timeline"}',
   '::open-page{route="/runtime/dlq" label="Открыть DLQ"}',
-  '::open-page{route="/odata-explorer" label="Открыть OData Explorer"}',
+  '::open-page{route="/odata-explorer" label="Открыть OData Master"}',
   '',
   '## Connection/OData',
   '- [OData connection test failed](/docs/onec/troubleshooting/odata-connection-test-failed)',
@@ -2881,19 +2941,19 @@ const troubleshootingIndex = page('troubleshooting', 'index', 'Troubleshooting �
 
 export const troubleshootingPages: PageSeed[] = [
   troubleshootingIndex,
-  symptomPage({ slug: 'odata-connection-test-failed', title: 'Symptom: OData connection test failed', description: 'Test metadata or connection healthcheck does not pass for a 1C OData profile.', order: 10, whatYouSee: ['- OData Connections page shows failed Test metadata.', '- OData Explorer cannot load resources for the selected connection.', '- Flow OData step fails before it can build a filter.'], meaning: 'OMH cannot reliably reach the selected 1C OData publication. This is connection-level: URL, network, credentials, SSL, publication path or 1C user rights.', quickFix: 'Open OData Connections, run Test metadata for the same profile, then fix the first reported external error before editing the flow.', checklist: ['Base URL ends with the actual OData publication, for example `/odata/standard.odata`.', 'The URL is reachable from the OMH backend/container network.', 'Username and password or secret reference are valid.', 'SSL verification matches the real certificate setup.', 'The 1C user can read metadata and required catalogs.', 'You are testing the same environment where the flow runs.'], where: ['OData Connections -> selected profile -> Test metadata.', 'Secrets Store -> referenced password exists.', 'Timeline -> failed `odata_query` step if the failure happened inside a flow.', 'Health page if connection healthcheck is enabled.', 'Audit log if the profile changed recently.'], exampleLanguage: 'json', example: ['{', '  "status": "failed",', '  "error": "OData metadata request failed",', '  "url": "http://1c-server/erp/odata/standard.odata/$metadata"', '}'], related: ['[Создаём OData-подключение к 1С](/docs/onec/academy/create-odata-connection)', '[Проверяем OData-запрос в OData Explorer](/docs/onec/academy/test-odata-explorer)', '[Reference — OData Connection](/docs/onec/reference/odata-connection)'] }),
-  symptomPage({ slug: 'onec-returned-401', title: 'Symptom: 1C returned 401 Unauthorized', description: 'How to separate inbound OMH auth from OData/target 1C authentication failures.', order: 20, whatYouSee: ['- OData Explorer shows `401 Unauthorized`.', '- Timeline step `get_contractor` or `get_product` failed with 401.', '- 1C HTTP service target returned 401 to `send_to_dnp` or another call step.'], meaning: 'A 401 means authentication failed, but the owner depends on the failed step. OData 401 belongs to the OData Connection. Inbound 401 from OMH belongs to endpoint token. Target 1C 401 belongs to target connector credentials.', quickFix: 'Open the failed Timeline step first. If it is OData, run Test metadata on that OData Connection. If it is receive, check `X-OMH-Token` from 1C.', checklist: ['Failed step is identified: `receive`, `odata_query`, or `call_endpoint`.', 'Inbound `X-OMH-Token` is correct for `/api/bus/in/{slug}`.', 'OData username/password secret is valid.', '1C OData user has read rights for the catalog/document.', 'Target connector auth is not confused with inbound token.', 'Secrets exist in the current environment after promotion.'], where: ['Timeline -> first failed step.', '`incoming.request.headers` for inbound auth, with secrets redacted.', '`odata_query_request` and `odata_query_response` for OData auth.', '`target.response.json` for target 1C HTTP service auth.', 'OData Connections -> Test metadata.'], exampleLanguage: 'json', example: ['{', '  "status": 401,', '  "error": "Unauthorized",', '  "step": "get_contractor"', '}'], related: ['[Создаём OData-подключение к 1С](/docs/onec/academy/create-odata-connection)', '[Урок 11 — Читаем Timeline и артефакты](/docs/onec/academy/lesson-11-read-timeline-and-artifacts)', '[Secrets Store](/docs/onec/reference/secrets)'] }),
-  symptomPage({ slug: 'odata-metadata-does-not-load', title: 'Symptom: OData metadata does not load', description: 'The `$metadata` document cannot be loaded or parsed.', order: 30, whatYouSee: ['- OData Explorer resources list is empty.', '- Test metadata returns timeout, 404, 500, certificate error or invalid XML.', '- Flow cannot show resources for OData Query step.'], meaning: 'OMH needs `$metadata` to know exact resource and field names. If metadata does not load, do not guess `Catalog_...` names in Flow Builder.', quickFix: 'Open the exact metadata URL from OData Connection and fix publication/network/auth until `$metadata` loads successfully.', checklist: ['OData publication is enabled in 1C.', 'Base URL is not a web client URL.', 'The metadata URL is `${base_url}/$metadata` or the platform equivalent.', 'Reverse proxy does not strip auth headers.', 'Response is XML metadata, not an HTML login page.', 'Resource list reloads after 1C publication changes.'], where: ['OData Connections -> Test metadata details.', 'OData Explorer -> resource loader.', 'Browser/curl from OMH host if available.', 'Timeline only if failure happens during flow preview.', '1C web server publication settings.'], exampleLanguage: 'text', example: ['GET http://1c-server/erp/odata/standard.odata/$metadata', 'Expected: 200 application/xml', 'Bad: 200 text/html login page or 404 Not Found'], related: ['[Проверяем OData-запрос в OData Explorer](/docs/onec/academy/test-odata-explorer)', '[Глубокий курс OData](/docs/onec/odata-course/what-is-odata-for-omh)', '[OData resource not found](/docs/onec/troubleshooting/odata-resource-not-found)'] }),
-  symptomPage({ slug: 'odata-resource-not-found', title: 'Symptom: OData resource not found', description: 'Resource is missing from metadata or the wrong OData base is selected.', order: 40, whatYouSee: ['- Flow OData step fails with resource not found.', '- OData Explorer does not contain `Catalog_Контрагенты` or `Catalog_Номенклатура`.', '- Timeline request contains a resource name that 1C rejects.'], meaning: 'The selected 1C OData base does not publish the resource used by the flow, or the resource technical name is different from the name typed in the step.', quickFix: 'Reload resources in OData Explorer for the same connection and copy the resource name from the list, not from memory.', checklist: ['Correct OData connection selected.', 'Resource is copied from metadata.', 'Object is published in 1C OData.', 'Base URL points to the intended ERP/WMS/УСП base.', 'Flow draft was republished after resource fix.', 'Metadata cache was refreshed after 1C changes.'], where: ['OData Explorer -> resources list.', 'Timeline -> `odata_query_request`.', 'Flow Builder -> OData Query step settings.', 'Config History if the resource changed recently.', '1C publication settings.'], exampleLanguage: 'json', example: ['{', '  "resource": "Catalog_Контрагенты",', '  "error": "Resource not found in metadata"', '}'], related: ['[Проверяем OData-запрос в OData Explorer](/docs/onec/academy/test-odata-explorer)', '[Как выбрать OData-подключение в интеграционном потоке](/docs/onec/odata-course/select-connection-in-flow)', '[Reference — Integration Flow](/docs/onec/reference/integration-flow)'] }),
-  symptomPage({ slug: 'odata-empty-result', title: 'Symptom: OData query returns empty result', description: 'OMH reached 1C successfully, but the OData filter returned no rows.', order: 50, whatYouSee: ['~~~json', '{', '  "value": []', '}', '~~~', '- Timeline may show `ODATA_LOOKUP_NOT_FOUND`.', '- Required OData step stops the flow before JSON Builder or target call.'], meaning: 'OMH reached 1C successfully, but 1C did not return matching records. This is usually filter, value, field, base, permissions or data quality.', quickFix: 'Copy the generated filter from Timeline and run it in OData Explorer.', checklist: ['Correct OData connection selected.', 'Correct resource selected.', 'Correct field name from metadata.', 'Value has no spaces or hidden characters.', 'Field is visible to the OData user.', 'Object is not marked for deletion.', 'Using correct 1C base.', 'Try `$top=5` without filter.'], where: ['Timeline -> OData step.', 'Artifact `odata_query_request`.', 'Artifact `odata_query_response`.', 'OData Explorer with the same connection.', 'Incoming request artifact to compare the raw value.'], exampleLanguage: 'text', example: ['ODATA_LOOKUP_NOT_FOUND', "Catalog_Контрагенты?$filter=ИНН eq '7707083893'&$top=1", 'Response: { "value": [] }'], related: ['[Как строить $filter](/docs/onec/odata-course/filter-basics)', '[Ищем контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)', '[Урок 11 — Читаем Timeline и артефакты](/docs/onec/academy/lesson-11-read-timeline-and-artifacts)'] }),
-  symptomPage({ slug: 'contractor-not-found-by-inn', title: 'Symptom: Contractor not found by INN', description: 'Contractor lookup returned an empty OData result.', order: 60, whatYouSee: ['- `get_contractor` failed or returned empty result.', '- `contractor_uuid` is missing from target JSON.', '- Timeline has empty `odata.get_contractor.response.json`.'], meaning: 'The contractor may exist in another 1C base, the INN may be formatted differently, or the OData user cannot see the contractor.', quickFix: 'Copy `request.body.inn` and the generated contractor filter into OData Explorer, then test without filter using `$top=5`.', checklist: ['Incoming path is `request.body.inn`.', 'INN is trimmed and contains no non-breaking spaces.', 'Field is `ИНН` or the actual metadata field.', 'Resource is the contractor catalog for this configuration.', 'OData connection points to the base where the contractor exists.', 'Contractor is not marked for deletion.', 'User has catalog read rights.'], where: ['Timeline -> `incoming.request.json`.', 'Timeline -> `odata.get_contractor.request.json`.', 'Timeline -> `odata.get_contractor.response.json`.', 'OData Explorer contractor query.', 'Transform output before lookup.'], exampleLanguage: 'json', example: ['{', '  "inn": "7707083893",', '  "contractor": null,', '  "error": "ODATA_LOOKUP_NOT_FOUND"', '}'], related: ['[Ищем контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)', '[Первая выборка OData: контрагент по ИНН](/docs/onec/academy/first-odata-query-contractor)', '[OData query returns empty result](/docs/onec/troubleshooting/odata-empty-result)'] }),
-  symptomPage({ slug: 'product-not-found', title: 'Symptom: Product not found by article', description: 'Product lookup by product_code/article returned an empty result.', order: 70, whatYouSee: ['- `get_product` failed or returned empty result.', '- JSON Builder cannot fill `product_uuid`.', '- Product exists in 1C UI but not through selected OData query.'], meaning: 'The product lookup does not match the actual product storage: wrong base, wrong field, article formatting, missing publication or access rights.', quickFix: 'Open OData Explorer on the same connection and try `Catalog_Номенклатура?$top=5`, then add the article filter.', checklist: ['Input value comes from `request.body.product_code`.', 'Field is `Артикул`, `Code`, SKU or actual metadata field.', 'Connection is ERP/WMS where product really lives.', 'Case and spaces are normalized.', 'Product variant/barcode is not confused with article.', 'OData user can read nomenclature.'], where: ['Timeline -> `odata.get_product.request.json`.', 'Timeline -> `odata.get_product.response.json`.', 'OData Explorer resources/fields.', 'Flow Builder second OData step.', 'Transform output before product lookup.'], exampleLanguage: 'text', example: ["Catalog_Номенклатура?$filter=Артикул eq 'ABC-123'&$top=1", 'Response: { "value": [] }'], related: ['[Вторая выборка OData: товар по артикулу](/docs/onec/academy/second-odata-query-product)', '[Как строить $filter](/docs/onec/odata-course/filter-basics)', '[Recipe 2 two OData queries](/docs/onec/recipes/recipe-02-onec-post-two-odata-lookups)'] }),
+  symptomPage({ slug: 'odata-connection-test-failed', title: 'Symptom: OData connection test failed', description: 'Test metadata or connection healthcheck does not pass for a 1C OData profile.', order: 10, whatYouSee: ['- OData Connections page shows failed Test metadata.', '- OData Master cannot load resources for the selected connection.', '- Flow OData step fails before it can build a filter.'], meaning: 'OMH cannot reliably reach the selected 1C OData publication. This is connection-level: URL, network, credentials, SSL, publication path or 1C user rights.', quickFix: 'Open OData Connections, run Test metadata for the same profile, then fix the first reported external error before editing the flow.', checklist: ['Base URL ends with the actual OData publication, for example `/odata/standard.odata`.', 'The URL is reachable from the OMH backend/container network.', 'Username and password or secret reference are valid.', 'SSL verification matches the real certificate setup.', 'The 1C user can read metadata and required catalogs.', 'You are testing the same environment where the flow runs.'], where: ['OData Connections -> selected profile -> Test metadata.', 'Secrets Store -> referenced password exists.', 'Timeline -> failed `odata_query` step if the failure happened inside a flow.', 'Health page if connection healthcheck is enabled.', 'Audit log if the profile changed recently.'], exampleLanguage: 'json', example: ['{', '  "status": "failed",', '  "error": "OData metadata request failed",', '  "url": "http://1c-server/erp/odata/standard.odata/$metadata"', '}'], related: ['[Создаём OData-подключение к 1С](/docs/onec/academy/create-odata-connection)', '[Проверяем OData-запрос в OData Master](/docs/onec/academy/test-odata-explorer)', '[Reference — OData Connection](/docs/onec/reference/odata-connection)'] }),
+  symptomPage({ slug: 'onec-returned-401', title: 'Symptom: 1C returned 401 Unauthorized', description: 'How to separate inbound OMH auth from OData/target 1C authentication failures.', order: 20, whatYouSee: ['- OData Master shows `401 Unauthorized`.', '- Timeline step `get_contractor` or `get_product` failed with 401.', '- 1C HTTP service target returned 401 to `send_to_dnp` or another call step.'], meaning: 'A 401 means authentication failed, but the owner depends on the failed step. OData 401 belongs to the OData Connection. Inbound 401 from OMH belongs to endpoint token. Target 1C 401 belongs to target connector credentials.', quickFix: 'Open the failed Timeline step first. If it is OData, run Test metadata on that OData Connection. If it is receive, check `X-OMH-Token` from 1C.', checklist: ['Failed step is identified: `receive`, `odata_query`, or `call_endpoint`.', 'Inbound `X-OMH-Token` is correct for `/api/bus/in/{slug}`.', 'OData username/password secret is valid.', '1C OData user has read rights for the catalog/document.', 'Target connector auth is not confused with inbound token.', 'Secrets exist in the current environment after promotion.'], where: ['Timeline -> first failed step.', '`incoming.request.headers` for inbound auth, with secrets redacted.', '`odata_query_request` and `odata_query_response` for OData auth.', '`target.response.json` for target 1C HTTP service auth.', 'OData Connections -> Test metadata.'], exampleLanguage: 'json', example: ['{', '  "status": 401,', '  "error": "Unauthorized",', '  "step": "get_contractor"', '}'], related: ['[Создаём OData-подключение к 1С](/docs/onec/academy/create-odata-connection)', '[Урок 11 — Читаем Timeline и артефакты](/docs/onec/academy/lesson-11-read-timeline-and-artifacts)', '[Secrets Store](/docs/onec/reference/secrets)'] }),
+  symptomPage({ slug: 'odata-metadata-does-not-load', title: 'Symptom: OData metadata does not load', description: 'The `$metadata` document cannot be loaded or parsed.', order: 30, whatYouSee: ['- OData Master resources list is empty.', '- Test metadata returns timeout, 404, 500, certificate error or invalid XML.', '- Flow cannot show resources for OData Query step.'], meaning: 'OMH needs `$metadata` to know exact resource and field names. If metadata does not load, do not guess `Catalog_...` names in Flow Builder.', quickFix: 'Open the exact metadata URL from OData Connection and fix publication/network/auth until `$metadata` loads successfully.', checklist: ['OData publication is enabled in 1C.', 'Base URL is not a web client URL.', 'The metadata URL is `${base_url}/$metadata` or the platform equivalent.', 'Reverse proxy does not strip auth headers.', 'Response is XML metadata, not an HTML login page.', 'Resource list reloads after 1C publication changes.'], where: ['OData Connections -> Test metadata details.', 'OData Master -> resource loader.', 'Browser/curl from OMH host if available.', 'Timeline only if failure happens during flow preview.', '1C web server publication settings.'], exampleLanguage: 'text', example: ['GET http://1c-server/erp/odata/standard.odata/$metadata', 'Expected: 200 application/xml', 'Bad: 200 text/html login page or 404 Not Found'], related: ['[Проверяем OData-запрос в OData Master](/docs/onec/academy/test-odata-explorer)', '[Глубокий курс OData](/docs/onec/odata-course/what-is-odata-for-omh)', '[OData resource not found](/docs/onec/troubleshooting/odata-resource-not-found)'] }),
+  symptomPage({ slug: 'odata-resource-not-found', title: 'Symptom: OData resource not found', description: 'Resource is missing from metadata or the wrong OData base is selected.', order: 40, whatYouSee: ['- Flow OData step fails with resource not found.', '- OData Master does not contain `Catalog_Контрагенты` or `Catalog_Номенклатура`.', '- Timeline request contains a resource name that 1C rejects.'], meaning: 'The selected 1C OData base does not publish the resource used by the flow, or the resource technical name is different from the name typed in the step.', quickFix: 'Reload resources in OData Master for the same connection and copy the resource name from the list, not from memory.', checklist: ['Correct OData connection selected.', 'Resource is copied from metadata.', 'Object is published in 1C OData.', 'Base URL points to the intended ERP/WMS/УСП base.', 'Flow draft was republished after resource fix.', 'Metadata cache was refreshed after 1C changes.'], where: ['OData Master -> resources list.', 'Timeline -> `odata_query_request`.', 'Flow Builder -> OData Query step settings.', 'Config History if the resource changed recently.', '1C publication settings.'], exampleLanguage: 'json', example: ['{', '  "resource": "Catalog_Контрагенты",', '  "error": "Resource not found in metadata"', '}'], related: ['[Проверяем OData-запрос в OData Master](/docs/onec/academy/test-odata-explorer)', '[Как выбрать OData-подключение в интеграционном потоке](/docs/onec/odata-course/select-connection-in-flow)', '[Reference — Integration Flow](/docs/onec/reference/integration-flow)'] }),
+  symptomPage({ slug: 'odata-empty-result', title: 'Symptom: OData query returns empty result', description: 'OMH reached 1C successfully, but the OData filter returned no rows.', order: 50, whatYouSee: ['~~~json', '{', '  "value": []', '}', '~~~', '- Timeline may show `ODATA_LOOKUP_NOT_FOUND`.', '- Required OData step stops the flow before JSON Builder or target call.'], meaning: 'OMH reached 1C successfully, but 1C did not return matching records. This is usually filter, value, field, base, permissions or data quality.', quickFix: 'Copy the generated filter from Timeline and run it in OData Master.', checklist: ['Correct OData connection selected.', 'Correct resource selected.', 'Correct field name from metadata.', 'Value has no spaces or hidden characters.', 'Field is visible to the OData user.', 'Object is not marked for deletion.', 'Using correct 1C base.', 'Try `$top=5` without filter.'], where: ['Timeline -> OData step.', 'Artifact `odata_query_request`.', 'Artifact `odata_query_response`.', 'OData Master with the same connection.', 'Incoming request artifact to compare the raw value.'], exampleLanguage: 'text', example: ['ODATA_LOOKUP_NOT_FOUND', "Catalog_Контрагенты?$filter=ИНН eq '7707083893'&$top=1", 'Response: { "value": [] }'], related: ['[Как строить $filter](/docs/onec/odata-course/filter-basics)', '[Ищем контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)', '[Урок 11 — Читаем Timeline и артефакты](/docs/onec/academy/lesson-11-read-timeline-and-artifacts)'] }),
+  symptomPage({ slug: 'contractor-not-found-by-inn', title: 'Symptom: Contractor not found by INN', description: 'Contractor lookup returned an empty OData result.', order: 60, whatYouSee: ['- `get_contractor` failed or returned empty result.', '- `contractor_uuid` is missing from target JSON.', '- Timeline has empty `odata.get_contractor.response.json`.'], meaning: 'The contractor may exist in another 1C base, the INN may be formatted differently, or the OData user cannot see the contractor.', quickFix: 'Copy `request.body.inn` and the generated contractor filter into OData Master, then test without filter using `$top=5`.', checklist: ['Incoming path is `request.body.inn`.', 'INN is trimmed and contains no non-breaking spaces.', 'Field is `ИНН` or the actual metadata field.', 'Resource is the contractor catalog for this configuration.', 'OData connection points to the base where the contractor exists.', 'Contractor is not marked for deletion.', 'User has catalog read rights.'], where: ['Timeline -> `incoming.request.json`.', 'Timeline -> `odata.get_contractor.request.json`.', 'Timeline -> `odata.get_contractor.response.json`.', 'OData Master contractor query.', 'Transform output before lookup.'], exampleLanguage: 'json', example: ['{', '  "inn": "7707083893",', '  "contractor": null,', '  "error": "ODATA_LOOKUP_NOT_FOUND"', '}'], related: ['[Ищем контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)', '[Первая выборка OData: контрагент по ИНН](/docs/onec/academy/first-odata-query-contractor)', '[OData query returns empty result](/docs/onec/troubleshooting/odata-empty-result)'] }),
+  symptomPage({ slug: 'product-not-found', title: 'Symptom: Product not found by article', description: 'Product lookup by product_code/article returned an empty result.', order: 70, whatYouSee: ['- `get_product` failed or returned empty result.', '- JSON Builder cannot fill `product_uuid`.', '- Product exists in 1C UI but not through selected OData query.'], meaning: 'The product lookup does not match the actual product storage: wrong base, wrong field, article formatting, missing publication or access rights.', quickFix: 'Open OData Master on the same connection and try `Catalog_Номенклатура?$top=5`, then add the article filter.', checklist: ['Input value comes from `request.body.product_code`.', 'Field is `Артикул`, `Code`, SKU or actual metadata field.', 'Connection is ERP/WMS where product really lives.', 'Case and spaces are normalized.', 'Product variant/barcode is not confused with article.', 'OData user can read nomenclature.'], where: ['Timeline -> `odata.get_product.request.json`.', 'Timeline -> `odata.get_product.response.json`.', 'OData Master resources/fields.', 'Flow Builder second OData step.', 'Transform output before product lookup.'], exampleLanguage: 'text', example: ["Catalog_Номенклатура?$filter=Артикул eq 'ABC-123'&$top=1", 'Response: { "value": [] }'], related: ['[Вторая выборка OData: товар по артикулу](/docs/onec/academy/second-odata-query-product)', '[Как строить $filter](/docs/onec/odata-course/filter-basics)', '[Recipe 2 two OData queries](/docs/onec/recipes/recipe-02-onec-post-two-odata-lookups)'] }),
   symptomPage({ slug: 'omh-404-from-1c', title: 'Symptom: 1C receives 404 from OMH', description: '1C calls OMH but receives Not Found.', order: 80, whatYouSee: ['- 1C HTTPСоединение returns 404.', '- Browser or curl shows `Not Found`.', '- No new event appears in Event Journal.'], meaning: 'The request did not reach a valid inbound endpoint route. It may be wrong slug, disabled package route, wrong API host, frontend URL instead of backend API URL, or `/api/bus/in/{slug}` does not exist.', quickFix: 'Copy the endpoint URL from Integration Bus or Flow Builder and use the backend API URL, not the frontend documentation URL.', checklist: ['Endpoint slug matches exactly.', 'Path is `/api/bus/in/{slug}`.', 'You are using backend API host/port.', 'Package route is installed and enabled.', 'Flow endpoint is published/enabled.', 'Reverse proxy routes `/api` to backend.', 'Auth package is not confused with integration endpoint auth.'], where: ['Integration Bus -> endpoints list.', 'Flow Builder -> generated endpoint URL.', 'Test Console endpoint selector.', 'Event Journal to confirm whether request created an event.', 'Reverse proxy logs if external URL is used.'], exampleLanguage: 'text', example: ['Bad:  POST http://omh-ui.example.local/docs/onec/endpoint', 'Bad:  POST http://omh-server:8000/api/bus/onec-pool-to-dnp', 'Good: POST http://omh-server:8000/api/bus/in/onec-pool-to-dnp'], related: ['[Создаём входную точку для POST-запроса из 1С](/docs/onec/academy/create-inbound-endpoint)', '[Настраиваем полный обмен click-by-click](/docs/onec/academy/full-flow-click-by-click)', '[Test Console](/test-console)'] }),
   symptomPage({ slug: 'omh-401-403-from-1c', title: 'Symptom: 1C receives 401/403 from OMH', description: 'The inbound OMH endpoint rejects the request before the flow starts.', order: 90, whatYouSee: ['- 1C receives 401 or 403 from `/api/bus/in/{slug}`.', '- Event is not created, or Timeline stops at receive/auth.', '- Test Console works only when token header is present.'], meaning: 'This is inbound endpoint authorization. It protects OMH from unauthorized requests. It is separate from optional UI auth and separate from OData credentials.', quickFix: 'Pass the correct `X-OMH-Token` header for this endpoint, then test the same request in Test Console.', checklist: ['Endpoint auth mode is known: none/static token.', '`X-OMH-Token` header is present in 1C request.', 'Token value matches the endpoint config or secret.', 'Header is not stripped by proxy.', 'You did not use OData password as inbound token.', 'Optional UI auth package is not expected to protect integration API.'], where: ['Integration Bus endpoint auth settings.', 'Timeline -> receive step if event exists.', '`incoming.request.headers` with redaction.', 'Test Console headers field.', 'Audit log for endpoint auth changes.'], exampleLanguage: 'http', example: ['POST /api/bus/in/onec-pool-to-dnp', 'Content-Type: application/json', 'X-OMH-Token: training-token'], related: ['[Secrets и static token](/docs/onec/setup/auth-secrets-static-token)', '[Создаём входную точку для POST-запроса из 1С](/docs/onec/academy/create-inbound-endpoint)', '[1C returned 401 Unauthorized](/docs/onec/troubleshooting/onec-returned-401)'] }),
   symptomPage({ slug: 'route-did-not-match', title: 'Symptom: Endpoint exists but route did not match', description: 'The inbound endpoint exists, but no route/action selected the request.', order: 100, whatYouSee: ['- Endpoint accepts the request, but response says route not matched.', '- Timeline has receive/match_route failed.', '- Business action never starts.'], meaning: 'OMH found the endpoint but route conditions did not match the request body, headers, source, event type or package route.', quickFix: 'Open Timeline `route.match.json`, compare matcher conditions with the incoming request, then run the same payload in Test Console.', checklist: ['Endpoint slug is correct.', 'Input mode matches JSON/XML/raw.', 'Matcher field path exists.', 'Expected value equals actual value exactly.', 'Default route/fallback exists if needed.', 'Package route is enabled.', 'Flow was published after matcher changes.'], where: ['Timeline -> `route.match.json`.', 'Timeline -> `incoming.request.json` or raw XML.', 'Integration Bus routes list.', 'Flow Builder matcher/source block.', 'Test Console saved request.'], exampleLanguage: 'json', example: ['{', '  "matched": false,', '  "reason": "pool_type expected DNP, got PRINT"', '}'], related: ['[Рецепт 8. Маршрутизация по phrase/value](/docs/onec/recipes/recipe-08-route-by-key-phrase-value)', '[Visual Flow Builder](/docs/onec/tools/visual-flow-builder)', '[Урок 11 — Читаем Timeline и артефакты](/docs/onec/academy/lesson-11-read-timeline-and-artifacts)'] }),
   symptomPage({ slug: 'invalid-json-body', title: 'Symptom: Request body is not valid JSON', description: 'OMH endpoint expects JSON, but the body cannot be parsed as JSON.', order: 110, whatYouSee: ['- 1C receives validation error for JSON body.', '- Timeline stops before read fields.', '- Test Console shows parse error.'], meaning: 'The endpoint input mode is JSON, but the request body is empty, malformed, encoded incorrectly, or sent with wrong Content-Type.', quickFix: 'Copy the body from `incoming.request` or 1C code into Test Console and fix JSON until it parses.', checklist: ['Content-Type is `application/json`.', 'Body is a JSON object, not a 1C string dump.', 'Quotes are double quotes.', 'No trailing commas.', 'Encoding is UTF-8.', '1C code writes JSON through JSON writer, not manual concatenation.', 'Endpoint input mode is JSON.'], where: ['Test Console JSON editor.', 'Timeline -> `incoming.request.raw` if event is created.', '1C code that builds request body.', 'Integration Bus endpoint input mode.', 'Saved Test Cases for a known-good payload.'], exampleLanguage: 'json', example: ['{', '  "inn": "7707083893",', '  "product_code": "ABC-123",', '  "pool_id": "POOL-001",', '  "codes": ["010464615169738421ABC"]', '}'], related: ['[Читаем значения из входящего запроса](/docs/onec/academy/read-request-fields)', '[Настраиваем полный обмен click-by-click](/docs/onec/academy/full-flow-click-by-click)', '[Test Console](/test-console)'] }),
   symptomPage({ slug: 'xml-parse-error', title: 'Symptom: XML parse failed', description: 'XML body cannot be parsed, fields are empty or encoding is broken.', order: 120, whatYouSee: ['- XML Tools reports invalid XML.', '- Flow parse step returns empty fields.', '- Cyrillic text looks corrupted.', '- Raw forwarding scenario accidentally tries to parse XML.'], meaning: 'The XML body, encoding, namespace, Content-Type or flow input mode does not match what the pipeline expects.', quickFix: 'Open the raw XML artifact in XML Tools and validate it before debugging OData or target steps.', checklist: ['Content-Type is `application/xml` or `text/xml`.', 'XML declaration encoding matches real body encoding.', 'Namespaces are handled in XPath/path picker.', 'Payload is raw XML, not escaped XML inside JSON.', 'Flow input mode is XML or raw_text as intended.', 'raw_forward is used when XML must not be changed.'], where: ['Timeline -> `incoming.request.xml`.', 'XML Tools parse/hash/diff.', '`xml.parse.result.json` artifact.', 'Endpoint input mode settings.', 'Target XML artifact for forwarding scenarios.'], exampleLanguage: 'xml', example: ['<?xml version="1.0" encoding="UTF-8"?>', '<Envelope>', '  <Customer><INN>7707083893</INN></Customer>', '</Envelope>'], related: ['[Recipe 3 XML raw forwarding](/docs/onec/recipes/recipe-03-onec-xml-raw-forwarding)', '[Recipe 4 XML with INN lookup](/docs/onec/recipes/recipe-04-onec-xml-inn-lookup)', '[XML Tools](/docs/onec/tools/xml-tools)'] }),
-  symptomPage({ slug: 'odata-step-failed', title: 'Symptom: OData step failed', description: 'Any OData Query step failed in Flow Builder or Timeline.', order: 130, whatYouSee: ['- Timeline step `get_contractor` or `get_product` is failed.', '- The flow stops before JSON Builder.', '- Error may be 401, resource not found, timeout or empty required lookup.'], meaning: 'The OData step combines connection, resource, filter, selected fields and required behavior. You need to identify which part failed, not rewrite the whole flow.', quickFix: 'Open `odata_query_request` and `odata_query_response`; then reproduce the same query in OData Explorer.', checklist: ['Connection healthcheck passes.', 'Resource exists in metadata.', 'Filter uses exact field name.', 'Value source exists and has expected value.', '`$select` includes fields used later.', '`Top` is safe.', 'Required behavior is intentional.'], where: ['Timeline -> failed OData step.', 'Artifacts `odata_query_request`, `odata_query_response`, `odata_query_result`.', 'OData Explorer.', 'Flow Builder OData Query block.', 'Variables preview before this step.'], exampleLanguage: 'text', example: ['Step: get_product', "Request: Catalog_Номенклатура?$filter=Артикул eq 'ABC-123'&$top=1", 'Result: failed required lookup'], related: ['[Как выбрать OData-подключение](/docs/onec/odata-course/select-connection-in-flow)', '[Как строить $filter](/docs/onec/odata-course/filter-basics)', '[OData query returns empty result](/docs/onec/troubleshooting/odata-empty-result)'] }),
+  symptomPage({ slug: 'odata-step-failed', title: 'Symptom: OData step failed', description: 'Any OData Query step failed in Flow Builder or Timeline.', order: 130, whatYouSee: ['- Timeline step `get_contractor` or `get_product` is failed.', '- The flow stops before JSON Builder.', '- Error may be 401, resource not found, timeout or empty required lookup.'], meaning: 'The OData step combines connection, resource, filter, selected fields and required behavior. You need to identify which part failed, not rewrite the whole flow.', quickFix: 'Open `odata_query_request` and `odata_query_response`; then reproduce the same query in OData Master.', checklist: ['Connection healthcheck passes.', 'Resource exists in metadata.', 'Filter uses exact field name.', 'Value source exists and has expected value.', '`$select` includes fields used later.', '`Top` is safe.', 'Required behavior is intentional.'], where: ['Timeline -> failed OData step.', 'Artifacts `odata_query_request`, `odata_query_response`, `odata_query_result`.', 'OData Master.', 'Flow Builder OData Query block.', 'Variables preview before this step.'], exampleLanguage: 'text', example: ['Step: get_product', "Request: Catalog_Номенклатура?$filter=Артикул eq 'ABC-123'&$top=1", 'Result: failed required lookup'], related: ['[Как выбрать OData-подключение](/docs/onec/odata-course/select-connection-in-flow)', '[Как строить $filter](/docs/onec/odata-course/filter-basics)', '[OData query returns empty result](/docs/onec/troubleshooting/odata-empty-result)'] }),
   symptomPage({ slug: 'json-builder-variable-missing', title: 'Symptom: JSON Builder variable missing', description: 'JSON Builder cannot read contractor/product/request fields.', order: 140, whatYouSee: ['- Preview says variable missing.', '- Target JSON contains null or missing `contractor_uuid` / `product_uuid`.', '- Flow fails at `build_target_payload`.'], meaning: 'JSON Builder references a variable that was not created, was named differently, or does not contain the requested field.', quickFix: 'Open preview variables before JSON Builder and fix the source path, for example `contractor.Ref_Key` instead of `contractor.uuid`.', checklist: ['Previous step saved result as the same name used in Builder.', 'OData `$select` includes `Ref_Key` and `Description`.', 'Request path is `request.body.pool_id`, not `request.pool_id`.', 'Array fields such as `codes` stay arrays.', 'Required OData steps do not silently continue with null.', 'Builder preview is checked before publish.'], where: ['Flow Builder -> JSON Builder preview.', 'Timeline -> `target_payload.json`.', 'Timeline -> previous OData response artifact.', 'Builder variables panel.', 'Config History if mapping changed.'], exampleLanguage: 'json', example: ['{', '  "field": "contractor_uuid",', '  "source": "contractor.uuid",', '  "error": "Variable path not found. Use contractor.Ref_Key"', '}'], related: ['[Собираем целевой JSON](/docs/onec/academy/build-target-json)', '[Как использовать результат OData дальше](/docs/onec/odata-course/use-result-json-builder)', '[Настраиваем полный обмен click-by-click](/docs/onec/academy/full-flow-click-by-click)'] }),
   symptomPage({ slug: 'business-rule-stopped-flow', title: 'Symptom: Business Rule stopped flow', description: 'Rule evaluation stopped or skipped the integration before target call.', order: 150, whatYouSee: ['- Timeline step `business_rule` or `evaluate_rules` stopped the event.', '- Target connector was not called.', '- Response contains business validation message.'], meaning: 'A configured rule intentionally blocked the route, or the rule condition does not match the real request shape.', quickFix: 'Open the rule result artifact and compare actual input values with rule conditions.', checklist: ['Rule input field exists.', 'Expected value matches actual value exactly.', 'Rule order is correct.', 'Fallback rule exists for unknown values.', 'Rule action is fail/skip/route as intended.', 'Rule set was published after edits.'], where: ['Timeline -> `business_rule.result.json`.', 'Business Rules page -> Test rule set.', 'Transform output before rule.', 'Flow Builder preview.', 'Audit log for rule changes.'], exampleLanguage: 'json', example: ['{', '  "matched": true,', '  "action": "fail",', '  "message": "Unsupported pool_type PRINT"', '}'], related: ['[Rule Sets](/business-rules)', '[Recipe 8 route by phrase/value](/docs/onec/recipes/recipe-08-route-by-key-phrase-value)', '[Урок 12 — Исправляем частые ошибки](/docs/onec/academy/lesson-12-fix-common-errors)'] }),
   symptomPage({ slug: 'target-connector-not-found', title: 'Symptom: Target connector not found', description: 'Flow references a connector that is missing, disabled or not installed in the environment.', order: 160, whatYouSee: ['- `send_to_dnp` fails before HTTP request is sent.', '- Error says connector not found or disabled.', '- `target.request.json` is absent.'], meaning: 'The flow configuration points to a connector name/id that is not available in the current environment or package boundary.', quickFix: 'Open Connectors and verify the exact connector used by the flow exists and is enabled in this environment.', checklist: ['Connector exists in current environment.', 'Connector package is installed/enabled.', 'Flow references correct connector id/name.', 'Promotion included connector dependency or environment variable.', 'Connector healthcheck passes.', 'Secrets referenced by connector exist.'], where: ['Connectors page.', 'Flow Builder -> Call Endpoint block.', 'Config History / Change Set dependencies.', 'Secrets Store.', 'Timeline -> failed call step.'], exampleLanguage: 'json', example: ['{', '  "step": "send_to_dnp",', '  "connector": "DNP Service",', '  "error": "Connector not found in environment production"', '}'], related: ['[Отправляем JSON во внешний API](/docs/onec/academy/send-to-external-api)', '[Connector docs](/docs/onec/tools/connector)', '[Environment profiles](/environments)'] }),
@@ -2994,9 +3054,9 @@ export const exercisePages: PageSeed[] = [
     description: 'Создать OData ERP connection и найти контрагента по ИНН.',
     order: 10,
     goal: 'Проверить, что пользователь может подключить 1C OData, увидеть metadata и найти `Ref_Key` контрагента без Flow Builder.',
-    open: ['OData Connections', 'OData Explorer', 'Secrets Store если пароль хранится через secret reference'],
-    task: ['Создайте connection `OData ERP`.', 'Запустите Test metadata.', 'Откройте OData Explorer.', 'Выберите resource `Catalog_Контрагенты`.', "Выполните filter `ИНН eq '7707083893'` и `$top=1`.", 'Найдите `Ref_Key` и `Description`.'],
-    pass: ['OData metadata загружается без ошибки.', 'OData Explorer показывает `Catalog_Контрагенты`.', 'Query возвращает одну строку или понятный empty result.', 'Вы можете объяснить, что такое `Ref_Key`.'],
+    open: ['OData Connections', 'OData Master', 'Secrets Store если пароль хранится через secret reference'],
+    task: ['Создайте connection `OData ERP`.', 'Запустите Test metadata.', 'Откройте OData Master.', 'Выберите resource `Catalog_Контрагенты`.', "Выполните filter `ИНН eq '7707083893'` и `$top=1`.", 'Найдите `Ref_Key` и `Description`.'],
+    pass: ['OData metadata загружается без ошибки.', 'OData Master показывает `Catalog_Контрагенты`.', 'Query возвращает одну строку или понятный empty result.', 'Вы можете объяснить, что такое `Ref_Key`.'],
     related: ['[Создаём OData-подключение к 1С](/docs/onec/academy/create-odata-connection)', '[Ищем контрагента по ИНН](/docs/onec/academy/find-contractor-by-inn)', '[OData empty result](/docs/onec/troubleshooting/odata-empty-result)'],
   }),
   exercisePage({
@@ -3017,7 +3077,7 @@ export const exercisePages: PageSeed[] = [
     description: 'Добавить первый OData Query step, который сохраняет contractor.',
     order: 30,
     goal: 'Проверить, что пользователь умеет использовать входное поле `request.body.inn` как значение фильтра OData.',
-    open: ['Integration Flow Builder', 'OData Explorer', 'Timeline artifacts'],
+    open: ['Integration Flow Builder', 'OData Master', 'Timeline artifacts'],
     task: ['Откройте flow Golden Scenario.', 'Добавьте step `get_contractor`.', 'Connection: `OData ERP`.', 'Resource: `Catalog_Контрагенты`.', "Filter: `ИНН eq request.body.inn`.", '`$select`: `Ref_Key,Description,ИНН`.', 'Save result as: `contractor`.', 'Required: yes.'],
     pass: ['Preview строит правильный OData request.', '`contractor.Ref_Key` доступен следующему шагу.', 'Timeline содержит OData request/response artifact.', 'Пустой результат дает понятную ошибку, а не null в target JSON.'],
     related: ['[Первая выборка OData: контрагент по ИНН](/docs/onec/academy/first-odata-query-contractor)', '[Как строить $filter](/docs/onec/odata-course/filter-basics)', '[OData step failed](/docs/onec/troubleshooting/odata-step-failed)'],
@@ -3028,7 +3088,7 @@ export const exercisePages: PageSeed[] = [
     description: 'Добавить второй lookup товара и не перезаписать contractor.',
     order: 40,
     goal: 'Проверить, что пользователь понимает chaining: второй OData result сохраняется как `product`, а первый остается `contractor`.',
-    open: ['Flow Builder', 'OData Explorer', 'Preview variables'],
+    open: ['Flow Builder', 'OData Master', 'Preview variables'],
     task: ['Добавьте step `get_product` после `get_contractor`.', 'Выберите connection, где хранится номенклатура: `OData ERP` или `OData WMS`.', 'Resource: `Catalog_Номенклатура`.', 'Filter field: `Артикул` или фактическое поле из metadata.', 'Value source: `request.body.product_code`.', 'Save result as: `product`.', 'Запустите Preview.'],
     pass: ['Preview показывает одновременно `contractor` и `product`.', '`product.Ref_Key` доступен JSON Builder.', 'Вы не перезаписали переменную `contractor`.', 'OData response artifact показывает выбранную connection.'],
     related: ['[Вторая выборка OData: товар по артикулу](/docs/onec/academy/second-odata-query-product)', '[Multiple OData connections](/docs/onec/odata-course/multiple-connections)', '[Product not found](/docs/onec/troubleshooting/product-not-found)'],
@@ -3096,8 +3156,8 @@ export const exercisePages: PageSeed[] = [
     description: 'Разобрать ODATA_LOOKUP_NOT_FOUND и исправить lookup.',
     order: 100,
     goal: 'Проверить, что пользователь умеет отличить успешное обращение к 1C от пустого результата фильтра.',
-    open: ['Timeline', 'OData Explorer', 'Flow Builder OData step'],
-    task: ['Откройте event с `ODATA_LOOKUP_NOT_FOUND`.', 'Откройте `odata_query_request`.', 'Скопируйте resource/filter в OData Explorer.', 'Проверьте filter без лишних пробелов.', 'Попробуйте `$top=5` без filter.', 'Исправьте connection, field или value source.', 'Запустите Dry Run повторно.'],
+    open: ['Timeline', 'OData Master', 'Flow Builder OData step'],
+    task: ['Откройте event с `ODATA_LOOKUP_NOT_FOUND`.', 'Откройте `odata_query_request`.', 'Скопируйте resource/filter в OData Master.', 'Проверьте filter без лишних пробелов.', 'Попробуйте `$top=5` без filter.', 'Исправьте connection, field или value source.', 'Запустите Dry Run повторно.'],
     pass: ['Понятно, что OMH reached 1C successfully.', 'Найдено, почему `value` пустой.', 'Исправленный filter возвращает contractor.', 'Flow больше не падает на contractor lookup.'],
     testConsole: true,
     related: ['[OData query returns empty result](/docs/onec/troubleshooting/odata-empty-result)', '[Contractor not found by INN](/docs/onec/troubleshooting/contractor-not-found-by-inn)', '[Пустой результат OData](/docs/onec/odata-course/empty-result-debugging)'],
@@ -3171,6 +3231,43 @@ export const readinessChecklistPages: PageSeed[] = [
 ];
 
 export const recipePages: PageSeed[] = [
+  page("recipes", "dnp-chz-code-pool-sync", "Рецепт. DnP запрашивает пул кодов Честного знака", "DnP -> OMH -> 1C OData order -> Продукция -> foreach code pool -> DnP endpoint.", 5, mdLines(
+    "# Рецепт. DnP запрашивает пул кодов Честного знака",
+    "",
+    "## Схема",
+    "```text",
+    "DnP calls OMH",
+    "  -> OMH finds production order by Number",
+    "  -> OMH reads tabular part Продукция",
+    "  -> OMH repeats OData query for each product row",
+    "  -> OMH merges code rows into codes",
+    "  -> OMH sends result to DnP endpoint",
+    "  -> OMH returns response to caller",
+    "```",
+    "",
+    "## Входящий JSON",
+    "```json",
+    "{",
+    "  \"operation\": \"dnp_sinc_pull_codes\",",
+    "  \"sinc\": \"dnp_sinc_pull_codes\",",
+    "  \"order_id\": 10271,",
+    "  \"order_name\": \"26-0666/6938\",",
+    "  \"Number\": \"260666/6938\"",
+    "}",
+    "```",
+    "",
+    "## OData steps",
+    "1. `Document_ЗаказНаПроизводство2_2`, filter `Number eq '{{request.body.Number}}'`, save as `order`.",
+    "2. `Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция`, save as `products`.",
+    "3. Foreach `products` as `product`, query `InformationRegister_ПулКодовМаркировкиСУЗ`, save merged result as `codes`.",
+    "",
+    "## Финальное действие",
+    "`POST http://172.16.3.10/api/v2/integrations/omh/chz/codes/import` и вернуть вызывающему `{ \"ok\": true }`.",
+    "",
+    "После сохранения endpoint: `POST /api/bus/in/dnp_sinc_pull_codes`.",
+    "",
+    "::open-page{route=\"/odata-explorer\" label=\"Открыть Мастер OData\"}",
+  )),
   page("recipes", "recipe-01-onec-marking-pool-to-external-api", "Рецепт 1. 1C отправляет пул кодов маркировки во внешний API", "Маркировочный пул из 1C отправляется во внешний API с понятным endpoint, matcher, target JSON и Timeline.", 10, mdLines(
     "# Рецепт 1. 1C отправляет пул кодов маркировки во внешний API",
     "",
@@ -3708,7 +3805,7 @@ export const recipePages: PageSeed[] = [
     "- OData 401: check OData connection credentials, not website token.",
     "",
     "## Связанные страницы",
-    "- [OData Explorer](/odata-explorer)",
+    "- [OData Master](/odata-explorer)",
     "- [Фильтры OData и chaining](/docs/onec/tools/odata-chaining-fields)",
     "- [Диагностика 401 от 1C](/docs/onec/troubleshooting/onec-returned-401)"
   )),
@@ -4007,7 +4104,7 @@ export const caseStudyPages: PageSeed[] = [
     flow: '1C product_changed -> OData product -> OData stock/price -> transform rules -> Marketplace API',
     inbound: '{\n  "article": "A-100",\n  "barcode": "04601234567890",\n  "price_type": "Retail",\n  "warehouse": "MAIN"\n}',
     exampleId: 'onec.product_lookup_by_article',
-    setup: ['Создайте OData ERP profile.', 'В OData Explorer проверьте Catalog_Номенклатура по Артикул.', 'Создайте второй lookup для остатка или цены, если они опубликованы отдельным регистром.', 'Добавьте transform: trim article, normalize barcode, convert price to number.', 'Добавьте business rule: не отправлять товар без barcode.', 'Отправьте target payload в marketplace REST connector.'],
+    setup: ['Создайте OData ERP profile.', 'В OData Master проверьте Catalog_Номенклатура по Артикул.', 'Создайте второй lookup для остатка или цены, если они опубликованы отдельным регистром.', 'Добавьте transform: trim article, normalize barcode, convert price to number.', 'Добавьте business rule: не отправлять товар без barcode.', 'Отправьте target payload в marketplace REST connector.'],
     odata: ['Catalog_Номенклатура: Артикул eq \'{article}\'.', 'Для регистров часто нужны Period, Recorder или измерения склада: проверьте metadata.', 'Для цены используйте $top 1 и $orderby Period desc, если OData ресурс поддерживает сортировку.', 'Не делайте широкий запрос без $filter по всему каталогу.'],
     timeline: ['Два OData request: product и stock/price.', 'Business rule decision: publish/skip/fail.', 'Target request содержит marketplace schema.', 'Если barcode пустой, event должен завершиться понятной validation error.'],
     risks: ['Разные базы 1C могут иметь разные имена русских полей.', 'Цена может быть строкой, decimal или объектом: проверьте sample response.', 'Маркетплейс может ограничивать rate limit: используйте queue и retry policy.']
@@ -4102,7 +4199,7 @@ export const caseStudyPages: PageSeed[] = [
     inbound: '{\n  "event_id": "failed-event-id",\n  "symptom": "Required OData lookup returned empty"\n}',
     exampleId: 'onec.error_missing_contractor',
     setup: ['Откройте failed event.', 'Скачайте или просмотрите artifacts.', 'Определите, ошибка в данных, credentials, resource или target.', 'Исправьте источник: 1C справочник, OData profile или flow config.', 'Сделайте replay/retry.', 'Проверьте новый run и audit log.'],
-    odata: ['Если lookup empty, сначала повторите filter в OData Explorer.', 'Если 401, проверьте OData profile credentials.', 'Если 404, проверьте resource name и публикацию OData в 1C.', 'Если timeout, уменьшите $select/$top или проверьте индекс/фильтр.'],
+    odata: ['Если lookup empty, сначала повторите filter в OData Master.', 'Если 401, проверьте OData profile credentials.', 'Если 404, проверьте resource name и публикацию OData в 1C.', 'Если timeout, уменьшите $select/$top или проверьте индекс/фильтр.'],
     timeline: ['Старый run остается failed.', 'Новый run имеет mode replay или retry.', 'Artifacts показывают разницу результата.', 'Audit log фиксирует config/data action если было изменение.'],
     risks: ['Не нажимайте retry много раз на deterministic mapping error.', 'Не удаляйте DLQ до root cause.', 'Не правьте payload так, чтобы потерять исходные данные.']
   }),
@@ -4165,7 +4262,7 @@ const basicOneCPost = `HTTP = Новый HTTPСоединение("omh.example.l
 КонецЕсли;`;
 
 export const requestExamplePages: PageSeed[] = [
-  requestExample({ slug: 'request-01-customer-lookup', order: 10, title: 'Запрос 1. Проверить контрагента по ИНН', description: 'Минимальный POST, который учит искать контрагента и читать lookup artifacts.', endpoint: 'POST /api/bus/in/onec-customer-lookup', headers: 'Content-Type: application/json\nX-OMH-Token: <token>\nX-OMH-Source: 1c', body: '{\n  "inn": "7707083893",\n  "source_document": "Order SO-1001"\n}', onecCode: basicOneCPost, odataFilter: 'Resource: Catalog_Контрагенты\n$filter: ИНН eq \'7707083893\'\n$select: Ref_Key,Description,ИНН', exampleId: 'onec.customer_lookup_by_inn', notes: ['Если lookup empty, откройте тот же фильтр в OData Explorer.', 'Если INN хранится без лидирующих нулей, нормализуйте значение transform step.', 'Для филиалов добавьте KPP.'] }),
+  requestExample({ slug: 'request-01-customer-lookup', order: 10, title: 'Запрос 1. Проверить контрагента по ИНН', description: 'Минимальный POST, который учит искать контрагента и читать lookup artifacts.', endpoint: 'POST /api/bus/in/onec-customer-lookup', headers: 'Content-Type: application/json\nX-OMH-Token: <token>\nX-OMH-Source: 1c', body: '{\n  "inn": "7707083893",\n  "source_document": "Order SO-1001"\n}', onecCode: basicOneCPost, odataFilter: 'Resource: Catalog_Контрагенты\n$filter: ИНН eq \'7707083893\'\n$select: Ref_Key,Description,ИНН', exampleId: 'onec.customer_lookup_by_inn', notes: ['Если lookup empty, откройте тот же фильтр в OData Master.', 'Если INN хранится без лидирующих нулей, нормализуйте значение transform step.', 'Для филиалов добавьте KPP.'] }),
   requestExample({ slug: 'request-02-product-lookup', order: 20, title: 'Запрос 2. Проверить номенклатуру по артикулу', description: 'Payload для поиска товара и передачи product_uuid в следующий step.', endpoint: 'POST /api/bus/in/onec-product-lookup', headers: 'Content-Type: application/json\nX-OMH-Token: <token>\nX-OMH-Source: 1c', body: '{\n  "article": "A-100",\n  "barcode": "04601234567890",\n  "warehouse": "MAIN"\n}', odataFilter: 'Resource: Catalog_Номенклатура\n$filter: Артикул eq \'A-100\'\n$select: Ref_Key,Description,Артикул', exampleId: 'onec.product_lookup_by_article', notes: ['Артикул может называться Article, Артикул или Код в разных публикациях.', 'Проверяйте $select по metadata, а не по памяти.', 'Barcode лучше нормализовать до строки.'] }),
   requestExample({ slug: 'request-03-two-lookups-order', order: 30, title: 'Запрос 3. Заказ с двумя lookup: контрагент и товар', description: 'Основной пример для 1C POST -> OData -> JSON -> endpoint.', endpoint: 'POST /api/bus/in/onec-enrich-order', headers: 'Content-Type: application/json\nX-OMH-Token: <token>\nX-OMH-Source: 1c', body: '{\n  "inn": "7707083893",\n  "product_code": "A-100",\n  "quantity": 12,\n  "external_order_id": "SO-1001"\n}', odataFilter: 'Lookup 1: Catalog_Контрагенты by ИНН\nLookup 2: Catalog_Номенклатура by Артикул or Код', exampleId: 'onec.two_odata_to_json_endpoint', notes: ['У lookup должны быть разные save_as: contractor и product.', 'Required включайте на обоих, если target API не принимает null.', 'В Timeline должно быть два odata_query_request.json.'] }),
   requestExample({ slug: 'request-04-xml-inn', order: 40, title: 'Запрос 4. XML с INN и номером документа', description: 'Пример для старого XML обмена и нового JSON target.', endpoint: 'POST /api/bus/in/onec-xml-inn-to-api', headers: 'Content-Type: application/xml\nX-OMH-Token: <token>\nX-OMH-Source: 1c', body: '{\n  "body_text": "<Request><INN>7707083893</INN><Document>UPD-1001</Document></Request>"\n}', odataFilter: 'Extract INN from XML -> Catalog_Контрагенты by ИНН', exampleId: 'onec.xml_inn_to_api', notes: ['Для XML в Test Console используйте body_text/input_mode xml.', 'Raw XML artifact должен сохраниться до parse step.', 'Namespace в XML проверяйте отдельно.'] }),
@@ -4212,8 +4309,8 @@ ${config.prevent.map((item) => `- ${item}`).join('\n')}
 
 export const errorPlaybookPages: PageSeed[] = [
   errorPlaybook({ slug: 'odata-401-auth', order: 10, title: 'Playbook 1. OData вернула 401 Unauthorized', description: 'Что делать, если OData profile не проходит auth.', symptom: 'Test $metadata или OData step возвращает 401, а входной запрос в OMH при этом принят.', likelyCauses: ['Неверный username/password в OData Connection.', 'Secret не создан в текущем окружении.', 'Пользователь 1C не имеет прав на OData publication.', 'Перепутали inbound token и OData credentials.'], whereToLook: ['OData Connections -> selected profile -> Test $metadata.', 'Timeline -> odata_query_response.json.', 'Secrets Store -> secret exists and enabled.', 'Audit log -> кто менял profile.'], fix: ['Проверьте логин/пароль в 1C вручную.', 'Если используется $secret, убедитесь, что secret существует в этом environment.', 'Обновите OData profile и повторите Test $metadata.', 'Повторите failed event только после успешного metadata test.'], prevent: ['Используйте named secrets per environment.', 'Не храните production пароль в description.', 'Добавьте healthcheck OData profile в production checklist.'] }),
-  errorPlaybook({ slug: 'odata-404-resource', order: 20, title: 'Playbook 2. OData resource не найден', description: '404/invalid resource при запросе Catalog или Document.', symptom: 'OData step падает с 404 или ONEC_ODATA_ERROR, хотя connection metadata работает.', likelyCauses: ['Ресурс называется иначе в этой базе.', 'Объект не опубликован в OData 1C.', 'Использовано русское имя справочника вместо technical OData name.', 'Base URL указывает не на ту информационную базу.'], whereToLook: ['OData Explorer resources list.', 'Timeline -> odata_query_request.json url/resource.', '1C publication settings.', 'OData profile base_url.'], fix: ['Откройте OData Explorer и загрузите resources.', 'Выберите ресурс из списка, не набирайте по памяти.', 'Проверьте публикацию OData в 1C.', 'Обновите flow step resource и сохраните draft/publish.'], prevent: ['В docs flow фиксируйте exact resource name.', 'Добавляйте screenshots/resources examples для клиента.', 'Проверяйте resource после обновления 1C конфигурации.'] }),
-  errorPlaybook({ slug: 'odata-empty-required', order: 30, title: 'Playbook 3. Required OData lookup пустой', description: 'Lookup не нашел строку и flow остановился.', symptom: 'Timeline показывает ODATA_RESULT_EMPTY или бизнес-ошибку “required lookup returned no rows”.', likelyCauses: ['Неверный field/operator/value source.', 'Входное значение не нормализовано: пробелы, регистр, лидирующие нули.', 'Данные еще не заведены в 1C.', 'Фильтр требует KPP/warehouse/date, а передан только INN/SKU.'], whereToLook: ['Timeline -> odata_query_request.json.', 'Timeline -> incoming.request.', 'OData Explorer с тем же filter.', 'Transform output до lookup.'], fix: ['Скопируйте filter из artifact в OData Explorer.', 'Проверьте фактическое значение из incoming.request.', 'Добавьте transform trim/remove_spaces/normalize.', 'Если данные отсутствуют, заведите их в 1C и сделайте replay.'], prevent: ['Проверяйте negative examples до production.', 'Документируйте required fields.', 'Для неоднозначных ключей используйте resolver вместо прямого lookup.'] }),
+  errorPlaybook({ slug: 'odata-404-resource', order: 20, title: 'Playbook 2. OData resource не найден', description: '404/invalid resource при запросе Catalog или Document.', symptom: 'OData step падает с 404 или ONEC_ODATA_ERROR, хотя connection metadata работает.', likelyCauses: ['Ресурс называется иначе в этой базе.', 'Объект не опубликован в OData 1C.', 'Использовано русское имя справочника вместо technical OData name.', 'Base URL указывает не на ту информационную базу.'], whereToLook: ['OData Master resources list.', 'Timeline -> odata_query_request.json url/resource.', '1C publication settings.', 'OData profile base_url.'], fix: ['Откройте OData Master и загрузите resources.', 'Выберите ресурс из списка, не набирайте по памяти.', 'Проверьте публикацию OData в 1C.', 'Обновите flow step resource и сохраните draft/publish.'], prevent: ['В docs flow фиксируйте exact resource name.', 'Добавляйте screenshots/resources examples для клиента.', 'Проверяйте resource после обновления 1C конфигурации.'] }),
+  errorPlaybook({ slug: 'odata-empty-required', order: 30, title: 'Playbook 3. Required OData lookup пустой', description: 'Lookup не нашел строку и flow остановился.', symptom: 'Timeline показывает ODATA_RESULT_EMPTY или бизнес-ошибку “required lookup returned no rows”.', likelyCauses: ['Неверный field/operator/value source.', 'Входное значение не нормализовано: пробелы, регистр, лидирующие нули.', 'Данные еще не заведены в 1C.', 'Фильтр требует KPP/warehouse/date, а передан только INN/SKU.'], whereToLook: ['Timeline -> odata_query_request.json.', 'Timeline -> incoming.request.', 'OData Master с тем же filter.', 'Transform output до lookup.'], fix: ['Скопируйте filter из artifact в OData Master.', 'Проверьте фактическое значение из incoming.request.', 'Добавьте transform trim/remove_spaces/normalize.', 'Если данные отсутствуют, заведите их в 1C и сделайте replay.'], prevent: ['Проверяйте negative examples до production.', 'Документируйте required fields.', 'Для неоднозначных ключей используйте resolver вместо прямого lookup.'] }),
   errorPlaybook({ slug: 'target-timeout', order: 40, title: 'Playbook 4. Target API timeout', description: 'Что делать, если внешний API или 1C HTTP service не отвечает вовремя.', symptom: 'Flow падает по timeout на target call или 1C форма ждет слишком долго.', likelyCauses: ['Target API медленный или недоступен.', 'Слишком короткий timeout.', 'Сценарий должен быть async, но выбран proxy_response.', '1C проводит документ синхронно и блокирует объект.'], whereToLook: ['Timeline -> target.request.', 'External error record.', 'Connector timeout_seconds.', 'Response mode flow.'], fix: ['Проверьте target доступность вне OMH.', 'Если операция долгая, смените response_mode на accepted_event.', 'Настройте retry policy для timeout/5xx.', 'Не retry 4xx validation errors.'], prevent: ['Для user-facing 1C кнопок держите короткий timeout.', 'Для фоновых операций используйте queue.', 'Согласуйте SLA target API.'] }),
   errorPlaybook({ slug: 'xml-parse-failed', order: 50, title: 'Playbook 5. XML не парсится или потерялась кодировка', description: 'Ошибки XML input, namespace и encoding.', symptom: 'XML Tools или flow parse step показывает invalid XML, пустые поля или кракозябры.', likelyCauses: ['Content-Type не application/xml.', 'Кодировка body не совпадает с XML declaration.', 'XML namespace не учтен в path.', '1C отправила не XML, а строку с escaped XML.'], whereToLook: ['incoming.request raw text.', 'XML Tools parse/hash.', 'Headers artifact.', 'xml.parse.result.'], fix: ['Сохраните raw body и проверьте encoding.', 'Проверьте Content-Type и XML declaration.', 'Для namespace используйте корректный XPath или local-name.', 'Если XML escaped внутри JSON, сначала извлеките строку.'], prevent: ['Всегда храните raw XML artifact.', 'Добавьте XML negative test.', 'Документируйте пример XML из реальной 1C.'] }),
   errorPlaybook({ slug: 'business-rule-stopped', order: 60, title: 'Playbook 6. Business rule остановил событие', description: 'Событие не дошло до target из-за правила.', symptom: 'Flow завершился как failed/skipped на evaluate_rules step.', likelyCauses: ['Статус/source value не входит в разрешенный список.', 'Правило настроено как fail вместо skip.', 'Поле до rule не было прочитано или трансформировано.', 'Порядок правил приводит к первому неверному match.'], whereToLook: ['Timeline -> business_rule result.', 'Rule set page.', 'Transform output до rule.', 'Sample request в builder preview.'], fix: ['Проверьте входное значение.', 'Прогоните rule set test.', 'Исправьте порядок правил.', 'Опубликуйте config version и replay событие.'], prevent: ['Пишите explicit fallback rule.', 'Добавляйте examples на каждый статус.', 'Не меняйте rule set без preview.'] }),
@@ -4279,7 +4376,7 @@ export const decisionPages: PageSeed[] = [
 - Один flow ищет Catalog_Контрагенты по ИНН: OData lookup.
 - Десять flow ищут Product по SKU и GTIN: Resolver.
 - Нужно fallback: сначала ERP, потом WMS: Resolver.
-- Нужно быстро проверить ресурс: OData Explorer и OData lookup.
+- Нужно быстро проверить ресурс: OData Master и OData lookup.
 
 ::checklist{id="decision-lookup-resolver" items="Оценил повторяемость поиска|Понял нужен ли cache|Выбрал lookup или resolver|Проверил результат в Timeline"}
 `)),

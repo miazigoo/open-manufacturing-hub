@@ -14,7 +14,7 @@ Visible by default:
 | 1C Cockpit | `/onec-cockpit` | Main 1C integration cockpit |
 | Request/Response Workbench | `/test-console` | External service calls OMH, OMH returns JSON/XML/raw |
 | OData Connections | `/odata-connections` | Named 1C OData connections |
-| OData Explorer | `/odata-explorer` | Test OData, build filters, continue integration |
+| OData Master | `/odata-explorer` | Build OData-backed integrations and safely test queries |
 | Integration Flows | `/integration-flows` | Created integrations list and operations |
 | Event Journal | `/events` | What happened |
 | Transaction Monitor | `/runtime/monitor` | Runtime transaction state |

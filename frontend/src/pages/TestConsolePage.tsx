@@ -457,7 +457,7 @@ export function TestConsolePage() {
         </section>
 
         <aside className="request-response-sidecar">
-          <section className="panel stack-form"><div className="panel-toolbar"><div><span className="eyebrow">Понятный preview</span><h2>Что будет происходить</h2></div><Link className="primary-link" to="/odata-explorer">Открыть OData Explorer</Link></div><PreviewStory fields={extractedFields} steps={odataSteps} responseType={wizard.responseType} endpointSlug={slugify(wizard.slug)} /></section>
+          <section className="panel stack-form"><div className="panel-toolbar"><div><span className="eyebrow">Понятный preview</span><h2>Что будет происходить</h2></div><Link className="primary-link" to="/odata-explorer">Открыть Мастер OData</Link></div><PreviewStory fields={extractedFields} steps={odataSteps} responseType={wizard.responseType} endpointSlug={slugify(wizard.slug)} /></section>
           {builderResult ? <JsonBlock title="Preview / результат" value={builderResult} searchable /> : <div className="test-console-empty-response"><span className="eyebrow">Preview</span><strong>Пока ничего не запускали</strong><p>Нажмите “Проверить без сохранения”, чтобы увидеть переменные, OData-запросы и готовый ответ.</p></div>}
           {createdFlow && <section className="panel stack-form"><h2>Готовые примеры запросов</h2><CodeEditor value={createdFlow.curl_example} onChange={() => undefined} language="bash" minRows={6} /><CodeEditor value={createdFlow.onec_http_example} onChange={() => undefined} language="text" minRows={7} /></section>}
         </aside>

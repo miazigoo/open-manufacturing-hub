@@ -42,7 +42,7 @@ export const navModel: NavModelItem[] = [
   nav('onec-cockpit', 'Build', '1C Cockpit', '/onec-cockpit', 'nav.onecCockpit', simple, 10, 'omh-package-onec'),
   nav('request-response', 'Build', 'Request/Response Workbench', '/test-console', 'nav.testConsole', simple, 20),
   nav('odata-connections', 'Build', 'OData Connections', '/odata-connections', 'onec.odataConnections', simple, 30, 'omh-package-onec'),
-  nav('odata-explorer', 'Build', 'OData Explorer', '/odata-explorer', 'nav.odataExplorer', simple, 40, 'omh-package-onec'),
+  nav('odata-explorer', 'Build', 'Мастер OData', '/odata-explorer', 'nav.odataExplorer', simple, 40, 'omh-package-onec'),
   nav('integration-flows', 'Build', 'Integration Flows', '/integration-flows', 'nav.integrationFlows', simple, 50),
   nav('printing', 'Build', 'Printing', '/printing', 'nav.printing', advanced, 60, 'omh-package-printer'),
 

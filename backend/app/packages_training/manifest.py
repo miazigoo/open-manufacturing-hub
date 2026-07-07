@@ -29,10 +29,9 @@ manifest = PackageManifest(
     },
     docs={"readme": "app.packages_training.docs:README", "quick_start": "app.packages_training.docs:QUICK_START"},
     i18n={"namespaces": ["training"], "locales": {"ru": "i18n/ru/training.json", "en": "i18n/en/training.json", "zh": "i18n/zh/training.json"}},
-    extension_points=["Package Store", "Mock OData", "Training Examples", "Test Console", "OData Explorer"],
+    extension_points=["Package Store", "Mock OData", "Training Examples", "Test Console", "OData Master"],
     dependencies=[
-        {"package_id": "omh-package-onec", "optional": True, "reason": "Enables the full 1C OData Explorer UI for training connections."},
+        {"package_id": "omh-package-onec", "optional": True, "reason": "Enables the full 1C OData Master UI for training connections."},
         {"package_id": "omh-package-printer", "optional": True, "reason": "Lets users compare the mock printer with production printer tooling."},
     ],
 )
-

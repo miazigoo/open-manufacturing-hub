@@ -58,7 +58,7 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
         ]),
         ("Data Tools", [
             ("OData Connections", "/odata-connections", ONEC_PACKAGE, False),
-            ("OData Explorer", "/odata-explorer", ONEC_PACKAGE, False),
+            ("OData Master", "/odata-explorer", ONEC_PACKAGE, False),
             ("XML Tools", "/xml-tools", ONEC_PACKAGE, False),
             ("JSON Builder / Mappings", "/mappings", None, False),
             ("Business Objects", "/business-objects", None, False),

@@ -30,7 +30,7 @@ export function FirstIntegrationWizard() {
           ['01', 'Choose scenario', 'Main path: 1C POST -> two OData lookups -> JSON endpoint.'],
           ['02', 'Select/create source endpoint', 'The preset creates an inbound endpoint for test requests.'],
           ['03', 'Select 1C connector', 'Use Connectors page to register real OData credentials.'],
-          ['04', 'Configure OData lookup', 'Open OData Explorer to verify resource, filter and selected fields.'],
+          ['04', 'Configure OData lookup', 'Open OData Master to verify resource, filter and selected fields.'],
           ['05', 'Configure target REST connector', 'Use connector JSON or secret references for auth.'],
           ['06', 'Build target JSON', 'Visual builder transforms lookup result and source payload.'],
           ['07', 'Send test request', 'Use Test Console or run the safe example below.'],

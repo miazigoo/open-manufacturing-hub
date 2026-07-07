@@ -42,7 +42,7 @@ Their backend manifests live under `backend/app/packages_*`. Auth frontend packa
 
 Package-specific operational navigation is shown only when the package is installed and enabled.
 
-For example, `omh-package-onec` being registered in the monorepo does not show 1C cockpit, OData Explorer or 1C workbench as normal operational nav. These pages become normal navigation only after `omh-package-onec` is installed and enabled.
+For example, `omh-package-onec` being registered in the monorepo does not show 1C cockpit, OData Master or 1C workbench as normal operational nav. These pages become normal navigation only after `omh-package-onec` is installed and enabled.
 
 Direct package-specific pages are wrapped by `PackageGate`. The gate shows:
 

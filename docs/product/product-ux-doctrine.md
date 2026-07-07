@@ -28,7 +28,7 @@ Default mode. Shows scenario-first pages only:
 - Documentation and Training
 - 1C Cockpit
 - Request/Response Workbench
-- OData Connections and OData Explorer
+- OData Connections and OData Master
 - Integration Flows as the list of created integrations
 - Event Journal, Transaction Monitor, Incidents and Health
 - Packages and Production
@@ -92,7 +92,7 @@ User understands what happens in production
 - Simple mode must not start from routes, workflows, execution steps or raw bus concepts.
 - "Create integration" opens a scenario chooser, not a blank technical builder.
 - Integration Flows is a management page for already created flows.
-- OData Explorer is both a test tool and an integration-building step.
+- OData Master is both a test tool and an integration-building step.
 - XML Tools is a reusable toolbox, not the first XML integration page.
 - Developer pages can be reachable by URL, but hidden in Simple and Advanced navigation unless explicitly needed.
 

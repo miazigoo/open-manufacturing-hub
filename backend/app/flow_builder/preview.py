@@ -159,7 +159,15 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
 
 
 def _scope(sample_request: dict[str, Any], variables: dict[str, Any]) -> dict[str, Any]:
-    return build_runtime_scope(request_body=sample_request, variables=variables, headers={}, query={}, raw_text=sample_request.get("text") if isinstance(sample_request, dict) else None, xml=sample_request.get("xml") if isinstance(sample_request, dict) else None, context={})
+    return build_runtime_scope(
+        request_body=sample_request,
+        variables=variables,
+        headers={},
+        query={},
+        raw_text=sample_request.get("text") if isinstance(sample_request, dict) else None,
+        xml=sample_request.get("xml") if isinstance(sample_request, dict) else None,
+        context={"event_id": "preview-event-id", "run_id": "preview-run-id", "correlation_id": "preview-correlation-id"},
+    )
 
 
 def _sample_xml(sample_request: dict[str, Any]) -> str:

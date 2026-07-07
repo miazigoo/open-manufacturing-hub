@@ -43,6 +43,7 @@ from app.onboarding.router import router as onboarding_router
 from app.operation_templates.router import router as operation_templates_router
 from app.odata_connections.router import router as odata_connections_router
 from app.odata_explorer.router import router as odata_explorer_router
+from app.odata_master.router import router as odata_master_router
 from app.packages.router import router as packages_router
 from app.packages.errors import PackageNotInstallableError
 from app.packages.runtime import PackageAccessError, require_package_enabled
@@ -142,6 +143,7 @@ app.include_router(matchers_router)
 app.include_router(scenario_library_router)
 app.include_router(odata_connections_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(odata_explorer_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
+app.include_router(odata_master_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(xml_tools_router)
 app.include_router(xml_toolkit_router)
 app.include_router(test_console_router)
