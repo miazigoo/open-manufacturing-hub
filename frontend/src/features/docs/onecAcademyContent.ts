@@ -2196,12 +2196,84 @@ export const academyPages: PageSeed[] = [
     'products[0].КоличествоУпаковок',
     '```',
     '',
-    'Следующий будущий шаг сможет пройти по `products` и выполнить OData-запрос для каждой строки. Foreach не входит в Step 2B.',
+    'Следующий шаг сможет пройти по `products` и выполнить OData-запрос для каждой строки.',
     '',
     '## Empty result',
     'Если строк нет и `required=true`, test вернёт `ODATA_TABULAR_PART_EMPTY`. Проверьте `order.Ref_Key`, имя табличной части, права OData пользователя и базовый resource.',
     '',
     '::checklist{id="read-tabular-part" items="Выбрал order|Выбрал Ref_Key|Key type GUID|Указал Document_ЗаказНаПроизводство2_2|Указал Продукция|Preview показывает template и rendered resource|Test вернул products[]|Сохранил odata_object_query"}',
+    '',
+    '::next-lesson{label="Повторяем OData-запрос по каждой строке массива" href="/docs/onec/academy/foreach-odata-over-products"}',
+  )),
+  page('academy', 'foreach-odata-over-products', 'Повторяем OData-запрос по каждой строке массива', 'Step 2C в /master: пройти по products[], выполнить OData-запрос для каждой строки и сохранить общий codes[].', 8, mdLines(
+    '# Повторяем OData-запрос по каждой строке массива',
+    '',
+    '::lesson-page{label="Integration Master · Step 2C"}',
+    '',
+    '## Зачем нужен Step 2C',
+    'После Step 2A есть `order`, после Step 2B есть `products[]`. Step 2C проходит по массиву и для каждой строки выполняет вложенный OData-запрос.',
+    '',
+    '## Настройка DnP',
+    '```text',
+    'По какому массиву пройти: products',
+    'Как назвать одну строку массива: product',
+    'Resource: InformationRegister_ПулКодовМаркировкиСУЗ',
+    '$top: 500',
+    'Pagination: true',
+    'Merge: flatten',
+    'Save as: codes',
+    'Required: true',
+    '```',
+    '',
+    '## Filter',
+    '```text',
+    "Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')",
+    '```',
+    '',
+    '`product.Номенклатура_Key` берётся из текущей строки `products[]`. `order.Ref_Key` берётся из найденного заказа Step 2A.',
+    '',
+    '## Preview',
+    'Preview берёт первую строку `products[]` и показывает rendered filter без запроса в 1С.',
+    '',
+    '```text',
+    "Номенклатура_Key eq guid'ff22288c-2da4-11f1-8388-000c29b755c7' and ДокументОснование eq cast(guid'c3335ee4-43d0-11f1-8388-000c29b755c7', 'Document_ЗаказНаПроизводство2_2')",
+    '```',
+    '',
+    '## Test',
+    'Test выполняет вложенные OData-запросы в рамках `test_limit` и safety limits.',
+    '',
+    '```text',
+    'source_count: 1',
+    'items_processed: 1',
+    'odata_requests: 1',
+    'rows_found: 180',
+    '```',
+    '',
+    'После успешного test/save будущие шаги смогут использовать:',
+    '',
+    '```text',
+    'codes[]',
+    'codes[0].КодМаркировки',
+    'codes[0].Номенклатура_Key',
+    '```',
+    '',
+    '## Merge modes',
+    '`flatten` складывает все строки из всех ответов в один `codes[]`. Это режим по умолчанию для DnP.',
+    '',
+    '`group_by_item` сохраняет группы по исходной строке `products[]`.',
+    '',
+    '`first_per_item` берёт первую найденную строку на каждый `product`.',
+    '',
+    '## Safety limits',
+    '```text',
+    'max_items: 100',
+    'max_requests: 100',
+    'max_result_rows: 10000',
+    '```',
+    '',
+    'Если `products[]` содержит больше строк, чем разрешено лимитами, validation остановит test до выполнения запросов в 1С.',
+    '',
+    '::checklist{id="foreach-odata-over-products" items="Выбрал products[]|item_as=product|Указал регистр пула кодов|Filter использует product.Номенклатура_Key|Filter использует order.Ref_Key|Merge flatten|save_as=codes|Safety limits заполнены|Test вернул rows_found"}',
   )),
   lesson({
     slug: 'lesson-01-what-is-omh-for-1c-users',
@@ -2764,6 +2836,10 @@ POST /api/integration-master/odata-object-step/preview
 POST /api/integration-master/odata-object-step/test
 POST /api/integration-master/odata-object-step/validate
 POST /api/integration-master/drafts/{draft_id}/odata-object-steps
+POST /api/integration-master/foreach-odata-step/preview
+POST /api/integration-master/foreach-odata-step/test
+POST /api/integration-master/foreach-odata-step/validate
+POST /api/integration-master/drafts/{draft_id}/foreach-odata-steps
 ~~~
 
 ## Что поддерживает step 1
@@ -2776,6 +2852,7 @@ POST /api/integration-master/drafts/{draft_id}/odata-object-steps
 - Draft сохранение без создания боевой интеграции.
 - Step 2A: один OData Query после Input Contract.
 - Step 2B: чтение табличной части найденного объекта 1С.
+- Step 2C: повтор OData-запроса по массиву, например \`products[] -> codes[]\`.
 
 ## Step 2A OData example
 
@@ -2827,9 +2904,32 @@ products[0].КоличествоУпаковок
 
 Пустая табличная часть при \`required=true\` возвращает \`ODATA_TABULAR_PART_EMPTY\`.
 
+## Step 2C foreach OData example
+
+~~~text
+items: products
+item_as: product
+Resource: InformationRegister_ПулКодовМаркировкиСУЗ
+Filter: Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')
+$top: 500
+paginate: true
+merge: flatten
+save_as: codes
+~~~
+
+Future variables:
+
+~~~text
+codes[]
+codes[0].КодМаркировки
+codes[0].Номенклатура_Key
+~~~
+
+Validation контролирует source array, \`$top <= 500\`, \`save_as\` collision и safety limits: \`max_items\`, \`max_requests\`, \`max_result_rows\`.
+
 ## Non-goals
 
-На Step 2B не создаются foreach, JSON/XML builder, response builder, final action, full integration save и Timeline.
+На текущих шагах не создаются JSON/XML builder, response builder, final action, full integration save и Timeline.
 
 ::open-page{route="/master" label="Открыть Мастер интеграции"}
 `)),

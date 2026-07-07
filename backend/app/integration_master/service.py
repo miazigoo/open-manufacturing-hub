@@ -16,6 +16,11 @@ from app.integration_master.models import IntegrationMasterDraft
 from app.integration_master.parser import parse_input
 from app.integration_master.schemas import (
     BusinessKeySuggestion,
+    ForeachODataStepConfig,
+    ForeachODataStepPreviewResponse,
+    ForeachODataStepRequest,
+    ForeachODataStepTestResponse,
+    ForeachODataStepValidationResponse,
     InputContract,
     InputDraftRead,
     InputParseResponse,
@@ -372,6 +377,237 @@ async def append_odata_object_step(session: AsyncSession, draft_id: UUID, step: 
     return _draft_read(draft), saved
 
 
+def validate_foreach_odata_step(request: ForeachODataStepRequest) -> ForeachODataStepValidationResponse:
+    context = _foreach_odata_step_context(request.previous_variables, request.foreach_step)
+    return ForeachODataStepValidationResponse(
+        valid=not context["errors"],
+        errors=context["errors"],
+        warnings=context["warnings"],
+        source_count=context["source_count"],
+        first_item_preview=context["first_item_preview"],
+        template_filter=context["template_filter"],
+        rendered_filter=context["rendered_filter"],
+        template_url=context["template_url"],
+        rendered_url=context["rendered_url"],
+        variables_after_step=context["variables_after_step"],
+    )
+
+
+def preview_foreach_odata_step(request: ForeachODataStepRequest) -> ForeachODataStepPreviewResponse:
+    context = _foreach_odata_step_context(request.previous_variables, request.foreach_step)
+    return ForeachODataStepPreviewResponse(
+        valid=not context["errors"],
+        errors=context["errors"],
+        warnings=context["warnings"],
+        source_count=context["source_count"],
+        first_item_preview=context["first_item_preview"],
+        template_filter=context["template_filter"],
+        rendered_filter=context["rendered_filter"],
+        template_url=context["template_url"],
+        rendered_url=context["rendered_url"],
+        variables_after_step=context["variables_after_step"],
+        saved_as=request.foreach_step.save_as.strip(),
+        items=request.foreach_step.items.strip(),
+        item_as=request.foreach_step.item_as.strip(),
+        merge=request.foreach_step.merge,
+    )
+
+
+async def test_foreach_odata_step(session: AsyncSession, request: ForeachODataStepRequest) -> ForeachODataStepTestResponse:
+    preview = preview_foreach_odata_step(request)
+    step = request.foreach_step
+    if not preview.valid:
+        return ForeachODataStepTestResponse(
+            success=False,
+            error_code="FOREACH_ODATA_STEP_INVALID",
+            message="; ".join(preview.errors),
+            hint="Исправьте параметры foreach OData и повторите проверку.",
+            source_count=preview.source_count,
+            merge=step.merge,
+            saved_as=preview.saved_as,
+            variables_after_step=preview.variables_after_step,
+        )
+    if step.connection_id is None:
+        return ForeachODataStepTestResponse(
+            success=False,
+            error_code="ODATA_CONNECTION_REQUIRED",
+            message="Выберите OData-подключение.",
+            source_count=preview.source_count,
+            merge=step.merge,
+            saved_as=preview.saved_as,
+            variables_after_step=preview.variables_after_step,
+        )
+
+    source_items = _source_array(request.previous_variables, step.items.strip())
+    if not source_items:
+        if step.required:
+            return ForeachODataStepTestResponse(
+                success=False,
+                error_code="FOREACH_ODATA_SOURCE_EMPTY",
+                message=f"Массив {step.items.strip()} пуст. Нечего передавать во вложенный OData-запрос.",
+                hint="Сначала протестируйте предыдущий шаг чтения табличной части и убедитесь, что он вернул products[].",
+                source_count=0,
+                merge=step.merge,
+                saved_as=preview.saved_as,
+                variables_after_step=preview.variables_after_step,
+            )
+        source_items = []
+
+    items_to_process = _limit_foreach_items_for_test(source_items, step)
+    if len(items_to_process) > step.limits.max_requests:
+        return ForeachODataStepTestResponse(
+            success=False,
+            error_code="FOREACH_ODATA_REQUEST_LIMIT_EXCEEDED",
+            message=f"Для теста нужно {len(items_to_process)} OData-запросов, но max_requests={step.limits.max_requests}.",
+            hint="Уменьшите test_limit или увеличьте safety limit.",
+            source_count=len(source_items),
+            merge=step.merge,
+            saved_as=preview.saved_as,
+            variables_after_step=preview.variables_after_step,
+        )
+
+    grouped_rows: list[dict[str, Any]] = []
+    requests: list[dict[str, Any]] = []
+    rows_found = 0
+    for index, item in enumerate(items_to_process):
+        if not isinstance(item, dict):
+            return ForeachODataStepTestResponse(
+                success=False,
+                error_code="FOREACH_ODATA_ITEM_NOT_OBJECT",
+                message=f"Элемент {step.items.strip()}[{index}] не является объектом. Нельзя прочитать поля через {step.item_as.strip()}.field.",
+                hint="Источник foreach должен быть массивом строк/объектов, например products[].",
+                source_count=len(source_items),
+                items_processed=index,
+                odata_requests=len(requests),
+                rows_found=rows_found,
+                merge=step.merge,
+                saved_as=preview.saved_as,
+                variables_after_step=preview.variables_after_step,
+                requests=requests,
+            )
+        local_variables = {**request.previous_variables, step.item_as.strip(): item}
+        try:
+            rendered_resource = _render_previous_template(step.resource.strip(), local_variables) or ""
+            rendered_filter = _render_previous_template((step.filter or "").strip() or None, local_variables)
+        except BadRequestError as exc:
+            return ForeachODataStepTestResponse(
+                success=False,
+                error_code="FOREACH_ODATA_TEMPLATE_FAILED",
+                message=str(exc),
+                hint=f"Проверьте поля элемента {step.item_as.strip()} и переменные предыдущих шагов.",
+                source_count=len(source_items),
+                items_processed=index,
+                odata_requests=len(requests),
+                rows_found=rows_found,
+                merge=step.merge,
+                saved_as=preview.saved_as,
+                variables_after_step=preview.variables_after_step,
+                requests=requests,
+            )
+        try:
+            result = await odata_explorer_service.query(
+                session,
+                step.connection_id,
+                ODataQueryRequest(
+                    resource=rendered_resource,
+                    top=step.top,
+                    filter=rendered_filter,
+                    select=",".join(step.select) if step.select else None,
+                    paginate=step.paginate,
+                ),
+            )
+        except BadRequestError as exc:
+            return ForeachODataStepTestResponse(
+                success=False,
+                error_code="FOREACH_ODATA_QUERY_FAILED",
+                message=str(exc),
+                hint=f"Проверьте resource/filter для элемента {step.items.strip()}[{index}] и права пользователя 1С.",
+                source_count=len(source_items),
+                items_processed=index,
+                odata_requests=len(requests),
+                rows_found=rows_found,
+                merge=step.merge,
+                saved_as=preview.saved_as,
+                variables_after_step=preview.variables_after_step,
+                requests=requests,
+            )
+        rows = [row for row in (result.get("items") if isinstance(result.get("items"), list) else []) if isinstance(row, dict)]
+        rows_found += len(rows)
+        request_payload = result.get("request") if isinstance(result.get("request"), dict) else {}
+        requests.append({"item_index": index, "resource": rendered_resource, "filter": rendered_filter, "request": request_payload})
+        grouped_rows.append({"item_index": index, "item": item, "rows": rows})
+        if rows_found > step.limits.max_result_rows:
+            return ForeachODataStepTestResponse(
+                success=False,
+                error_code="FOREACH_ODATA_RESULT_LIMIT_EXCEEDED",
+                message=f"Результат превысил max_result_rows={step.limits.max_result_rows}. Сейчас найдено {rows_found} строк.",
+                hint="Уточните фильтр, уменьшите top или увеличьте safety limit осознанно.",
+                source_count=len(source_items),
+                items_processed=index + 1,
+                odata_requests=len(requests),
+                rows_found=rows_found,
+                merge=step.merge,
+                saved_as=preview.saved_as,
+                variables_after_step=preview.variables_after_step,
+                requests=requests,
+            )
+
+    if rows_found == 0 and step.required:
+        return ForeachODataStepTestResponse(
+            success=False,
+            error_code="FOREACH_ODATA_RESULT_EMPTY",
+            message=f"1C OData не вернула строк по массиву {step.items.strip()}.",
+            hint="Проверьте фильтр, Номенклатура_Key из products[] и order.Ref_Key.",
+            source_count=len(source_items),
+            items_processed=len(items_to_process),
+            odata_requests=len(requests),
+            rows_found=0,
+            merge=step.merge,
+            saved_as=preview.saved_as,
+            variables_after_step=preview.variables_after_step,
+            requests=requests,
+        )
+
+    merged = _merge_foreach_rows(grouped_rows, step.merge)
+    first_row = _first_foreach_row(grouped_rows)
+    return ForeachODataStepTestResponse(
+        success=True,
+        message=f"Выполнено {len(requests)} OData-запросов, найдено {rows_found} строк.",
+        source_count=len(source_items),
+        items_processed=len(items_to_process),
+        odata_requests=len(requests),
+        rows_found=rows_found,
+        merge=step.merge,
+        saved_as=preview.saved_as,
+        result_preview=_preview_foreach_result(merged, step.merge),
+        variables_after_step=_variables_after_foreach_step(step, first_row),
+        requests=requests,
+    )
+
+
+async def append_foreach_odata_step(session: AsyncSession, draft_id: UUID, step: ForeachODataStepConfig, previous_variables: dict[str, Any]) -> tuple[InputDraftRead, ForeachODataStepConfig]:
+    draft = await session.get(IntegrationMasterDraft, draft_id)
+    if draft is None:
+        raise NotFoundError("Integration Master draft not found")
+    contract = InputContract(**draft.contract_json)
+    validation = validate_foreach_odata_step(ForeachODataStepRequest(input_contract=contract, previous_variables=previous_variables, foreach_step=step))
+    if not validation.valid:
+        raise BadRequestError("; ".join(validation.errors))
+    saved = _normalized_foreach_odata_step(step)
+    if saved.connection_id and not saved.connection_name:
+        try:
+            connection = await odata_connections_service.get_connection(session, saved.connection_id)
+            saved.connection_name = connection.name
+        except NotFoundError:
+            saved.connection_name = None
+    existing_steps = [item for item in (draft.odata_steps_json or []) if isinstance(item, dict)]
+    steps = [item for item in existing_steps if item.get("id") != saved.id]
+    steps.append(saved.model_dump(mode="json"))
+    draft.odata_steps_json = steps
+    await session.flush()
+    return _draft_read(draft), saved
+
+
 def endpoint_url(slug: str) -> str:
     return f"/api/bus/in/{slug}"
 
@@ -461,6 +697,121 @@ def _validate_odata_object_step_fields(step: ODataObjectStepConfig, previous_var
     elif step.save_as.strip() in previous_variables and not step.overwrite:
         errors.append(f"Переменная {step.save_as.strip()} уже существует. Выберите другое имя или подтвердите overwrite.")
     return _dedupe_errors(errors)
+
+
+def _foreach_odata_step_context(previous_variables: dict[str, Any], step: ForeachODataStepConfig) -> dict[str, Any]:
+    errors = _validate_foreach_odata_step_fields(step, previous_variables)
+    warnings: list[str] = []
+    source_items = _source_array(previous_variables, step.items.strip())
+    first_item = next((item for item in source_items if isinstance(item, dict)), None)
+    if source_items and first_item is None:
+        errors.append(f"Массив {step.items.strip()} должен содержать объекты, например строки products[].")
+    template_filter = (step.filter or "").strip() or None
+    template_resource = step.resource.strip()
+    rendered_filter: str | None = None
+    rendered_resource: str | None = None
+    if first_item is not None:
+        local_variables = {**previous_variables, step.item_as.strip(): first_item}
+        try:
+            rendered_filter = _render_previous_template(template_filter, local_variables)
+            rendered_resource = _render_previous_template(template_resource, local_variables)
+        except BadRequestError as exc:
+            errors.append(str(exc))
+    elif template_resource:
+        rendered_resource = template_resource
+    template_url = _odata_foreach_url(template_resource, template_filter, step)
+    rendered_url = _odata_foreach_url(rendered_resource, rendered_filter, step)
+    if step.paginate:
+        warnings.append("Pagination включён: для каждой строки массива OMH будет читать следующие страницы через $skip.")
+    if template_filter and f"{{{{{step.item_as.strip()}." not in template_filter:
+        warnings.append(f"Фильтр не использует {step.item_as.strip()}.*. Такой запрос повторится одинаково для каждой строки массива.")
+    if not source_items and step.items.strip() in previous_variables:
+        warnings.append(f"Массив {step.items.strip()} пуст в текущем sample. Test не выполнит вложенные OData-запросы.")
+    return {
+        "errors": _dedupe_errors(errors),
+        "warnings": warnings,
+        "source_count": len(source_items),
+        "first_item_preview": first_item,
+        "template_filter": template_filter,
+        "rendered_filter": rendered_filter,
+        "template_url": template_url,
+        "rendered_url": rendered_url,
+        "variables_after_step": _variables_after_foreach_step(step),
+    }
+
+
+def _validate_foreach_odata_step_fields(step: ForeachODataStepConfig, previous_variables: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if step.connection_id is None:
+        errors.append("Выберите OData-подключение.")
+    items_name = step.items.strip()
+    if not items_name:
+        errors.append("Выберите массив, по которому нужно пройти, например products.")
+    elif items_name not in previous_variables:
+        errors.append(f"Переменная {items_name} не найдена среди результатов предыдущих шагов.")
+    elif not isinstance(previous_variables[items_name], list):
+        errors.append(f"Переменная {items_name} является {_value_type_ru(previous_variables[items_name])}, а не массивом. Для объекта используйте обычный OData-запрос или чтение табличной части.")
+    else:
+        source_count = len(previous_variables[items_name])
+        if source_count > step.limits.max_items:
+            errors.append(f"Массив {items_name} содержит {source_count} строк, но max_items={step.limits.max_items}.")
+        if source_count > step.limits.max_requests:
+            errors.append(f"Для массива {items_name} потребуется {source_count} OData-запросов, но max_requests={step.limits.max_requests}.")
+    item_as = step.item_as.strip()
+    if not item_as:
+        errors.append("Укажите имя одной строки массива, например product.")
+    elif not SAVE_AS_PATTERN.fullmatch(item_as):
+        errors.append("Имя item_as должно содержать латиницу, цифры и underscore, и не начинаться с цифры.")
+    elif item_as in previous_variables:
+        errors.append(f"Имя item_as={item_as} конфликтует с переменной предыдущего шага. Выберите другое имя.")
+    if not step.resource.strip():
+        errors.append("Укажите OData Resource для вложенного запроса, например InformationRegister_ПулКодовМаркировкиСУЗ.")
+    if not (step.filter or "").strip():
+        errors.append("Укажите $filter для вложенного OData-запроса. Без фильтра foreach может прочитать слишком много строк.")
+    if step.top is None:
+        errors.append("$top должен быть от 1 до 500.")
+    elif step.top < 1 or step.top > 500:
+        errors.append("$top не может быть больше 500. Установите 500 и включите пагинацию.")
+    if not step.save_as.strip():
+        errors.append("Укажите имя общего массива результата, например codes.")
+    elif not SAVE_AS_PATTERN.fullmatch(step.save_as.strip()):
+        errors.append("Имя переменной save_as должно содержать латиницу, цифры и underscore, и не начинаться с цифры.")
+    elif step.save_as.strip() in previous_variables and not step.overwrite:
+        errors.append(f"Переменная {step.save_as.strip()} уже существует. Выберите другое имя или подтвердите overwrite.")
+    if step.limits.max_items < 1:
+        errors.append("max_items должен быть больше 0.")
+    if step.limits.max_requests < 1:
+        errors.append("max_requests должен быть больше 0.")
+    if step.limits.max_result_rows < 1:
+        errors.append("max_result_rows должен быть больше 0.")
+    if step.test_limit is not None and step.test_limit < 1:
+        errors.append("test_limit должен быть больше 0 или null для проверки всего массива.")
+    return _dedupe_errors(errors)
+
+
+def _source_array(previous_variables: dict[str, Any], name: str) -> list[Any]:
+    value = previous_variables.get(name)
+    return value if isinstance(value, list) else []
+
+
+def _limit_foreach_items_for_test(source_items: list[Any], step: ForeachODataStepConfig) -> list[Any]:
+    if step.test_limit is None:
+        return source_items[: step.limits.max_items]
+    return source_items[: min(step.test_limit, step.limits.max_items)]
+
+
+def _value_type_ru(value: Any) -> str:
+    if isinstance(value, dict):
+        return "объектом"
+    if isinstance(value, list):
+        return "массивом"
+    if isinstance(value, str):
+        return "строкой"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, (int, float)):
+        return "числом"
+    return type(value).__name__
 
 
 def _odata_step_context(contract: InputContract, sample_input: Any, step: ODataStepConfig) -> dict[str, Any]:
@@ -681,6 +1032,21 @@ def _odata_object_url(resource: str | None, filter_value: str | None, step: ODat
     return resource if not params else f"{resource}?{'&'.join(params)}"
 
 
+def _odata_foreach_url(resource: str | None, filter_value: str | None, step: ForeachODataStepConfig) -> str | None:
+    if not resource:
+        return None
+    params: list[str] = []
+    if filter_value:
+        params.append(f"$filter={filter_value}")
+    if step.select:
+        params.append(f"$select={','.join(step.select)}")
+    if step.top:
+        params.append(f"$top={step.top}")
+    if step.paginate:
+        params.append("paginate=true")
+    return resource if not params else f"{resource}?{'&'.join(params)}"
+
+
 def _variables_after_step(step: ODataStepConfig, first_item: dict[str, Any] | None = None) -> list[str]:
     save_as = step.save_as.strip() or "result"
     fields = list(first_item.keys()) if first_item else list(step.select)
@@ -694,6 +1060,14 @@ def _variables_after_object_step(step: ODataObjectStepConfig, first_item: dict[s
     fields = list(first_item.keys()) if first_item else list(step.select)
     if not fields:
         fields = ["Номенклатура_Key", "Количество"]
+    return [f"{save_as}[]"] + [f"{save_as}[0].{field}" for field in fields]
+
+
+def _variables_after_foreach_step(step: ForeachODataStepConfig, first_item: dict[str, Any] | None = None) -> list[str]:
+    save_as = step.save_as.strip() or "items"
+    fields = list(first_item.keys()) if first_item else list(step.select)
+    if not fields:
+        fields = ["КодМаркировки", "Номенклатура_Key"]
     return [f"{save_as}[]"] + [f"{save_as}[0].{field}" for field in fields]
 
 
@@ -724,7 +1098,55 @@ def _normalized_odata_object_step(step: ODataObjectStepConfig) -> ODataObjectSte
     )
 
 
-def _step_read(item: dict[str, Any]) -> ODataStepConfig | ODataObjectStepConfig:
+def _normalized_foreach_odata_step(step: ForeachODataStepConfig) -> ForeachODataStepConfig:
+    save_as = step.save_as.strip()
+    step_id = step.id or f"find_{save_as}"
+    step_id = STEP_ID_PATTERN.sub("_", step_id).strip("_") or f"find_{save_as}"
+    return step.model_copy(
+        update={
+            "id": step_id,
+            "items": step.items.strip(),
+            "item_as": step.item_as.strip(),
+            "resource": step.resource.strip(),
+            "filter": (step.filter or "").strip() or None,
+            "select": [item.strip() for item in step.select if item.strip()],
+            "save_as": save_as,
+        }
+    )
+
+
+def _merge_foreach_rows(grouped_rows: list[dict[str, Any]], merge: str) -> Any:
+    if merge == "group_by_item":
+        return grouped_rows
+    if merge == "first_per_item":
+        return [group["rows"][0] for group in grouped_rows if isinstance(group.get("rows"), list) and group["rows"]]
+    merged: list[dict[str, Any]] = []
+    for group in grouped_rows:
+        rows = group.get("rows")
+        if isinstance(rows, list):
+            merged.extend([row for row in rows if isinstance(row, dict)])
+    return merged
+
+
+def _preview_foreach_result(merged: Any, merge: str) -> Any:
+    if isinstance(merged, list):
+        return merged[:5]
+    return merged
+
+
+def _first_foreach_row(grouped_rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for group in grouped_rows:
+        rows = group.get("rows")
+        if isinstance(rows, list):
+            first = next((row for row in rows if isinstance(row, dict)), None)
+            if first is not None:
+                return first
+    return None
+
+
+def _step_read(item: dict[str, Any]) -> ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig:
+    if item.get("type") == "foreach_odata":
+        return ForeachODataStepConfig(**item)
     if item.get("type") == "odata_object_query":
         return ODataObjectStepConfig(**item)
     return ODataStepConfig(**item)

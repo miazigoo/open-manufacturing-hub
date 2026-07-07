@@ -100,7 +100,7 @@ Package добавляет доменную функциональность: 1C
 
 \`/master\` — первый шаг общего мастера интеграции. Он отвечает на вопрос: кто вызывает OMH и что придет во входящем запросе.
 
-Step 1 сохраняет только \`InputContract\`. Step 2A добавляет ровно один OData Query; foreach, response builder и final action остаются следующими шагами мастера.
+Step 1 сохраняет \`InputContract\`. Step 2A добавляет один OData Query, Step 2B читает табличную часть, Step 2C повторяет OData по массиву. Response builder и final action остаются следующими шагами мастера.
 
 ## Product route
 
@@ -124,6 +124,10 @@ POST /api/integration-master/odata-object-step/preview
 POST /api/integration-master/odata-object-step/test
 POST /api/integration-master/odata-object-step/validate
 POST /api/integration-master/drafts/{draft_id}/odata-object-steps
+POST /api/integration-master/foreach-odata-step/preview
+POST /api/integration-master/foreach-odata-step/test
+POST /api/integration-master/foreach-odata-step/validate
+POST /api/integration-master/drafts/{draft_id}/foreach-odata-steps
 \`\`\`
 
 ## Input Contract
@@ -210,6 +214,31 @@ products[0].Количество
 \`\`\`
 
 Если строк нет и \`required=true\`, test вернёт \`ODATA_TABULAR_PART_EMPTY\`.
+
+## Step 2C: foreach OData по массиву
+
+После сохранения \`odata_object_query\` можно пройти по \`products[]\` и выполнить OData-запрос для каждой строки.
+
+\`\`\`text
+items: products
+item_as: product
+Resource: InformationRegister_ПулКодовМаркировкиСУЗ
+Filter: Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')
+$top: 500
+paginate: true
+merge: flatten
+save_as: codes
+\`\`\`
+
+Будущие переменные:
+
+\`\`\`text
+codes[]
+codes[0].КодМаркировки
+codes[0].Номенклатура_Key
+\`\`\`
+
+Validation проверяет source array, \`$top <= 500\`, collision \`save_as\` и safety limits: \`max_items\`, \`max_requests\`, \`max_result_rows\`.
 
 ## Parser rules
 

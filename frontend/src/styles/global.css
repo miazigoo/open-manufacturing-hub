@@ -1327,6 +1327,70 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .previous-variable-row code {
   color: var(--accent-2);
 }
+.foreach-odata-step-builder {
+  border-color: rgba(143,198,180,.42);
+  background: radial-gradient(circle at 82% 0%, rgba(143,198,180,.18), transparent 30%), radial-gradient(circle at 10% 12%, rgba(240,179,90,.12), transparent 30%), linear-gradient(145deg, rgba(247,239,218,.075), rgba(0,0,0,.22));
+}
+.foreach-filter-editor,
+.foreach-safety-limits {
+  box-shadow: none;
+}
+.variable-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.variable-chip-row strong {
+  width: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.variable-chip-row code {
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.18);
+  padding: 6px 8px;
+  color: var(--accent-2);
+}
+.ghost-button.compact {
+  padding: 6px 9px;
+  min-height: auto;
+  font-size: 12px;
+}
+.status-card {
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.16);
+  padding: 12px;
+  display: grid;
+  gap: 5px;
+}
+.status-card.success {
+  border-color: rgba(143,198,180,.55);
+  background: rgba(143,198,180,.1);
+}
+.status-card.danger {
+  border-color: rgba(239,100,97,.55);
+  background: rgba(239,100,97,.08);
+}
+.status-card span,
+.status-card small {
+  color: var(--muted);
+}
+.issue-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #ffb4aa;
+  display: grid;
+  gap: 6px;
+}
+.warning-list {
+  color: var(--accent);
+}
+.compact-stack {
+  gap: 8px;
+}
 @media (max-width: 860px) {
   .integration-master-page .metadata-grid, .integration-master-page .compact-grid { grid-template-columns: minmax(0, 1fr); }
   .odata-step-heading,

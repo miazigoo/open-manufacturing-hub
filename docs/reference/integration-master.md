@@ -34,6 +34,10 @@ POST /api/integration-master/odata-object-step/preview
 POST /api/integration-master/odata-object-step/test
 POST /api/integration-master/odata-object-step/validate
 POST /api/integration-master/drafts/{draft_id}/odata-object-steps
+POST /api/integration-master/foreach-odata-step/preview
+POST /api/integration-master/foreach-odata-step/test
+POST /api/integration-master/foreach-odata-step/validate
+POST /api/integration-master/drafts/{draft_id}/foreach-odata-steps
 ```
 
 ## Parse Request
@@ -260,6 +264,105 @@ If `required=true` and the tabular part is empty, test returns `ODATA_TABULAR_PA
 
 The saved draft item has `type=odata_object_query` and is stored in the same `odata_steps_json` list. This is not full integration compile.
 
+## Step 2C: Foreach OData Over Array
+
+After one `odata_object_query` step is saved, `/master` can add one `foreach_odata` step.
+
+This step takes an array such as:
+
+```text
+products[]
+```
+
+For each row it exposes one local variable:
+
+```text
+product
+```
+
+Example request:
+
+```json
+{
+  "input_contract": {},
+  "previous_variables": {
+    "order": {
+      "Ref_Key": "c3335ee4-43d0-11f1-8388-000c29b755c7",
+      "Number": "260666/6938"
+    },
+    "products": [
+      {
+        "Номенклатура_Key": "ff22288c-2da4-11f1-8388-000c29b755c7",
+        "Количество": 180,
+        "КоличествоУпаковок": 180
+      }
+    ]
+  },
+  "foreach_step": {
+    "connection_id": "11111111-1111-1111-1111-111111111111",
+    "items": "products",
+    "item_as": "product",
+    "resource": "InformationRegister_ПулКодовМаркировкиСУЗ",
+    "filter": "Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')",
+    "select": ["КодМаркировки", "Номенклатура_Key", "ДокументОснование", "Статус"],
+    "top": 500,
+    "paginate": true,
+    "merge": "flatten",
+    "save_as": "codes",
+    "required": true,
+    "limits": {
+      "max_items": 100,
+      "max_requests": 100,
+      "max_result_rows": 10000
+    },
+    "test_limit": 1
+  }
+}
+```
+
+Preview renders the filter using the first row of `products[]`:
+
+```text
+Номенклатура_Key eq guid'ff22288c-2da4-11f1-8388-000c29b755c7' and ДокументОснование eq cast(guid'c3335ee4-43d0-11f1-8388-000c29b755c7', 'Document_ЗаказНаПроизводство2_2')
+```
+
+Successful test returns:
+
+```text
+source_count
+items_processed
+odata_requests
+rows_found
+result_preview
+requests
+```
+
+The default merge mode is `flatten`, so rows from all nested OData responses become one array:
+
+```text
+codes[]
+codes[0].КодМаркировки
+codes[0].Номенклатура_Key
+```
+
+Supported merge modes:
+
+- `flatten` — one common result array;
+- `group_by_item` — keep rows grouped by source item;
+- `first_per_item` — take the first returned row per source item.
+
+Safety limits are part of the saved step. They prevent accidental mass reads from 1C:
+
+```text
+max_items
+max_requests
+max_result_rows
+```
+
+If the source array is not an array, validation explains that an object should use a normal OData query or tabular part step. If `$top > 500`, validation asks to set `$top=500` and enable pagination.
+
+The saved draft item has `type=foreach_odata` and is stored in the same `odata_steps_json` list. This is still not full integration compile.
+
 ## Parsing Rules
 
 - JSON fields use paths like `request.body.operation`.
@@ -290,9 +393,6 @@ lookup contractor!
 
 Do not add here:
 
-- foreach OData.
-- foreach over tabular part rows.
-- nested code pool query for each product.
 - final action.
 - response builder.
 - saving full integration.

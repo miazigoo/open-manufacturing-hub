@@ -8,6 +8,7 @@ import { EndpointSlugEditor, slugError, slugify } from './EndpointSlugEditor';
 import { InputContractPreview } from './InputContractPreview';
 import { InputTypeSelector } from './InputTypeSelector';
 import { integrationMasterApi } from './api';
+import { ForeachODataStepBuilder } from './foreach-odata-step/ForeachODataStepBuilder';
 import { MasterStepLayout } from './MasterStepLayout';
 import { ODataObjectStepBuilder } from './odata-object-step/ODataObjectStepBuilder';
 import { OperationKeySelector } from './OperationKeySelector';
@@ -110,7 +111,8 @@ export function IntegrationMasterPage() {
   const parseError = parse.error instanceof Error ? parse.error.message : null;
   const saveError = saveDraft.error instanceof Error ? saveDraft.error.message : validation.error instanceof Error ? validation.error.message : null;
   const savedResponse = savedDraft ? { draft: savedDraft, next_steps: saveDraft.data?.next_steps ?? [] } : saveDraft.data ?? null;
-  const hasSavedODataQuery = Boolean(savedDraft?.odata_steps.some((step) => step.type !== 'odata_object_query'));
+  const hasSavedODataQuery = Boolean(savedDraft?.odata_steps.some((step) => !step.type || step.type === 'odata_query'));
+  const hasSavedObjectStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'odata_object_query'));
 
   return (
     <div className="page-stack integration-master-page">
@@ -154,7 +156,9 @@ export function IntegrationMasterPage() {
 
       {savedDraft ? <ODataStepBuilder contract={savedDraft.contract} draft={savedDraft} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
 
-      {savedDraft && hasSavedODataQuery ? <ODataObjectStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} /> : null}
+      {savedDraft && hasSavedODataQuery ? <ODataObjectStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
+
+      {savedDraft && hasSavedObjectStep ? <ForeachODataStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} /> : null}
     </div>
   );
 }
@@ -226,6 +230,11 @@ function deriveVariablesFromDraft(draft: InputDraftRead | null): Record<string, 
   const variables: Record<string, unknown> = {};
   for (const step of draft?.odata_steps ?? []) {
     if (step.type === 'odata_object_query') {
+      variables[step.save_as] = [];
+      continue;
+    }
+    if (step.type === 'foreach_odata') {
+      variables[step.save_as] = [];
       continue;
     }
     const fields = step.select.length ? step.select : ['Ref_Key'];

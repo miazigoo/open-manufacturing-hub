@@ -5,6 +5,7 @@ from app.integration_master.service import render_1c_object_resource
 
 ORDER_GUID = "c3335ee4-43d0-11f1-8388-000c29b755c7"
 PRODUCT_GUID = "ff22288c-2da4-11f1-8388-000c29b755c7"
+PRODUCT_GUID_2 = "aa22288c-2da4-11f1-8388-000c29b755c7"
 
 
 async def _create_master_contract(client):
@@ -56,6 +57,11 @@ async def _create_mock_odata_connector(client):
                     f"Document_ЗаказНаПроизводство2_2(guid'{ORDER_GUID}')/Продукция": [
                         {"Номенклатура_Key": PRODUCT_GUID, "Количество": 180, "КоличествоУпаковок": 180},
                     ],
+                    "InformationRegister_ПулКодовМаркировкиСУЗ": [
+                        {"Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "КодМаркировки": "code-001", "Статус": "available"},
+                        {"Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "КодМаркировки": "code-002", "Статус": "available"},
+                        {"Номенклатура_Key": PRODUCT_GUID_2, "ДокументОснование": ORDER_GUID, "КодМаркировки": "code-101", "Статус": "available"},
+                    ],
                 },
             },
         },
@@ -94,6 +100,21 @@ def _previous_variables(**overrides):
     return variables
 
 
+def _previous_variables_with_products(products=None, **overrides):
+    variables = _previous_variables(
+        products=products
+        or [
+            {
+                "Номенклатура_Key": PRODUCT_GUID,
+                "Количество": 180,
+                "КоличествоУпаковок": 180,
+            }
+        ]
+    )
+    variables.update(overrides)
+    return variables
+
+
 def _object_step(connector_id, **overrides):
     step = {
         "connection_id": connector_id,
@@ -107,6 +128,26 @@ def _object_step(connector_id, **overrides):
         "paginate": False,
         "save_as": "products",
         "required": True,
+    }
+    step.update(overrides)
+    return step
+
+
+def _foreach_step(connector_id, **overrides):
+    step = {
+        "connection_id": connector_id,
+        "items": "products",
+        "item_as": "product",
+        "resource": "InformationRegister_ПулКодовМаркировкиСУЗ",
+        "filter": "Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')",
+        "select": ["КодМаркировки", "Номенклатура_Key", "ДокументОснование", "Статус"],
+        "top": 500,
+        "paginate": True,
+        "merge": "flatten",
+        "save_as": "codes",
+        "required": True,
+        "limits": {"max_items": 100, "max_requests": 100, "max_result_rows": 10000},
+        "test_limit": 1,
     }
     step.update(overrides)
     return step
@@ -516,3 +557,202 @@ async def test_append_odata_object_step_to_master_draft(client):
     )
     assert saved_again.status_code == 200, saved_again.text
     assert len(saved_again.json()["draft"]["odata_steps"]) == 2
+
+
+async def test_foreach_odata_step_preview_renders_first_item_filter_and_url(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    response = await client.post(
+        "/api/integration-master/foreach-odata-step/preview",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(), "foreach_step": _foreach_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert body["source_count"] == 1
+    assert body["first_item_preview"]["Номенклатура_Key"] == PRODUCT_GUID
+    assert body["template_filter"] == "Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')"
+    assert body["rendered_filter"] == f"Номенклатура_Key eq guid'{PRODUCT_GUID}' and ДокументОснование eq cast(guid'{ORDER_GUID}', 'Document_ЗаказНаПроизводство2_2')"
+    assert body["rendered_url"] == (
+        "InformationRegister_ПулКодовМаркировкиСУЗ"
+        f"?$filter=Номенклатура_Key eq guid'{PRODUCT_GUID}' and ДокументОснование eq cast(guid'{ORDER_GUID}', 'Document_ЗаказНаПроизводство2_2')"
+        "&$select=КодМаркировки,Номенклатура_Key,ДокументОснование,Статус&$top=500&paginate=true"
+    )
+    assert "codes[0].КодМаркировки" in body["variables_after_step"]
+
+
+async def test_foreach_odata_step_test_runs_query_for_each_product_and_flattens(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    response = await client.post(
+        "/api/integration-master/foreach-odata-step/test",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(), "foreach_step": _foreach_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["items_processed"] == 1
+    assert body["odata_requests"] == 1
+    assert body["rows_found"] == 2
+    assert body["result_preview"][0]["КодМаркировки"] == "code-001"
+    assert body["requests"][0]["request"]["resource"] == "InformationRegister_ПулКодовМаркировкиСУЗ"
+    assert body["requests"][0]["request"]["params"]["$filter"] == f"Номенклатура_Key eq guid'{PRODUCT_GUID}' and ДокументОснование eq cast(guid'{ORDER_GUID}', 'Document_ЗаказНаПроизводство2_2')"
+    assert "codes[0].КодМаркировки" in body["variables_after_step"]
+
+
+async def test_foreach_odata_step_test_can_process_multiple_products(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+    products = [
+        {"Номенклатура_Key": PRODUCT_GUID, "Количество": 180, "КоличествоУпаковок": 180},
+        {"Номенклатура_Key": PRODUCT_GUID_2, "Количество": 1, "КоличествоУпаковок": 1},
+    ]
+
+    response = await client.post(
+        "/api/integration-master/foreach-odata-step/test",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(products=products), "foreach_step": _foreach_step(connector["id"], test_limit=None)},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["items_processed"] == 2
+    assert body["odata_requests"] == 2
+    assert body["rows_found"] == 3
+    assert [row["КодМаркировки"] for row in body["result_preview"]] == ["code-001", "code-002", "code-101"]
+
+
+async def test_foreach_odata_step_merge_modes(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+    products = [
+        {"Номенклатура_Key": PRODUCT_GUID, "Количество": 180, "КоличествоУпаковок": 180},
+        {"Номенклатура_Key": PRODUCT_GUID_2, "Количество": 1, "КоличествоУпаковок": 1},
+    ]
+
+    grouped = await client.post(
+        "/api/integration-master/foreach-odata-step/test",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(products=products), "foreach_step": _foreach_step(connector["id"], merge="group_by_item", test_limit=None)},
+    )
+    assert grouped.status_code == 200, grouped.text
+    grouped_body = grouped.json()
+    assert grouped_body["success"] is True
+    assert grouped_body["result_preview"][0]["item_index"] == 0
+    assert len(grouped_body["result_preview"][0]["rows"]) == 2
+
+    first_per_item = await client.post(
+        "/api/integration-master/foreach-odata-step/test",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(products=products), "foreach_step": _foreach_step(connector["id"], merge="first_per_item", test_limit=None)},
+    )
+    assert first_per_item.status_code == 200, first_per_item.text
+    first_body = first_per_item.json()
+    assert first_body["success"] is True
+    assert [row["КодМаркировки"] for row in first_body["result_preview"]] == ["code-001", "code-101"]
+
+
+async def test_foreach_odata_step_validate_friendly_errors(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    not_array = await client.post(
+        "/api/integration-master/foreach-odata-step/validate",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "foreach_step": _foreach_step(connector["id"], items="order")},
+    )
+    assert not_array.status_code == 200, not_array.text
+    assert not_array.json()["valid"] is False
+    assert "не массивом" in "; ".join(not_array.json()["errors"])
+
+    missing_item_field = await client.post(
+        "/api/integration-master/foreach-odata-step/validate",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(products=[{"Количество": 180}]), "foreach_step": _foreach_step(connector["id"])},
+    )
+    assert missing_item_field.status_code == 200, missing_item_field.text
+    assert missing_item_field.json()["valid"] is False
+    assert "product.Номенклатура_Key" in "; ".join(missing_item_field.json()["errors"])
+
+    invalid_top = await client.post(
+        "/api/integration-master/foreach-odata-step/validate",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(), "foreach_step": _foreach_step(connector["id"], top=501)},
+    )
+    assert invalid_top.status_code == 200, invalid_top.text
+    assert invalid_top.json()["valid"] is False
+    assert "$top не может быть больше 500" in "; ".join(invalid_top.json()["errors"])
+
+    request_limit = await client.post(
+        "/api/integration-master/foreach-odata-step/validate",
+        json={
+            "input_contract": contract,
+            "previous_variables": _previous_variables_with_products(
+                products=[
+                    {"Номенклатура_Key": PRODUCT_GUID},
+                    {"Номенклатура_Key": PRODUCT_GUID_2},
+                ]
+            ),
+            "foreach_step": _foreach_step(connector["id"], limits={"max_items": 100, "max_requests": 1, "max_result_rows": 10000}),
+        },
+    )
+    assert request_limit.status_code == 200, request_limit.text
+    assert request_limit.json()["valid"] is False
+    assert "max_requests=1" in "; ".join(request_limit.json()["errors"])
+
+
+async def test_foreach_odata_step_test_returns_empty_required_result(client):
+    contract, _ = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+
+    response = await client.post(
+        "/api/integration-master/foreach-odata-step/test",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(products=[{"Номенклатура_Key": "00000000-0000-0000-0000-000000000000"}]), "foreach_step": _foreach_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is False
+    assert body["error_code"] == "FOREACH_ODATA_RESULT_EMPTY"
+    assert body["rows_found"] == 0
+
+
+async def test_append_foreach_odata_step_to_master_draft(client):
+    contract, parse_result = await _create_master_contract(client)
+    connector = await _create_mock_odata_connector(client)
+    saved = await client.post("/api/integration-master/input/save-draft", json={"contract": contract, "parse_result": parse_result})
+    assert saved.status_code == 200, saved.text
+    draft_id = saved.json()["draft"]["id"]
+
+    first_step = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-steps",
+        json={"input_contract": contract, "odata_step": _order_step(connector["id"])},
+    )
+    assert first_step.status_code == 200, first_step.text
+
+    second_step = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-object-steps",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "odata_object_step": _object_step(connector["id"])},
+    )
+    assert second_step.status_code == 200, second_step.text
+
+    response = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/foreach-odata-steps",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(), "foreach_step": _foreach_step(connector["id"])},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["saved_step"]["id"] == "find_codes"
+    assert body["saved_step"]["type"] == "foreach_odata"
+    assert body["saved_step"]["connection_name"] == "1C CHZ OData ERP"
+    assert body["saved_step"]["items"] == "products"
+    assert body["saved_step"]["item_as"] == "product"
+    assert body["draft"]["odata_steps"][0]["type"] == "odata_query"
+    assert body["draft"]["odata_steps"][1]["type"] == "odata_object_query"
+    assert body["draft"]["odata_steps"][2]["type"] == "foreach_odata"
+
+    loaded = await client.get(f"/api/integration-master/drafts/{draft_id}")
+    assert loaded.status_code == 200, loaded.text
+    assert loaded.json()["odata_steps"][2]["save_as"] == "codes"
+
+    saved_again = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/foreach-odata-steps",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(), "foreach_step": _foreach_step(connector["id"])},
+    )
+    assert saved_again.status_code == 200, saved_again.text
+    assert len(saved_again.json()["draft"]["odata_steps"]) == 3

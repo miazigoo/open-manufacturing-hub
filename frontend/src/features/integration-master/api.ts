@@ -1,5 +1,5 @@
 import { request } from '../../api/client';
-import type { InputContract, InputContractValidationResponse, InputDraftSaveResponse, InputParseRequest, InputParseResponse, IntegrationScenario, ODataObjectStepConfig, ODataObjectStepPreviewResponse, ODataObjectStepRequest, ODataObjectStepSaveResponse, ODataObjectStepTestResponse, ODataObjectStepValidationResponse, ODataStepConfig, ODataStepPreviewResponse, ODataStepRequest, ODataStepSaveResponse, ODataStepTestResponse, ODataStepValidationResponse } from './types';
+import type { ForeachODataStepConfig, ForeachODataStepPreviewResponse, ForeachODataStepRequest, ForeachODataStepSaveResponse, ForeachODataStepTestResponse, ForeachODataStepValidationResponse, InputContract, InputContractValidationResponse, InputDraftSaveResponse, InputParseRequest, InputParseResponse, IntegrationScenario, ODataObjectStepConfig, ODataObjectStepPreviewResponse, ODataObjectStepRequest, ODataObjectStepSaveResponse, ODataObjectStepTestResponse, ODataObjectStepValidationResponse, ODataStepConfig, ODataStepPreviewResponse, ODataStepRequest, ODataStepSaveResponse, ODataStepTestResponse, ODataStepValidationResponse } from './types';
 
 export const integrationMasterApi = {
   scenarios: () => request<IntegrationScenario[]>('/api/integration-master/scenarios'),
@@ -16,4 +16,9 @@ export const integrationMasterApi = {
   testODataObjectStep: (payload: ODataObjectStepRequest) => request<ODataObjectStepTestResponse>('/api/integration-master/odata-object-step/test', { method: 'POST', body: JSON.stringify(payload) }),
   saveODataObjectStep: (draftId: string, inputContract: InputContract, previousVariables: Record<string, unknown>, step: ODataObjectStepConfig) =>
     request<ODataObjectStepSaveResponse>(`/api/integration-master/drafts/${draftId}/odata-object-steps`, { method: 'POST', body: JSON.stringify({ input_contract: inputContract, previous_variables: previousVariables, odata_object_step: step }) }),
+  validateForeachODataStep: (payload: ForeachODataStepRequest) => request<ForeachODataStepValidationResponse>('/api/integration-master/foreach-odata-step/validate', { method: 'POST', body: JSON.stringify(payload) }),
+  previewForeachODataStep: (payload: ForeachODataStepRequest) => request<ForeachODataStepPreviewResponse>('/api/integration-master/foreach-odata-step/preview', { method: 'POST', body: JSON.stringify(payload) }),
+  testForeachODataStep: (payload: ForeachODataStepRequest) => request<ForeachODataStepTestResponse>('/api/integration-master/foreach-odata-step/test', { method: 'POST', body: JSON.stringify(payload) }),
+  saveForeachODataStep: (draftId: string, inputContract: InputContract, previousVariables: Record<string, unknown>, step: ForeachODataStepConfig) =>
+    request<ForeachODataStepSaveResponse>(`/api/integration-master/drafts/${draftId}/foreach-odata-steps`, { method: 'POST', body: JSON.stringify({ input_contract: inputContract, previous_variables: previousVariables, foreach_step: step }) }),
 };

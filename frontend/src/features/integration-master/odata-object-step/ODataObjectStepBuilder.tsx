@@ -21,9 +21,10 @@ interface ODataObjectStepBuilderProps {
   draft: InputDraftRead;
   previousVariables: Record<string, unknown>;
   onDraftUpdated: (draft: InputDraftRead) => void;
+  onVariablesUpdated?: (variables: Record<string, unknown>) => void;
 }
 
-export function ODataObjectStepBuilder({ contract, draft, previousVariables, onDraftUpdated }: ODataObjectStepBuilderProps) {
+export function ODataObjectStepBuilder({ contract, draft, previousVariables, onDraftUpdated, onVariablesUpdated }: ODataObjectStepBuilderProps) {
   const [step, setStep] = useState<ODataObjectStepConfig>(() => defaultObjectStep(contract, previousVariables));
   const connections = useQuery({ queryKey: ['odata-connections-options'], queryFn: odataConnectionsApi.options });
   const selectedConnection = (connections.data ?? []).find((item) => item.id === step.connection_id);
@@ -35,9 +36,15 @@ export function ODataObjectStepBuilder({ contract, draft, previousVariables, onD
 
   const payload = useMemo<ODataObjectStepRequest>(() => ({ input_contract: contract, previous_variables: previousVariables, odata_object_step: step }), [contract, previousVariables, step]);
   const preview = useMutation({ mutationFn: () => integrationMasterApi.previewODataObjectStep(payload) });
-  const test = useMutation({ mutationFn: () => integrationMasterApi.testODataObjectStep(payload) });
+  const test = useMutation({
+    mutationFn: () => integrationMasterApi.testODataObjectStep(payload),
+    onSuccess: (data) => {
+      if (data.success) onVariablesUpdated?.({ [data.saved_as]: data.result_preview });
+    },
+  });
+  const saveVariables = useMemo(() => withoutVariable(previousVariables, step.save_as), [previousVariables, step.save_as]);
   const save = useMutation({
-    mutationFn: () => integrationMasterApi.saveODataObjectStep(draft.id, contract, previousVariables, step),
+    mutationFn: () => integrationMasterApi.saveODataObjectStep(draft.id, contract, saveVariables, step),
     onSuccess: (data) => {
       onDraftUpdated(data.draft);
       setStep(data.saved_step);
@@ -146,4 +153,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function splitSelect(value: string) {
   return value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function withoutVariable(variables: Record<string, unknown>, name: string) {
+  const next = { ...variables };
+  delete next[name];
+  return next;
 }

@@ -12,6 +12,7 @@ ODataFilterMode = Literal["builder", "raw"]
 ODataFilterOperator = Literal["eq", "ne", "contains", "gt", "lt", "ge", "le"]
 ODataValueType = Literal["string", "number", "boolean", "variable", "guid", "raw"]
 ODataObjectKeyType = Literal["guid", "string", "number", "raw"]
+ForeachODataMergeMode = Literal["flatten", "group_by_item", "first_per_item"]
 
 
 class IntegrationScenario(BaseModel):
@@ -146,6 +147,33 @@ class ODataObjectStepConfig(BaseModel):
     last_test_status: str | None = None
 
 
+class ForeachODataSafetyLimits(BaseModel):
+    max_items: int = 100
+    max_requests: int = 100
+    max_result_rows: int = 10000
+
+
+class ForeachODataStepConfig(BaseModel):
+    id: str | None = None
+    type: Literal["foreach_odata"] = "foreach_odata"
+    items: str = "products"
+    item_as: str = "product"
+    connection_id: UUID | None = None
+    connection_name: str | None = None
+    resource: str = "InformationRegister_ПулКодовМаркировкиСУЗ"
+    filter: str | None = None
+    select: list[str] = Field(default_factory=list)
+    top: int | None = 500
+    paginate: bool = True
+    merge: ForeachODataMergeMode = "flatten"
+    save_as: str = "codes"
+    required: bool = True
+    limits: ForeachODataSafetyLimits = Field(default_factory=ForeachODataSafetyLimits)
+    test_limit: int | None = 1
+    overwrite: bool = False
+    last_test_status: str | None = None
+
+
 class ResourceRenderResult(BaseModel):
     template_resource: str
     rendered_resource: str | None = None
@@ -161,6 +189,12 @@ class ODataObjectStepRequest(BaseModel):
     input_contract: InputContract
     previous_variables: dict[str, Any] = Field(default_factory=dict)
     odata_object_step: ODataObjectStepConfig
+
+
+class ForeachODataStepRequest(BaseModel):
+    input_contract: InputContract
+    previous_variables: dict[str, Any] = Field(default_factory=dict)
+    foreach_step: ForeachODataStepConfig
 
 
 class ODataStepValidationResponse(BaseModel):
@@ -198,6 +232,26 @@ class ODataObjectStepPreviewResponse(ODataObjectStepValidationResponse):
     key_preview: Any = None
 
 
+class ForeachODataStepValidationResponse(BaseModel):
+    valid: bool
+    errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    source_count: int = 0
+    first_item_preview: dict[str, Any] | None = None
+    template_filter: str | None = None
+    rendered_filter: str | None = None
+    template_url: str | None = None
+    rendered_url: str | None = None
+    variables_after_step: list[str] = Field(default_factory=list)
+
+
+class ForeachODataStepPreviewResponse(ForeachODataStepValidationResponse):
+    saved_as: str
+    items: str
+    item_as: str
+    merge: ForeachODataMergeMode
+
+
 class ODataStepTestResponse(BaseModel):
     success: bool
     error_code: str | None = None
@@ -226,6 +280,22 @@ class ODataObjectStepTestResponse(BaseModel):
     request: dict[str, Any] = Field(default_factory=dict)
 
 
+class ForeachODataStepTestResponse(BaseModel):
+    success: bool
+    error_code: str | None = None
+    message: str | None = None
+    hint: str | None = None
+    source_count: int = 0
+    items_processed: int = 0
+    odata_requests: int = 0
+    rows_found: int = 0
+    merge: ForeachODataMergeMode = "flatten"
+    saved_as: str
+    result_preview: Any = None
+    variables_after_step: list[str] = Field(default_factory=list)
+    requests: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class ODataStepSaveRequest(BaseModel):
     input_contract: InputContract | None = None
     odata_step: ODataStepConfig
@@ -235,6 +305,12 @@ class ODataObjectStepSaveRequest(BaseModel):
     input_contract: InputContract | None = None
     previous_variables: dict[str, Any] = Field(default_factory=dict)
     odata_object_step: ODataObjectStepConfig
+
+
+class ForeachODataStepSaveRequest(BaseModel):
+    input_contract: InputContract | None = None
+    previous_variables: dict[str, Any] = Field(default_factory=dict)
+    foreach_step: ForeachODataStepConfig
 
 
 class InputContractValidationRequest(BaseModel):
@@ -261,7 +337,7 @@ class InputDraftRead(BaseModel):
     input_mode: InputMode
     source_system: str
     contract: InputContract
-    odata_steps: list[ODataStepConfig | ODataObjectStepConfig] = Field(default_factory=list)
+    odata_steps: list[ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig] = Field(default_factory=list)
     parse_result: InputParseResponse | None = None
     endpoint_url: str
     created_at: datetime
@@ -277,6 +353,12 @@ class ODataStepSaveResponse(BaseModel):
 class ODataObjectStepSaveResponse(BaseModel):
     draft: InputDraftRead
     saved_step: ODataObjectStepConfig
+    next_steps: list[str]
+
+
+class ForeachODataStepSaveResponse(BaseModel):
+    draft: InputDraftRead
+    saved_step: ForeachODataStepConfig
     next_steps: list[str]
 
 

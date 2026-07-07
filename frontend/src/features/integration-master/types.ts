@@ -4,6 +4,7 @@ export type ODataFilterMode = 'builder' | 'raw';
 export type ODataFilterOperator = 'eq' | 'ne' | 'contains' | 'gt' | 'lt' | 'ge' | 'le';
 export type ODataValueType = 'string' | 'number' | 'boolean' | 'variable' | 'guid' | 'raw';
 export type ODataObjectKeyType = 'guid' | 'string' | 'number' | 'raw';
+export type ForeachODataMergeMode = 'flatten' | 'group_by_item' | 'first_per_item';
 
 export interface IntegrationScenario {
   key: string;
@@ -144,7 +145,34 @@ export interface ODataObjectStepConfig {
   last_test_status?: string | null;
 }
 
-export type IntegrationMasterODataStep = ODataStepConfig | ODataObjectStepConfig;
+export interface ForeachODataSafetyLimits {
+  max_items: number;
+  max_requests: number;
+  max_result_rows: number;
+}
+
+export interface ForeachODataStepConfig {
+  id?: string | null;
+  type: 'foreach_odata';
+  items: string;
+  item_as: string;
+  connection_id?: string | null;
+  connection_name?: string | null;
+  resource: string;
+  filter?: string | null;
+  select: string[];
+  top?: number | null;
+  paginate: boolean;
+  merge: ForeachODataMergeMode;
+  save_as: string;
+  required: boolean;
+  limits: ForeachODataSafetyLimits;
+  test_limit?: number | null;
+  overwrite?: boolean;
+  last_test_status?: string | null;
+}
+
+export type IntegrationMasterODataStep = ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig;
 
 export interface ODataStepRequest {
   input_contract: InputContract;
@@ -156,6 +184,12 @@ export interface ODataObjectStepRequest {
   input_contract: InputContract;
   previous_variables: Record<string, unknown>;
   odata_object_step: ODataObjectStepConfig;
+}
+
+export interface ForeachODataStepRequest {
+  input_contract: InputContract;
+  previous_variables: Record<string, unknown>;
+  foreach_step: ForeachODataStepConfig;
 }
 
 export interface ODataStepValidationResponse {
@@ -193,6 +227,26 @@ export interface ODataObjectStepPreviewResponse extends ODataObjectStepValidatio
   key_preview?: unknown;
 }
 
+export interface ForeachODataStepValidationResponse {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  source_count: number;
+  first_item_preview?: Record<string, unknown> | null;
+  template_filter?: string | null;
+  rendered_filter?: string | null;
+  template_url?: string | null;
+  rendered_url?: string | null;
+  variables_after_step: string[];
+}
+
+export interface ForeachODataStepPreviewResponse extends ForeachODataStepValidationResponse {
+  saved_as: string;
+  items: string;
+  item_as: string;
+  merge: ForeachODataMergeMode;
+}
+
 export interface ODataStepTestResponse {
   success: boolean;
   error_code?: string | null;
@@ -219,6 +273,22 @@ export interface ODataObjectStepTestResponse {
   saved_as: string;
   variables_after_step: string[];
   request: Record<string, unknown>;
+}
+
+export interface ForeachODataStepTestResponse {
+  success: boolean;
+  error_code?: string | null;
+  message?: string | null;
+  hint?: string | null;
+  source_count: number;
+  items_processed: number;
+  odata_requests: number;
+  rows_found: number;
+  merge: ForeachODataMergeMode;
+  saved_as: string;
+  result_preview?: unknown;
+  variables_after_step: string[];
+  requests: Array<Record<string, unknown>>;
 }
 
 export interface InputDraftRead {
@@ -250,5 +320,11 @@ export interface ODataStepSaveResponse {
 export interface ODataObjectStepSaveResponse {
   draft: InputDraftRead;
   saved_step: ODataObjectStepConfig;
+  next_steps: string[];
+}
+
+export interface ForeachODataStepSaveResponse {
+  draft: InputDraftRead;
+  saved_step: ForeachODataStepConfig;
   next_steps: string[];
 }

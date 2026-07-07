@@ -8,6 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.integration_master import service
 from app.integration_master.schemas import (
+    ForeachODataStepPreviewResponse,
+    ForeachODataStepRequest,
+    ForeachODataStepSaveRequest,
+    ForeachODataStepSaveResponse,
+    ForeachODataStepTestResponse,
+    ForeachODataStepValidationResponse,
     InputContractValidationRequest,
     InputContractValidationResponse,
     InputDraftRead,
@@ -115,6 +121,36 @@ async def append_odata_object_step(draft_id: UUID, request: ODataObjectStepSaveR
         "next_steps": [
             "Повторить OData по массиву products будет следующим этапом",
             "Настроить JSON/XML builder позже",
+            "Запустить Dry Run и проверить Timeline/DLQ позже",
+        ],
+    }
+
+
+@router.post("/foreach-odata-step/validate", response_model=ForeachODataStepValidationResponse)
+async def validate_foreach_odata_step(request: ForeachODataStepRequest):
+    return service.validate_foreach_odata_step(request)
+
+
+@router.post("/foreach-odata-step/preview", response_model=ForeachODataStepPreviewResponse)
+async def preview_foreach_odata_step(request: ForeachODataStepRequest):
+    return service.preview_foreach_odata_step(request)
+
+
+@router.post("/foreach-odata-step/test", response_model=ForeachODataStepTestResponse)
+async def test_foreach_odata_step(request: ForeachODataStepRequest, session: AsyncSession = Depends(get_session)):
+    return await service.test_foreach_odata_step(session, request)
+
+
+@router.post("/drafts/{draft_id}/foreach-odata-steps", response_model=ForeachODataStepSaveResponse)
+async def append_foreach_odata_step(draft_id: UUID, request: ForeachODataStepSaveRequest, session: AsyncSession = Depends(get_session)):
+    draft, saved_step = await service.append_foreach_odata_step(session, draft_id, request.foreach_step, request.previous_variables)
+    await session.commit()
+    return {
+        "draft": draft,
+        "saved_step": saved_step,
+        "next_steps": [
+            "JSON/XML builder будет следующим этапом",
+            "Endpoint send и full integration compile позже",
             "Запустить Dry Run и проверить Timeline/DLQ позже",
         ],
     }

@@ -79,6 +79,12 @@ def _matches_condition(item: dict[str, Any], condition: str) -> bool:
 
 
 def _parse_literal(value: str) -> Any:
+    cast = re.fullmatch(r"cast\((.+),\s*'[^']+'\)", value, flags=re.IGNORECASE)
+    if cast:
+        return _parse_literal(cast.group(1).strip())
+    guid = re.fullmatch(r"guid'((?:''|[^'])*)'", value, flags=re.IGNORECASE)
+    if guid:
+        return _unquote(guid.group(1))
     if value.lower() == "false":
         return False
     if value.lower() == "true":
@@ -109,4 +115,3 @@ def _to_int(value: Any, default: int) -> int:
         return max(0, int(value))
     except (TypeError, ValueError):
         return default
-
