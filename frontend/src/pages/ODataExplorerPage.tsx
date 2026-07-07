@@ -343,6 +343,19 @@ export function ODataExplorerPage() {
     updateDraft([]);
   }
 
+  function editDraftStep(index: number) {
+    const step = draftSteps[index];
+    if (!step) return;
+    const matchingConnection = enabledConnections.find((connection) => connection.name === step.connection);
+    if (matchingConnection) setConnectorId(matchingConnection.id);
+    setQuery({ resource: step.resource, top: String(step.top), filter: step.filter, select: step.select.join(','), orderby: '' });
+    setStepSaveAs(step.save_as);
+    setStepSaveAsTouched(true);
+    run.reset();
+    updateDraft(draftSteps.slice(0, index));
+    setWizardStep('odata');
+  }
+
   function buildFlowPayload() {
     if (draftSteps.length === 0) throw new Error('Add at least one OData step');
     const responseBody = draftSteps.reduce<Record<string, string>>((acc, step) => ({ ...acc, [step.save_as]: `{{${step.save_as}}}` }), { operation_key: '{{operation_key}}' });
@@ -448,12 +461,13 @@ export function ODataExplorerPage() {
     return (
       <div className="stack-form">
         {draftSteps.map((step, index) => (
-          <article className="success-note" key={step.id}>
+          <button type="button" className="success-note draft-step-card" key={step.id} onClick={() => editDraftStep(index)}>
             <strong>{index + 1}. {step.name}</strong>
             <span><code>{step.save_as}</code> · {step.connection} · top {step.top}</span>
             <span>{step.resource}</span>
             {step.filter && <span>$filter: {step.filter}</span>}
-          </article>
+            <small>Нажмите, чтобы открыть и изменить этот шаг</small>
+          </button>
         ))}
       </div>
     );
