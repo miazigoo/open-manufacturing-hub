@@ -110,6 +110,24 @@ function formatInputValue(value: unknown) {
   return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
+function decodeDisplayUrl(value: string) {
+  if (!value.includes('%')) return value;
+  try {
+    return decodeURI(value);
+  } catch {
+    return value;
+  }
+}
+
+function normalizeDisplayUrls(value: unknown): unknown {
+  if (typeof value === 'string') return value.startsWith('http://') || value.startsWith('https://') ? decodeDisplayUrl(value) : value;
+  if (Array.isArray(value)) return value.map(normalizeDisplayUrls);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, normalizeDisplayUrls(item)]));
+  }
+  return value;
+}
+
 function triggerFieldFromSample(sample: Record<string, unknown>) {
   if (Object.prototype.hasOwnProperty.call(sample, 'sinc')) return 'sinc';
   return 'operation';
@@ -647,7 +665,7 @@ export function ODataExplorerPage() {
         {run.error instanceof Error && <div className="error-state compact">{run.error.message}</div>}
         {run.data && (
           <div className="stack-form">
-            <JsonBlock title={t('integration.odataExplorer.queryResult')} value={run.data} searchable />
+            <JsonBlock title={t('integration.odataExplorer.queryResult')} value={normalizeDisplayUrls(run.data)} searchable />
             <div className="builder-help-card">
               <strong>Результат подходит?</strong>
               <span>Сохраните его как переменную шага. Потом поля можно будет вставлять в следующий OData-ресурс или фильтр.</span>

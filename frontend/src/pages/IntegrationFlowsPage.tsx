@@ -84,6 +84,15 @@ function unresolvedTemplates(value: string) {
   return Array.from(value.matchAll(/{{\s*([^}]+)\s*}}/g)).map((match) => match[1].trim());
 }
 
+function decodeDisplayUrl(value: string) {
+  if (!value.includes('%')) return value;
+  try {
+    return decodeURI(value);
+  } catch {
+    return value;
+  }
+}
+
 function odataPath(step: Record<string, unknown>, scope: Record<string, unknown>) {
   const resource = renderTemplatePreview(String(step.resource ?? ''), scope);
   const params = new URLSearchParams();
@@ -95,7 +104,7 @@ function odataPath(step: Record<string, unknown>, scope: Record<string, unknown>
   if (select) params.set('$select', select);
   params.set('$format', 'json');
   const query = params.toString().replaceAll('%24', '$').replaceAll('%2C', ',').replaceAll('%7B%7B', '{{').replaceAll('%7D%7D', '}}');
-  return query ? `${resource}?${query}` : resource;
+  return decodeDisplayUrl(query ? `${resource}?${query}` : resource);
 }
 
 function stepSummary(step: Record<string, unknown>, index: number, scope: Record<string, unknown>) {
