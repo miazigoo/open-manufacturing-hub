@@ -121,7 +121,10 @@ async def patch_flow(session: AsyncSession, flow_id: UUID, request: IntegrationF
     if "matcher_group_json" in data:
         validate_matcher_group(data["matcher_group_json"])
     if "builder_json" in data and data["builder_json"] is not None:
-        data["last_validation_json"] = validate_builder(data["builder_json"])
+        validation = validate_builder(data["builder_json"])
+        if not validation["valid"]:
+            raise BadRequestError(json.dumps(validation, ensure_ascii=False))
+        data["last_validation_json"] = validation
     for key, value in data.items():
         setattr(flow, key, value)
     if flow.route_id and ("matcher_group_json" in data or "action_json" in data):
@@ -133,6 +136,22 @@ async def patch_flow(session: AsyncSession, flow_id: UUID, request: IntegrationF
         endpoint = await session.get(IntegrationEndpoint, flow.endpoint_id)
         if endpoint:
             endpoint.enabled = flow.enabled
+    if "builder_json" in data and flow.builder_json:
+        compiled = FlowCompiler().compile(flow.builder_json)
+        flow.last_validation_json = compiled["validation"]
+        if compiled["valid"]:
+            workflow = await _upsert_compiled_workflow(session, flow, compiled["steps_json"])
+            flow.workflow_id = workflow.id
+            flow.compiled_workflow_id = workflow.id
+            flow.compiled_at = datetime.now(timezone.utc)
+            if flow.endpoint_id:
+                endpoint = await session.get(IntegrationEndpoint, flow.endpoint_id)
+                if endpoint:
+                    endpoint.workflow_id = workflow.id
+            if flow.route_id:
+                route = await session.get(IntegrationRoute, flow.route_id)
+                if route:
+                    route.workflow_id = workflow.id
     await session.flush()
     return flow
 

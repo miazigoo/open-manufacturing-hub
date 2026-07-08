@@ -116,6 +116,25 @@ class FlowForEachStep:
         save_as = str(config.get("save_as") or config["step_id"])
         flatten = bool(config.get("flatten", True))
         continue_on_error = bool(config.get("continue_on_error", False))
+        limits = config.get("limits") if isinstance(config.get("limits"), dict) else {}
+        max_items = _positive_int(limits.get("max_items"), len(source_items))
+        max_requests = _positive_int(limits.get("max_requests"), len(source_items))
+        max_result_rows = _positive_int(limits.get("max_result_rows"), 0)
+
+        if len(source_items) > max_items:
+            return _failed(
+                "FOREACH_MAX_ITEMS_EXCEEDED",
+                f"Foreach source has {len(source_items)} items, max_items={max_items}",
+                config,
+                "Increase max_items only if this integration is expected to process that many source rows.",
+            )
+        if len(source_items) > max_requests:
+            return _failed(
+                "FOREACH_MAX_REQUESTS_EXCEEDED",
+                f"Foreach needs {len(source_items)} OData requests, max_requests={max_requests}",
+                config,
+                "Increase max_requests or reduce the source array before foreach.",
+            )
 
         combined: list[Any] = []
         iterations: list[dict[str, Any]] = []
@@ -146,6 +165,14 @@ class FlowForEachStep:
                     combined.extend(items)
                 else:
                     combined.append(result_value)
+                if max_result_rows and len(combined) > max_result_rows:
+                    return _failed(
+                        "FOREACH_MAX_RESULT_ROWS_EXCEEDED",
+                        f"Foreach result has more than max_result_rows={max_result_rows} rows",
+                        config,
+                        "For large code pools keep $top=500, enable pagination, and increase max_result_rows deliberately.",
+                        artifacts,
+                    )
                 iterations.append(
                     {
                         "index": index,
@@ -451,6 +478,14 @@ def _compile_filter_builder(conditions: list[dict[str, Any]], scope: dict[str, A
         else:
             chunks.append(f"{field} {operator} '{value}'")
     return " and ".join(chunks)
+
+
+def _positive_int(value: Any, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
 
 
 def _mock_odata_items(config: dict[str, Any], connector_config: dict[str, Any], query: dict[str, Any]) -> list[dict[str, Any]] | None:

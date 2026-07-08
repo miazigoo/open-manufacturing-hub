@@ -14,11 +14,40 @@ import { VersionHistoryPanel } from '../features/configVersions';
 import { useI18n } from '../i18n/useI18n';
 
 const sampleJson = { pool_type: 'DNP', order_id: 'ORD-123', codes: ['010464615169738421ABC', '010464615169738421DEF'] };
+const HTTP_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE', 'GET'];
 
 function parseJsonObject(value: string, label: string): Record<string, unknown> {
   const parsed = JSON.parse(value || '{}') as unknown;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(`${label} must be a JSON object`);
   return parsed as Record<string, unknown>;
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value ?? {})) as T;
+}
+
+function parseNumberInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : value;
+}
+
+function selectToText(value: unknown) {
+  return Array.isArray(value) ? value.join(',') : String(value ?? '');
+}
+
+function textToSelect(value: string) {
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function flowValidationError(validation: Record<string, unknown> | null | undefined) {
+  const errors = Array.isArray(validation?.errors) ? validation.errors : [];
+  if (!errors.length) return null;
+  return errors.map((item) => {
+    const row = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+    return [row.step_id, row.message, row.hint].filter(Boolean).join(': ');
+  }).join('\n');
 }
 
 function humanType(value: string) {
@@ -288,6 +317,10 @@ export function IntegrationFlowsPage() {
   const selected = useMemo(() => (flows.data ?? []).find((item) => item.id === selectedId) ?? flows.data?.[0] ?? null, [flows.data, selectedId]);
   const [result, setResult] = useState<unknown>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
+  const [editBuilder, setEditBuilder] = useState<Record<string, unknown> | null>(null);
+  const [editPayloadText, setEditPayloadText] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['integration-flows'] });
   const duplicate = useMutation({ mutationFn: integrationFlowsApi.duplicate, onSuccess: (data) => { setResult(data); setSelectedId(data.id); refresh(); } });
@@ -298,6 +331,21 @@ export function IntegrationFlowsPage() {
   });
   const testFlow = useMutation({ mutationFn: (payload: { id: string; body: Record<string, unknown> }) => integrationFlowsApi.test(payload.id, { input_mode: 'json', payload_json: payload.body, dry_run: false }), onSuccess: setResult });
   const testMatcher = useMutation({ mutationFn: (payload: { body: Record<string, unknown>; matcher: Record<string, unknown> }) => integrationFlowsApi.testMatcher({ input_mode: 'json', payload: payload.body, matcher_group: payload.matcher }), onSuccess: setResult });
+  const saveSettings = useMutation({
+    mutationFn: async (payload: { id: string; builder_json: Record<string, unknown>; test_payload_json: Record<string, unknown> | null }) => {
+      const flow = await integrationFlowsApi.patch(payload.id, { builder_json: payload.builder_json, test_payload_json: payload.test_payload_json });
+      const validationError = flowValidationError(flow.last_validation_json);
+      if (validationError) throw new Error(validationError);
+      return flow;
+    },
+    onSuccess: (flow) => {
+      setEditingFlowId(null);
+      setEditBuilder(null);
+      setEditError(null);
+      setResult({ saved: true, flow_id: flow.id, compiled_at: flow.compiled_at, validation: flow.last_validation_json });
+      refresh();
+    },
+  });
 
   if (flows.isLoading) return <LoadingState label={t('integration.flowBuilder.loading')} />;
   if (flows.error) return <ErrorState error={flows.error} />;
@@ -308,6 +356,91 @@ export function IntegrationFlowsPage() {
     setFormError(null);
     try { testFlow.mutate({ id: flow.id, body: parseJsonObject(asJson(flow.test_payload_json ?? sampleJson), 'Flow test payload') }); }
     catch (error) { setFormError(error instanceof Error ? error.message : 'Invalid flow test payload'); }
+  }
+
+  function openSettingsEditor(flow: IntegrationFlow) {
+    setEditingFlowId(flow.id);
+    setEditBuilder(cloneJson(flow.builder_json ?? { version: 1, steps: [] }));
+    setEditPayloadText(asJson(flow.test_payload_json ?? {}));
+    setEditError(null);
+  }
+
+  function updateBuilderStep(index: number, patch: Record<string, unknown>) {
+    setEditBuilder((current) => {
+      const next = cloneJson(current ?? { version: 1, steps: [] });
+      const steps = Array.isArray(next.steps) ? [...next.steps] : [];
+      const step = steps[index] && typeof steps[index] === 'object' ? { ...(steps[index] as Record<string, unknown>) } : {};
+      Object.entries(patch).forEach(([key, value]) => value === undefined ? delete step[key] : step[key] = value);
+      steps[index] = step;
+      next.steps = steps;
+      return next;
+    });
+  }
+
+  function updateNestedStep(index: number, patch: Record<string, unknown>) {
+    setEditBuilder((current) => {
+      const next = cloneJson(current ?? { version: 1, steps: [] });
+      const steps = Array.isArray(next.steps) ? [...next.steps] : [];
+      const step = steps[index] && typeof steps[index] === 'object' ? { ...(steps[index] as Record<string, unknown>) } : {};
+      const nestedKey = step.step && typeof step.step === 'object' ? 'step' : 'do';
+      const nested: Record<string, unknown> = step[nestedKey] && typeof step[nestedKey] === 'object' ? { ...(step[nestedKey] as Record<string, unknown>) } : { type: 'odata_query' };
+      Object.entries(patch).forEach(([key, value]) => value === undefined ? delete nested[key] : nested[key] = value);
+      step[nestedKey] = nested;
+      steps[index] = step;
+      next.steps = steps;
+      return next;
+    });
+  }
+
+  function updateForeachLimit(index: number, key: string, value: unknown) {
+    setEditBuilder((current) => {
+      const next = cloneJson(current ?? { version: 1, steps: [] });
+      const steps = Array.isArray(next.steps) ? [...next.steps] : [];
+      const step = steps[index] && typeof steps[index] === 'object' ? { ...(steps[index] as Record<string, unknown>) } : {};
+      const limits = step.limits && typeof step.limits === 'object' ? { ...(step.limits as Record<string, unknown>) } : {};
+      if (value === undefined) delete limits[key]; else limits[key] = value;
+      step.limits = limits;
+      steps[index] = step;
+      next.steps = steps;
+      return next;
+    });
+  }
+
+  function updateFinalAction(patch: Record<string, unknown>) {
+    setEditBuilder((current) => {
+      const next = cloneJson(current ?? { version: 1, steps: [] });
+      const finalAction = next.final_action && typeof next.final_action === 'object' ? { ...(next.final_action as Record<string, unknown>) } : {};
+      Object.entries(patch).forEach(([key, value]) => value === undefined ? delete finalAction[key] : finalAction[key] = value);
+      next.final_action = finalAction;
+      return next;
+    });
+  }
+
+  function updateCallerResponseBody(value: string) {
+    setEditBuilder((current) => {
+      const next = cloneJson(current ?? { version: 1, steps: [] });
+      const finalAction = next.final_action && typeof next.final_action === 'object' ? { ...(next.final_action as Record<string, unknown>) } : {};
+      const returnToCaller = finalAction.return_to_caller && typeof finalAction.return_to_caller === 'object' ? { ...(finalAction.return_to_caller as Record<string, unknown>) } : {};
+      try {
+        returnToCaller.body = JSON.parse(value) as unknown;
+      } catch {
+        returnToCaller.body = value;
+      }
+      finalAction.return_to_caller = returnToCaller;
+      next.final_action = finalAction;
+      return next;
+    });
+  }
+
+  function saveEditedSettings(flow: IntegrationFlow) {
+    setEditError(null);
+    try {
+      if (!editBuilder) throw new Error('Настройки flow не загружены');
+      const testPayload = editPayloadText.trim() ? parseJsonObject(editPayloadText, 'Test payload') : null;
+      saveSettings.mutate({ id: flow.id, builder_json: editBuilder, test_payload_json: testPayload });
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : 'Не удалось сохранить настройки');
+    }
   }
 
   return (
@@ -358,7 +491,7 @@ export function IntegrationFlowsPage() {
             <span>{t('integration.flowBuilder.target')}<strong>{humanType(selected.target_type)}</strong></span>
           </div>
           <div className="action-row">
-            <Link className="primary-button" to={`/integration-flows/${selected.id}/builder`}>{t('integration.flowBuilder.openVisualBuilder')}</Link>
+            <button className="primary-button" onClick={() => openSettingsEditor(selected)}>Изменить настройки</button>
             <button className="primary-button" onClick={() => exportForProduction.mutate(selected)} disabled={exportForProduction.isPending}>{t('integration.flowBuilder.exportProduction')}</button>
             <Link className="ghost-button" to={`/config-history/integration_flow/${selected.id}`}>{t('integration.flowBuilder.releaseControl')}</Link>
             <button className="primary-button" onClick={() => runSelectedFlow(selected)} disabled={testFlow.isPending}>{t('integration.flowBuilder.testThisFlow')}</button>
@@ -372,6 +505,100 @@ export function IntegrationFlowsPage() {
           {duplicate.error instanceof Error ? <div className="error-state compact">{duplicate.error.message}</div> : null}
           {exportFlow.error instanceof Error ? <div className="error-state compact">{exportFlow.error.message}</div> : null}
           {exportForProduction.error instanceof Error && <div className="error-state compact">{exportForProduction.error.message}</div>}
+          {saveSettings.error instanceof Error && <div className="error-state compact">{saveSettings.error.message}</div>}
+          {editError ? <div className="error-state compact">{editError}</div> : null}
+          {editingFlowId === selected.id && editBuilder ? (
+            <section className="flow-settings-editor">
+              <div className="panel-toolbar">
+                <div>
+                  <span className="eyebrow">Редактирование настроек</span>
+                  <h3>Тонкая настройка опубликованного flow</h3>
+                  <p className="microcopy">$top в 1C OData должен быть от 1 до 500. Для 40000+ строк ставьте $top=500, включайте пагинацию и увеличивайте max_result_rows.</p>
+                </div>
+                <div className="action-row wrap-actions">
+                  <button className="ghost-button" onClick={() => { setEditingFlowId(null); setEditBuilder(null); setEditError(null); }}>Закрыть</button>
+                  <button className="primary-button" onClick={() => saveEditedSettings(selected)} disabled={saveSettings.isPending}>{saveSettings.isPending ? 'Сохраняю...' : 'Сохранить и пересобрать'}</button>
+                </div>
+              </div>
+              <div className="flow-settings-grid">
+                {builderSteps(editBuilder).map((step, index) => {
+                  const type = String(step.type ?? '');
+                  const nestedStep = (step.step && typeof step.step === 'object' ? step.step : step.do && typeof step.do === 'object' ? step.do : {}) as Record<string, unknown>;
+                  const limits = step.limits && typeof step.limits === 'object' ? step.limits as Record<string, unknown> : {};
+                  if (type === 'odata_query') {
+                    return (
+                      <article className="flow-settings-card" key={`${String(step.id ?? type)}-${index}`}>
+                        <span className="eyebrow">Шаг {index + 1} · OData</span>
+                        <h4>{String(step.name ?? step.id ?? 'OData query')}</h4>
+                        <label className="field-label">Resource<input value={String(step.resource ?? '')} onChange={(event) => updateBuilderStep(index, { resource: event.target.value })} /></label>
+                        <label className="field-label">$filter<textarea value={String(step.filter ?? '')} onChange={(event) => updateBuilderStep(index, { filter: event.target.value || undefined })} rows={3} /></label>
+                        <label className="field-label">$select<input value={selectToText(step.select)} onChange={(event) => updateBuilderStep(index, { select: textToSelect(event.target.value) })} /></label>
+                        <div className="metadata-grid compact-grid no-margin">
+                          <label className="field-label">$top<input type="number" min={1} max={500} value={String(step.top ?? '')} onChange={(event) => updateBuilderStep(index, { top: parseNumberInput(event.target.value) })} /></label>
+                          <label className="toggle-row"><input type="checkbox" checked={Boolean(step.paginate)} onChange={(event) => updateBuilderStep(index, { paginate: event.target.checked })} /> Читать следующие страницы</label>
+                        </div>
+                      </article>
+                    );
+                  }
+                  if (type === 'foreach') {
+                    return (
+                      <article className="flow-settings-card wide" key={`${String(step.id ?? type)}-${index}`}>
+                        <span className="eyebrow">Шаг {index + 1} · Повтор по массиву</span>
+                        <h4>{String(step.name ?? step.id ?? 'Foreach OData')}</h4>
+                        <div className="metadata-grid compact-grid no-margin">
+                          <label className="field-label">Array<input value={String(step.items ?? '')} onChange={(event) => updateBuilderStep(index, { items: event.target.value })} /></label>
+                          <label className="field-label">Item variable<input value={String(step.item_as ?? 'item')} onChange={(event) => updateBuilderStep(index, { item_as: event.target.value })} /></label>
+                          <label className="field-label">Save as<input value={String(step.save_as ?? step.id ?? '')} onChange={(event) => updateBuilderStep(index, { save_as: event.target.value })} /></label>
+                          <label className="toggle-row"><input type="checkbox" checked={step.flatten !== false} onChange={(event) => updateBuilderStep(index, { flatten: event.target.checked })} /> Объединить все строки в один массив</label>
+                        </div>
+                        <div className="flow-limit-grid">
+                          <label className="field-label">max_items<input type="number" min={1} value={String(limits.max_items ?? '')} onChange={(event) => updateForeachLimit(index, 'max_items', parseNumberInput(event.target.value))} /></label>
+                          <label className="field-label">max_requests<input type="number" min={1} value={String(limits.max_requests ?? '')} onChange={(event) => updateForeachLimit(index, 'max_requests', parseNumberInput(event.target.value))} /></label>
+                          <label className="field-label">max_result_rows<input type="number" min={1} value={String(limits.max_result_rows ?? '')} onChange={(event) => updateForeachLimit(index, 'max_result_rows', parseNumberInput(event.target.value))} /></label>
+                        </div>
+                        <div className="builder-help-card">
+                          <strong>Nested OData-запрос внутри foreach</strong>
+                          <span>Для больших пулов кодов обычно ставим nested $top=500, включаем nested pagination и поднимаем max_result_rows до ожидаемого объема, например 50000.</span>
+                        </div>
+                        <label className="field-label">Nested resource<input value={String(nestedStep.resource ?? '')} onChange={(event) => updateNestedStep(index, { resource: event.target.value })} /></label>
+                        <label className="field-label">Nested $filter<textarea value={String(nestedStep.filter ?? '')} onChange={(event) => updateNestedStep(index, { filter: event.target.value || undefined })} rows={3} /></label>
+                        <label className="field-label">Nested $select<input value={selectToText(nestedStep.select)} onChange={(event) => updateNestedStep(index, { select: textToSelect(event.target.value) })} /></label>
+                        <div className="metadata-grid compact-grid no-margin">
+                          <label className="field-label">Nested $top<input type="number" min={1} max={500} value={String(nestedStep.top ?? '')} onChange={(event) => updateNestedStep(index, { top: parseNumberInput(event.target.value) })} /></label>
+                          <label className="toggle-row"><input type="checkbox" checked={Boolean(nestedStep.paginate)} onChange={(event) => updateNestedStep(index, { paginate: event.target.checked })} /> Читать следующие страницы</label>
+                        </div>
+                      </article>
+                    );
+                  }
+                  return null;
+                })}
+                {(() => {
+                  const finalAction = finalActionFromBuilder(editBuilder);
+                  if (!finalAction) return null;
+                  const returnToCaller = finalAction.return_to_caller && typeof finalAction.return_to_caller === 'object' ? finalAction.return_to_caller as Record<string, unknown> : {};
+                  return (
+                    <article className="flow-settings-card wide">
+                      <span className="eyebrow">Финальное действие</span>
+                      <h4>{String(finalAction.type ?? 'return_response')}</h4>
+                      {String(finalAction.type ?? '').startsWith('send') ? (
+                        <div className="metadata-grid compact-grid no-margin">
+                          <label className="field-label">Method<select value={String(finalAction.method ?? 'POST')} onChange={(event) => updateFinalAction({ method: event.target.value })}>{HTTP_METHODS.map((method) => <option value={method} key={method}>{method}</option>)}</select></label>
+                          <label className="field-label">URL<input value={String(finalAction.url ?? '')} onChange={(event) => updateFinalAction({ url: event.target.value })} /></label>
+                        </div>
+                      ) : null}
+                      <label className="field-label">Ответ вызывающей системе<textarea value={asJson(returnToCaller.body ?? { ok: true })} onChange={(event) => updateCallerResponseBody(event.target.value)} rows={5} /></label>
+                      <p className="microcopy">Это HTTP-ответ на исходный запрос в OMH. Если flow отправляет данные во внешний endpoint, здесь обычно остается короткое подтверждение вроде {"{\"ok\": true}"}.</p>
+                    </article>
+                  );
+                })()}
+                <article className="flow-settings-card wide">
+                  <span className="eyebrow">Тестовый входной JSON</span>
+                  <h4>Пример для проверки и предпросмотра</h4>
+                  <textarea className="code-textarea" value={editPayloadText} onChange={(event) => setEditPayloadText(event.target.value)} rows={8} />
+                </article>
+              </div>
+            </section>
+          ) : null}
           <section className="flow-operator-grid">
             <article className="flow-operator-card">
               <span className="eyebrow">Входной JSON</span>
@@ -436,7 +663,7 @@ export function IntegrationFlowsPage() {
                   <small>{selectedFinalAction.callerResponse.detail}</small>
                 </div>
               ) : null}
-              <Link className="ghost-button" to={`/integration-flows/${selected.id}/builder`}>Редактировать настройки</Link>
+              <button className="ghost-button" onClick={() => openSettingsEditor(selected)}>Редактировать настройки</button>
             </section>
           )}
           <section className="flow-output-grid">

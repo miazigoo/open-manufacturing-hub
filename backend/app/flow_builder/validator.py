@@ -43,6 +43,7 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
             for field, code in (("connection", "ODATA_CONNECTION_NOT_SET"), ("resource", "ODATA_RESOURCE_NOT_SET"), ("save_as", "ODATA_SAVE_AS_REQUIRED")):
                 if not step.get(field):
                     errors.append(_error(step_id, code, f"OData step needs {field}", "Select connector/resource and save result variable."))
+            _validate_odata_top(step, step_id, errors)
         if step_type == "xml_extract":
             fields = step.get("fields")
             if not isinstance(fields, list) or not fields:
@@ -88,6 +89,7 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
                 for field, code in (("connection", "ODATA_CONNECTION_NOT_SET"), ("resource", "ODATA_RESOURCE_NOT_SET")):
                     if not nested.get(field):
                         errors.append(_error(step_id, code, f"Nested OData step needs {field}", "Select connector/resource for the repeated lookup."))
+                _validate_odata_top(nested, step_id, errors)
         if step_type == "call_endpoint" and not (step.get("connector") or step.get("url")):
             errors.append(_error(step_id, "TARGET_CONNECTOR_NOT_SET", "Endpoint step needs connector or URL", "Select a REST/1C target connector or enter a direct HTTP URL."))
     has_terminal_response = any(isinstance(step, dict) and step.get("type") in {"call_endpoint", "return_response", "build_xml_response", "raw_xml_forward"} for step in steps)
@@ -98,3 +100,16 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
 
 def _error(step_id: str | None, code: str, message: str, hint: str | None) -> dict[str, Any]:
     return {"step_id": step_id, "code": code, "message": message, "hint": hint}
+
+
+def _validate_odata_top(step: dict[str, Any], step_id: str | None, errors: list[dict[str, Any]]) -> None:
+    raw_top = step.get("top")
+    if raw_top in (None, ""):
+        return
+    try:
+        top = int(raw_top)
+    except (TypeError, ValueError):
+        errors.append(_error(step_id, "ODATA_TOP_INVALID", "$top must be a number", "Use a value from 1 to 500."))
+        return
+    if top < 1 or top > 500:
+        errors.append(_error(step_id, "ODATA_TOP_OUT_OF_RANGE", "$top must be from 1 to 500", "For large results set $top=500, enable pagination, and increase max_result_rows."))
