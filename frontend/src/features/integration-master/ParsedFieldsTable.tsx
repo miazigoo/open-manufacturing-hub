@@ -20,6 +20,10 @@ export function ParsedFieldsTable({ fields, operationPath, businessPath, onChang
 
   return (
     <section className="table-panel integration-fields-table">
+      <div className="field-key-help">
+        <span><strong>Route</strong> — поле, по которому OMH выбирает нужный сценарий.</span>
+        <span><strong>Business</strong> — поле, по которому оператор потом найдёт запрос в журнале и Timeline.</span>
+      </div>
       <table>
         <thead><tr><th>Поле</th><th>Путь</th><th>Тип</th><th>Пример</th><th>Обязательное</th><th>Описание</th><th>Ключи</th></tr></thead>
         <tbody>
@@ -31,7 +35,30 @@ export function ParsedFieldsTable({ fields, operationPath, businessPath, onChang
               <td><small>{formatExample(field.example)}</small></td>
               <td><label className="check-row compact-check"><input type="checkbox" checked={field.required} onChange={(event) => patch(index, { required: event.target.checked })} /> {field.required ? 'Required' : 'Optional'}</label></td>
               <td><input value={field.description ?? ''} onChange={(event) => patch(index, { description: event.target.value })} placeholder="Например: номер заказа в 1С" /></td>
-              <td><div className="action-row wrap-actions"><button type="button" className={operationPath === field.path ? 'primary-link' : 'ghost-button'} onClick={() => onUseOperation(field)}>Route</button><button type="button" className={businessPath === field.path ? 'primary-link' : 'ghost-button'} onClick={() => onUseBusiness(field)}>Business</button></div></td>
+              <td>
+                <div className="action-row wrap-actions">
+                  <button
+                    type="button"
+                    className={`${operationPath === field.path ? 'primary-link' : 'ghost-button'} tooltip-button`}
+                    data-tooltip="Route key: OMH выберет этот сценарий, если входящий запрос содержит это поле с нужным значением. Обычно это operation или sinc."
+                    title="Route key: OMH выберет этот сценарий, если входящий запрос содержит это поле с нужным значением. Обычно это operation или sinc."
+                    aria-label={`Сделать ${field.name} route key`}
+                    onClick={() => onUseOperation(field)}
+                  >
+                    Route
+                  </button>
+                  <button
+                    type="button"
+                    className={`${businessPath === field.path ? 'primary-link' : 'ghost-button'} tooltip-button`}
+                    data-tooltip="Business key: значение попадёт в журнал событий и Timeline. Выбирайте номер заказа, ID заявки или другой понятный оператору идентификатор."
+                    title="Business key: значение попадёт в журнал событий и Timeline. Выбирайте номер заказа, ID заявки или другой понятный оператору идентификатор."
+                    aria-label={`Сделать ${field.name} business key`}
+                    onClick={() => onUseBusiness(field)}
+                  >
+                    Business
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
