@@ -6,6 +6,7 @@
   "settings": "Settings",
   "advanced": "Advanced",
   "developer": "Developer",
+  "printing": "Printing",
   "i18nDebug": "i18n Debug",
   "bffUnavailable": "Navigation BFF unavailable, using local fallback."
 }

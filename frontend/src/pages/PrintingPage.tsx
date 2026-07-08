@@ -50,7 +50,7 @@ export function PrintingPage() {
       </section>
 
       <section className="printing-layout">
-        <div className="panel">
+        <div className="panel print-jobs-panel">
           <div className="panel-toolbar"><h2>{t('printing.jobs')}</h2><span className="microcopy">{t('printing.jobsCount', { count: jobs.data?.length ?? 0 })}</span></div>
           <div className="print-job-list">
             {jobs.data?.length ? jobs.data.map((job) => (
@@ -62,12 +62,12 @@ export function PrintingPage() {
           </div>
         </div>
 
-        <div className="panel">
+        <div className="panel print-detail-panel">
           {selectedJob ? (
             <>
               <div className="panel-toolbar">
                 <div><h2>{selectedJob.job_key}</h2><p>{selectedJob.source_system} · {formatDateTime(selectedJob.created_at)}</p></div>
-                <div className="action-row">
+                <div className="action-row wrap-actions">
                   <button className="ghost-button" onClick={() => sendDry.mutate(selectedJob.id)}>{t('printing.dryRun')}</button>
                   <button className="primary-button" onClick={() => sendReal.mutate(selectedJob.id)}>{t('printing.send')}</button>
                   <button className="ghost-button" onClick={() => confirm.mutate(selectedJob.id)}>{t('printing.confirm')}</button>
@@ -95,7 +95,7 @@ export function PrintingPage() {
           ) : <EmptyState title={t('printing.noSelected')} detail={t('printing.noSelectedDetail')} />}
         </div>
 
-        <aside className="panel">
+        <aside className="panel print-log-panel">
           <div className="panel-toolbar"><h2>{t('printing.log')}</h2><span className="microcopy">{logs.data?.length ?? 0}</span></div>
           <div className="print-log-list">
             {(logs.data ?? []).map((item) => (

@@ -6,6 +6,7 @@
   "settings": "Настройки",
   "advanced": "Расширенный",
   "developer": "Разработчик",
+  "printing": "Печать",
   "i18nDebug": "i18n Debug",
   "bffUnavailable": "Navigation BFF недоступен, используется локальный fallback."
 }

@@ -42,6 +42,7 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
             ("Onboarding", "/onboarding", None, False),
             ("Dashboard", "/", None, False),
             ("Transaction Monitor", "/runtime/monitor", None, False),
+            ("Printing", "/printing", "omh-package-printer", False),
             ("Integration Queue", "/runtime/queue", None, False),
             ("DLQ", "/runtime/dlq", None, False),
             ("Audit Log", "/audit", None, False),

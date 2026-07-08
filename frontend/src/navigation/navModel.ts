@@ -45,7 +45,7 @@ export const navModel: NavModelItem[] = [
   nav('integration-flows', 'Build', 'Integration Flows', '/integration-flows', 'nav.integrationFlows', simple, 40),
   nav('request-response', 'Build', 'Request/Response Workbench', '/test-console', 'nav.testConsole', advanced, 50),
   nav('onec-cockpit', 'Build', '1C Cockpit', '/onec-cockpit', 'nav.onecCockpit', advanced, 60, 'omh-package-onec'),
-  nav('printing', 'Build', 'Printing', '/printing', 'nav.printing', advanced, 70, 'omh-package-printer'),
+  nav('printing', 'Operate', 'Printing', '/printing', 'nav.printing', simple, 45, 'omh-package-printer'),
 
   nav('packages', 'Packages', 'Packages', '/packages', 'nav.packages', advanced, 10),
   nav('production', 'Packages', 'Production', '/production', 'nav.production', advanced, 20),

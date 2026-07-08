@@ -286,14 +286,19 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .connector-card .json-panel { box-shadow: none; background: rgba(0,0,0,.12); }
 .onec-config-editor { border: 1px solid var(--line); background: linear-gradient(135deg, rgba(143,198,180,.08), rgba(240,179,90,.055)); padding: 18px; margin-bottom: 18px; }
 .onec-config-editor p { margin-top: 8px; }
-.printing-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr) 420px; gap: 18px; align-items: start; }
-.print-job-list, .print-log-list { display: grid; gap: 10px; }
-.print-job-row { width: 100%; border: 1px solid var(--line); background: rgba(0,0,0,.18); color: var(--ink); padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; }
+.printing-layout { display: grid; grid-template-columns: minmax(260px, 320px) minmax(520px, 1fr) minmax(300px, 420px); gap: 18px; align-items: start; }
+.printing-layout > .panel { min-width: 0; overflow: hidden; }
+.print-jobs-panel, .print-log-panel { align-self: start; }
+.print-job-list, .print-log-list { display: grid; gap: 10px; min-width: 0; max-height: calc(100vh - 380px); overflow: auto; padding-right: 3px; scrollbar-width: thin; scrollbar-color: rgba(240,179,90,.45) transparent; }
+.print-job-row { width: 100%; min-width: 0; border: 1px solid var(--line); background: rgba(0,0,0,.18); color: var(--ink); padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; text-align: left; }
 .print-job-row.active { border-color: var(--accent); background: rgba(240,179,90,.1); }
 .print-job-row span { min-width: 0; display: grid; gap: 4px; }
+.print-job-row strong { min-width: 0; overflow-wrap: anywhere; word-break: break-word; line-height: 1.25; }
 .print-job-row small { color: var(--muted); overflow-wrap: anywhere; }
+.print-job-row .status-badge { justify-self: end; max-width: 100%; white-space: normal; }
 .print-log-row { border: 1px solid var(--line); background: rgba(0,0,0,.16); padding: 12px; display: grid; gap: 8px; }
 .print-log-row > div { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.print-log-row strong, .print-log-row p { overflow-wrap: anywhere; }
 .print-log-row span { color: var(--muted); font-size: 12px; }
 .embedded-table { box-shadow: none; background: rgba(0,0,0,.12); padding: 0; overflow-x: auto; }
 .embedded-table table { min-width: 760px; }

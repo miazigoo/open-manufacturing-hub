@@ -76,3 +76,22 @@ async def test_optional_secrets_navigation_requires_package(client):
     secrets = next(item for item in navigation.json() if item["route"] == "/secrets")
     assert secrets["installed"] is True
     assert secrets["enabled"] is True
+
+
+async def test_printing_navigation_requires_printer_package(client):
+    navigation = await client.get("/api/ui/navigation")
+    assert navigation.status_code == 200
+    printing = next(item for item in navigation.json() if item["route"] == "/printing")
+    assert printing["group"] == "Operate"
+    assert printing["package_id"] == "omh-package-printer"
+    assert printing["installed"] is False
+    assert printing["enabled"] is False
+
+    installed = await client.post("/api/packages/omh-package-printer/install", json={"install_demo_data": False})
+    assert installed.status_code == 200, installed.text
+
+    navigation = await client.get("/api/ui/navigation")
+    assert navigation.status_code == 200
+    printing = next(item for item in navigation.json() if item["route"] == "/printing")
+    assert printing["installed"] is True
+    assert printing["enabled"] is True
