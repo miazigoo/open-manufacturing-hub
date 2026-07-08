@@ -58,6 +58,12 @@ export function IntegrationMasterPage() {
   const contract = useMemo(() => buildContract({ name, slug, inputMode, sourceSystem, selected, sample: parseResult?.normalized_sample ?? sampleText, fields, operationKey, businessKey }), [name, slug, inputMode, sourceSystem, selected, parseResult, sampleText, fields, operationKey, businessKey]);
   const objectVariables = useMemo(() => ({ ...deriveVariablesFromDraft(savedDraft), ...previousVariables }), [savedDraft, previousVariables]);
 
+  useEffect(() => {
+    if (!savedDraft?.id || scrolledDraftId.current === savedDraft.id) return;
+    scrolledDraftId.current = savedDraft.id;
+    window.setTimeout(() => odataStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  }, [savedDraft?.id]);
+
   if (scenarios.isPending) return <LoadingState label="Загрузка мастера интеграции" />;
   if (scenarios.error) return <ErrorState error={scenarios.error} />;
 
@@ -120,12 +126,6 @@ export function IntegrationMasterPage() {
   const hasSavedObjectStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'odata_object_query'));
   const hasSavedForeachStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'foreach_odata'));
   const hasSavedPayloadStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'build_payload'));
-
-  useEffect(() => {
-    if (!savedDraft?.id || scrolledDraftId.current === savedDraft.id) return;
-    scrolledDraftId.current = savedDraft.id;
-    window.setTimeout(() => odataStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
-  }, [savedDraft?.id]);
 
   return (
     <div className="page-stack integration-master-page">
