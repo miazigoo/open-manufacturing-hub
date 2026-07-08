@@ -106,7 +106,7 @@ export function ForeachODataStepBuilder({ contract, draft, previousVariables, on
       <ForeachODataFilterEditor step={step} variables={previousVariables} onChange={patchStep} />
 
       <div className="metadata-grid compact-grid no-margin">
-        <label className="field-label">Какие поля получить<input value={step.select.join(', ')} onChange={(event) => patchStep({ select: splitSelect(event.target.value) })} placeholder="КодМаркировки, Номенклатура_Key" /></label>
+        <label className="field-label">Какие поля получить<input value={step.select.join(', ')} onChange={(event) => patchStep({ select: splitSelect(event.target.value) })} placeholder="КодМаркировки, ПолныйКодМаркировки, Номенклатура_Key" /></label>
         <label className="field-label">$top<input type="number" min="1" max="500" value={step.top ?? ''} onChange={(event) => patchStep({ top: event.target.value ? Number(event.target.value) : null })} /><small>Для 1C OData максимум 500. Для больших результатов включите pagination.</small></label>
         <MergeModeSelect value={step.merge} onChange={(merge) => patchStep({ merge })} />
         <label className="field-label">Сохранить общий результат как<input value={step.save_as} onChange={(event) => patchStep({ save_as: event.target.value })} placeholder="codes" /><small>Это имя массива. Для DnP ожидается `codes`.</small></label>
@@ -139,7 +139,7 @@ function defaultForeachStep(contract: InputContract, draft: InputDraftRead, vari
     connection_name: previousConnection && 'connection_name' in previousConnection ? previousConnection.connection_name ?? null : null,
     resource: contract.scenario_key === 'dnp_chz_code_pool' ? 'InformationRegister_ПулКодовМаркировкиСУЗ' : '',
     filter: contract.scenario_key === 'dnp_chz_code_pool' ? DNP_FOREACH_FILTER : '',
-    select: contract.scenario_key === 'dnp_chz_code_pool' ? ['КодМаркировки', 'Номенклатура_Key', 'ДокументОснование', 'Статус'] : [],
+    select: contract.scenario_key === 'dnp_chz_code_pool' ? ['КодМаркировки', 'ПолныйКодМаркировки', 'Номенклатура_Key', 'ДокументОснование', 'Статус'] : [],
     top: 500,
     paginate: true,
     merge: 'flatten',

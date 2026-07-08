@@ -141,7 +141,7 @@ def _foreach_step(connector_id, **overrides):
         "item_as": "product",
         "resource": "InformationRegister_ПулКодовМаркировкиСУЗ",
         "filter": "Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')",
-        "select": ["КодМаркировки", "Номенклатура_Key", "ДокументОснование", "Статус"],
+        "select": ["КодМаркировки", "ПолныйКодМаркировки", "Номенклатура_Key", "ДокументОснование", "Статус"],
         "top": 500,
         "paginate": True,
         "merge": "flatten",
@@ -169,8 +169,8 @@ def _payload_variables(codes=None, **overrides):
             },
             "codes": codes
             or [
-                {"КодМаркировки": "code-001", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"},
-                {"КодМаркировки": "code-002", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"},
+                {"КодМаркировки": "code-001", "ПолныйКодМаркировки": "full-code-001", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"},
+                {"КодМаркировки": "code-002", "ПолныйКодМаркировки": "full-code-002", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"},
             ],
             "context": {"run_id": "run-001", "event_id": "evt-001"},
         }
@@ -699,9 +699,10 @@ async def test_foreach_odata_step_preview_renders_first_item_filter_and_url(clie
     assert body["rendered_url"] == (
         "InformationRegister_ПулКодовМаркировкиСУЗ"
         f"?$filter=Номенклатура_Key eq guid'{PRODUCT_GUID}' and ДокументОснование eq cast(guid'{ORDER_GUID}', 'Document_ЗаказНаПроизводство2_2')"
-        "&$select=КодМаркировки,Номенклатура_Key,ДокументОснование,Статус&$top=500&paginate=true"
+        "&$select=КодМаркировки,ПолныйКодМаркировки,Номенклатура_Key,ДокументОснование,Статус&$top=500&paginate=true"
     )
     assert "codes[0].КодМаркировки" in body["variables_after_step"]
+    assert "codes[0].ПолныйКодМаркировки" in body["variables_after_step"]
 
 
 async def test_foreach_odata_step_test_runs_query_for_each_product_and_flattens(client):
