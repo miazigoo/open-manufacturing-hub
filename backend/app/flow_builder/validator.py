@@ -61,6 +61,19 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
                 errors.append(_error(step_id, "RESOLVER_SAVE_AS_REQUIRED", "Resolve step needs save_as", "Save the canonical object as customer, product or warehouse."))
         if step_type == "build_json" and not (step.get("template") or step.get("fields")):
             errors.append(_error(step_id, "JSON_TEMPLATE_REQUIRED", "Build JSON step needs template or visual fields", "Add target fields or switch to advanced JSON template."))
+        if step_type == "build_payload":
+            body_type = str(step.get("body_type") or "").strip()
+            json_mode = str(step.get("json_mode") or "table").strip()
+            if body_type not in {"json", "xml", "raw_text"}:
+                errors.append(_error(step_id, "PAYLOAD_BODY_TYPE_INVALID", "Payload step needs body_type json/xml/raw_text", "Choose JSON, XML or raw text in Payload Builder."))
+            if not step.get("save_as"):
+                errors.append(_error(step_id, "PAYLOAD_SAVE_AS_REQUIRED", "Payload step needs save_as", "Save the result as target_payload or another variable."))
+            if body_type == "json" and json_mode == "table" and not (step.get("fields") or step.get("dynamic_entries")):
+                errors.append(_error(step_id, "PAYLOAD_JSON_FIELDS_REQUIRED", "JSON payload needs fields or dynamic entries", "Add at least one target field or switch to raw JSON template."))
+            if body_type == "json" and json_mode == "raw_template" and not step.get("template"):
+                errors.append(_error(step_id, "PAYLOAD_JSON_TEMPLATE_REQUIRED", "JSON payload needs a raw template", "Paste the JSON template used by the target API."))
+            if body_type in {"xml", "raw_text"} and not step.get("template"):
+                errors.append(_error(step_id, "PAYLOAD_TEMPLATE_REQUIRED", "XML/raw payload needs a template", "Paste the XML or raw text template."))
         if step_type == "foreach":
             nested = step.get("step") or step.get("do")
             if not step.get("items"):

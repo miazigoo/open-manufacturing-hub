@@ -1,5 +1,12 @@
 import { request } from '../../api/client';
 import type {
+  CompileDraftRequest,
+  CompileDraftResponse,
+  CompileDraftValidationResponse,
+  CompilePreviewResponse,
+  CompiledEnableResponse,
+  CompiledRunTestRequest,
+  CompiledRunTestResponse,
   FinalActionConfig,
   FinalActionPreviewResponse,
   FinalActionRequest,
@@ -67,4 +74,9 @@ export const integrationMasterApi = {
   testFinalAction: (payload: FinalActionTestRequest) => request<FinalActionTestResponse>('/api/integration-master/final-action/test', { method: 'POST', body: JSON.stringify(payload) }),
   saveFinalAction: (draftId: string, inputContract: InputContract, previousVariables: Record<string, unknown>, finalAction: FinalActionConfig) =>
     request<FinalActionSaveResponse>(`/api/integration-master/drafts/${draftId}/final-action`, { method: 'POST', body: JSON.stringify({ input_contract: inputContract, previous_variables: previousVariables, final_action: finalAction }) }),
+  validateForCompile: (draftId: string) => request<CompileDraftValidationResponse>(`/api/integration-master/drafts/${draftId}/validate-for-compile`, { method: 'POST' }),
+  compilePreview: (draftId: string) => request<CompilePreviewResponse>(`/api/integration-master/drafts/${draftId}/compile-preview`, { method: 'POST' }),
+  compileDraft: (draftId: string, payload: CompileDraftRequest) => request<CompileDraftResponse>(`/api/integration-master/drafts/${draftId}/compile`, { method: 'POST', body: JSON.stringify(payload) }),
+  runCompiledTest: (integrationFlowId: string, payload: CompiledRunTestRequest) => request<CompiledRunTestResponse>(`/api/integration-master/compiled/${integrationFlowId}/run-test`, { method: 'POST', body: JSON.stringify(payload) }),
+  enableCompiled: (integrationFlowId: string) => request<CompiledEnableResponse>(`/api/integration-master/compiled/${integrationFlowId}/enable`, { method: 'POST' }),
 };

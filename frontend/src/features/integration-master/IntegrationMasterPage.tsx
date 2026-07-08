@@ -8,6 +8,7 @@ import { EndpointSlugEditor, slugError, slugify } from './EndpointSlugEditor';
 import { InputContractPreview } from './InputContractPreview';
 import { InputTypeSelector } from './InputTypeSelector';
 import { integrationMasterApi } from './api';
+import { CompileIntegrationStep } from './compile/CompileIntegrationStep';
 import { FinalActionBuilder } from './final-action/FinalActionBuilder';
 import { ForeachODataStepBuilder } from './foreach-odata-step/ForeachODataStepBuilder';
 import { MasterStepLayout } from './MasterStepLayout';
@@ -167,6 +168,8 @@ export function IntegrationMasterPage() {
       {savedDraft && hasSavedForeachStep ? <PayloadBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
 
       {savedDraft && hasSavedPayloadStep ? <FinalActionBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} /> : null}
+
+      {savedDraft?.final_action ? <CompileIntegrationStep draft={savedDraft} /> : null}
     </div>
   );
 }

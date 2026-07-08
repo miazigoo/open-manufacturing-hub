@@ -453,3 +453,69 @@ export interface FinalActionSaveResponse {
   final_action: FinalActionConfig;
   next_steps: string[];
 }
+
+export interface CompileIssue {
+  section: string;
+  field?: string | null;
+  message: string;
+}
+
+export interface CompileDraftValidationResponse {
+  valid: boolean;
+  errors: CompileIssue[];
+  warnings: CompileIssue[];
+}
+
+export interface CompilePreviewResponse extends CompileDraftValidationResponse {
+  will_create: Record<string, unknown>;
+  advanced: {
+    builder_json?: Record<string, unknown>;
+    workflow_steps?: unknown[];
+    flow_payload?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+}
+
+export interface CompileDraftRequest {
+  enabled: boolean;
+  create_saved_test_case: boolean;
+  comment?: string | null;
+}
+
+export interface CompileDraftResponse {
+  success: boolean;
+  integration_flow_id: string;
+  endpoint_id: string;
+  route_id: string;
+  saved_test_case_id?: string | null;
+  enabled: boolean;
+  endpoint: {
+    method: string;
+    url: string;
+  };
+  curl_example?: string | null;
+  onec_http_example?: string | null;
+  next_actions: string[];
+}
+
+export interface CompiledRunTestRequest {
+  dry_run: boolean;
+}
+
+export interface CompiledRunTestResponse {
+  success: boolean;
+  dry_run: boolean;
+  saved_test_case_id: string;
+  response: Record<string, unknown>;
+  event_id?: string | null;
+  timeline_url?: string | null;
+}
+
+export interface CompiledEnableResponse {
+  success: boolean;
+  integration_flow_id: string;
+  enabled: boolean;
+  endpoint_enabled: boolean;
+  route_enabled: boolean;
+  workflow_enabled: boolean;
+}

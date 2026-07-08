@@ -2,12 +2,20 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import service as audit_service
 from app.core.database import get_session
 from app.integration_master import service
 from app.integration_master.schemas import (
+    CompileDraftRequest,
+    CompileDraftResponse,
+    CompileDraftValidationResponse,
+    CompilePreviewResponse,
+    CompiledEnableResponse,
+    CompiledRunTestRequest,
+    CompiledRunTestResponse,
     FinalActionPreviewResponse,
     FinalActionRequest,
     FinalActionSaveRequest,
@@ -76,6 +84,101 @@ async def save_draft(request: InputDraftSaveRequest, session: AsyncSession = Dep
 @router.get("/drafts/{draft_id}", response_model=InputDraftRead)
 async def get_draft(draft_id: UUID, session: AsyncSession = Depends(get_session)):
     return await service.get_draft(session, draft_id)
+
+
+@router.post("/drafts/{draft_id}/validate-for-compile", response_model=CompileDraftValidationResponse)
+async def validate_for_compile(draft_id: UUID, session: AsyncSession = Depends(get_session)):
+    return await service.validate_draft_for_compile(session, draft_id)
+
+
+@router.post("/drafts/{draft_id}/compile-preview", response_model=CompilePreviewResponse)
+async def compile_preview(draft_id: UUID, session: AsyncSession = Depends(get_session)):
+    return await service.preview_compile_draft(session, draft_id)
+
+
+@router.post("/drafts/{draft_id}/compile", response_model=CompileDraftResponse)
+async def compile_draft(draft_id: UUID, payload: CompileDraftRequest, http_request: Request, session: AsyncSession = Depends(get_session)):
+    result = await service.compile_draft(session, draft_id, payload)
+    details = {
+        "draft_id": str(draft_id),
+        "flow_id": str(result.integration_flow_id),
+        "endpoint_id": str(result.endpoint_id),
+        "route_id": str(result.route_id),
+        "saved_test_case_id": str(result.saved_test_case_id) if result.saved_test_case_id else None,
+        "enabled": result.enabled,
+        "endpoint_url": result.endpoint.url,
+        "comment": payload.comment,
+    }
+    await audit_service.record_action(
+        session,
+        request=http_request,
+        action="integration_master.compiled",
+        category="integration_master",
+        object_type="integration_master_draft",
+        object_id=draft_id,
+        object_name=result.endpoint.url,
+        summary=f"Integration Master draft compiled into {result.endpoint.url}",
+        details=details,
+    )
+    await audit_service.record_action(
+        session,
+        request=http_request,
+        action="integration_flow.created_from_master",
+        category="integration_flows",
+        object_type="integration_flow",
+        object_id=result.integration_flow_id,
+        object_name=result.endpoint.url,
+        summary=f"Integration flow created from Integration Master draft {draft_id}",
+        details=details,
+    )
+    if result.saved_test_case_id:
+        await audit_service.record_action(
+            session,
+            request=http_request,
+            action="saved_test_case.created_from_master",
+            category="test_console",
+            object_type="saved_test_case",
+            object_id=result.saved_test_case_id,
+            object_name=result.endpoint.url,
+            summary=f"Saved test case created from Integration Master draft {draft_id}",
+            details=details,
+        )
+    await session.commit()
+    return result
+
+
+@router.post("/compiled/{integration_flow_id}/run-test", response_model=CompiledRunTestResponse)
+async def run_compiled_test(integration_flow_id: UUID, payload: CompiledRunTestRequest, http_request: Request, session: AsyncSession = Depends(get_session)):
+    result = await service.run_compiled_test(session, integration_flow_id, payload)
+    await audit_service.record_action(
+        session,
+        request=http_request,
+        action="integration_master.compiled_test_run",
+        category="integration_master",
+        object_type="integration_flow",
+        object_id=integration_flow_id,
+        summary=f"Compiled integration {integration_flow_id} test run completed",
+        details={"dry_run": payload.dry_run, "saved_test_case_id": str(result.saved_test_case_id), "success": result.success, "event_id": str(result.event_id) if result.event_id else None},
+    )
+    await session.commit()
+    return result
+
+
+@router.post("/compiled/{integration_flow_id}/enable", response_model=CompiledEnableResponse)
+async def enable_compiled(integration_flow_id: UUID, http_request: Request, session: AsyncSession = Depends(get_session)):
+    result = await service.enable_compiled_integration(session, integration_flow_id)
+    await audit_service.record_action(
+        session,
+        request=http_request,
+        action="integration_master.compiled_enabled",
+        category="integration_master",
+        object_type="integration_flow",
+        object_id=integration_flow_id,
+        summary=f"Compiled integration {integration_flow_id} enabled",
+        details=result.model_dump(mode="json"),
+    )
+    await session.commit()
+    return result
 
 
 @router.post("/odata-step/validate", response_model=ODataStepValidationResponse)

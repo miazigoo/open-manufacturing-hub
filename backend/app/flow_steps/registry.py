@@ -7,6 +7,7 @@ BUILDER_STEP_TYPES = {
     "raw_xml_forward": "Preserve inbound XML unchanged for raw forwarding scenarios",
     "resolve_object": "Resolve a canonical Customer/Product/Warehouse/etc. through Resolver Engine v2",
     "build_json": "Build target JSON from variables and constants",
+    "build_payload": "Build JSON/XML/raw payload and save it as a variable",
     "foreach": "Run a nested step for every item in an array and combine results",
     "build_xml_response": "Render XML response template from request/OData variables",
     "condition": "Fail or continue based on a simple condition",

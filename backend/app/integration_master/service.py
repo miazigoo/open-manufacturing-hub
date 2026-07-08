@@ -5,9 +5,18 @@ import json
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.connectors import repository as connector_repository
 from app.core.errors import BadRequestError, NotFoundError
+from app.flow_builder.validator import validate_builder
+from app.integration_bus import repository as bus_repository
+from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
+from app.integration_flows import repository as flow_repository
+from app.integration_flows import service as integration_flows_service
+from app.integration_flows.models import IntegrationFlow
+from app.integration_master.compiler import CompileIssue as CompilerIssue, compile_master_draft
 from app.odata_explorer import service as odata_explorer_service
 from app.odata_explorer.schemas import ODataQueryRequest
 from app.odata_connections import service as odata_connections_service
@@ -22,6 +31,14 @@ from app.integration_master.payload_renderer import PayloadRenderError, render_p
 from app.integration_master.parser import parse_input
 from app.integration_master.schemas import (
     BusinessKeySuggestion,
+    CompileDraftRequest,
+    CompileDraftResponse,
+    CompileDraftValidationResponse,
+    CompileIssue,
+    CompilePreviewResponse,
+    CompiledEnableResponse,
+    CompiledRunTestRequest,
+    CompiledRunTestResponse,
     FinalActionConfig,
     FinalActionPreviewResponse,
     FinalActionRequest,
@@ -55,6 +72,9 @@ from app.integration_master.schemas import (
     PayloadStepRequest,
     PayloadStepValidationResponse,
 )
+from app.test_console import service as test_console_service
+from app.test_console.models import SavedTestCase
+from app.workflows.models import Workflow
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9_-]{0,158}[a-z0-9])?$")
 SAVE_AS_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -136,6 +156,115 @@ async def get_draft(session: AsyncSession, draft_id: UUID) -> InputDraftRead:
     if draft is None:
         raise NotFoundError("Integration Master draft not found")
     return _draft_read(draft)
+
+
+async def validate_draft_for_compile(session: AsyncSession, draft_id: UUID) -> CompileDraftValidationResponse:
+    draft = await _draft_for_compile(session, draft_id)
+    errors, warnings = await _compile_issues(session, draft)
+    if not errors:
+        compiled = compile_master_draft(draft)
+        if not compiled.builder_json:
+            errors.append(CompilerIssue("builder_json", None, "Не удалось собрать builder_json. Проверьте шаги мастера."))
+        else:
+            validation = validate_builder(compiled.builder_json)
+            for item in validation.get("errors", []):
+                errors.append(CompilerIssue("builder_json", str(item.get("step_id") or ""), str(item.get("message") or item.get("code"))))
+            for item in validation.get("warnings", []):
+                warnings.append(CompilerIssue("builder_json", str(item.get("step_id") or ""), str(item.get("message") or item.get("code"))))
+    return CompileDraftValidationResponse(valid=not errors, errors=_issue_schema(errors), warnings=_issue_schema(warnings))
+
+
+async def preview_compile_draft(session: AsyncSession, draft_id: UUID) -> CompilePreviewResponse:
+    draft = await _draft_for_compile(session, draft_id)
+    validation = await validate_draft_for_compile(session, draft_id)
+    advanced: dict[str, Any] = {}
+    will_create: dict[str, Any] = {}
+    if validation.valid:
+        compiled = compile_master_draft(draft)
+        will_create = compiled.will_create
+        advanced = {
+            "builder_json": compiled.builder_json,
+            "workflow_steps": compiled.workflow_steps,
+            "flow_payload": compiled.flow_payload.model_dump(mode="json"),
+        }
+    return CompilePreviewResponse(valid=validation.valid, errors=validation.errors, warnings=validation.warnings, will_create=will_create, advanced=advanced)
+
+
+async def compile_draft(session: AsyncSession, draft_id: UUID, request: CompileDraftRequest) -> CompileDraftResponse:
+    draft = await _draft_for_compile(session, draft_id)
+    validation = await validate_draft_for_compile(session, draft_id)
+    if not validation.valid:
+        raise BadRequestError("; ".join(issue.message for issue in validation.errors))
+    await _ensure_slug_available(session, draft)
+    compiled = compile_master_draft(draft, enabled=request.enabled, create_saved_test_case=request.create_saved_test_case, comment=request.comment)
+    flow = await integration_flows_service.create_flow(session, compiled.flow_payload)
+    endpoint = await session.get(IntegrationEndpoint, flow.endpoint_id) if flow.endpoint_id else None
+    route = await session.get(IntegrationRoute, flow.route_id) if flow.route_id else None
+    if endpoint is None or route is None:
+        raise BadRequestError("Compiled integration was created without endpoint or route. Transaction rolled back.")
+    test_case = await _test_case_for_flow(session, flow)
+    if test_case is not None and not request.create_saved_test_case:
+        await session.delete(test_case)
+        test_case = None
+        await session.flush()
+    return CompileDraftResponse(
+        success=True,
+        integration_flow_id=flow.id,
+        endpoint_id=endpoint.id,
+        route_id=route.id,
+        saved_test_case_id=test_case.id if test_case else None,
+        enabled=flow.enabled,
+        endpoint={"method": "POST", "url": endpoint_url(flow.slug)},
+        curl_example=integration_flows_service.curl_example(flow.slug, endpoint.input_mode, flow.test_payload_text or flow.test_payload_json),
+        onec_http_example=integration_flows_service.onec_http_example(flow.slug, endpoint.input_mode),
+        next_actions=[
+            "Отправьте тестовый запрос из сохраненного test case.",
+            "Откройте Timeline и проверьте шаги OData, payload и final action.",
+            "Если все работает, включите интеграцию.",
+        ],
+    )
+
+
+async def run_compiled_test(session: AsyncSession, integration_flow_id: UUID, request: CompiledRunTestRequest) -> CompiledRunTestResponse:
+    flow = await integration_flows_service.get_flow_or_404(session, integration_flow_id)
+    test_case = await _test_case_for_flow(session, flow)
+    if test_case is None:
+        raise NotFoundError("Saved test case for compiled integration not found")
+    result = await test_console_service.run_test_case(session, test_case.id, dry_run=request.dry_run)
+    event_id = result.get("event_id")
+    return CompiledRunTestResponse(
+        success=bool(result.get("success")),
+        dry_run=bool(result.get("dry_run")),
+        saved_test_case_id=test_case.id,
+        response=result,
+        event_id=event_id,
+        timeline_url=result.get("timeline_url") or (f"/events/{event_id}" if event_id else None),
+    )
+
+
+async def enable_compiled_integration(session: AsyncSession, integration_flow_id: UUID) -> CompiledEnableResponse:
+    flow = await integration_flows_service.get_flow_or_404(session, integration_flow_id)
+    flow.enabled = True
+    endpoint_enabled = False
+    route_enabled = False
+    workflow_enabled = False
+    if flow.endpoint_id:
+        endpoint = await session.get(IntegrationEndpoint, flow.endpoint_id)
+        if endpoint:
+            endpoint.enabled = True
+            endpoint_enabled = True
+    if flow.route_id:
+        route = await session.get(IntegrationRoute, flow.route_id)
+        if route:
+            route.enabled = True
+            route_enabled = True
+    if flow.workflow_id:
+        workflow = await session.get(Workflow, flow.workflow_id)
+        if workflow:
+            workflow.enabled = True
+            workflow_enabled = True
+    await session.flush()
+    return CompiledEnableResponse(success=True, integration_flow_id=flow.id, enabled=flow.enabled, endpoint_enabled=endpoint_enabled, route_enabled=route_enabled, workflow_enabled=workflow_enabled)
 
 
 def validate_odata_step(request: ODataStepRequest) -> ODataStepValidationResponse:
@@ -720,6 +849,239 @@ async def save_final_action(session: AsyncSession, draft_id: UUID, final_action:
     draft.final_action_json = saved.model_dump(mode="json")
     await session.flush()
     return _draft_read(draft), saved
+
+
+async def _draft_for_compile(session: AsyncSession, draft_id: UUID) -> InputDraftRead:
+    draft = await get_draft(session, draft_id)
+    enriched_steps: list[ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig | PayloadStepConfig] = []
+    for step in draft.odata_steps:
+        if isinstance(step, (ODataStepConfig, ODataObjectStepConfig, ForeachODataStepConfig)) and step.connection_id and not step.connection_name:
+            try:
+                connection = await odata_connections_service.get_connection(session, step.connection_id)
+                enriched_steps.append(step.model_copy(update={"connection_name": connection.name}))
+                continue
+            except NotFoundError:
+                pass
+        enriched_steps.append(step)
+    return draft.model_copy(update={"odata_steps": enriched_steps})
+
+
+async def _compile_issues(session: AsyncSession, draft: InputDraftRead) -> tuple[list[CompilerIssue], list[CompilerIssue]]:
+    errors: list[CompilerIssue] = []
+    warnings: list[CompilerIssue] = []
+    contract = draft.contract
+    field_paths = {field.path for field in contract.fields}
+    if not contract.name.strip():
+        errors.append(CompilerIssue("input_contract", "name", "Укажите название интеграции."))
+    if not contract.slug.strip():
+        errors.append(CompilerIssue("input_contract", "slug", "Укажите endpoint slug."))
+    else:
+        try:
+            validate_slug(contract.slug)
+        except BadRequestError as exc:
+            errors.append(CompilerIssue("input_contract", "slug", str(exc)))
+    if contract.input_mode not in {"json", "xml", "raw_text"}:
+        errors.append(CompilerIssue("input_contract", "input_mode", "Поддерживаются только JSON, XML и raw text."))
+    if contract.sample in (None, "", {}, []):
+        errors.append(CompilerIssue("input_contract", "sample", "Input Contract должен содержать sample request."))
+    if contract.operation_key.type == "field":
+        if not contract.operation_key.field_path:
+            errors.append(CompilerIssue("input_contract", "operation_key", "Operation key настроен как field, но путь не указан."))
+        elif contract.operation_key.field_path not in field_paths:
+            errors.append(CompilerIssue("input_contract", "operation_key", f"Operation key path не найден в Input Contract: {contract.operation_key.field_path}"))
+        if contract.operation_key.value in (None, ""):
+            errors.append(CompilerIssue("input_contract", "operation_key", "Operation key value пустой."))
+    if contract.business_key.path and contract.business_key.path not in field_paths:
+        fallback_known = any(path in field_paths for path in contract.business_key.fallback_paths)
+        if not fallback_known:
+            errors.append(CompilerIssue("input_contract", "business_key", f"Business key path не найден в Input Contract: {contract.business_key.path}"))
+    elif not contract.business_key.path:
+        warnings.append(CompilerIssue("input_contract", "business_key", "Business key не выбран. Timeline будет сложнее искать оператору."))
+
+    variables = _initial_compile_variables(draft)
+    seen_variables = set(variables)
+    payload_step_seen = False
+    for step in draft.odata_steps:
+        if isinstance(step, ODataStepConfig):
+            await _validate_compile_odata_step(session, step, "odata_query", errors)
+            _check_save_as(step.save_as, "odata_query", seen_variables, errors)
+            variables[step.save_as] = _sample_object(step.select)
+            seen_variables.add(step.save_as)
+        elif isinstance(step, ODataObjectStepConfig):
+            await _validate_compile_odata_object_step(session, step, variables, errors)
+            _check_save_as(step.save_as, "odata_object_query", seen_variables, errors)
+            variables[step.save_as] = [_sample_object(step.select)]
+            seen_variables.add(step.save_as)
+        elif isinstance(step, ForeachODataStepConfig):
+            await _validate_compile_foreach_step(session, step, variables, errors, warnings)
+            _check_save_as(step.save_as, "foreach_odata", seen_variables, errors)
+            variables[step.save_as] = [_sample_object(step.select)]
+            seen_variables.add(step.save_as)
+        elif isinstance(step, PayloadStepConfig):
+            payload_step_seen = True
+            _validate_compile_payload_step(step, variables, errors, warnings)
+            _check_save_as(step.save_as, "payload", seen_variables, errors)
+            variables[step.save_as] = {} if step.body_type == "json" else ""
+            seen_variables.add(step.save_as)
+
+    if draft.final_action is None:
+        errors.append(CompilerIssue("final_action", None, "Сохраните финальное действие перед созданием интеграции."))
+    else:
+        if draft.final_action.body_source == "target_payload" and "target_payload" not in variables:
+            errors.append(CompilerIssue("final_action", "body_source", "Финальное действие использует target_payload, но payload step его не создал."))
+        validation = validate_final_action_config(draft.final_action, variables)
+        for message in validation.errors:
+            errors.append(CompilerIssue("final_action", validation.error_code, message))
+        for message in validation.warnings:
+            warnings.append(CompilerIssue("final_action", validation.error_code, message))
+    if not payload_step_seen:
+        warnings.append(CompilerIssue("payload", None, "Payload step не найден. Это допустимо только для сценариев без target_payload."))
+    return errors, warnings
+
+
+async def _validate_compile_odata_step(session: AsyncSession, step: ODataStepConfig, section: str, errors: list[CompilerIssue]) -> None:
+    await _check_compile_connection(session, step, section, errors)
+    if not step.resource.strip():
+        errors.append(CompilerIssue(section, "resource", "Укажите OData resource."))
+    _check_top(section, step.top, errors)
+    if not step.save_as.strip():
+        errors.append(CompilerIssue(section, "save_as", "Укажите имя переменной результата."))
+
+
+async def _validate_compile_odata_object_step(session: AsyncSession, step: ODataObjectStepConfig, variables: dict[str, Any], errors: list[CompilerIssue]) -> None:
+    section = "odata_object_query"
+    await _check_compile_connection(session, step, section, errors)
+    if not step.object_variable.strip() or step.object_variable.strip() not in variables:
+        errors.append(CompilerIssue(section, "object_variable", f"Переменная {step.object_variable or '<empty>'} не найдена. Сначала сохраните OData step, который создаёт объект."))
+    if not step.base_resource.strip():
+        errors.append(CompilerIssue(section, "base_resource", "Укажите базовый resource документа 1C."))
+    if not step.nested_resource.strip():
+        errors.append(CompilerIssue(section, "nested_resource", "Укажите табличную часть документа 1C."))
+    _check_top(section, step.top, errors)
+
+
+async def _validate_compile_foreach_step(session: AsyncSession, step: ForeachODataStepConfig, variables: dict[str, Any], errors: list[CompilerIssue], warnings: list[CompilerIssue]) -> None:
+    section = "foreach_odata"
+    await _check_compile_connection(session, step, section, errors)
+    if not step.items.strip() or step.items.strip() not in variables:
+        errors.append(CompilerIssue(section, "items", f"Массив {step.items or '<empty>'} не найден. Сначала сохраните шаг, который создаёт массив."))
+    elif not isinstance(variables.get(step.items.strip()), list):
+        errors.append(CompilerIssue(section, "items", f"Переменная {step.items} должна быть массивом."))
+    if not step.resource.strip():
+        errors.append(CompilerIssue(section, "resource", "Укажите OData resource для вложенного запроса."))
+    if not (step.filter or "").strip():
+        errors.append(CompilerIssue(section, "filter", "Укажите $filter для foreach OData."))
+    _check_top(section, step.top, errors)
+    if step.top == 500 and step.paginate:
+        warnings.append(CompilerIssue(section, "top", "$top = 500. Для больших результатов включена пагинация."))
+
+
+def _validate_compile_payload_step(step: PayloadStepConfig, variables: dict[str, Any], errors: list[CompilerIssue], warnings: list[CompilerIssue]) -> None:
+    section = "payload"
+    if not step.save_as.strip():
+        errors.append(CompilerIssue(section, "save_as", "Укажите имя payload-переменной."))
+    if step.body_type not in {"json", "xml", "raw_text"}:
+        errors.append(CompilerIssue(section, "body_type", "Выберите формат payload: JSON, XML или raw text."))
+    if step.body_type == "json" and step.json_mode == "table" and not step.fields and not step.dynamic_entries:
+        errors.append(CompilerIssue(section, "fields", "Добавьте хотя бы одно JSON поле или dynamic entry."))
+    if step.body_type == "json" and step.json_mode == "raw_template" and step.template in (None, ""):
+        errors.append(CompilerIssue(section, "template", "Укажите raw JSON template."))
+    if step.body_type in {"xml", "raw_text"} and step.template in (None, ""):
+        errors.append(CompilerIssue(section, "template", "Укажите template для XML/raw payload."))
+    unknown_roots = sorted(_unknown_placeholder_roots(step, variables))
+    for root in unknown_roots:
+        warnings.append(CompilerIssue(section, "template", f"Payload template ссылается на {root}, но в compile preview нет sample-значения. Проверьте Dry Run после создания."))
+
+
+async def _check_compile_connection(session: AsyncSession, step: Any, section: str, errors: list[CompilerIssue]) -> None:
+    if not getattr(step, "connection_id", None):
+        connection_name = str(getattr(step, "connection_name", "") or "").strip()
+        if connection_name and await connector_repository.get_by_name(session, connection_name):
+            return
+        errors.append(CompilerIssue(section, "connection_id", "Выберите OData-подключение."))
+        return
+    try:
+        await odata_connections_service.get_connection(session, step.connection_id)
+    except NotFoundError:
+        errors.append(CompilerIssue(section, "connection_id", f"OData-подключение не найдено: {step.connection_id}"))
+
+
+def _check_top(section: str, top: int | None, errors: list[CompilerIssue]) -> None:
+    if top is None or top < 1 or top > 500:
+        errors.append(CompilerIssue(section, "top", "$top должен быть от 1 до 500."))
+
+
+def _check_save_as(save_as: str, section: str, seen_variables: set[str], errors: list[CompilerIssue]) -> None:
+    value = save_as.strip()
+    if not value:
+        errors.append(CompilerIssue(section, "save_as", "Укажите имя переменной результата."))
+    elif not SAVE_AS_PATTERN.fullmatch(value):
+        errors.append(CompilerIssue(section, "save_as", "Имя переменной save_as должно содержать латиницу, цифры и underscore, и не начинаться с цифры."))
+    elif value in seen_variables:
+        errors.append(CompilerIssue(section, "save_as", f"Переменная {value} уже существует. Выберите другое имя."))
+
+
+def _initial_compile_variables(draft: InputDraftRead) -> dict[str, Any]:
+    sample = draft.contract.sample
+    if draft.input_mode == "json":
+        body = sample if isinstance(sample, dict) else {}
+        request = {"body": body}
+    elif draft.input_mode == "xml":
+        request = {"body": {}, "xml": str(sample or "")}
+    else:
+        request = {"body": {}, "raw_text": str(sample or "")}
+    return {
+        "request": request,
+        "context": {"run_id": "preview-run", "event_id": "preview-event", "queue_item_id": "preview-queue"},
+    }
+
+
+def _sample_object(select_fields: list[str]) -> dict[str, Any]:
+    fields = select_fields or ["Ref_Key", "Description"]
+    sample: dict[str, Any] = {}
+    for field in fields:
+        if field.endswith("_Key") or field == "Ref_Key" or "Основание" in field:
+            sample[field] = "00000000-0000-0000-0000-000000000000"
+        elif "Количество" in field:
+            sample[field] = 1
+        else:
+            sample[field] = f"sample_{field}"
+    return sample
+
+
+def _unknown_placeholder_roots(step: PayloadStepConfig, variables: dict[str, Any]) -> set[str]:
+    roots: set[str] = set()
+    payload = step.model_dump(mode="json")
+    text = json.dumps(payload, ensure_ascii=False)
+    for match in PLACEHOLDER_RE.finditer(text):
+        expression = match.group(1).strip()
+        root = re.split(r"[.\\[]", expression, maxsplit=1)[0]
+        if root and root not in variables and root not in {"variables", "steps"}:
+            roots.add(root)
+    return roots
+
+
+async def _ensure_slug_available(session: AsyncSession, draft: InputDraftRead) -> None:
+    endpoint_name = f"Flow {draft.name} Endpoint"
+    flow_name = draft.name
+    if await bus_repository.get_endpoint_by_slug(session, draft.slug) or await bus_repository.get_endpoint_by_name(session, endpoint_name):
+        raise BadRequestError(f"Endpoint {endpoint_url(draft.slug)} уже существует. Выберите другой slug.")
+    if await flow_repository.get_by_slug(session, draft.slug):
+        raise BadRequestError(f"Integration Flow со slug {draft.slug} уже существует. Выберите другой slug.")
+    existing_flow_by_name = await session.execute(select(IntegrationFlow).where(IntegrationFlow.name == flow_name))
+    if existing_flow_by_name.scalar_one_or_none() is not None:
+        raise BadRequestError(f"Integration Flow с названием {flow_name} уже существует. Измените название или slug.")
+
+
+async def _test_case_for_flow(session: AsyncSession, flow: IntegrationFlow) -> SavedTestCase | None:
+    if not flow.endpoint_id:
+        return None
+    result = await session.execute(select(SavedTestCase).where(SavedTestCase.endpoint_id == flow.endpoint_id).order_by(SavedTestCase.updated_at.desc()))
+    return result.scalars().first()
+
+
+def _issue_schema(issues: list[CompilerIssue]) -> list[CompileIssue]:
+    return [CompileIssue(section=issue.section, field=issue.field, message=issue.message) for issue in issues]
 
 
 def endpoint_url(slug: str) -> str:

@@ -135,6 +135,11 @@ POST /api/integration-master/final-action/preview
 POST /api/integration-master/final-action/test
 POST /api/integration-master/final-action/validate
 POST /api/integration-master/drafts/{draft_id}/final-action
+POST /api/integration-master/drafts/{draft_id}/validate-for-compile
+POST /api/integration-master/drafts/{draft_id}/compile-preview
+POST /api/integration-master/drafts/{draft_id}/compile
+POST /api/integration-master/compiled/{integration_flow_id}/run-test
+POST /api/integration-master/compiled/{integration_flow_id}/enable
 \`\`\`
 
 ## Input Contract
@@ -298,6 +303,33 @@ return_to_caller: fixed_success {"ok": true}
 \`Preview final action\` не вызывает network. \`Test final action\` по умолчанию dry-run; real test должен подтверждаться в UI.
 
 Private/localhost URL разрешены, но validation вернет warning. Form body, production publish, queue/retry/DLQ и Timeline runtime остаются следующими этапами.
+
+## Step 5A: compile draft into real integration
+
+После сохранения \`final_action\` мастер может создать реальные OMH objects:
+
+\`\`\`text
+IntegrationEndpoint
+IntegrationRoute
+IntegrationFlow
+Workflow
+SavedTestCase
+\`\`\`
+
+Порядок: \`validate-for-compile\`, \`compile-preview\`, затем \`compile\`.
+
+Default compile request создаёт интеграцию выключенной:
+
+\`\`\`json
+{
+  "enabled": false,
+  "create_saved_test_case": true
+}
+\`\`\`
+
+Duplicate slug не перезаписывается. Backend вернет: \`Endpoint /api/bus/in/{slug} уже существует. Выберите другой slug.\`
+
+После создания запустите saved test case, проверьте Timeline и только потом включите интеграцию через \`POST /api/integration-master/compiled/{integration_flow_id}/enable\`.
 
 ## Parser rules
 

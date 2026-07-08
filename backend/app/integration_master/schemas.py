@@ -511,3 +511,66 @@ class FinalActionSaveResponse(BaseModel):
 class InputDraftSaveResponse(BaseModel):
     draft: InputDraftRead
     next_steps: list[str]
+
+
+class CompileIssue(BaseModel):
+    section: str
+    field: str | None = None
+    message: str
+
+
+class CompileDraftValidationResponse(BaseModel):
+    valid: bool
+    errors: list[CompileIssue] = Field(default_factory=list)
+    warnings: list[CompileIssue] = Field(default_factory=list)
+
+
+class CompilePreviewResponse(CompileDraftValidationResponse):
+    will_create: dict[str, Any] = Field(default_factory=dict)
+    advanced: dict[str, Any] = Field(default_factory=dict)
+
+
+class CompileDraftRequest(BaseModel):
+    enabled: bool = False
+    create_saved_test_case: bool = True
+    comment: str | None = None
+
+
+class CompiledEndpointInfo(BaseModel):
+    method: str = "POST"
+    url: str
+
+
+class CompileDraftResponse(BaseModel):
+    success: bool
+    integration_flow_id: UUID
+    endpoint_id: UUID
+    route_id: UUID
+    saved_test_case_id: UUID | None = None
+    enabled: bool
+    endpoint: CompiledEndpointInfo
+    curl_example: str | None = None
+    onec_http_example: str | None = None
+    next_actions: list[str] = Field(default_factory=list)
+
+
+class CompiledRunTestRequest(BaseModel):
+    dry_run: bool = True
+
+
+class CompiledRunTestResponse(BaseModel):
+    success: bool
+    dry_run: bool
+    saved_test_case_id: UUID
+    response: dict[str, Any] = Field(default_factory=dict)
+    event_id: UUID | None = None
+    timeline_url: str | None = None
+
+
+class CompiledEnableResponse(BaseModel):
+    success: bool
+    integration_flow_id: UUID
+    enabled: bool
+    endpoint_enabled: bool
+    route_enabled: bool
+    workflow_enabled: bool

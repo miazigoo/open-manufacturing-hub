@@ -1288,3 +1288,141 @@ async def test_save_final_action_to_master_draft(client):
     loaded = await client.get(f"/api/integration-master/drafts/{draft_id}")
     assert loaded.status_code == 200, loaded.text
     assert loaded.json()["final_action"]["body_source"] == "target_payload"
+
+
+async def _create_complete_master_draft(client, *, slug="dnp_sinc_pull_codes", final_action=None):
+    contract, parse_result = await _create_master_contract(client)
+    contract = {**contract, "slug": slug, "name": f"{contract['name']} {slug}"}
+    connector = await _create_mock_odata_connector(client)
+    saved = await client.post("/api/integration-master/input/save-draft", json={"contract": contract, "parse_result": parse_result})
+    assert saved.status_code == 200, saved.text
+    draft_id = saved.json()["draft"]["id"]
+
+    order = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-steps",
+        json={"input_contract": contract, "odata_step": _order_step(connector["id"])},
+    )
+    assert order.status_code == 200, order.text
+
+    products = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/odata-object-steps",
+        json={"input_contract": contract, "previous_variables": _previous_variables(), "odata_object_step": _object_step(connector["id"])},
+    )
+    assert products.status_code == 200, products.text
+
+    codes = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/foreach-odata-steps",
+        json={"input_contract": contract, "previous_variables": _previous_variables_with_products(), "foreach_step": _foreach_step(connector["id"])},
+    )
+    assert codes.status_code == 200, codes.text
+
+    payload = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/payload-steps",
+        json={"input_contract": contract, "previous_variables": _payload_variables(), "payload_step": _payload_step()},
+    )
+    assert payload.status_code == 200, payload.text
+
+    final = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/final-action",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": final_action or _final_endpoint_action(url="http://172.16.3.10/api/v2/integrations/omh/chz/codes/import")},
+    )
+    assert final.status_code == 200, final.text
+    return final.json()["draft"], contract, parse_result
+
+
+async def test_compile_validation_complete_dnp_draft_success(client):
+    draft, _, _ = await _create_complete_master_draft(client, slug="dnp_compile_validate")
+
+    response = await client.post(f"/api/integration-master/drafts/{draft['id']}/validate-for-compile")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert body["errors"] == []
+
+
+async def test_compile_validation_missing_final_action_fails(client):
+    contract, parse_result = await _create_master_contract(client)
+    contract = {**contract, "slug": "dnp_compile_missing_final", "name": "DnP missing final"}
+    saved = await client.post("/api/integration-master/input/save-draft", json={"contract": contract, "parse_result": parse_result})
+    assert saved.status_code == 200, saved.text
+
+    response = await client.post(f"/api/integration-master/drafts/{saved.json()['draft']['id']}/validate-for-compile")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is False
+    assert any(item["section"] == "final_action" for item in body["errors"])
+
+
+async def test_compile_preview_returns_objects_and_builder_json(client):
+    draft, _, _ = await _create_complete_master_draft(client, slug="dnp_compile_preview")
+
+    response = await client.post(f"/api/integration-master/drafts/{draft['id']}/compile-preview")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert body["will_create"]["integration_endpoint"]["url"] == "/api/bus/in/dnp_compile_preview"
+    assert body["will_create"]["integration_flow"]["steps_count"] >= 5
+    step_types = [step["type"] for step in body["advanced"]["builder_json"]["steps"]]
+    assert "build_payload" in step_types
+    assert "call_endpoint" in step_types
+    assert body["advanced"]["builder_json"]["source"]["master_steps"][1]["type"] == "odata_object_query"
+
+
+async def test_compile_creates_disabled_flow_endpoint_route_test_case_and_audit(client):
+    draft, _, _ = await _create_complete_master_draft(client, slug="dnp_compile_create")
+
+    response = await client.post(
+        f"/api/integration-master/drafts/{draft['id']}/compile",
+        json={"enabled": False, "create_saved_test_case": True, "comment": "pytest compile"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["enabled"] is False
+    assert body["endpoint"] == {"method": "POST", "url": "/api/bus/in/dnp_compile_create"}
+    assert body["endpoint_id"]
+    assert body["route_id"]
+    assert body["integration_flow_id"]
+    assert body["saved_test_case_id"]
+
+    flow = await client.get(f"/api/integration-flows/{body['integration_flow_id']}")
+    assert flow.status_code == 200, flow.text
+    flow_body = flow.json()
+    assert flow_body["enabled"] is False
+    assert flow_body["builder_json"]["steps"][3]["type"] == "build_payload"
+    assert flow_body["last_validation_json"]["valid"] is True
+
+    test_case = await client.get(f"/api/test-cases/{body['saved_test_case_id']}")
+    assert test_case.status_code == 200, test_case.text
+    assert test_case.json()["body_json"]["sinc"] == "dnp_sinc_pull_codes"
+
+    dry_run = await client.post(f"/api/integration-master/compiled/{body['integration_flow_id']}/run-test", json={"dry_run": True})
+    assert dry_run.status_code == 200, dry_run.text
+    assert dry_run.json()["success"] is True
+    assert dry_run.json()["dry_run"] is True
+
+    enabled = await client.post(f"/api/integration-master/compiled/{body['integration_flow_id']}/enable")
+    assert enabled.status_code == 200, enabled.text
+    assert enabled.json()["enabled"] is True
+    assert enabled.json()["endpoint_enabled"] is True
+    assert enabled.json()["route_enabled"] is True
+
+    audit = await client.get("/api/audit", params={"action": "integration_master.compiled", "object_id": draft["id"]})
+    assert audit.status_code == 200, audit.text
+    assert audit.json()["total"] >= 1
+
+
+async def test_compile_duplicate_slug_conflict_is_transactional(client):
+    draft, _, _ = await _create_complete_master_draft(client, slug="dnp_compile_duplicate")
+    first = await client.post(f"/api/integration-master/drafts/{draft['id']}/compile", json={"enabled": False, "create_saved_test_case": True})
+    assert first.status_code == 200, first.text
+    before = await client.get("/api/integration-flows")
+    assert before.status_code == 200, before.text
+    before_count = len(before.json())
+
+    duplicate = await client.post(f"/api/integration-master/drafts/{draft['id']}/compile", json={"enabled": False, "create_saved_test_case": True})
+    assert duplicate.status_code == 400, duplicate.text
+    assert "/api/bus/in/dnp_compile_duplicate" in duplicate.text
+    after = await client.get("/api/integration-flows")
+    assert after.status_code == 200, after.text
+    assert len(after.json()) == before_count

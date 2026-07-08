@@ -9,6 +9,8 @@ from app.connectors.manager import ConnectorManager
 from app.core.enums import ArtifactType
 from app.execution.context import PipelineContext
 from app.execution.result import ArtifactCreate, StepResult
+from app.integration_master.payload_renderer import PayloadRenderError, render_payload_step
+from app.integration_master.schemas import PayloadStepConfig
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
 from app.packages_training.mock_dnp import submit_marking_pool
 from app.packages_training.mock_odata import query_mock_odata
@@ -214,6 +216,34 @@ class FlowBuildJsonStep:
         return StepResult.success(
             "JSON payload built",
             artifacts=[ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "json_builder_template.json", {"template": config.get("template"), "fields": config.get("fields")}), ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "json_builder_result.json", result)],
+            variables_update=variables,
+        )
+
+
+class FlowBuildPayloadStep:
+    name = "flow_build_payload"
+    display_name = "Build Payload"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        try:
+            payload_config = PayloadStepConfig(**{key: value for key, value in config.items() if key not in {"step_id", "step_type", "display_name"}})
+            result = render_payload_step(payload_config, _scope(context))
+        except PayloadRenderError as exc:
+            return _failed(exc.code, exc.message, config, "Check Payload Builder mappings and available variables.")
+        except Exception as exc:
+            return _failed("PAYLOAD_BUILD_FAILED", str(exc), config, "Check Payload Builder configuration.")
+
+        save_as = str(config.get("save_as") or "target_payload")
+        variables = _variables_with_step(context, config["step_id"], result.rendered_body)
+        variables[save_as] = result.rendered_body
+        variables["mapped_payload"] = result.rendered_body
+        return StepResult.success(
+            "Payload built",
+            artifacts=[
+                ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "payload_builder_config.json", {"body_type": config.get("body_type"), "json_mode": config.get("json_mode"), "save_as": save_as}),
+                ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "payload_builder_result.json", {"body": result.rendered_body, "size_bytes": result.size_bytes, "warnings": result.warnings}),
+            ],
             variables_update=variables,
         )
 

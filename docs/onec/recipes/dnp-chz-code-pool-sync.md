@@ -150,3 +150,25 @@ POST /api/bus/in/dnp_sinc_pull_codes
 - `target_payload.json`
 - `outgoing_request.json`
 - `return_response.json`
+
+## Step 5A. Создать реальную интеграцию
+
+После сохранения `final_action` откройте блок `Шаг 5 — Создание интеграции`.
+
+Порядок:
+
+1. `Проверить перед созданием`.
+2. `Показать preview`.
+3. Оставить `Включить сразу` выключенным.
+4. `Создать интеграцию`.
+5. Запустить saved test case.
+6. Открыть Timeline и проверить artifacts.
+7. Если всё корректно, нажать `Включить интеграцию`.
+
+Созданный endpoint:
+
+```text
+POST /api/bus/in/dnp_sinc_pull_codes
+```
+
+Интеграция создаётся disabled by default, чтобы случайный production-запрос не ушёл в DnP до проверки.

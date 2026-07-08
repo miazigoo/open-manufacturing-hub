@@ -534,3 +534,55 @@ Do not add here:
 - Timeline and full dry-run execution.
 - production queue execution, retry or DLQ.
 - generated production endpoint publish.
+
+## Step 5A: Compile Draft Into Real Integration
+
+After `final_action` is saved, `/master` shows `Шаг 5 — Создание интеграции`.
+
+New endpoints:
+
+```text
+POST /api/integration-master/drafts/{draft_id}/validate-for-compile
+POST /api/integration-master/drafts/{draft_id}/compile-preview
+POST /api/integration-master/drafts/{draft_id}/compile
+POST /api/integration-master/compiled/{integration_flow_id}/run-test
+POST /api/integration-master/compiled/{integration_flow_id}/enable
+```
+
+`validate-for-compile` checks Input Contract, OData dependencies, Payload Builder, Final Action and generated `builder_json`.
+
+`compile-preview` does not write to the database. It returns `will_create` and `advanced.builder_json`.
+
+`compile` creates real OMH objects transactionally:
+
+```text
+IntegrationEndpoint
+IntegrationRoute
+IntegrationFlow
+Workflow
+SavedTestCase
+Audit events
+```
+
+The created integration is disabled by default:
+
+```json
+{
+  "enabled": false,
+  "create_saved_test_case": true
+}
+```
+
+Duplicate slug is blocked. The compiler does not silently overwrite existing endpoints:
+
+```text
+Endpoint /api/bus/in/{slug} уже существует. Выберите другой slug.
+```
+
+After creation, run the saved test case, inspect Timeline artifacts, then call:
+
+```text
+POST /api/integration-master/compiled/{integration_flow_id}/enable
+```
+
+This enables the flow, endpoint, route and workflow.
