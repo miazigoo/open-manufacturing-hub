@@ -55,9 +55,13 @@ function buildSummary(draft: InputDraftRead) {
     else if (step.type === 'foreach_odata') items.push(`По массиву ${step.items} выполняет OData lookup и сохраняет ${step.save_as}.`);
     else if (step.type === 'build_payload') items.push(`Собирает ${step.body_type} payload в ${step.save_as}.`);
   }
-  if (draft.final_action?.type === 'send_endpoint') items.push('Отправляет результат во внешний endpoint и возвращает ответ caller-у.');
+  if (draft.final_action?.type === 'send_endpoint') {
+    const response = draft.final_action.return_to_caller;
+    const body = response.type === 'fixed_success' ? JSON.stringify(response.body || { ok: true }) : response.type;
+    items.push(`Отправляет результат во внешний endpoint и возвращает вызывающей системе HTTP ${response.status_code || 200} ${body}.`);
+  }
   else if (draft.final_action?.type === 'send_and_return_response') items.push('Отправляет результат во внешний endpoint и проксирует response caller-у.');
-  else if (draft.final_action?.type === 'return_response') items.push('Возвращает собранный payload вызывающей системе.');
+  else if (draft.final_action?.type === 'return_response') items.push('Возвращает собранный target_payload вызывающей системе, без отправки во внешний endpoint.');
   else if (draft.final_action?.type === 'accepted_event') items.push('Возвращает async accepted response с event_id.');
   return items;
 }

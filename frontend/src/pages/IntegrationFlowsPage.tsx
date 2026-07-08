@@ -181,14 +181,82 @@ function publicEndpointFromCurl(flow: IntegrationFlow) {
   return match?.[1] ?? flow.endpoint_url;
 }
 
+function jsonInline(value: unknown) {
+  if (value === undefined) return '';
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function finalActionFromBuilder(builder: Record<string, unknown> | null) {
+  const value = builder?.final_action;
+  return value && typeof value === 'object' ? value as Record<string, unknown> : null;
+}
+
+function callerResponseForAction(action: Record<string, unknown> | null) {
+  if (!action) return null;
+  const type = String(action.type ?? '');
+  const returnConfig = action.return_to_caller && typeof action.return_to_caller === 'object' ? action.return_to_caller as Record<string, unknown> : {};
+  const returnType = type === 'send_and_return_response' ? 'proxy_response' : String(returnConfig.type ?? 'fixed_success');
+  const statusCode = Number(returnConfig.status_code ?? (returnType === 'accepted_event' ? 202 : 200));
+  if (type === 'return_response') {
+    const bodySource = String(action.body_source ?? 'target_payload');
+    if (bodySource === 'target_payload') return { label: `HTTP ${statusCode}`, body: '{{target_payload}}', detail: 'OMH вернёт собранный результат предыдущих шагов в ответ на входящий POST.' };
+    if (bodySource === 'custom') return { label: `HTTP ${statusCode}`, body: jsonInline(action.custom_body ?? ''), detail: 'OMH вернёт настроенное custom body в ответ на входящий POST.' };
+    return { label: `HTTP ${statusCode}`, body: 'без тела ответа', detail: 'OMH завершит запрос без response body.' };
+  }
+  if (returnType === 'proxy_response') return { label: 'Proxy response', body: '{{response.body}}', detail: 'OMH вернёт вызывающей системе ответ внешнего endpoint.' };
+  if (returnType === 'accepted_event') return { label: `HTTP ${statusCode}`, body: '{"accepted":true,"event_id":"{{context.event_id}}"}', detail: 'OMH вернёт быстрый async accepted response.' };
+  if (returnType === 'custom_json' || returnType === 'custom_xml' || returnType === 'custom_raw') return { label: `HTTP ${statusCode}`, body: jsonInline(returnConfig.body ?? ''), detail: 'OMH вернёт настроенное custom body вызывающей системе.' };
+  return { label: `HTTP ${statusCode}`, body: jsonInline(returnConfig.body ?? { ok: true }) || '{"ok":true}', detail: 'OMH вернёт короткое подтверждение вызывающей системе после выполнения финального действия.' };
+}
+
 function finalActionSummary(flow: IntegrationFlow) {
   const builder = flow.builder_json;
+  const finalAction = finalActionFromBuilder(builder);
+  const callerResponse = callerResponseForAction(finalAction);
+  if (finalAction) {
+    const type = String(finalAction.type ?? '');
+    const method = String(finalAction.method ?? 'POST');
+    const url = String(finalAction.url ?? '');
+    if (type === 'send_endpoint' || type === 'send_and_return_response') {
+      return {
+        title: type === 'send_and_return_response' ? 'Отправить результат и вернуть ответ endpoint' : 'Отправить результат во внешнюю систему',
+        line: url ? `${method} ${url}` : 'URL внешней системы не задан',
+        detail: url ? 'После выполнения OData-шагов flow отправит собранный результат на этот внешний URL.' : 'Flow настроен на отправку наружу, но URL не сохранён.',
+        callerResponse,
+        missingTarget: !url,
+      };
+    }
+    if (type === 'return_response') {
+      return {
+        title: 'Вернуть результат вызывающей системе',
+        line: `Ответ на входящий POST ${publicEndpointFromCurl(flow)}`,
+        detail: 'Отдельного внешнего URL нет: результат возвращается в HTTP-ответ тому, кто вызвал этот endpoint.',
+        callerResponse,
+        missingTarget: false,
+      };
+    }
+    if (type === 'accepted_event') {
+      return {
+        title: 'Принять запрос асинхронно',
+        line: `Ответ на входящий POST ${publicEndpointFromCurl(flow)}`,
+        detail: 'OMH быстро вернёт accepted response и продолжит обработку отдельно.',
+        callerResponse,
+        missingTarget: false,
+      };
+    }
+  }
   const target = targetSummary(builder);
   if (target?.url) {
     return {
       title: 'Отправить результат во внешнюю систему',
       line: `${target.method} ${target.url}`,
       detail: 'После выполнения OData-шагов flow отправит собранный результат на этот внешний URL.',
+      callerResponse: null,
       missingTarget: false,
     };
   }
@@ -198,6 +266,7 @@ function finalActionSummary(flow: IntegrationFlow) {
       title: 'Отправка наружу не завершена',
       line: 'URL внешней системы не задан',
       detail: 'Flow был выбран как отправка результата, но target URL не сохранился. Откройте builder и укажите Method + URL.',
+      callerResponse: null,
       missingTarget: true,
     };
   }
@@ -205,6 +274,7 @@ function finalActionSummary(flow: IntegrationFlow) {
     title: 'Вернуть результат вызывающей системе',
     line: `Ответ на входящий POST ${publicEndpointFromCurl(flow)}`,
     detail: 'Отдельного внешнего URL нет: результат возвращается в HTTP-ответ тому, кто вызвал этот endpoint.',
+    callerResponse: null,
     missingTarget: false,
   };
 }
@@ -359,6 +429,13 @@ export function IntegrationFlowsPage() {
               <strong>{selectedFinalAction.title}</strong>
               <code>{selectedFinalAction.line}</code>
               <p className="microcopy">{selectedFinalAction.detail}</p>
+              {selectedFinalAction.callerResponse ? (
+                <div className="flow-caller-response">
+                  <span>Ответ вызывающей системе: {selectedFinalAction.callerResponse.label}</span>
+                  <code>{selectedFinalAction.callerResponse.body}</code>
+                  <small>{selectedFinalAction.callerResponse.detail}</small>
+                </div>
+              ) : null}
               <Link className="ghost-button" to={`/integration-flows/${selected.id}/builder`}>Редактировать настройки</Link>
             </section>
           )}

@@ -367,6 +367,9 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .flow-target-card strong { overflow-wrap: anywhere; }
 .flow-target-card code { display: block; width: fit-content; max-width: 100%; color: var(--accent-2); background: rgba(0,0,0,.2); border: 1px solid var(--line); padding: 8px 10px; overflow-wrap: anywhere; white-space: normal; }
 .flow-target-card .ghost-button { width: fit-content; }
+.flow-caller-response { border: 1px solid rgba(143,198,180,.28); background: rgba(143,198,180,.08); padding: 12px; display: grid; gap: 8px; }
+.flow-caller-response span { color: var(--accent); font-weight: 800; }
+.flow-caller-response small { color: var(--muted); }
 .flow-output-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .technical-details { border: 1px solid var(--line); background: rgba(0,0,0,.12); padding: 12px; }
 .technical-details summary { cursor: pointer; color: var(--accent); font-weight: 700; }
@@ -1535,11 +1538,25 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
   text-align: left;
   cursor: pointer;
   font: inherit;
-  min-height: 132px;
+  min-height: 188px;
+  align-content: start;
 }
 .action-type-card.active {
   border-color: rgba(240,179,90,.72);
   background: radial-gradient(circle at 100% 0%, rgba(240,179,90,.2), transparent 36%), linear-gradient(135deg, rgba(240,179,90,.12), rgba(114,167,255,.08));
+}
+.action-type-card small {
+  color: var(--accent-2);
+  line-height: 1.35;
+}
+.action-type-card .code-panel {
+  margin-top: 2px;
+  background: rgba(0,0,0,.22);
+}
+.action-type-card .code-block {
+  max-height: 82px;
+  padding: 8px;
+  font-size: 11px;
 }
 .small-code-textarea {
   min-height: 112px;
