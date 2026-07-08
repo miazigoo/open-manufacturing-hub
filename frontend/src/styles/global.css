@@ -533,8 +533,8 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .nav-warning { padding: 8px 10px; color: var(--yellow); }
 .ui-mode-switch { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.14); }
 .ui-mode-switch > span { color: var(--accent-2); text-transform: uppercase; letter-spacing: .15em; font-size: 10px; font-weight: 700; }
-.ui-mode-switch > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.ui-mode-switch button { min-width: 0; border: 1px solid var(--line); background: rgba(247,239,218,.045); color: var(--muted); padding: 7px 5px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.ui-mode-switch > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.ui-mode-switch button { min-width: 0; border: 1px solid var(--line); background: rgba(247,239,218,.045); color: var(--muted); padding: 7px 8px; font-size: 11px; text-align: left; text-transform: none; letter-spacing: 0; overflow-wrap: anywhere; }
 .ui-mode-switch button.active { color: #18130a; background: var(--accent); border-color: var(--accent); font-weight: 700; }
 .ui-mode-switch small { color: var(--muted); line-height: 1.35; }
 .create-integration-button { border: 1px solid rgba(240,179,90,.55); background: linear-gradient(135deg, rgba(240,179,90,.95), rgba(143,198,180,.86)); color: #17120a; padding: 10px 14px; font-weight: 800; letter-spacing: -.01em; box-shadow: 0 14px 34px rgba(0,0,0,.22); }
