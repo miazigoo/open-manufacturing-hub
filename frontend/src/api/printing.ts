@@ -68,4 +68,9 @@ export const printingApi = {
     request<PrintJob>(`/api/printing/jobs/${jobId}/confirm-printed`, { method: 'POST', body: JSON.stringify(payload) }),
   returnToPrint: (jobId: string, payload: { from_sequence_no: number; reason?: string }) =>
     request<PrintJob>(`/api/printing/jobs/${jobId}/return-to-print`, { method: 'POST', body: JSON.stringify(payload) }),
+  cancel: (jobId: string, payload: { reason?: string; send_printer_cancel_command?: boolean }) =>
+    request<{ job: PrintJob; printer_cancel_requested: boolean; printer_cancel_sent: boolean; message: string }>(
+      `/api/printing/jobs/${jobId}/cancel`,
+      { method: 'POST', body: JSON.stringify(payload) },
+    ),
 };

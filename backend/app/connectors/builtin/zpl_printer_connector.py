@@ -136,6 +136,60 @@ class ZPLPrinterConnector:
             },
         )
 
+    async def cancel_print(self, config: dict[str, Any], payload: dict[str, Any], context: ConnectorContext, *, dry_run: bool = False) -> ConnectorSendResult:
+        validation = await self.validate_config(config)
+        if not validation.valid:
+            return ConnectorSendResult(success=False, error_code="INVALID_CONNECTOR_CONFIG", error_message="; ".join(validation.errors))
+
+        command = str(config.get("cancel_command") or "~JA\n")
+        host = str(config["host"]).strip()
+        port = int(config.get("port", 9100))
+        timeout = float(config.get("timeout_seconds", 5))
+        data = command.encode("utf-8")
+        request_payload = {
+            "connector_type": "zpl_printer",
+            "operation": "cancel_print",
+            "host": host,
+            "port": port,
+            "printer_name": config.get("printer_name"),
+            "job_id": payload.get("job_id"),
+            "correlation_id": context.correlation_id,
+            "bytes_count": len(data),
+            "command": command.strip(),
+        }
+        if dry_run:
+            return ConnectorSendResult(
+                success=True,
+                status_code=200,
+                request_payload=request_payload,
+                response_payload={"dry_run": True, "status": "would_send_cancel_to_printer", "host": host, "port": port, "command": command.strip()},
+            )
+
+        try:
+            await asyncio.to_thread(_send_raw, host, port, data, timeout)
+        except OSError as exc:
+            return ConnectorSendResult(
+                success=False,
+                request_payload=request_payload,
+                error_code="ZPL_PRINTER_CANCEL_FAILED",
+                error_message=str(exc),
+                external_error_message=str(exc),
+                external_error_type="socket_error",
+                human_title="Printer cancel command failed",
+                human_summary=f"Printer {host}:{port} rejected cancel command: {exc}",
+                developer_message=str(exc),
+                hint="If the printer keeps printing, stop it manually and check network reachability before retrying.",
+                endpoint_url=f"tcp://{host}:{port}",
+                operation="cancel_print",
+            )
+
+        return ConnectorSendResult(
+            success=True,
+            status_code=200,
+            request_payload=request_payload,
+            response_payload={"status": "cancel_sent_to_printer", "host": host, "port": port, "bytes_count": len(data), "command": command.strip()},
+        )
+
     async def receive(self, config: dict, context: ConnectorContext) -> list[ConnectorReceivedEvent]:
         return []
 

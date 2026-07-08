@@ -909,7 +909,7 @@ async def test_payload_step_preview_renders_dnp_json_with_type_preserving_placeh
 async def test_payload_step_preview_keeps_full_rendered_body_when_preview_is_truncated(client):
     contract, _ = await _create_master_contract(client)
     codes = [
-        {"КодМаркировки": f"code-{index:03}", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID}
+        {"КодМаркировки": f"code-{index:03}", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"}
         for index in range(1, 6)
     ]
 

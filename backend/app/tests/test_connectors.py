@@ -79,6 +79,19 @@ async def test_zpl_printer_connector_dry_run():
     assert result.request_payload["bytes_count"] > 0
 
 
+async def test_zpl_printer_connector_cancel_dry_run():
+    connector = ZPLPrinterConnector()
+    config = {"host": "127.0.0.1", "port": 9100, "dpi": 600, "printer_name": "Zebra 600"}
+
+    result = await connector.cancel_print(config, {"job_id": "job-1"}, ConnectorContext(correlation_id="corr-1"), dry_run=True)
+
+    assert result.success is True
+    assert result.response_payload["dry_run"] is True
+    assert result.response_payload["status"] == "would_send_cancel_to_printer"
+    assert result.response_payload["command"] == "~JA"
+    assert result.request_payload["operation"] == "cancel_print"
+
+
 async def test_zpl_printer_connector_rejects_invalid_config_and_payload():
     connector = ZPLPrinterConnector()
 

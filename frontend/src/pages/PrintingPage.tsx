@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { printingApi } from '../api/printing';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
@@ -12,6 +13,7 @@ import { formatDateTime } from '../utils';
 export function PrintingPage() {
   const t = useT();
   const queryClient = useQueryClient();
+  const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const printers = useQuery({ queryKey: ['printing-printers'], queryFn: printingApi.printers });
   const jobs = useQuery({ queryKey: ['printing-jobs'], queryFn: printingApi.jobs });
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -28,6 +30,13 @@ export function PrintingPage() {
   const sendReal = useMutation({ mutationFn: (jobId: string) => printingApi.sendBatch(jobId, { limit: 100, dry_run: false, include_returned: true }), onSuccess: refreshJob });
   const confirm = useMutation({ mutationFn: (jobId: string) => printingApi.confirmPrinted(jobId, { through_sequence_no: 999999 }), onSuccess: refreshJob });
   const returnPrint = useMutation({ mutationFn: (jobId: string) => printingApi.returnToPrint(jobId, { from_sequence_no: 1, reason: 'Operator returned labels to print' }), onSuccess: refreshJob });
+  const cancel = useMutation({
+    mutationFn: (jobId: string) => printingApi.cancel(jobId, { reason: 'Operator cancelled print job', send_printer_cancel_command: true }),
+    onSuccess: () => {
+      setCancelJobId(null);
+      refreshJob();
+    },
+  });
 
   const error = printers.error ?? jobs.error ?? lines.error ?? logs.error;
   if (printers.isLoading || jobs.isLoading) return <LoadingState label={t('printing.loading')} />;
@@ -72,6 +81,7 @@ export function PrintingPage() {
                   <button className="primary-button" onClick={() => sendReal.mutate(selectedJob.id)}>{t('printing.send')}</button>
                   <button className="ghost-button" onClick={() => confirm.mutate(selectedJob.id)}>{t('printing.confirm')}</button>
                   <button className="ghost-button danger" onClick={() => returnPrint.mutate(selectedJob.id)}>{t('printing.return')}</button>
+                  <button className="ghost-button danger" onClick={() => setCancelJobId(selectedJob.id)}>{t('printing.cancel')}</button>
                 </div>
               </div>
               <div className="table-panel embedded-table">
@@ -110,6 +120,17 @@ export function PrintingPage() {
           <JsonBlock title={t('printing.selectedJobRaw')} value={selectedJob ?? {}} searchable={false} />
         </aside>
       </section>
+      <ConfirmDialog
+        open={Boolean(cancelJobId)}
+        title={t('printing.cancelTitle')}
+        description={t('printing.cancelDescription')}
+        confirmLabel={t('printing.cancelConfirm')}
+        cancelLabel={t('common.cancel')}
+        tone="danger"
+        loading={cancel.isPending}
+        onCancel={() => setCancelJobId(null)}
+        onConfirm={() => cancelJobId && cancel.mutate(cancelJobId)}
+      />
     </div>
   );
 }

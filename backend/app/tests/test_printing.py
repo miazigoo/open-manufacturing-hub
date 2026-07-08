@@ -63,6 +63,36 @@ async def test_printing_job_lifecycle(client):
     assert {"job_created", "batch_started", "line_reserved", "line_sent", "line_confirmed_printed", "line_returned_to_print"}.issubset(actions)
 
 
+async def test_cancel_print_job_before_send_cancels_lines_without_printer_command(client):
+    printer = await _create_printer(client)
+    job_response = await client.post(
+        "/api/printing/jobs",
+        json={
+            "job_key": "print-job-cancel",
+            "printer_id": printer["id"],
+            "source_system": "1C ERP",
+            "lines": [
+                {"sequence_no": 1, "code": "010460123456789021ABC", "zpl": "^XA\n^FO0,0\n^FDABC^FS\n^XZ"},
+                {"sequence_no": 2, "code": "010460123456789021DEF", "zpl": "^XA\n^FO0,0\n^FDDEF^FS\n^XZ"},
+            ],
+        },
+    )
+    assert job_response.status_code == 200
+    job = job_response.json()
+
+    cancel_response = await client.post(f"/api/printing/jobs/{job['id']}/cancel", json={"reason": "Operator cancelled"})
+
+    assert cancel_response.status_code == 200
+    cancelled = cancel_response.json()
+    assert cancelled["job"]["status"] == "cancelled"
+    assert cancelled["printer_cancel_requested"] is False
+    assert cancelled["printer_cancel_sent"] is False
+    lines = (await client.get(f"/api/printing/jobs/{job['id']}/lines")).json()
+    assert {line["status"] for line in lines} == {"cancelled"}
+    logs = (await client.get(f"/api/printing/jobs/{job['id']}/logs")).json()
+    assert "job_cancelled" in {log["action"] for log in logs}
+
+
 async def test_printing_job_key_is_idempotent_but_rejects_different_payload(client):
     printer = await _create_printer(client)
     payload = {

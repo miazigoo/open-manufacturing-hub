@@ -14,6 +14,8 @@ from app.core.errors import BadRequestError, NotFoundError
 from app.printing import repository
 from app.printing.models import PrintJob, PrintJobLine, PrintJobLog, PrintPrinter
 from app.printing.schemas import (
+    CancelPrintJobRequest,
+    CancelPrintJobResponse,
     ConfirmPrintedRequest,
     OneCPrintBatchRequest,
     PrintBatchLineResult,
@@ -245,6 +247,72 @@ async def send_batch(session: AsyncSession, job_id: UUID, request: PrintBatchReq
         dry_run=request.dry_run,
         results=line_results,
     )
+
+
+async def cancel_print_job(session: AsyncSession, job_id: UUID, request: CancelPrintJobRequest) -> CancelPrintJobResponse:
+    job = await get_job_or_404(session, job_id)
+    if job.status == PrintJobStatus.CANCELLED:
+        return CancelPrintJobResponse(job=job, printer_cancel_requested=False, printer_cancel_sent=False, message="Print job is already cancelled")
+
+    printer = await get_printer_or_404(session, job.printer_id)
+    connector = await _get_connector_or_404(session, printer.connector_id)
+    connector_config = await SecretResolver(session).resolve_config(connector.config_json)
+    lines = await repository.list_job_lines(session, job.id)
+    has_real_sent_lines = any(line.status == PrintLineStatus.SENT_TO_PRINTER for line in lines)
+    printer_cancel_requested = request.send_printer_cancel_command and has_real_sent_lines
+    printer_cancel_sent = False
+    cancel_result_payload = None
+
+    if printer_cancel_requested:
+        connector_impl = registry.get(connector.connector_type)
+        cancel_method = getattr(connector_impl, "cancel_print", None)
+        if cancel_method is None:
+            raise BadRequestError("Printer connector does not support cancel_print")
+        context = ConnectorContext(
+            correlation_id=job.job_key,
+            source_system=job.source_system,
+            target_system=connector.name,
+            metadata={"print_job_id": str(job.id), "operation": "cancel_print"},
+        )
+        cancel_result = await cancel_method(connector_config, {"job_id": str(job.id)}, context, dry_run=False)
+        cancel_result_payload = {"request": cancel_result.request_payload, "response": cancel_result.response_payload, "error_code": cancel_result.error_code}
+        if not cancel_result.success:
+            _add_log(session, job.id, None, None, "job_cancel_failed", job.status.value, cancel_result.error_message, cancel_result_payload)
+            raise BadRequestError(cancel_result.error_message or cancel_result.error_code or "Printer cancel command failed")
+        printer_cancel_sent = True
+
+    now = datetime.now(timezone.utc)
+    for line in lines:
+        if line.status != PrintLineStatus.PRINTED:
+            line.status = PrintLineStatus.CANCELLED
+            line.last_error = request.reason
+            if line.sent_at is None:
+                line.sent_at = now
+            _add_log(session, job.id, line.id, line.sequence_no, "line_cancelled", line.status.value, request.reason or "Line cancelled", {})
+
+    job.status = PrintJobStatus.CANCELLED
+    job.last_error = request.reason
+    job.total_lines = len(lines)
+    job.sent_lines = sum(1 for line in lines if line.status in {PrintLineStatus.SENT_TO_PRINTER, PrintLineStatus.TEST_MODE, PrintLineStatus.PRINTED})
+    job.printed_lines = sum(1 for line in lines if line.status == PrintLineStatus.PRINTED)
+    job.error_lines = sum(1 for line in lines if line.status == PrintLineStatus.ERROR)
+    message = "Print job cancelled"
+    if printer_cancel_sent:
+        message = "Print job cancelled; printer cancel command sent"
+    elif request.send_printer_cancel_command:
+        message = "Print job cancelled before any real printer send"
+    _add_log(
+        session,
+        job.id,
+        None,
+        None,
+        "job_cancelled",
+        job.status.value,
+        message,
+        {"reason": request.reason, "printer_cancel_requested": printer_cancel_requested, "printer_cancel_sent": printer_cancel_sent, "cancel_result": cancel_result_payload},
+    )
+    await session.flush()
+    return CancelPrintJobResponse(job=job, printer_cancel_requested=printer_cancel_requested, printer_cancel_sent=printer_cancel_sent, message=message)
 
 
 async def confirm_printed(session: AsyncSession, job_id: UUID, request: ConfirmPrintedRequest) -> PrintJob:

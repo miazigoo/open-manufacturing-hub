@@ -134,6 +134,18 @@ class PrintBatchResponse(BaseModel):
     results: list[PrintBatchLineResult]
 
 
+class CancelPrintJobRequest(BaseModel):
+    reason: str | None = None
+    send_printer_cancel_command: bool = True
+
+
+class CancelPrintJobResponse(BaseModel):
+    job: PrintJobRead
+    printer_cancel_requested: bool
+    printer_cancel_sent: bool
+    message: str
+
+
 class OneCPrinterPayload(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     host: str = Field(min_length=1, max_length=255)

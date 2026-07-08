@@ -7,6 +7,8 @@ from app.core.database import get_session
 from app.core.errors import NotFoundError
 from app.printing import repository, service
 from app.printing.schemas import (
+    CancelPrintJobRequest,
+    CancelPrintJobResponse,
     ConfirmPrintedRequest,
     OneCPrintBatchRequest,
     PrintBatchRequest,
@@ -92,6 +94,13 @@ async def list_job_logs(job_id: UUID, session: AsyncSession = Depends(get_sessio
 @router.post("/api/printing/jobs/{job_id}/send-batch", response_model=PrintBatchResponse)
 async def send_batch(job_id: UUID, request: PrintBatchRequest, session: AsyncSession = Depends(get_session)):
     result = await service.send_batch(session, job_id, request)
+    await session.commit()
+    return result
+
+
+@router.post("/api/printing/jobs/{job_id}/cancel", response_model=CancelPrintJobResponse)
+async def cancel_print_job(job_id: UUID, request: CancelPrintJobRequest, session: AsyncSession = Depends(get_session)):
+    result = await service.cancel_print_job(session, job_id, request)
     await session.commit()
     return result
 
