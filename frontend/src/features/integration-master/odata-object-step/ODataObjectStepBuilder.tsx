@@ -64,6 +64,7 @@ export function ODataObjectStepBuilder({ contract, draft, previousVariables, onD
   }
 
   const selectedObject = previousVariables[step.object_variable];
+  const livePreview = useMemo(() => buildLivePreview(step, previousVariables, selectedConnection?.base_url), [step, previousVariables, selectedConnection?.base_url]);
   const previewError = preview.error instanceof Error ? preview.error.message : null;
   const testError = test.error instanceof Error ? test.error.message : null;
   const saveError = save.error instanceof Error ? save.error.message : null;
@@ -107,7 +108,7 @@ export function ODataObjectStepBuilder({ contract, draft, previousVariables, onD
       </div>
 
       <div className="odata-step-panels">
-        <ObjectResourcePreview preview={preview.data} error={previewError} loading={preview.isPending} onPreview={() => preview.mutate()} />
+        <ObjectResourcePreview livePreview={livePreview} preview={preview.data} error={previewError} loading={preview.isPending} onPreview={() => preview.mutate()} />
         <ODataObjectStepTestResult result={test.data} error={testError} loading={test.isPending} onTest={() => test.mutate()} />
       </div>
 
@@ -153,6 +154,69 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function splitSelect(value: string) {
   return value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function buildLivePreview(step: ODataObjectStepConfig, variables: Record<string, unknown>, baseUrl?: string | null) {
+  const objectName = step.object_variable.trim();
+  const keyField = step.key_field.trim() || 'Ref_Key';
+  const keyPreview = objectFieldValue(variables[objectName], keyField);
+  const templateKey = keyExpression(`{{${objectName || 'object'}.${keyField}}}`, step.key_type);
+  const renderedKey = keyPreview === undefined || keyPreview === null || keyPreview === '' ? null : keyExpression(String(keyPreview), step.key_type);
+  const baseResource = step.base_resource.trim();
+  const nestedResource = step.nested_resource.trim().replace(/^\/+|\/+$/g, '');
+  const templateResource = baseResource && nestedResource ? `${baseResource}(${templateKey})/${nestedResource}` : null;
+  const renderedResource = baseResource && nestedResource && renderedKey ? `${baseResource}(${renderedKey})/${nestedResource}` : null;
+  const renderedFilter = renderTemplate((step.filter ?? '').trim(), variables);
+  const renderedUrl = buildODataUrl(renderedResource, renderedFilter, step);
+  return {
+    template_resource: templateResource,
+    rendered_resource: renderedResource,
+    rendered_url: renderedUrl,
+    full_rendered_url: renderedUrl && baseUrl ? joinODataUrl(baseUrl, renderedUrl) : renderedUrl,
+    key_preview: keyPreview,
+  };
+}
+
+function keyExpression(value: string, type: ODataObjectStepConfig['key_type']) {
+  if (type === 'guid') return `guid'${value}'`;
+  if (type === 'string') return `'${value}'`;
+  return value;
+}
+
+function objectFieldValue(value: unknown, key: string) {
+  if (!isRecord(value)) return undefined;
+  return value[key];
+}
+
+function renderTemplate(template: string, variables: Record<string, unknown>) {
+  if (!template) return null;
+  return template.replace(/{{\s*([^{}]+?)\s*}}/g, (_match, path: string) => {
+    const value = resolvePath(variables, path.trim());
+    if (value === undefined || value === null) return `{{${path.trim()}}}`;
+    return typeof value === 'string' ? value : JSON.stringify(value);
+  });
+}
+
+function resolvePath(variables: Record<string, unknown>, path: string) {
+  return path.split('.').reduce<unknown>((current, part) => {
+    if (Array.isArray(current) && /^\d+$/.test(part)) return current[Number(part)];
+    if (isRecord(current)) return current[part];
+    return undefined;
+  }, variables);
+}
+
+function buildODataUrl(resource: string | null, filter: string | null, step: ODataObjectStepConfig) {
+  if (!resource) return null;
+  const params: string[] = [];
+  if (filter) params.push(`$filter=${filter}`);
+  if (step.select.length) params.push(`$select=${step.select.join(',')}`);
+  if (step.top) params.push(`$top=${step.top}`);
+  if (step.paginate) params.push('paginate=true');
+  return params.length ? `${resource}?${params.join('&')}` : resource;
+}
+
+function joinODataUrl(baseUrl: string, renderedUrl: string) {
+  return `${baseUrl.replace(/\/+$/, '')}/${renderedUrl.replace(/^\/+/, '')}`;
 }
 
 function withoutVariable(variables: Record<string, unknown>, name: string) {
