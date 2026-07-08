@@ -8,6 +8,7 @@ import { EndpointSlugEditor, slugError, slugify } from './EndpointSlugEditor';
 import { InputContractPreview } from './InputContractPreview';
 import { InputTypeSelector } from './InputTypeSelector';
 import { integrationMasterApi } from './api';
+import { FinalActionBuilder } from './final-action/FinalActionBuilder';
 import { ForeachODataStepBuilder } from './foreach-odata-step/ForeachODataStepBuilder';
 import { MasterStepLayout } from './MasterStepLayout';
 import { ODataObjectStepBuilder } from './odata-object-step/ODataObjectStepBuilder';
@@ -115,6 +116,7 @@ export function IntegrationMasterPage() {
   const hasSavedODataQuery = Boolean(savedDraft?.odata_steps.some((step) => !step.type || step.type === 'odata_query'));
   const hasSavedObjectStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'odata_object_query'));
   const hasSavedForeachStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'foreach_odata'));
+  const hasSavedPayloadStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'build_payload'));
 
   return (
     <div className="page-stack integration-master-page">
@@ -163,6 +165,8 @@ export function IntegrationMasterPage() {
       {savedDraft && hasSavedObjectStep ? <ForeachODataStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
 
       {savedDraft && hasSavedForeachStep ? <PayloadBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
+
+      {savedDraft && hasSavedPayloadStep ? <FinalActionBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} /> : null}
     </div>
   );
 }
@@ -233,7 +237,7 @@ function defaultSample(mode: InputMode) {
 function deriveVariablesFromDraft(draft: InputDraftRead | null): Record<string, unknown> {
   const variables: Record<string, unknown> = draft ? {
     request: requestVariableFromDraft(draft),
-    context: { run_id: 'preview-run-001', event_id: 'preview-event-001' },
+    context: { run_id: 'preview-run-001', event_id: 'preview-event-001', queue_item_id: 'preview-queue-item-001' },
   } : {};
   for (const step of draft?.odata_steps ?? []) {
     if (step.type === 'build_payload') {

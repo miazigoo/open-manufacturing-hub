@@ -6,7 +6,7 @@
 DnP -> OMH -> 1C OData order -> tabular part Продукция -> foreach code pool -> build target_payload
 ```
 
-Endpoint send to DnP and caller response are the next Integration Master stages and are not part of current Step 3A.
+Endpoint send to DnP and caller response are configured in current Step 4A. Full production publish/runtime queue remains a later stage.
 
 ## Входящий JSON
 
@@ -97,9 +97,11 @@ Rules:
 - `codes.length` is available for counters.
 - Missing path returns `VARIABLE_NOT_FOUND`.
 
-## Следующий этап: финальное действие
+## Step 4A. Финальное действие
 
 ```text
+Action type: send_endpoint
+Method: POST
 POST http://172.16.3.10/api/v2/integrations/omh/chz/codes/import
 ```
 
@@ -117,6 +119,13 @@ Expected response to caller after future send stage:
 }
 ```
 
+Проверка:
+
+- `Preview final action` не отправляет запрос в DnP.
+- `Dry run` не ходит в сеть и показывает `would_send`.
+- `Real test endpoint` отправляет настоящий HTTP-запрос только после подтверждения в UI.
+- Private URL `172.16.*` разрешен, но preview покажет warning про доступность из backend-контейнера.
+
 ## Проверка текущего Step 3A
 
 Нажмите `Preview payload` и проверьте:
@@ -125,7 +134,7 @@ Expected response to caller after future send stage:
 - `payload.order_numbers_by_basis` has key equal to `order.Ref_Key`.
 - `omh.correlation_id` contains `request.body.order_name`.
 
-## Проверка future full flow
+## Проверка будущего full flow
 
 После реализации final action endpoint будет:
 

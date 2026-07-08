@@ -25,6 +25,11 @@ JsonPayloadValueType = Literal[
     "object",
     "array",
 ]
+FinalActionType = Literal["return_response", "send_endpoint", "send_and_return_response", "accepted_event"]
+FinalActionMethod = Literal["POST", "PUT", "PATCH", "DELETE", "GET"]
+FinalActionBodyType = Literal["json", "xml", "raw_text", "form"]
+FinalActionBodySource = Literal["target_payload", "custom", "none"]
+FinalActionReturnType = Literal["fixed_success", "proxy_response", "accepted_event", "custom_json", "custom_xml", "custom_raw"]
 
 
 class IntegrationScenario(BaseModel):
@@ -212,6 +217,26 @@ class PayloadStepConfig(BaseModel):
     last_preview_status: str | None = None
 
 
+class FinalActionReturnConfig(BaseModel):
+    type: FinalActionReturnType = "fixed_success"
+    body: Any = Field(default_factory=lambda: {"ok": True})
+    status_code: int = 200
+    headers: dict[str, Any] = Field(default_factory=dict)
+
+
+class FinalActionConfig(BaseModel):
+    type: FinalActionType = "send_endpoint"
+    method: FinalActionMethod = "POST"
+    url: str | None = None
+    headers: dict[str, Any] = Field(default_factory=lambda: {"Content-Type": "application/json"})
+    body_type: FinalActionBodyType = "json"
+    body_source: FinalActionBodySource = "target_payload"
+    custom_body: Any = None
+    timeout_seconds: int = 30
+    return_to_caller: FinalActionReturnConfig = Field(default_factory=FinalActionReturnConfig)
+    last_test_status: str | None = None
+
+
 class ResourceRenderResult(BaseModel):
     template_resource: str
     rendered_resource: str | None = None
@@ -239,6 +264,16 @@ class PayloadStepRequest(BaseModel):
     input_contract: InputContract | None = None
     previous_variables: dict[str, Any] = Field(default_factory=dict)
     payload_step: PayloadStepConfig
+
+
+class FinalActionRequest(BaseModel):
+    input_contract: InputContract | None = None
+    previous_variables: dict[str, Any] = Field(default_factory=dict)
+    final_action: FinalActionConfig
+
+
+class FinalActionTestRequest(FinalActionRequest):
+    dry_run: bool = True
 
 
 class ODataStepValidationResponse(BaseModel):
@@ -311,6 +346,33 @@ class PayloadStepPreviewResponse(PayloadStepValidationResponse):
     size_bytes: int = 0
 
 
+class FinalActionValidationResponse(BaseModel):
+    valid: bool
+    errors: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    action_type: FinalActionType
+    error_code: str | None = None
+
+
+class FinalActionPreviewResponse(FinalActionValidationResponse):
+    success: bool
+    send_preview: dict[str, Any] | None = None
+    caller_response_preview: Any = None
+    human_preview: str
+
+
+class FinalActionTestResponse(BaseModel):
+    success: bool
+    dry_run: bool
+    error_code: str | None = None
+    message: str | None = None
+    would_send: dict[str, Any] | None = None
+    would_return_to_caller: Any = None
+    target_status: int | None = None
+    target_response: Any = None
+    caller_response: Any = None
+
+
 class ODataStepTestResponse(BaseModel):
     success: bool
     error_code: str | None = None
@@ -378,6 +440,12 @@ class PayloadStepSaveRequest(BaseModel):
     payload_step: PayloadStepConfig
 
 
+class FinalActionSaveRequest(BaseModel):
+    input_contract: InputContract | None = None
+    previous_variables: dict[str, Any] = Field(default_factory=dict)
+    final_action: FinalActionConfig
+
+
 class InputContractValidationRequest(BaseModel):
     contract: InputContract
 
@@ -403,6 +471,7 @@ class InputDraftRead(BaseModel):
     source_system: str
     contract: InputContract
     odata_steps: list[ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig | PayloadStepConfig] = Field(default_factory=list)
+    final_action: FinalActionConfig | None = None
     parse_result: InputParseResponse | None = None
     endpoint_url: str
     created_at: datetime
@@ -430,6 +499,12 @@ class ForeachODataStepSaveResponse(BaseModel):
 class PayloadStepSaveResponse(BaseModel):
     draft: InputDraftRead
     saved_step: PayloadStepConfig
+    next_steps: list[str]
+
+
+class FinalActionSaveResponse(BaseModel):
+    draft: InputDraftRead
+    final_action: FinalActionConfig
     next_steps: list[str]
 
 

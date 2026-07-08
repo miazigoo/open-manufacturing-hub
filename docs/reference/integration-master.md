@@ -41,6 +41,10 @@ POST /api/integration-master/drafts/{draft_id}/foreach-odata-steps
 POST /api/integration-master/payload/preview
 POST /api/integration-master/payload/validate
 POST /api/integration-master/drafts/{draft_id}/payload-steps
+POST /api/integration-master/final-action/preview
+POST /api/integration-master/final-action/test
+POST /api/integration-master/final-action/validate
+POST /api/integration-master/drafts/{draft_id}/final-action
 ```
 
 ## Parse Request
@@ -446,6 +450,56 @@ Missing path returns `VARIABLE_NOT_FOUND` and a friendly message such as `Пер
 
 The saved draft item has `type=build_payload` and is stored in the same `odata_steps_json` list. This step does not send the body anywhere.
 
+## Step 4A: Final Action Builder
+
+After one `build_payload` step is saved, `/master` can configure one `final_action` object on the draft.
+
+Supported action types:
+
+- `return_response` — return JSON/XML/raw body to the caller;
+- `send_endpoint` — send `target_payload` to an external endpoint and return a configured caller response;
+- `send_and_return_response` — send endpoint and proxy the endpoint response to the caller;
+- `accepted_event` — return `event_id` and `queue_item_id` for async handling.
+
+Example endpoint send:
+
+```json
+{
+  "type": "send_endpoint",
+  "method": "POST",
+  "url": "http://172.16.3.10/api/v2/integrations/omh/chz/codes/import",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body_type": "json",
+  "body_source": "target_payload",
+  "timeout_seconds": 30,
+  "return_to_caller": {
+    "type": "fixed_success",
+    "body": {
+      "ok": true
+    },
+    "status_code": 200,
+    "headers": {}
+  }
+}
+```
+
+`Preview final action` is dry: it renders the target request and caller response without network calls.
+
+`Test final action` defaults to `dry_run=true`. A real test uses the configured endpoint and should be confirmed by the UI before sending.
+
+Validation rules:
+
+- URL is required for endpoint actions and must start with `http://` or `https://`;
+- private and localhost URLs are allowed but produce warnings;
+- `target_payload` must exist when `body_source=target_payload`;
+- form body is reserved for a later step;
+- timeout must be 1..300 seconds;
+- caller status must be 100..599.
+
+The saved final action is stored in `integration_master_drafts.final_action_json`. It is not appended to `odata_steps_json`.
+
 ## Parsing Rules
 
 - JSON fields use paths like `request.body.operation`.
@@ -476,7 +530,7 @@ lookup contractor!
 
 Do not add here:
 
-- final action.
 - saving full integration.
 - Timeline and full dry-run execution.
-- endpoint send or 1C HTTP service call.
+- production queue execution, retry or DLQ.
+- generated production endpoint publish.

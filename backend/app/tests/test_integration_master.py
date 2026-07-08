@@ -1,3 +1,4 @@
+import httpx
 import pytest
 
 from app.integration_master.service import render_1c_object_resource
@@ -210,6 +211,41 @@ def _payload_step(**overrides):
     }
     step.update(overrides)
     return step
+
+
+def _final_action_variables(**overrides):
+    variables = _payload_variables(context={"run_id": "run-001", "event_id": "evt-001", "queue_item_id": "queue-001"})
+    variables["target_payload"] = {
+        "omh": {
+            "run_id": "run-001",
+            "event_id": "evt-001",
+            "entity_id": "26-0666/6938",
+            "event_type": "ChestniyZnakCodesSyncRequested",
+        },
+        "payload": {
+            "rows": variables["codes"],
+            "order_id": 10271,
+            "order_name": "26-0666/6938",
+            "codes_count": len(variables["codes"]),
+        },
+    }
+    variables.update(overrides)
+    return variables
+
+
+def _final_endpoint_action(**overrides):
+    action = {
+        "type": "send_endpoint",
+        "method": "POST",
+        "url": "https://dnp.example.local/api/codes/import",
+        "headers": {"Content-Type": "application/json"},
+        "body_type": "json",
+        "body_source": "target_payload",
+        "timeout_seconds": 30,
+        "return_to_caller": {"type": "fixed_success", "body": {"ok": True}, "status_code": 200, "headers": {}},
+    }
+    action.update(overrides)
+    return action
 
 
 async def test_integration_master_scenarios_include_dnp(client):
@@ -984,3 +1020,271 @@ async def test_append_payload_step_to_master_draft(client):
     loaded = await client.get(f"/api/integration-master/drafts/{draft_id}")
     assert loaded.status_code == 200, loaded.text
     assert loaded.json()["odata_steps"][3]["save_as"] == "target_payload"
+
+
+async def test_final_action_preview_return_json_response(client):
+    contract, _ = await _create_master_contract(client)
+
+    response = await client.post(
+        "/api/integration-master/final-action/preview",
+        json={
+            "input_contract": contract,
+            "previous_variables": _final_action_variables(),
+            "final_action": {
+                "type": "return_response",
+                "body_type": "json",
+                "body_source": "target_payload",
+                "return_to_caller": {"type": "fixed_success", "body": {"ok": True}, "status_code": 200, "headers": {"Content-Type": "application/json"}},
+            },
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["valid"] is True
+    assert body["caller_response_preview"]["payload"]["codes_count"] == 2
+    assert body["send_preview"] is None
+
+
+async def test_final_action_preview_return_xml_custom_response(client):
+    contract, _ = await _create_master_contract(client)
+
+    response = await client.post(
+        "/api/integration-master/final-action/preview",
+        json={
+            "input_contract": contract,
+            "previous_variables": _final_action_variables(),
+            "final_action": {
+                "type": "return_response",
+                "body_type": "xml",
+                "body_source": "custom",
+                "custom_body": "<Response><Order>{{request.body.order_name}}</Order><Codes>{{codes.length}}</Codes></Response>",
+                "return_to_caller": {"type": "fixed_success", "body": {}, "status_code": 200, "headers": {"Content-Type": "application/xml"}},
+            },
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["caller_response_preview"] == "<Response><Order>26-0666/6938</Order><Codes>2</Codes></Response>"
+
+
+async def test_final_action_preview_send_endpoint_with_target_payload(client):
+    contract, _ = await _create_master_contract(client)
+
+    response = await client.post(
+        "/api/integration-master/final-action/preview",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": _final_endpoint_action()},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["send_preview"]["method"] == "POST"
+    assert body["send_preview"]["url"] == "https://dnp.example.local/api/codes/import"
+    assert body["send_preview"]["body_preview"]["payload"]["codes_count"] == 2
+    assert body["caller_response_preview"] == {"ok": True}
+
+
+async def test_final_action_dry_run_does_not_call_network(client, monkeypatch):
+    contract, _ = await _create_master_contract(client)
+
+    class FailingHttpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def request(self, *args, **kwargs):
+            raise AssertionError("dry-run must not call target endpoint")
+
+    monkeypatch.setattr("app.integration_master.final_action.HTTP_CLIENT_CLS", FailingHttpClient)
+    response = await client.post(
+        "/api/integration-master/final-action/test",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": _final_endpoint_action(), "dry_run": True},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["dry_run"] is True
+    assert body["would_send"]["url"] == "https://dnp.example.local/api/codes/import"
+    assert body["would_return_to_caller"] == {"ok": True}
+    assert body["target_status"] is None
+
+
+async def test_final_action_real_test_can_be_mocked(client, monkeypatch):
+    contract, _ = await _create_master_contract(client)
+    seen: dict[str, object] = {}
+
+    class FakeHttpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def request(self, method, url, headers=None, **kwargs):
+            seen["method"] = method
+            seen["url"] = url
+            seen["headers"] = headers
+            seen["json"] = kwargs.get("json")
+            return httpx.Response(200, json={"ok": True, "rows_count": 180}, headers={"content-type": "application/json"})
+
+    monkeypatch.setattr("app.integration_master.final_action.HTTP_CLIENT_CLS", FakeHttpClient)
+    response = await client.post(
+        "/api/integration-master/final-action/test",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": _final_endpoint_action(), "dry_run": False},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["dry_run"] is False
+    assert body["target_status"] == 200
+    assert body["target_response"] == {"ok": True, "rows_count": 180}
+    assert body["caller_response"] == {"ok": True}
+    assert seen["method"] == "POST"
+    assert seen["json"]["payload"]["codes_count"] == 2
+
+
+async def test_final_action_proxy_response_and_target_error(client, monkeypatch):
+    contract, _ = await _create_master_contract(client)
+
+    class ProxyHttpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def request(self, method, url, headers=None, **kwargs):
+            return httpx.Response(201, json={"accepted": True, "target_id": "dnp-001"}, headers={"content-type": "application/json"})
+
+    monkeypatch.setattr("app.integration_master.final_action.HTTP_CLIENT_CLS", ProxyHttpClient)
+    proxy = await client.post(
+        "/api/integration-master/final-action/test",
+        json={
+            "input_contract": contract,
+            "previous_variables": _final_action_variables(),
+            "final_action": _final_endpoint_action(type="send_and_return_response", return_to_caller={"type": "fixed_success", "body": {"ok": True}, "status_code": 200, "headers": {}}),
+            "dry_run": False,
+        },
+    )
+    assert proxy.status_code == 200, proxy.text
+    assert proxy.json()["caller_response"] == {"accepted": True, "target_id": "dnp-001"}
+
+    class ErrorHttpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def request(self, method, url, headers=None, **kwargs):
+            return httpx.Response(400, json={"error": "bad payload"}, headers={"content-type": "application/json"})
+
+    monkeypatch.setattr("app.integration_master.final_action.HTTP_CLIENT_CLS", ErrorHttpClient)
+    error = await client.post(
+        "/api/integration-master/final-action/test",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": _final_endpoint_action(), "dry_run": False},
+    )
+    assert error.status_code == 200, error.text
+    assert error.json()["success"] is False
+    assert error.json()["error_code"] == "TARGET_ENDPOINT_ERROR"
+    assert error.json()["target_response"] == {"error": "bad payload"}
+
+
+async def test_final_action_accepted_event_preview(client):
+    contract, _ = await _create_master_contract(client)
+
+    response = await client.post(
+        "/api/integration-master/final-action/preview",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": {"type": "accepted_event", "return_to_caller": {"type": "accepted_event", "body": {}, "status_code": 202, "headers": {}}}},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["success"] is True
+    assert body["caller_response_preview"] == {"accepted": True, "event_id": "evt-001", "queue_item_id": "queue-001", "timeline_url": "/events/evt-001"}
+
+
+async def test_final_action_validate_url_body_and_private_warnings(client):
+    contract, _ = await _create_master_contract(client)
+
+    missing_url = await client.post(
+        "/api/integration-master/final-action/validate",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": _final_endpoint_action(url="")},
+    )
+    assert missing_url.status_code == 200, missing_url.text
+    assert missing_url.json()["valid"] is False
+    assert missing_url.json()["error_code"] == "FINAL_ACTION_URL_REQUIRED"
+
+    invalid_url = await client.post(
+        "/api/integration-master/final-action/validate",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": _final_endpoint_action(url="ftp://example.local/import")},
+    )
+    assert invalid_url.status_code == 200, invalid_url.text
+    assert invalid_url.json()["valid"] is False
+    assert invalid_url.json()["error_code"] == "FINAL_ACTION_URL_INVALID"
+
+    private_url = await client.post(
+        "/api/integration-master/final-action/validate",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": _final_endpoint_action(url="http://172.16.3.10/api/import")},
+    )
+    assert private_url.status_code == 200, private_url.text
+    assert private_url.json()["valid"] is True
+    assert "private IP" in "; ".join(private_url.json()["warnings"])
+
+    missing_payload = await client.post(
+        "/api/integration-master/final-action/validate",
+        json={"input_contract": contract, "previous_variables": _payload_variables(), "final_action": _final_endpoint_action()},
+    )
+    assert missing_payload.status_code == 200, missing_payload.text
+    assert missing_payload.json()["valid"] is False
+    assert missing_payload.json()["error_code"] == "FINAL_ACTION_BODY_SOURCE_MISSING"
+
+    form_body = await client.post(
+        "/api/integration-master/final-action/validate",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": _final_endpoint_action(body_type="form")},
+    )
+    assert form_body.status_code == 200, form_body.text
+    assert form_body.json()["valid"] is False
+    assert form_body.json()["error_code"] == "FINAL_ACTION_BODY_TYPE_UNSUPPORTED"
+
+
+async def test_save_final_action_to_master_draft(client):
+    contract, parse_result = await _create_master_contract(client)
+    saved = await client.post("/api/integration-master/input/save-draft", json={"contract": contract, "parse_result": parse_result})
+    assert saved.status_code == 200, saved.text
+    draft_id = saved.json()["draft"]["id"]
+
+    payload_step = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/payload-steps",
+        json={"input_contract": contract, "previous_variables": _payload_variables(), "payload_step": _payload_step()},
+    )
+    assert payload_step.status_code == 200, payload_step.text
+
+    response = await client.post(
+        f"/api/integration-master/drafts/{draft_id}/final-action",
+        json={"input_contract": contract, "previous_variables": _final_action_variables(), "final_action": _final_endpoint_action(url="http://172.16.3.10/api/v2/integrations/omh/chz/codes/import")},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["final_action"]["type"] == "send_endpoint"
+    assert body["final_action"]["last_test_status"] == "configured"
+    assert body["draft"]["final_action"]["url"] == "http://172.16.3.10/api/v2/integrations/omh/chz/codes/import"
+    assert body["draft"]["odata_steps"][0]["type"] == "build_payload"
+
+    loaded = await client.get(f"/api/integration-master/drafts/{draft_id}")
+    assert loaded.status_code == 200, loaded.text
+    assert loaded.json()["final_action"]["body_source"] == "target_payload"

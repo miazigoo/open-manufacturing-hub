@@ -8,6 +8,11 @@ export type ForeachODataMergeMode = 'flatten' | 'group_by_item' | 'first_per_ite
 export type PayloadBodyType = 'json' | 'xml' | 'raw_text';
 export type JsonPayloadMode = 'table' | 'raw_template';
 export type JsonPayloadValueType = 'variable' | 'template_string' | 'constant_string' | 'constant_number' | 'constant_boolean' | 'constant_null' | 'object' | 'array';
+export type FinalActionType = 'return_response' | 'send_endpoint' | 'send_and_return_response' | 'accepted_event';
+export type FinalActionMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'GET';
+export type FinalActionBodyType = 'json' | 'xml' | 'raw_text' | 'form';
+export type FinalActionBodySource = 'target_payload' | 'custom' | 'none';
+export type FinalActionReturnType = 'fixed_success' | 'proxy_response' | 'accepted_event' | 'custom_json' | 'custom_xml' | 'custom_raw';
 
 export interface IntegrationScenario {
   key: string;
@@ -201,6 +206,26 @@ export interface PayloadStepConfig {
   last_preview_status?: string | null;
 }
 
+export interface FinalActionReturnConfig {
+  type: FinalActionReturnType;
+  body: unknown;
+  status_code: number;
+  headers: Record<string, unknown>;
+}
+
+export interface FinalActionConfig {
+  type: FinalActionType;
+  method: FinalActionMethod;
+  url?: string | null;
+  headers: Record<string, unknown>;
+  body_type: FinalActionBodyType;
+  body_source: FinalActionBodySource;
+  custom_body?: unknown;
+  timeout_seconds: number;
+  return_to_caller: FinalActionReturnConfig;
+  last_test_status?: string | null;
+}
+
 export type IntegrationMasterODataStep = ODataStepConfig | ODataObjectStepConfig | ForeachODataStepConfig | PayloadStepConfig;
 
 export interface ODataStepRequest {
@@ -225,6 +250,16 @@ export interface PayloadStepRequest {
   input_contract?: InputContract | null;
   previous_variables: Record<string, unknown>;
   payload_step: PayloadStepConfig;
+}
+
+export interface FinalActionRequest {
+  input_contract?: InputContract | null;
+  previous_variables: Record<string, unknown>;
+  final_action: FinalActionConfig;
+}
+
+export interface FinalActionTestRequest extends FinalActionRequest {
+  dry_run: boolean;
 }
 
 export interface ODataStepValidationResponse {
@@ -297,6 +332,33 @@ export interface PayloadStepPreviewResponse extends PayloadStepValidationRespons
   size_bytes: number;
 }
 
+export interface FinalActionValidationResponse {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  action_type: FinalActionType;
+  error_code?: string | null;
+}
+
+export interface FinalActionPreviewResponse extends FinalActionValidationResponse {
+  success: boolean;
+  send_preview?: Record<string, unknown> | null;
+  caller_response_preview?: unknown;
+  human_preview: string;
+}
+
+export interface FinalActionTestResponse {
+  success: boolean;
+  dry_run: boolean;
+  error_code?: string | null;
+  message?: string | null;
+  would_send?: Record<string, unknown> | null;
+  would_return_to_caller?: unknown;
+  target_status?: number | null;
+  target_response?: unknown;
+  caller_response?: unknown;
+}
+
 export interface ODataStepTestResponse {
   success: boolean;
   error_code?: string | null;
@@ -350,6 +412,7 @@ export interface InputDraftRead {
   source_system: string;
   contract: InputContract;
   odata_steps: IntegrationMasterODataStep[];
+  final_action?: FinalActionConfig | null;
   parse_result?: InputParseResponse | null;
   endpoint_url: string;
   created_at: string;
@@ -382,5 +445,11 @@ export interface ForeachODataStepSaveResponse {
 export interface PayloadStepSaveResponse {
   draft: InputDraftRead;
   saved_step: PayloadStepConfig;
+  next_steps: string[];
+}
+
+export interface FinalActionSaveResponse {
+  draft: InputDraftRead;
+  final_action: FinalActionConfig;
   next_steps: string[];
 }

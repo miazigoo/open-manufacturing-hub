@@ -100,7 +100,7 @@ Package добавляет доменную функциональность: 1C
 
 \`/master\` — первый шаг общего мастера интеграции. Он отвечает на вопрос: кто вызывает OMH и что придет во входящем запросе.
 
-Step 1 сохраняет \`InputContract\`. Step 2A добавляет один OData Query, Step 2B читает табличную часть, Step 2C повторяет OData по массиву. Response builder и final action остаются следующими шагами мастера.
+Step 1 сохраняет \`InputContract\`. Step 2A добавляет один OData Query, Step 2B читает табличную часть, Step 2C повторяет OData по массиву, Step 3A собирает \`target_payload\`, Step 4A выбирает финальное действие.
 
 ## Product route
 
@@ -131,6 +131,10 @@ POST /api/integration-master/drafts/{draft_id}/foreach-odata-steps
 POST /api/integration-master/payload/preview
 POST /api/integration-master/payload/validate
 POST /api/integration-master/drafts/{draft_id}/payload-steps
+POST /api/integration-master/final-action/preview
+POST /api/integration-master/final-action/test
+POST /api/integration-master/final-action/validate
+POST /api/integration-master/drafts/{draft_id}/final-action
 \`\`\`
 
 ## Input Contract
@@ -268,6 +272,32 @@ Dynamic keys поддерживаются для DnP:
 \`\`\`
 
 Step 3A сохраняет только \`build_payload\`. Endpoint send, caller response, queue, Timeline runtime и full integration compile не выполняются.
+
+## Step 4A: final action
+
+После сохранения \`build_payload\` можно сохранить один \`final_action\` в draft.
+
+Поддержанные варианты:
+
+- \`return_response\` — вернуть JSON/XML/raw caller-у.
+- \`send_endpoint\` — отправить \`target_payload\` во внешний endpoint и вернуть configured response.
+- \`send_and_return_response\` — отправить endpoint и проксировать endpoint response.
+- \`accepted_event\` — вернуть \`event_id\` и \`queue_item_id\` для async обработки.
+
+Endpoint send пример:
+
+\`\`\`text
+method: POST
+url: http://172.16.3.10/api/v2/integrations/omh/chz/codes/import
+headers: {"Content-Type":"application/json"}
+body_source: target_payload
+body_type: json
+return_to_caller: fixed_success {"ok": true}
+\`\`\`
+
+\`Preview final action\` не вызывает network. \`Test final action\` по умолчанию dry-run; real test должен подтверждаться в UI.
+
+Private/localhost URL разрешены, но validation вернет warning. Form body, production publish, queue/retry/DLQ и Timeline runtime остаются следующими этапами.
 
 ## Parser rules
 

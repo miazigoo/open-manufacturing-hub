@@ -8,6 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.integration_master import service
 from app.integration_master.schemas import (
+    FinalActionPreviewResponse,
+    FinalActionRequest,
+    FinalActionSaveRequest,
+    FinalActionSaveResponse,
+    FinalActionTestRequest,
+    FinalActionTestResponse,
+    FinalActionValidationResponse,
     ForeachODataStepPreviewResponse,
     ForeachODataStepRequest,
     ForeachODataStepSaveRequest,
@@ -182,5 +189,35 @@ async def append_payload_step(draft_id: UUID, request: PayloadStepSaveRequest, s
             "Endpoint send и caller response будут следующими этапами",
             "Full integration compile пока не выполняется",
             "Запустить Dry Run и проверить Timeline/DLQ позже",
+        ],
+    }
+
+
+@router.post("/final-action/validate", response_model=FinalActionValidationResponse)
+async def validate_final_action(request: FinalActionRequest):
+    return service.validate_final_action_step(request)
+
+
+@router.post("/final-action/preview", response_model=FinalActionPreviewResponse)
+async def preview_final_action(request: FinalActionRequest):
+    return service.preview_final_action_step(request)
+
+
+@router.post("/final-action/test", response_model=FinalActionTestResponse)
+async def test_final_action(request: FinalActionTestRequest):
+    return await service.test_final_action_step(request)
+
+
+@router.post("/drafts/{draft_id}/final-action", response_model=FinalActionSaveResponse)
+async def save_final_action(draft_id: UUID, request: FinalActionSaveRequest, session: AsyncSession = Depends(get_session)):
+    draft, saved_action = await service.save_final_action(session, draft_id, request.final_action, request.previous_variables)
+    await session.commit()
+    return {
+        "draft": draft,
+        "final_action": saved_action,
+        "next_steps": [
+            "Step 4A сохранён в draft. Full publish/compile будет отдельным этапом.",
+            "Проверьте dry-run перед real test, чтобы не отправить случайный запрос во внешний сервис.",
+            "Production retry/DLQ и Timeline появятся в следующих этапах.",
         ],
     }

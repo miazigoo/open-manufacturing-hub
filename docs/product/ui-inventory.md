@@ -12,7 +12,7 @@ Visible by default:
 | Documentation | `/docs` | Learning and reference |
 | Training | `/training` | Safe executable lessons |
 | 1C Cockpit | `/onec-cockpit` | Main 1C integration cockpit |
-| Integration Master | `/master` | Scenario chooser and first-step Input Contract |
+| Integration Master | `/master` | Scenario chooser, Input Contract, OData chain, payload builder and Step 4A final action |
 | Request/Response Workbench | `/test-console` | External service calls OMH, OMH returns JSON/XML/raw |
 | OData Connections | `/odata-connections` | Named 1C OData connections |
 | OData Master | `/odata-explorer` | Build OData-backed integrations and safely test queries |

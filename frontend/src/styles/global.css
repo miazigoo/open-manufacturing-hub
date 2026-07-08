@@ -1413,6 +1413,40 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
   padding: 6px 8px;
   color: var(--accent-2);
 }
+.final-action-builder {
+  border-color: rgba(240,179,90,.38);
+  background: radial-gradient(circle at 82% 0%, rgba(240,179,90,.16), transparent 32%), radial-gradient(circle at 12% 12%, rgba(114,167,255,.13), transparent 30%), linear-gradient(145deg, rgba(247,239,218,.075), rgba(0,0,0,.24));
+}
+.final-action-intro,
+.final-action-variable-summary,
+.final-action-type-select,
+.final-action-config-card,
+.final-action-preview-panel,
+.final-action-test-panel,
+.final-action-save-panel {
+  box-shadow: none;
+}
+.final-action-type-select .metadata-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.action-type-card {
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  min-height: 132px;
+}
+.action-type-card.active {
+  border-color: rgba(240,179,90,.72);
+  background: radial-gradient(circle at 100% 0%, rgba(240,179,90,.2), transparent 36%), linear-gradient(135deg, rgba(240,179,90,.12), rgba(114,167,255,.08));
+}
+.small-code-textarea {
+  min-height: 112px;
+}
+.final-action-variable-summary code {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .ghost-button.compact {
   padding: 6px 9px;
   min-height: auto;
@@ -1461,6 +1495,7 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
   .integration-master-page .metadata-grid, .integration-master-page .compact-grid { grid-template-columns: minmax(0, 1fr); }
   .odata-step-heading,
   .odata-step-panels { grid-template-columns: minmax(0, 1fr); display: grid; }
+  .final-action-type-select .metadata-grid { grid-template-columns: minmax(0, 1fr); }
   .previous-variable-head,
   .previous-variable-row { grid-template-columns: minmax(0, 1fr); }
 }

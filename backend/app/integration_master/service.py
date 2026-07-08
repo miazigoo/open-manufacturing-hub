@@ -12,11 +12,22 @@ from app.odata_explorer import service as odata_explorer_service
 from app.odata_explorer.schemas import ODataQueryRequest
 from app.odata_connections import service as odata_connections_service
 from app.integration_master.examples import scenario_by_key, scenarios
+from app.integration_master.final_action import (
+    preview_final_action as preview_final_action_config,
+    test_final_action as test_final_action_config,
+    validate_final_action as validate_final_action_config,
+)
 from app.integration_master.models import IntegrationMasterDraft
 from app.integration_master.payload_renderer import PayloadRenderError, render_payload_step
 from app.integration_master.parser import parse_input
 from app.integration_master.schemas import (
     BusinessKeySuggestion,
+    FinalActionConfig,
+    FinalActionPreviewResponse,
+    FinalActionRequest,
+    FinalActionTestRequest,
+    FinalActionTestResponse,
+    FinalActionValidationResponse,
     ForeachODataStepConfig,
     ForeachODataStepPreviewResponse,
     ForeachODataStepRequest,
@@ -657,6 +668,60 @@ async def append_payload_step(session: AsyncSession, draft_id: UUID, step: Paylo
     return _draft_read(draft), saved
 
 
+def validate_final_action_step(request: FinalActionRequest) -> FinalActionValidationResponse:
+    validation = validate_final_action_config(request.final_action, request.previous_variables)
+    return FinalActionValidationResponse(
+        valid=validation.valid,
+        errors=validation.errors,
+        warnings=validation.warnings,
+        action_type=request.final_action.type,
+        error_code=validation.error_code,
+    )
+
+
+def preview_final_action_step(request: FinalActionRequest) -> FinalActionPreviewResponse:
+    preview = preview_final_action_config(request.final_action, request.previous_variables)
+    return FinalActionPreviewResponse(
+        valid=preview.success,
+        success=preview.success,
+        errors=preview.errors,
+        warnings=preview.warnings,
+        action_type=request.final_action.type,
+        error_code=preview.error_code,
+        send_preview=preview.send_preview,
+        caller_response_preview=preview.caller_response_preview,
+        human_preview=preview.human_preview,
+    )
+
+
+async def test_final_action_step(request: FinalActionTestRequest) -> FinalActionTestResponse:
+    result = await test_final_action_config(request.final_action, request.previous_variables, dry_run=request.dry_run)
+    return FinalActionTestResponse(
+        success=result.success,
+        dry_run=result.dry_run,
+        error_code=result.error_code,
+        message=result.message,
+        would_send=result.would_send,
+        would_return_to_caller=result.would_return_to_caller,
+        target_status=result.target_status,
+        target_response=result.target_response,
+        caller_response=result.caller_response,
+    )
+
+
+async def save_final_action(session: AsyncSession, draft_id: UUID, final_action: FinalActionConfig, previous_variables: dict[str, Any]) -> tuple[InputDraftRead, FinalActionConfig]:
+    draft = await session.get(IntegrationMasterDraft, draft_id)
+    if draft is None:
+        raise NotFoundError("Integration Master draft not found")
+    validation = validate_final_action_config(final_action, previous_variables)
+    if not validation.valid:
+        raise BadRequestError("; ".join(validation.errors))
+    saved = _normalized_final_action(final_action)
+    draft.final_action_json = saved.model_dump(mode="json")
+    await session.flush()
+    return _draft_read(draft), saved
+
+
 def endpoint_url(slug: str) -> str:
     return f"/api/bus/in/{slug}"
 
@@ -1234,6 +1299,20 @@ def _normalized_payload_step(step: PayloadStepConfig) -> PayloadStepConfig:
     )
 
 
+def _normalized_final_action(final_action: FinalActionConfig) -> FinalActionConfig:
+    return_to_caller = final_action.return_to_caller
+    if final_action.type == "send_and_return_response":
+        return_to_caller = return_to_caller.model_copy(update={"type": "proxy_response"})
+    return final_action.model_copy(
+        update={
+            "url": (final_action.url or "").strip() or None,
+            "headers": final_action.headers or {},
+            "return_to_caller": return_to_caller,
+            "last_test_status": "configured",
+        }
+    )
+
+
 def _merge_foreach_rows(grouped_rows: list[dict[str, Any]], merge: str) -> Any:
     if merge == "group_by_item":
         return grouped_rows
@@ -1406,6 +1485,7 @@ def _draft_read(draft: IntegrationMasterDraft) -> InputDraftRead:
     contract = InputContract(**draft.contract_json)
     parse_result = InputParseResponse(**draft.parse_result_json) if draft.parse_result_json else None
     odata_steps = [_step_read(item) for item in (draft.odata_steps_json or []) if isinstance(item, dict)]
+    final_action = FinalActionConfig(**draft.final_action_json) if draft.final_action_json else None
     return InputDraftRead(
         id=draft.id,
         name=draft.name,
@@ -1415,6 +1495,7 @@ def _draft_read(draft: IntegrationMasterDraft) -> InputDraftRead:
         source_system=draft.source_system,
         contract=contract,
         odata_steps=odata_steps,
+        final_action=final_action,
         parse_result=parse_result,
         endpoint_url=endpoint_url(draft.slug),
         created_at=draft.created_at,
