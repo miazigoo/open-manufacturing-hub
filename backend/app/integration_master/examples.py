@@ -5,9 +5,9 @@ from typing import Any
 SCENARIOS: list[dict[str, Any]] = [
     {
         "key": "dnp_chz_code_pool",
-        "title": "DnP запрашивает пул кодов Честного знака",
-        "description": "DnP вызывает OMH по номеру заказа, а следующие шаги смогут прочитать заказ и коды из 1C OData.",
-        "caller": "DnP / внешний сервис",
+        "title": "Синхронизация пула кодов Честного знака",
+        "description": "Внешняя система передает номер заказа, а OMH читает заказ, продукцию и коды маркировки из 1C OData.",
+        "caller": "Внешняя система / API",
         "incoming": "JSON с номером заказа 1C",
         "next_action": "OMH сможет сходить в 1C OData, найти заказ, продукцию и коды маркировки.",
         "source_system": "dnp",

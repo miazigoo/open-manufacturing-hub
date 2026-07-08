@@ -86,7 +86,7 @@ POST /api/integration-master/drafts/{draft_id}/final-action
 
 ```json
 {
-  "name": "DnP запрашивает пул кодов Честного знака",
+  "name": "Синхронизация пула кодов Честного знака",
   "slug": "dnp_sinc_pull_codes",
   "input_mode": "json",
   "source_system": "dnp",
@@ -143,7 +143,7 @@ Example request:
 ```json
 {
   "input_contract": {
-    "name": "DnP запрашивает пул кодов Честного знака",
+    "name": "Синхронизация пула кодов Честного знака",
     "slug": "dnp_sinc_pull_codes",
     "input_mode": "json",
     "source_system": "dnp",

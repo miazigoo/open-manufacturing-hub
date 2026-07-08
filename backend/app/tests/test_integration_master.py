@@ -253,7 +253,7 @@ async def test_integration_master_scenarios_include_dnp(client):
     assert response.status_code == 200, response.text
     scenarios = response.json()
     dnp = next(item for item in scenarios if item["key"] == "dnp_chz_code_pool")
-    assert dnp["title"] == "DnP запрашивает пул кодов Честного знака"
+    assert dnp["title"] == "Синхронизация пула кодов Честного знака"
     assert dnp["default_slug"] == "dnp_sinc_pull_codes"
     assert dnp["sample"]["sinc"] == "dnp_sinc_pull_codes"
 
