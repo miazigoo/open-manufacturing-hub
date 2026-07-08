@@ -342,6 +342,7 @@ class PayloadStepValidationResponse(BaseModel):
 
 
 class PayloadStepPreviewResponse(PayloadStepValidationResponse):
+    rendered_body: Any = None
     rendered_preview: Any = None
     size_bytes: int = 0
 

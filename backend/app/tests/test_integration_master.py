@@ -864,6 +864,7 @@ async def test_payload_step_preview_renders_dnp_json_with_type_preserving_placeh
     body = response.json()
     assert body["valid"] is True
     rendered = body["rendered_preview"]
+    assert body["rendered_body"] == rendered
     assert rendered["omh"]["run_id"] == "run-001"
     assert rendered["omh"]["correlation_id"] == "dnp-chz-sync:26-0666/6938"
     assert isinstance(rendered["payload"]["rows"], list)
@@ -875,6 +876,26 @@ async def test_payload_step_preview_renders_dnp_json_with_type_preserving_placeh
     assert rendered["payload"]["first_gtin"] == "04601234567890"
     assert rendered["payload"]["order_numbers_by_basis"] == {ORDER_GUID: "260666/6938"}
     assert body["variables_after_step"] == ["target_payload"]
+
+
+async def test_payload_step_preview_keeps_full_rendered_body_when_preview_is_truncated(client):
+    contract, _ = await _create_master_contract(client)
+    codes = [
+        {"КодМаркировки": f"code-{index:03}", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID}
+        for index in range(1, 6)
+    ]
+
+    response = await client.post(
+        "/api/integration-master/payload/preview",
+        json={"input_contract": contract, "previous_variables": _payload_variables(codes=codes), "payload_step": _payload_step()},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert len(body["rendered_body"]["payload"]["rows"]) == 5
+    assert len(body["rendered_preview"]["payload"]["rows"]) == 4
+    assert body["rendered_preview"]["payload"]["rows"][-1] == {"_preview_truncated": 2}
 
 
 async def test_payload_step_json_table_builder_supports_dynamic_object_entries(client):

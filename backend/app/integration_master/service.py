@@ -776,6 +776,7 @@ def preview_payload_step(request: PayloadStepRequest) -> PayloadStepPreviewRespo
         save_as=request.payload_step.save_as.strip(),
         variables_after_step=context["variables_after_step"],
         error_code=context["error_code"],
+        rendered_body=context["rendered_body"],
         rendered_preview=context["rendered_preview"],
         size_bytes=context["size_bytes"],
     )
@@ -1293,11 +1294,13 @@ def _value_type_ru(value: Any) -> str:
 def _payload_step_context(previous_variables: dict[str, Any], step: PayloadStepConfig) -> dict[str, Any]:
     errors = _validate_payload_step_fields(step, previous_variables)
     warnings: list[str] = []
+    rendered_body: Any = None
     rendered_preview: Any = None
     size_bytes = 0
     error_code: str | None = None
     try:
         result = render_payload_step(step, previous_variables)
+        rendered_body = result.rendered_body
         rendered_preview = result.rendered_preview
         size_bytes = result.size_bytes
         warnings.extend(result.warnings)
@@ -1307,6 +1310,7 @@ def _payload_step_context(previous_variables: dict[str, Any], step: PayloadStepC
     return {
         "errors": _dedupe_errors(errors),
         "warnings": _dedupe_errors(warnings),
+        "rendered_body": rendered_body,
         "rendered_preview": rendered_preview,
         "size_bytes": size_bytes,
         "variables_after_step": _variables_after_payload_step(step),

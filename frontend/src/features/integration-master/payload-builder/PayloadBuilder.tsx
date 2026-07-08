@@ -38,14 +38,14 @@ export function PayloadBuilder({ contract, draft, previousVariables, onDraftUpda
   const preview = useMutation({
     mutationFn: () => integrationMasterApi.previewPayloadStep(payload),
     onSuccess: (data) => {
-      if (data.valid) onVariablesUpdated({ [data.save_as]: data.rendered_preview ?? null });
+      if (data.valid) onVariablesUpdated({ [data.save_as]: data.rendered_body ?? data.rendered_preview ?? null });
     },
   });
   const save = useMutation({
     mutationFn: () => integrationMasterApi.savePayloadStep(draft.id, contract, payloadVariables, step),
     onSuccess: (data) => {
       onDraftUpdated(data.draft);
-      onVariablesUpdated({ [data.saved_step.save_as]: preview.data?.rendered_preview ?? null });
+      onVariablesUpdated({ [data.saved_step.save_as]: preview.data?.rendered_body ?? preview.data?.rendered_preview ?? null });
     },
   });
 

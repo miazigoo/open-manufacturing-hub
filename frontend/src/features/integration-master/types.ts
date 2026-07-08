@@ -328,6 +328,7 @@ export interface PayloadStepValidationResponse {
 }
 
 export interface PayloadStepPreviewResponse extends PayloadStepValidationResponse {
+  rendered_body?: unknown;
   rendered_preview?: unknown;
   size_bytes: number;
 }
