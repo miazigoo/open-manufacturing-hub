@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { CodeBlock } from '../../../components/CodeBlock';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { CopyButton } from '../../../components/product/CopyButton';
 import { integrationMasterApi } from '../api';
 import type { CompileDraftResponse } from '../types';
@@ -10,13 +12,19 @@ interface CompileSuccessPanelProps {
 }
 
 export function CompileSuccessPanel({ result }: CompileSuccessPanelProps) {
+  const [enableConfirmOpen, setEnableConfirmOpen] = useState(false);
   const runTest = useMutation({ mutationFn: () => integrationMasterApi.runCompiledTest(result.integration_flow_id, { dry_run: true }) });
   const enable = useMutation({ mutationFn: () => integrationMasterApi.enableCompiled(result.integration_flow_id) });
   const endpointUrl = result.endpoint.url;
   const curl = result.curl_example ?? `curl -X POST http://localhost:8000${endpointUrl}`;
 
   function enableAfterConfirm() {
-    if (window.confirm('После включения endpoint начнёт принимать реальные запросы. Продолжить?')) enable.mutate();
+    setEnableConfirmOpen(true);
+  }
+
+  function confirmEnable() {
+    setEnableConfirmOpen(false);
+    enable.mutate();
   }
 
   return (
@@ -37,6 +45,20 @@ export function CompileSuccessPanel({ result }: CompileSuccessPanelProps) {
       {enable.data?.enabled ? <div className="status-card success"><strong>Интеграция включена</strong><span>Endpoint, route и workflow переведены в enabled.</span></div> : null}
       <CodeBlock title="curl" code={curl} language="bash" copyLabel="Скопировать curl" copiedLabel="Скопировано" />
       {result.next_actions.length ? <div className="status-card neutral"><strong>Что дальше</strong><span>{result.next_actions.join(' · ')}</span></div> : null}
+      <ConfirmDialog
+        open={enableConfirmOpen}
+        title="Включить интеграцию?"
+        description="После включения endpoint начнет принимать реальные входящие запросы и запускать сохраненный flow."
+        confirmLabel="Включить интеграцию"
+        loading={enable.isPending}
+        onCancel={() => setEnableConfirmOpen(false)}
+        onConfirm={confirmEnable}
+      >
+        <div className="metadata-grid compact-grid no-margin">
+          <span className="status-card neutral"><small>Endpoint</small><strong>{result.endpoint.method} {endpointUrl}</strong></span>
+          <span className="status-card neutral"><small>Flow</small><strong>{result.integration_flow_id}</strong></span>
+        </div>
+      </ConfirmDialog>
     </section>
   );
 }

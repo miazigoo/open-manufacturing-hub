@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { integrationMasterApi } from '../api';
 import { AvailableVariablesPanel } from '../payload-builder/AvailableVariablesPanel';
 import { CallerResponseConfig } from './CallerResponseConfig';
@@ -24,6 +25,7 @@ const DEFAULT_DNP_ENDPOINT = 'http://172.16.3.10/api/v2/integrations/omh/chz/cod
 export function FinalActionBuilder({ contract, draft, previousVariables, onDraftUpdated }: FinalActionBuilderProps) {
   const [expanded, setExpanded] = useState(Boolean(draft.final_action));
   const [action, setAction] = useState<FinalActionConfig>(() => draft.final_action ?? defaultFinalAction('send_endpoint'));
+  const [realTestConfirmOpen, setRealTestConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (draft.final_action) {
@@ -48,8 +50,12 @@ export function FinalActionBuilder({ contract, draft, previousVariables, onDraft
   }
 
   function realTest() {
-    const ok = window.confirm('Real test отправит HTTP-запрос на указанный endpoint. Продолжить?');
-    if (ok) test.mutate(false);
+    setRealTestConfirmOpen(true);
+  }
+
+  function confirmRealTest() {
+    setRealTestConfirmOpen(false);
+    test.mutate(false);
   }
 
   function insertVariable(path: string) {
@@ -101,6 +107,22 @@ export function FinalActionBuilder({ contract, draft, previousVariables, onDraft
             <FinalActionTestPanel result={test.data} error={testError} testing={test.isPending} onDryRun={() => test.mutate(true)} onRealTest={realTest} />
             <FinalActionSavePanel draft={draft} action={action} error={saveError} saving={save.isPending} onSave={() => save.mutate()} />
           </div>
+          <ConfirmDialog
+            open={realTestConfirmOpen}
+            title="Отправить реальный HTTP-запрос?"
+            description="OMH выполнит запрос на указанный endpoint. Это уже не dry run: внешний сервис может сохранить данные или запустить обработку."
+            confirmLabel="Отправить real test"
+            loading={test.isPending}
+            onCancel={() => setRealTestConfirmOpen(false)}
+            onConfirm={confirmRealTest}
+          >
+            <div className="metadata-grid compact-grid no-margin">
+              <span className="status-card neutral"><small>Method</small><strong>{action.method}</strong></span>
+              <span className="status-card neutral"><small>Endpoint</small><strong>{action.url || 'URL не указан'}</strong></span>
+              <span className="status-card neutral"><small>Body source</small><strong>{action.body_source}</strong></span>
+              <span className="status-card neutral"><small>Caller response</small><strong>{action.return_to_caller.type}</strong></span>
+            </div>
+          </ConfirmDialog>
         </>
       )}
     </section>
