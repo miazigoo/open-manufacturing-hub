@@ -21,7 +21,7 @@ export function AvailableVariablesPanel({ variables, onInsert }: AvailableVariab
           <div key={group} className="status-card neutral">
             <strong>{group}</strong>
             <div className="chip-row">
-              {paths.map((path) => <VariableChip key={path} path={path} available={isAvailable(path, variables)} onInsert={onInsert} />)}
+      {paths.map((path) => <VariableChip key={path} path={path} available={isAvailable(path, variables)} onInsert={onInsert} />)}
             </div>
           </div>
         ))}
@@ -41,9 +41,9 @@ function VariableChip({ path, available, onInsert }: { path: string; available: 
   }
 
   return (
-    <span className={`pill ${available ? 'success' : ''}`}>
+    <span className={`pill ${available ? 'success' : 'muted'}`}>
       <code>{path}</code>
-      <button type="button" className="link-button" onClick={() => onInsert(path)}>insert</button>
+      {available ? <button type="button" className="link-button" onClick={() => onInsert(path)}>insert</button> : <small>нет в sample</small>}
       <button type="button" className="link-button" onClick={copyPath}>copy</button>
     </span>
   );

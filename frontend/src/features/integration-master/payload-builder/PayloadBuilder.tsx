@@ -26,7 +26,7 @@ export function PayloadBuilder({ contract, draft, previousVariables, onDraftUpda
   const [saveAs, setSaveAs] = useState(existing?.save_as ?? 'target_payload');
   const [overwrite, setOverwrite] = useState(Boolean(existing?.overwrite));
   const [jsonMode, setJsonMode] = useState<JsonPayloadMode>(existing?.json_mode ?? 'table');
-  const [fields, setFields] = useState<JsonPayloadFieldConfig[]>(existing?.fields?.length ? existing.fields : defaultDnpFields());
+  const [fields, setFields] = useState<JsonPayloadFieldConfig[]>(existing?.fields?.length ? existing.fields : defaultDnpFields(contract));
   const [dynamicEntries, setDynamicEntries] = useState<JsonPayloadDynamicEntryConfig[]>(existing?.dynamic_entries?.length ? existing.dynamic_entries : defaultDynamicEntries());
   const [rawJsonTemplate, setRawJsonTemplate] = useState(() => (existing?.body_type === 'json' && existing?.template ? stringifyTemplate(existing.template) : DNP_RAW_JSON_TEMPLATE));
   const [xmlTemplate, setXmlTemplate] = useState(() => (existing?.body_type === 'xml' && typeof existing.template === 'string' ? existing.template : '<Response><RowsCount>{{codes.length}}</RowsCount></Response>'));
@@ -113,22 +113,31 @@ function buildStep({ bodyType, saveAs, overwrite, jsonMode, fields, dynamicEntri
   };
 }
 
-function defaultDnpFields(): JsonPayloadFieldConfig[] {
-  return [
+function defaultDnpFields(contract: InputContract): JsonPayloadFieldConfig[] {
+  const bodyPath = requestBodyPath(contract);
+  const entityPath = bodyPath('order_name') ?? bodyPath('Number') ?? 'order.Number';
+  const orderIdPath = bodyPath('order_id');
+  const fields: JsonPayloadFieldConfig[] = [
     { target_path: 'omh.run_id', value_source: 'context.run_id', value_type: 'variable' },
     { target_path: 'omh.event_id', value_source: 'context.event_id', value_type: 'variable' },
-    { target_path: 'omh.entity_id', value_source: 'request.body.order_name', value_type: 'variable' },
+    { target_path: 'omh.entity_id', value_source: entityPath, value_type: 'variable' },
     { target_path: 'omh.event_type', value_source: 'ChestniyZnakCodesSyncRequested', value_type: 'constant_string' },
     { target_path: 'omh.entity_type', value_source: 'DnPOrder', value_type: 'constant_string' },
     { target_path: 'omh.source_system', value_source: 'Open Manufacturing Hub', value_type: 'constant_string' },
     { target_path: 'omh.target_system', value_source: 'DnP', value_type: 'constant_string' },
-    { target_path: 'omh.correlation_id', value_source: 'dnp-chz-sync:{{request.body.order_name}}', value_type: 'template_string' },
+    { target_path: 'omh.correlation_id', value_source: `dnp-chz-sync:{{${entityPath}}}`, value_type: 'template_string' },
     { target_path: 'payload.rows', value_source: 'codes', value_type: 'array' },
-    { target_path: 'payload.order_id', value_source: 'request.body.order_id', value_type: 'variable' },
     { target_path: 'payload.odata_url', value_source: 'http://172.16.3.19/erp_ptc/odata/standard.odata/InformationRegister_ПулКодовМаркировкиСУЗ', value_type: 'constant_string' },
-    { target_path: 'payload.order_name', value_source: 'request.body.order_name', value_type: 'variable' },
+    { target_path: 'payload.order_name', value_source: entityPath, value_type: 'variable' },
     { target_path: 'payload.onec_order_number', value_source: 'order.Number', value_type: 'variable' },
   ];
+  if (orderIdPath) fields.splice(9, 0, { target_path: 'payload.order_id', value_source: orderIdPath, value_type: 'variable' });
+  return fields;
+}
+
+function requestBodyPath(contract: InputContract) {
+  const sample = contract.sample && typeof contract.sample === 'object' && !Array.isArray(contract.sample) ? contract.sample as Record<string, unknown> : {};
+  return (name: string) => Object.prototype.hasOwnProperty.call(sample, name) ? `request.body.${name}` : null;
 }
 
 function defaultDynamicEntries(): JsonPayloadDynamicEntryConfig[] {

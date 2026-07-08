@@ -1,3 +1,4 @@
+import { CodeBlock } from '../../../components/CodeBlock';
 import type { ForeachODataStepPreviewResponse } from '../types';
 
 interface ForeachPreviewPanelProps {
@@ -15,8 +16,8 @@ export function ForeachPreviewPanel({ preview, error, loading, onPreview }: Fore
       {preview ? <div className={`status-card ${preview.valid ? 'success' : 'danger'}`}><strong>{preview.valid ? 'Preview valid' : 'Preview invalid'}</strong><span>Источник: {preview.items}[] · строк: {preview.source_count} · item_as={preview.item_as}</span></div> : null}
       {preview?.errors.length ? <ul className="issue-list">{preview.errors.map((item) => <li key={item}>{item}</li>)}</ul> : null}
       {preview?.warnings.length ? <ul className="issue-list warning-list">{preview.warnings.map((item) => <li key={item}>{item}</li>)}</ul> : null}
-      {preview?.rendered_url ? <pre className="code-block"><code>{preview.rendered_url}</code></pre> : null}
-      {preview?.first_item_preview ? <pre className="code-block"><code>{JSON.stringify(preview.first_item_preview, null, 2)}</code></pre> : null}
+      {preview?.rendered_url ? <CodeBlock code={preview.rendered_url} language="odata" title="Rendered OData URL" showToolbar={false} /> : null}
+      {preview?.first_item_preview ? <CodeBlock code={JSON.stringify(preview.first_item_preview, null, 2)} language="json" title="First item preview" showToolbar={false} /> : null}
       {preview?.variables_after_step.length ? <div className="variable-chip-row"><strong>После шага появится</strong>{preview.variables_after_step.map((item) => <code key={item}>{item}</code>)}</div> : null}
     </section>
   );

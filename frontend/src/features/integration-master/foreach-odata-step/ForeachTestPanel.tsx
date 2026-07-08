@@ -1,3 +1,4 @@
+import { CodeBlock } from '../../../components/CodeBlock';
 import type { ForeachODataStepTestResponse } from '../types';
 
 interface ForeachTestPanelProps {
@@ -19,8 +20,8 @@ export function ForeachTestPanel({ result, error, loading, onTest }: ForeachTest
         <span><small>OData requests</small><strong>{result.odata_requests}</strong></span>
         <span><small>rows_found</small><strong>{result.rows_found}</strong></span>
       </div> : null}
-      {result?.result_preview !== undefined ? <pre className="code-block"><code>{JSON.stringify(result.result_preview, null, 2)}</code></pre> : null}
-      {result?.requests.length ? <details><summary>Показать OData requests</summary><pre className="code-block"><code>{JSON.stringify(result.requests, null, 2)}</code></pre></details> : null}
+      {result?.result_preview !== undefined ? <CodeBlock code={JSON.stringify(result.result_preview, null, 2)} language="json" title="Result preview" showToolbar={false} /> : null}
+      {result?.requests.length ? <details><summary>Показать OData requests</summary><CodeBlock code={JSON.stringify(result.requests, null, 2)} language="json" title="OData requests" showToolbar={false} /></details> : null}
     </section>
   );
 }
