@@ -412,6 +412,13 @@ export function IntegrationFlowsPage() {
       const finalAction = next.final_action && typeof next.final_action === 'object' ? { ...(next.final_action as Record<string, unknown>) } : {};
       Object.entries(patch).forEach(([key, value]) => value === undefined ? delete finalAction[key] : finalAction[key] = value);
       next.final_action = finalAction;
+      if ('method' in patch || 'url' in patch) {
+        const steps = Array.isArray(next.steps) ? [...next.steps] : [];
+        next.steps = steps.map((step) => {
+          if (!step || typeof step !== 'object' || (step as Record<string, unknown>).type !== 'call_endpoint') return step;
+          return { ...(step as Record<string, unknown>), ...patch };
+        });
+      }
       return next;
     });
   }
@@ -428,6 +435,11 @@ export function IntegrationFlowsPage() {
       }
       finalAction.return_to_caller = returnToCaller;
       next.final_action = finalAction;
+      const steps = Array.isArray(next.steps) ? [...next.steps] : [];
+      next.steps = steps.map((step) => {
+        if (!step || typeof step !== 'object' || (step as Record<string, unknown>).type !== 'return_response') return step;
+        return { ...(step as Record<string, unknown>), body: returnToCaller.body };
+      });
       return next;
     });
   }
