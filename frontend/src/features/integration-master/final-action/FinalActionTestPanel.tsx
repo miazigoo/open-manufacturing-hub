@@ -1,3 +1,4 @@
+import { CodeBlock } from '../../../components/CodeBlock';
 import type { FinalActionTestResponse } from '../types';
 
 interface FinalActionTestPanelProps {
@@ -27,5 +28,9 @@ export function FinalActionTestPanel({ result, error, testing, onDryRun, onRealT
 }
 
 function PreviewBlock({ title, value }: { title: string; value: unknown }) {
-  return <div className="stack-form"><strong>{title}</strong><pre className="code-block"><code>{typeof value === 'string' ? value : JSON.stringify(value, null, 2)}</code></pre></div>;
+  return <CodeBlock title={title} code={formatPreviewValue(value)} language={typeof value === 'string' ? 'text' : 'json'} showToolbar />;
+}
+
+function formatPreviewValue(value: unknown) {
+  return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
 }

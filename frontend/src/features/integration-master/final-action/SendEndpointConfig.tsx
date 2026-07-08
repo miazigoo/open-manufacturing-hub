@@ -1,3 +1,4 @@
+import { CodeEditor } from '../../../components/CodeEditor';
 import { EndpointHeadersEditor } from './EndpointHeadersEditor';
 import type { FinalActionBodySource, FinalActionBodyType, FinalActionConfig, FinalActionMethod } from '../types';
 
@@ -42,7 +43,13 @@ export function SendEndpointConfig({ action, onChange }: SendEndpointConfigProps
       </div>
       {action.body_source === 'custom' ? (
         <label className="field-label full-span">Custom request body
-          <textarea className="code-textarea" value={String(action.custom_body ?? '')} onChange={(event) => patch({ custom_body: event.target.value })} spellCheck={false} placeholder={action.body_type === 'xml' ? '<Request>{{target_payload}}</Request>' : '{"payload": "{{target_payload}}"}'} />
+          <CodeEditor
+            value={String(action.custom_body ?? '')}
+            onChange={(value) => patch({ custom_body: value })}
+            language={action.body_type === 'xml' ? 'xml' : action.body_type === 'raw_text' ? 'text' : 'json'}
+            minRows={8}
+            placeholder={action.body_type === 'xml' ? '<Request>{{target_payload}}</Request>' : '{"payload": "{{target_payload}}"}'}
+          />
         </label>
       ) : null}
       <EndpointHeadersEditor value={action.headers ?? { 'Content-Type': 'application/json' }} onChange={(headers) => patch({ headers })} />

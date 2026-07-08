@@ -1,3 +1,4 @@
+import { CodeEditor } from '../../../components/CodeEditor';
 import { EndpointHeadersEditor } from './EndpointHeadersEditor';
 import type { FinalActionConfig, FinalActionReturnType } from '../types';
 
@@ -35,7 +36,12 @@ export function CallerResponseConfig({ action, onChange }: CallerResponseConfigP
       </div>
       {['fixed_success', 'custom_json', 'custom_xml', 'custom_raw'].includes(response.type) && !lockedProxy ? (
         <label className="field-label full-span">Caller response body
-          <textarea className="code-textarea" value={typeof response.body === 'string' ? response.body : JSON.stringify(response.body ?? {}, null, 2)} onChange={(event) => patch({ body: event.target.value })} spellCheck={false} />
+          <CodeEditor
+            value={typeof response.body === 'string' ? response.body : JSON.stringify(response.body ?? {}, null, 2)}
+            onChange={(value) => patch({ body: value })}
+            language={response.type === 'custom_xml' ? 'xml' : response.type === 'custom_raw' ? 'text' : 'json'}
+            minRows={6}
+          />
           <small>Для custom JSON можно использовать placeholders: {`{{target_payload.payload.order_id}}`}.</small>
         </label>
       ) : null}

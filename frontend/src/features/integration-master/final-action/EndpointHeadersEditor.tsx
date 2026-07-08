@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CodeEditor } from '../../../components/CodeEditor';
 
 interface EndpointHeadersEditorProps {
   value: Record<string, unknown>;
@@ -29,7 +30,7 @@ export function EndpointHeadersEditor({ value, onChange, label = 'Headers JSON',
 
   return (
     <label className="field-label full-span">{label}
-      <textarea className="code-textarea small-code-textarea" value={text} onChange={(event) => apply(event.target.value)} spellCheck={false} />
+      <CodeEditor value={text} onChange={apply} language="json" minRows={4} />
       <small>{error ? <span className="error-text">{error}</span> : hint}</small>
     </label>
   );
