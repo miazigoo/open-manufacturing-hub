@@ -31,7 +31,7 @@ export function OperationKeySelector({ value, suggestions, fields, onChange }: O
           onChange({ type: 'field', field_path: event.target.value, value: field?.example ?? '', fallback_paths: [], matcher_preview: {} });
         }}><option value="">Выберите поле</option>{fields.map((field) => <option key={field.path} value={field.path}>{field.name} · {field.path}</option>)}</select></label>
         <label className="field-label">Значение<input value={value.value == null ? '' : String(value.value)} disabled={value.type !== 'field'} onChange={(event) => onChange({ ...value, value: event.target.value })} placeholder={selectedField ? String(selectedField.example ?? '') : 'operation value'} /></label>
-        <label className="field-label">Fallback paths<input value={value.fallback_paths.join(', ')} disabled={value.type !== 'field'} onChange={(event) => onChange({ ...value, fallback_paths: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} placeholder="request.body.operation" /></label>
+        <label className="field-label">Если поле не пришло, проверить ещё<small>Запасные поля для route key. Например: сначала sinc, а если его нет — operation.</small><input value={value.fallback_paths.join(', ')} disabled={value.type !== 'field'} onChange={(event) => onChange({ ...value, fallback_paths: event.target.value.split(',').map((item) => item.trim()).filter(Boolean) })} placeholder="request.body.operation" /></label>
       </div>
       <details className="variable-card"><summary><span>Advanced matcher JSON</span><strong>JSON</strong></summary><JsonBlock value={value.matcher_preview} title="Matcher preview" searchable={false} /></details>
     </div>

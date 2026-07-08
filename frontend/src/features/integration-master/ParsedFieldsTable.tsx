@@ -41,7 +41,6 @@ export function ParsedFieldsTable({ fields, operationPath, businessPath, onChang
                     type="button"
                     className={`${operationPath === field.path ? 'primary-link' : 'ghost-button'} tooltip-button`}
                     data-tooltip="Route key: OMH выберет этот сценарий, если входящий запрос содержит это поле с нужным значением. Обычно это operation или sinc."
-                    title="Route key: OMH выберет этот сценарий, если входящий запрос содержит это поле с нужным значением. Обычно это operation или sinc."
                     aria-label={`Сделать ${field.name} route key`}
                     onClick={() => onUseOperation(field)}
                   >
@@ -51,7 +50,6 @@ export function ParsedFieldsTable({ fields, operationPath, businessPath, onChang
                     type="button"
                     className={`${businessPath === field.path ? 'primary-link' : 'ghost-button'} tooltip-button`}
                     data-tooltip="Business key: значение попадёт в журнал событий и Timeline. Выбирайте номер заказа, ID заявки или другой понятный оператору идентификатор."
-                    title="Business key: значение попадёт в журнал событий и Timeline. Выбирайте номер заказа, ID заявки или другой понятный оператору идентификатор."
                     aria-label={`Сделать ${field.name} business key`}
                     onClick={() => onUseBusiness(field)}
                   >
