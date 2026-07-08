@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ErrorState } from '../../components/ErrorState';
@@ -35,10 +35,6 @@ export function IntegrationMasterPage() {
   const [fields, setFields] = useState<InputContractField[]>([]);
   const [operationKey, setOperationKey] = useState<InputOperationKey>({ type: 'endpoint', field_path: null, value: null, fallback_paths: [], matcher_preview: { mode: 'endpoint', rules: [] } });
   const [businessKey, setBusinessKey] = useState<InputBusinessKey>({ path: null, fallback_paths: [] });
-
-  useEffect(() => {
-    if (!selected && scenarios.data?.length) applyScenario(scenarios.data[0]);
-  }, [scenarios.data, selected]);
 
   const parse = useMutation({
     mutationFn: () => integrationMasterApi.parse({ input_mode: inputMode, scenario_key: selected?.key, sample: sampleText }),
@@ -131,46 +127,72 @@ export function IntegrationMasterPage() {
         <div className="hero-instrument"><span>IC</span><small>INPUT CONTRACT</small></div>
       </section>
 
-      <MasterStepLayout index="01" title="Выберите сценарий" description="Карточки описывают реальные интеграции человеческим языком: кто вызывает OMH, что приходит и что обычно будет дальше.">
-        <ScenarioChooser scenarios={scenarios.data ?? []} selectedKey={selected?.key} onSelect={applyScenario} />
-      </MasterStepLayout>
+      {!selected ? (
+        <MasterStepLayout index="01" title="Выберите сценарий" description="Карточки описывают реальные интеграции человеческим языком: кто вызывает OMH, что приходит и что обычно будет дальше.">
+          <ScenarioChooser scenarios={scenarios.data ?? []} selectedKey={undefined} onSelect={applyScenario} />
+        </MasterStepLayout>
+      ) : (
+        <>
+          <SelectedScenarioPanel scenario={selected} onBack={() => setSelected(null)} />
 
-      <MasterStepLayout index="02" title="Что придёт во входящем запросе" description="Выберите JSON, XML или raw text и вставьте реальный sample. OMH разберёт поля, пути и типы.">
-        <InputTypeSelector value={inputMode} allowed={selected?.input_modes ?? []} onChange={changeInputMode} />
-        <div className="metadata-grid compact-grid no-margin">
-          <label className="field-label">Название контракта<input value={name} onChange={(event) => setName(event.target.value)} /></label>
-          <label className="field-label">Source system<select value={sourceSystem} onChange={(event) => setSourceSystem(event.target.value)}><option value="external_api">External API / Website</option><option value="dnp">DnP</option><option value="onec">1C</option><option value="wms">WMS</option><option value="printer">Printer</option><option value="other">Other</option></select></label>
-        </div>
-        <EndpointSlugEditor value={slug} onChange={setSlug} />
-        <SampleInputEditor inputMode={inputMode} value={sampleText} error={parseError} onChange={setSampleText} onParse={() => parse.mutate()} parsing={parse.isPending} />
-      </MasterStepLayout>
+          <MasterStepLayout index="02" title="Что придёт во входящем запросе" description="Выберите JSON, XML или raw text и вставьте реальный sample. OMH разберёт поля, пути и типы.">
+            <InputTypeSelector value={inputMode} allowed={selected.input_modes} onChange={changeInputMode} />
+            <div className="metadata-grid compact-grid no-margin">
+              <label className="field-label">Название контракта<input value={name} onChange={(event) => setName(event.target.value)} /></label>
+              <label className="field-label">Source system<select value={sourceSystem} onChange={(event) => setSourceSystem(event.target.value)}><option value="external_api">External API / Website</option><option value="dnp">DnP</option><option value="onec">1C</option><option value="wms">WMS</option><option value="printer">Printer</option><option value="other">Other</option></select></label>
+            </div>
+            <EndpointSlugEditor value={slug} onChange={setSlug} />
+            <SampleInputEditor inputMode={inputMode} value={sampleText} error={parseError} onChange={setSampleText} onParse={() => parse.mutate()} parsing={parse.isPending} />
+          </MasterStepLayout>
 
-      <MasterStepLayout index="03" title="Проверьте Input Contract Table" description="Поля из sample считаются required по умолчанию. Здесь можно сделать поле optional и добавить описание для следующих шагов мастера.">
-        <ParsedFieldsTable fields={fields} operationPath={operationKey.field_path} businessPath={businessKey.path} onChange={setFields} onUseOperation={useOperationField} onUseBusiness={useBusinessField} />
-      </MasterStepLayout>
+          <MasterStepLayout index="03" title="Проверьте Input Contract Table" description="Поля из sample считаются required по умолчанию. Здесь можно сделать поле optional и добавить описание для следующих шагов мастера.">
+            <ParsedFieldsTable fields={fields} operationPath={operationKey.field_path} businessPath={businessKey.path} onChange={setFields} onUseOperation={useOperationField} onUseBusiness={useBusinessField} />
+          </MasterStepLayout>
 
-      <MasterStepLayout index="04" title="Как OMH поймёт, что это этот сценарий" description="Выберите route key. Для DnP по умолчанию это sinc=dnp_sinc_pull_codes с fallback на operation.">
-        <OperationKeySelector value={operationKey} suggestions={parseResult?.suggested_operation_keys ?? []} fields={fields} onChange={(value) => setOperationKey(withMatcher(value))} />
-      </MasterStepLayout>
+          <MasterStepLayout index="04" title="Как OMH поймёт, что это этот сценарий" description="Выберите route key. Например, входящий JSON может нести поле sinc или operation с кодовой фразой сценария.">
+            <OperationKeySelector value={operationKey} suggestions={parseResult?.suggested_operation_keys ?? []} fields={fields} onChange={(value) => setOperationKey(withMatcher(value))} />
+          </MasterStepLayout>
 
-      <MasterStepLayout index="05" title="Что считать номером события" description="Business key попадёт в журнал событий и Timeline. Выбирайте поле, по которому оператор потом найдёт конкретный запрос.">
-        <BusinessKeySelector value={businessKey} suggestions={parseResult?.suggested_business_keys ?? []} fields={fields} onChange={setBusinessKey} />
-      </MasterStepLayout>
+          <MasterStepLayout index="05" title="Что считать номером события" description="Business key попадёт в журнал событий и Timeline. Выбирайте поле, по которому оператор потом найдёт конкретный запрос.">
+            <BusinessKeySelector value={businessKey} suggestions={parseResult?.suggested_business_keys ?? []} fields={fields} onChange={setBusinessKey} />
+          </MasterStepLayout>
 
-      <InputContractPreview contract={contract} validation={validation.data ?? null} saved={savedResponse} error={saveError} onValidate={validateContract} onSave={saveContractDraft} validating={validation.isPending} saving={saveDraft.isPending} />
+          <InputContractPreview contract={contract} validation={validation.data ?? null} saved={savedResponse} error={saveError} onValidate={validateContract} onSave={saveContractDraft} validating={validation.isPending} saving={saveDraft.isPending} />
 
-      {savedDraft ? <ODataStepBuilder contract={savedDraft.contract} draft={savedDraft} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
+          {savedDraft ? <ODataStepBuilder contract={savedDraft.contract} draft={savedDraft} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
 
-      {savedDraft && hasSavedODataQuery ? <ODataObjectStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
+          {savedDraft && hasSavedODataQuery ? <ODataObjectStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
 
-      {savedDraft && hasSavedObjectStep ? <ForeachODataStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
+          {savedDraft && hasSavedObjectStep ? <ForeachODataStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
 
-      {savedDraft && hasSavedForeachStep ? <PayloadBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
+          {savedDraft && hasSavedForeachStep ? <PayloadBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
 
-      {savedDraft && hasSavedPayloadStep ? <FinalActionBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} /> : null}
+          {savedDraft && hasSavedPayloadStep ? <FinalActionBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} /> : null}
 
-      {savedDraft?.final_action ? <CompileIntegrationStep draft={savedDraft} /> : null}
+          {savedDraft?.final_action ? <CompileIntegrationStep draft={savedDraft} /> : null}
+        </>
+      )}
     </div>
+  );
+}
+
+function SelectedScenarioPanel({ scenario, onBack }: { scenario: IntegrationScenario; onBack: () => void }) {
+  return (
+    <section className="wizard-step integration-master-step selected-scenario-panel">
+      <div className="panel-toolbar">
+        <div>
+          <span className="eyebrow">Выбран сценарий</span>
+          <h2>{scenario.title}</h2>
+          <p>{scenario.description}</p>
+        </div>
+        <button type="button" className="ghost-button" onClick={onBack}>Вернуться к сценариям</button>
+      </div>
+      <dl className="scenario-card-meta selected-scenario-meta">
+        <div><dt>Кто вызывает OMH</dt><dd>{scenario.caller}</dd></div>
+        <div><dt>Что приходит</dt><dd>{scenario.incoming}</dd></div>
+        <div className="wide"><dt>Что делает OMH дальше</dt><dd>{scenario.next_action}</dd></div>
+      </dl>
+    </section>
   );
 }
 

@@ -1238,6 +1238,14 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .integration-master-step { background: linear-gradient(145deg, rgba(247,239,218,.075), rgba(143,198,180,.045)); }
 .integration-scenario-grid .scenario-choice-card { text-align: left; cursor: pointer; font: inherit; }
 .integration-scenario-grid .scenario-choice-card.selected { transform: translateY(-2px); }
+.selected-scenario-panel { border-color: rgba(240,179,90,.44); background: linear-gradient(145deg, rgba(240,179,90,.1), rgba(143,198,180,.055)); }
+.selected-scenario-panel .panel-toolbar { margin-bottom: 0; align-items: flex-start; }
+.selected-scenario-panel .panel-toolbar p { max-width: 760px; margin-top: 6px; }
+.selected-scenario-meta { display: grid; gap: 10px; margin: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.selected-scenario-meta div { border-top: 1px solid rgba(247,239,218,.12); padding-top: 10px; display: grid; gap: 4px; }
+.selected-scenario-meta .wide { grid-column: 1 / -1; }
+.selected-scenario-meta dt { color: var(--accent-2); font-size: 11px; text-transform: uppercase; letter-spacing: .11em; font-weight: 800; }
+.selected-scenario-meta dd { margin: 0; color: var(--muted); line-height: 1.45; }
 .builder-help-card.active, .input-mode-card.active { border-color: rgba(240,179,90,.72); background: radial-gradient(circle at 100% 0%, rgba(240,179,90,.2), transparent 36%), linear-gradient(135deg, rgba(240,179,90,.12), rgba(143,198,180,.08)); }
 .input-mode-card:disabled { opacity: .52; cursor: not-allowed; }
 .integration-fields-table { overflow-x: auto; }
@@ -1526,6 +1534,7 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 }
 @media (max-width: 860px) {
   .integration-master-page .metadata-grid, .integration-master-page .compact-grid { grid-template-columns: minmax(0, 1fr); }
+  .selected-scenario-meta { grid-template-columns: minmax(0, 1fr); }
   .odata-step-heading,
   .odata-step-panels { grid-template-columns: minmax(0, 1fr); display: grid; }
   .final-action-type-select .metadata-grid { grid-template-columns: minmax(0, 1fr); }
