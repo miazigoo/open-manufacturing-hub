@@ -413,6 +413,7 @@ class ForeachODataStepTestResponse(BaseModel):
     rows_found: int = 0
     merge: ForeachODataMergeMode = "flatten"
     saved_as: str
+    result_body: Any = None
     result_preview: Any = None
     variables_after_step: list[str] = Field(default_factory=list)
     requests: list[dict[str, Any]] = Field(default_factory=list)

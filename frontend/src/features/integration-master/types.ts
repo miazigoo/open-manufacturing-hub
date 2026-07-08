@@ -399,6 +399,7 @@ export interface ForeachODataStepTestResponse {
   rows_found: number;
   merge: ForeachODataMergeMode;
   saved_as: string;
+  result_body?: unknown;
   result_preview?: unknown;
   variables_after_step: string[];
   requests: Array<Record<string, unknown>>;

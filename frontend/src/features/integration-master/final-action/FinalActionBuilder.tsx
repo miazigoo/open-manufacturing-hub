@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { ToastStack, ToastMessage } from '../../../components/ToastStack';
 import { integrationMasterApi } from '../api';
 import { AvailableVariablesPanel } from '../payload-builder/AvailableVariablesPanel';
 import { CallerResponseConfig } from './CallerResponseConfig';
@@ -26,6 +27,7 @@ export function FinalActionBuilder({ contract, draft, previousVariables, onDraft
   const [expanded, setExpanded] = useState(Boolean(draft.final_action));
   const [action, setAction] = useState<FinalActionConfig>(() => draft.final_action ?? defaultFinalAction('send_endpoint'));
   const [realTestConfirmOpen, setRealTestConfirmOpen] = useState(false);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   useEffect(() => {
     if (draft.final_action) {
@@ -36,11 +38,41 @@ export function FinalActionBuilder({ contract, draft, previousVariables, onDraft
 
   const payload = useMemo<FinalActionRequest>(() => ({ input_contract: contract, previous_variables: previousVariables, final_action: action }), [contract, previousVariables, action]);
   const preview = useMutation({ mutationFn: () => integrationMasterApi.previewFinalAction(payload) });
-  const test = useMutation({ mutationFn: (dryRun: boolean) => integrationMasterApi.testFinalAction({ ...payload, dry_run: dryRun }) });
+  const test = useMutation({
+    mutationFn: (dryRun: boolean) => integrationMasterApi.testFinalAction({ ...payload, dry_run: dryRun }),
+    onSuccess: (data, dryRun) => {
+      pushToast({
+        tone: data.success ? 'success' : 'danger',
+        title: data.success ? (dryRun ? 'Dry run выполнен' : 'Тестовый запрос отправлен') : 'Проверка не прошла',
+        message: data.message ?? (dryRun ? 'Сетевой запрос не выполнялся.' : `Target status ${data.target_status ?? 'n/a'}`),
+      });
+    },
+    onError: (error, dryRun) => {
+      pushToast({
+        tone: 'danger',
+        title: dryRun ? 'Dry run завершился ошибкой' : 'Тестовый запрос не отправлен',
+        message: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    },
+  });
   const save = useMutation({
     mutationFn: () => integrationMasterApi.saveFinalAction(draft.id, contract, previousVariables, action),
-    onSuccess: (data) => onDraftUpdated(data.draft),
+    onSuccess: (data) => {
+      onDraftUpdated(data.draft);
+      pushToast({ tone: 'success', title: 'Финальное действие сохранено', message: 'Настройки endpoint/response записаны в draft.' });
+    },
+    onError: (error) => {
+      pushToast({ tone: 'danger', title: 'Не удалось сохранить финальное действие', message: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+    },
   });
+
+  function pushToast(toast: Omit<ToastMessage, 'id'>) {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setToasts((current) => [...current.slice(-2), { id, ...toast }]);
+    window.setTimeout(() => {
+      setToasts((current) => current.filter((item) => item.id !== id));
+    }, 5000);
+  }
 
   function changeType(type: FinalActionType) {
     setAction((current) => actionForType(type, current));
@@ -123,6 +155,7 @@ export function FinalActionBuilder({ contract, draft, previousVariables, onDraft
               <span className="status-card neutral"><small>Caller response</small><strong>{action.return_to_caller.type}</strong></span>
             </div>
           </ConfirmDialog>
+          <ToastStack items={toasts} onClose={(id) => setToasts((current) => current.filter((item) => item.id !== id))} />
         </>
       )}
     </section>

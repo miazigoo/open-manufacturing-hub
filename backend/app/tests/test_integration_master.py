@@ -715,6 +715,7 @@ async def test_foreach_odata_step_test_can_process_multiple_products(client):
     assert body["items_processed"] == 2
     assert body["odata_requests"] == 2
     assert body["rows_found"] == 3
+    assert [row["КодМаркировки"] for row in body["result_body"]] == ["code-001", "code-002", "code-101"]
     assert [row["КодМаркировки"] for row in body["result_preview"]] == ["code-001", "code-002", "code-101"]
 
 

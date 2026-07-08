@@ -40,7 +40,7 @@ export function ForeachODataStepBuilder({ contract, draft, previousVariables, on
   const test = useMutation({
     mutationFn: () => integrationMasterApi.testForeachODataStep(payload),
     onSuccess: (data) => {
-      if (data.success) onVariablesUpdated?.({ [data.saved_as]: data.result_preview ?? [] });
+      if (data.success) onVariablesUpdated?.({ [data.saved_as]: data.result_body ?? data.result_preview ?? [] });
     },
   });
   const saveVariables = useMemo(() => withoutVariable(previousVariables, step.save_as), [previousVariables, step.save_as]);

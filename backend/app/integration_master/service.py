@@ -724,6 +724,7 @@ async def test_foreach_odata_step(session: AsyncSession, request: ForeachODataSt
         rows_found=rows_found,
         merge=step.merge,
         saved_as=preview.saved_as,
+        result_body=merged,
         result_preview=_preview_foreach_result(merged, step.merge),
         variables_after_step=_variables_after_foreach_step(step, first_row),
         requests=requests,
