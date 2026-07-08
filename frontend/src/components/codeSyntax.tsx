@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 
-export type CodeLanguage = 'json' | 'bash' | 'xml' | 'text' | 'diff';
+export type CodeLanguage = 'json' | 'bash' | 'xml' | 'text' | 'diff' | 'odata';
 
 export function normalizeLanguage(language?: string): CodeLanguage {
   const value = (language || 'text').toLowerCase();
   if (['json', 'jsonc'].includes(value)) return 'json';
   if (['bash', 'sh', 'shell', 'curl', 'http'].includes(value)) return 'bash';
   if (['xml', 'html', '1c'].includes(value)) return 'xml';
+  if (['odata', 'odata-filter', 'filter'].includes(value)) return 'odata';
   if (value === 'diff') return 'diff';
   return 'text';
 }
@@ -23,7 +24,9 @@ export function highlightCode(code: string, language?: string): ReactNode[] {
           ? highlightXmlLine(line, lineIndex)
           : normalized === 'diff'
             ? highlightDiffLine(line, lineIndex)
-            : [line];
+            : normalized === 'odata'
+              ? highlightODataLine(line, lineIndex)
+              : [line];
     return lineIndex === lines.length - 1 ? highlighted : [...highlighted, '\n'];
   });
 }
@@ -102,4 +105,20 @@ function highlightXmlLine(line: string, lineIndex: number): ReactNode[] {
 function highlightDiffLine(line: string, lineIndex: number): ReactNode[] {
   const tone = line.startsWith('+') ? 'tok-diff-add' : line.startsWith('-') ? 'tok-diff-remove' : line.startsWith('@') ? 'tok-key' : '';
   return tone ? [span(tone, line, `${lineIndex}-${line}`)] : [line];
+}
+
+function highlightODataLine(line: string, lineIndex: number): ReactNode[] {
+  const parts = line.split(/({{\s*[^{}]+?\s*}}|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|[(),]|\b(?:eq|ne|gt|lt|ge|le|and|or|not|contains|startswith|endswith|cast|guid|datetime|true|false|null)\b)/gi).filter(Boolean);
+  return parts.map((part, index) => {
+    const key = `${lineIndex}-${index}-${part}`;
+    if (/^{{/.test(part)) return span('tok-key', part, key);
+    if (/^['"]/.test(part)) return span('tok-string', part, key);
+    if (/^[(),]$/.test(part)) return span('tok-punctuation', part, key);
+    if (/^(eq|ne|gt|lt|ge|le|and|or|not)$/i.test(part)) return span('tok-method', part, key);
+    if (/^(contains|startswith|endswith|cast)$/i.test(part)) return span('tok-command', part, key);
+    if (/^(guid|datetime)$/i.test(part)) return span('tok-flag', part, key);
+    if (/^(true|false)$/i.test(part)) return span('tok-boolean', part, key);
+    if (/^null$/i.test(part)) return span('tok-null', part, key);
+    return part;
+  });
 }

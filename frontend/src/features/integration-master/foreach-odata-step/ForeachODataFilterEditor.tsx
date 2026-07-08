@@ -1,3 +1,4 @@
+import { CodeEditor } from '../../../components/CodeEditor';
 import type { ForeachODataStepConfig } from '../types';
 
 interface ForeachODataFilterEditorProps {
@@ -19,7 +20,7 @@ export function ForeachODataFilterEditor({ step, variables, onChange }: ForeachO
   return (
     <section className="panel stack-form foreach-filter-editor">
       <div><span className="eyebrow">Foreach OData filter</span><h3>OData-запрос для каждой строки</h3><p className="microcopy">Внутри цикла доступна локальная переменная <code>{step.item_as || 'product'}</code> и все предыдущие переменные, например <code>order.Ref_Key</code>.</p></div>
-      <label className="field-label">$filter<textarea value={step.filter ?? ''} onChange={(event) => onChange({ filter: event.target.value })} rows={4} placeholder="Номенклатура_Key eq guid'{{product.Номенклатура_Key}}'" /></label>
+      <label className="field-label">$filter<CodeEditor value={step.filter ?? ''} onChange={(filter) => onChange({ filter })} language="odata" minRows={4} placeholder="Номенклатура_Key eq guid'{{product.Номенклатура_Key}}'" /></label>
       <div className="action-row wrap-actions">
         <button type="button" className="ghost-button" onClick={() => insert(`Номенклатура_Key eq guid'{{${step.item_as || 'product'}.Номенклатура_Key}}'`)}>+ Номенклатура_Key</button>
         <button type="button" className="ghost-button" onClick={() => insert("and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')")}>+ ДокументОснование</button>

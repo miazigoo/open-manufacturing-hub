@@ -1,3 +1,4 @@
+import { CodeEditor } from '../../../components/CodeEditor';
 import type { InputContractField, ODataFilterOperator, ODataFilterRule, ODataStepConfig, ODataValueType } from '../types';
 
 interface ODataFilterBuilderProps {
@@ -33,7 +34,7 @@ export function ODataFilterBuilder({ step, fields, onChange }: ODataFilterBuilde
       </div>
 
       {step.filter_mode === 'raw' ? (
-        <label className="field-label">$filter<textarea value={step.filter ?? ''} onChange={(event) => onChange({ filter: event.target.value })} rows={3} placeholder="Number eq '{{request.body.Number}}'" /></label>
+        <label className="field-label">$filter<CodeEditor value={step.filter ?? ''} onChange={(filter) => onChange({ filter })} language="odata" minRows={3} placeholder="Number eq '{{request.body.Number}}'" /></label>
       ) : (
         <div className="metadata-grid compact-grid no-margin">
           <label className="field-label">OData field<input value={rule.field} onChange={(event) => updateRule({ field: event.target.value })} placeholder="Number" /></label>
