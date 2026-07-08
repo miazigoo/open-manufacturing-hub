@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -16,16 +17,21 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({ open, title, description, confirmLabel, cancelLabel = 'Отмена', tone = 'warning', loading = false, children, onConfirm, onCancel }: ConfirmDialogProps) {
   useEffect(() => {
     if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') onCancel();
     }
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [open, onCancel]);
 
   if (!open) return null;
 
-  return (
+  const dialog = (
     <div className="confirm-dialog-backdrop" role="presentation" onMouseDown={onCancel}>
       <section className={`confirm-dialog confirm-dialog-${tone}`} role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="panel-toolbar">
@@ -43,4 +49,6 @@ export function ConfirmDialog({ open, title, description, confirmLabel, cancelLa
       </section>
     </div>
   );
+
+  return createPortal(dialog, document.body);
 }
