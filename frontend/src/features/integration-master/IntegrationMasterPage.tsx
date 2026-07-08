@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { BusinessKeySelector } from './BusinessKeySelector';
-import { EndpointSlugEditor, slugError, slugify } from './EndpointSlugEditor';
+import { EndpointSlugEditor, slugError, slugify, suggestedSlug } from './EndpointSlugEditor';
 import { InputContractPreview } from './InputContractPreview';
 import { InputTypeSelector } from './InputTypeSelector';
 import { integrationMasterApi } from './api';
@@ -54,7 +54,7 @@ export function IntegrationMasterPage() {
   });
 
   const validation = useMutation({ mutationFn: (contract: InputContract) => integrationMasterApi.validate(contract) });
-  const saveDraft = useMutation({ mutationFn: (contract: InputContract) => integrationMasterApi.saveDraft(contract, parseResult), onSuccess: (data) => { setSavedDraft(data.draft); setPreviousVariables({}); } });
+  const saveDraft = useMutation({ mutationFn: (contract: InputContract) => integrationMasterApi.saveDraft(contract, parseResult), onSuccess: (data) => { setSavedDraft(data.draft); setSlug(data.draft.slug); setPreviousVariables({}); } });
   const contract = useMemo(() => buildContract({ name, slug, inputMode, sourceSystem, selected, sample: parseResult?.normalized_sample ?? sampleText, fields, operationKey, businessKey }), [name, slug, inputMode, sourceSystem, selected, parseResult, sampleText, fields, operationKey, businessKey]);
   const objectVariables = useMemo(() => ({ ...deriveVariablesFromDraft(savedDraft), ...previousVariables }), [savedDraft, previousVariables]);
 
@@ -72,7 +72,7 @@ export function IntegrationMasterPage() {
     setSelected(scenario);
     setInputMode(mode);
     setName(scenario.title);
-    setSlug(scenario.default_slug);
+    setSlug(suggestedSlug(scenario.default_slug));
     setSourceSystem(scenario.source_system);
     setSampleText(sampleToText(scenario.sample, mode));
     setParseResult(null);

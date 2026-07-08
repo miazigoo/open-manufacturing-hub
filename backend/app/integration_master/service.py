@@ -135,6 +135,9 @@ async def save_draft(session: AsyncSession, contract: InputContract, parse_resul
     validation = validate_input_contract(contract)
     if not validation["valid"]:
         raise BadRequestError("; ".join(validation["errors"]))
+    unique_slug = await _unique_draft_slug(session, contract.slug)
+    if unique_slug != contract.slug:
+        contract = contract.model_copy(update={"slug": unique_slug, "endpoint_url": endpoint_url(unique_slug)})
     payload = contract.model_dump(mode="json")
     payload["endpoint_url"] = endpoint_url(contract.slug)
     draft = IntegrationMasterDraft(
@@ -1064,8 +1067,8 @@ def _unknown_placeholder_roots(step: PayloadStepConfig, variables: dict[str, Any
 
 
 async def _ensure_slug_available(session: AsyncSession, draft: InputDraftRead) -> None:
-    endpoint_name = f"Flow {draft.name} Endpoint"
-    flow_name = draft.name
+    flow_name = f"{draft.name} [{draft.slug}]"
+    endpoint_name = f"Flow {flow_name} Endpoint"
     if await bus_repository.get_endpoint_by_slug(session, draft.slug) or await bus_repository.get_endpoint_by_name(session, endpoint_name):
         raise BadRequestError(f"Endpoint {endpoint_url(draft.slug)} уже существует. Выберите другой slug.")
     if await flow_repository.get_by_slug(session, draft.slug):
@@ -1073,6 +1076,27 @@ async def _ensure_slug_available(session: AsyncSession, draft: InputDraftRead) -
     existing_flow_by_name = await session.execute(select(IntegrationFlow).where(IntegrationFlow.name == flow_name))
     if existing_flow_by_name.scalar_one_or_none() is not None:
         raise BadRequestError(f"Integration Flow с названием {flow_name} уже существует. Измените название или slug.")
+
+
+async def _unique_draft_slug(session: AsyncSession, requested_slug: str) -> str:
+    validate_slug(requested_slug)
+    base = requested_slug[:160].strip("_-") or "integration"
+    candidate = base
+    suffix = 2
+    while await _slug_is_taken(session, candidate):
+        suffix_text = f"-{suffix}"
+        candidate = f"{base[:160 - len(suffix_text)].rstrip('_-')}{suffix_text}"
+        suffix += 1
+    return candidate
+
+
+async def _slug_is_taken(session: AsyncSession, slug: str) -> bool:
+    draft_result = await session.execute(select(IntegrationMasterDraft.id).where(IntegrationMasterDraft.slug == slug).limit(1))
+    if draft_result.scalar_one_or_none() is not None:
+        return True
+    if await bus_repository.get_endpoint_by_slug(session, slug):
+        return True
+    return await flow_repository.get_by_slug(session, slug) is not None
 
 
 async def _test_case_for_flow(session: AsyncSession, flow: IntegrationFlow) -> SavedTestCase | None:

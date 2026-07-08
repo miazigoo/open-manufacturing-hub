@@ -400,6 +400,33 @@ async def test_save_and_load_input_contract_draft(client):
     assert loaded.json()["parse_result"]["fields"][0]["path"] == "request.body.operation"
 
 
+async def test_save_draft_generates_unique_slug(client):
+    parse_response = await client.post(
+        "/api/integration-master/input/parse",
+        json={"input_mode": "json", "scenario_key": "external_contractor_lookup", "sample": {"operation": "lookup_contractor", "inn": "7707083893"}},
+    )
+    assert parse_response.status_code == 200, parse_response.text
+    parse_result = parse_response.json()
+    contract = {
+        "name": "Внешний сайт запрашивает данные из 1C",
+        "slug": "lookup_contractor",
+        "input_mode": "json",
+        "source_system": "external_api",
+        "scenario_key": "external_contractor_lookup",
+        "sample": parse_result["normalized_sample"],
+        "fields": parse_result["fields"],
+        "operation_key": {"type": "field", "field_path": "request.body.operation", "value": "lookup_contractor"},
+        "business_key": {"path": "request.body.inn"},
+    }
+    first = await client.post("/api/integration-master/input/save-draft", json={"contract": contract, "parse_result": parse_result})
+    second = await client.post("/api/integration-master/input/save-draft", json={"contract": contract, "parse_result": parse_result})
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    assert first.json()["draft"]["slug"] == "lookup_contractor"
+    assert second.json()["draft"]["slug"] == "lookup_contractor-2"
+    assert second.json()["draft"]["contract"]["endpoint_url"] == "/api/bus/in/lookup_contractor-2"
+
+
 async def test_odata_step_preview_renders_filter_and_url(client):
     contract, _ = await _create_master_contract(client)
     connector = await _create_mock_odata_connector(client)

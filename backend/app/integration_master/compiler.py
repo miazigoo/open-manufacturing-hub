@@ -54,8 +54,9 @@ def compile_master_draft(
     builder_json = _builder_json(draft, final_action)
     compiled = FlowCompiler().compile(builder_json)
     workflow_steps = compiled.get("steps_json") if compiled.get("valid") else []
+    flow_name = f"{draft.name} [{draft.slug}]"
     endpoint_config = {
-        "name": f"Flow {draft.name} Endpoint",
+        "name": f"Flow {flow_name} Endpoint",
         "slug": draft.slug,
         "method": "POST",
         "url": f"/api/bus/in/{draft.slug}",
@@ -65,7 +66,7 @@ def compile_master_draft(
     }
     matcher_group = _matcher_group(draft)
     route_config = {
-        "name": f"Flow {draft.name} Route",
+        "name": f"Flow {flow_name} Route",
         "matcher_group_json": matcher_group,
         "matcher": _matcher_human(draft),
         "enabled": enabled,
@@ -80,7 +81,7 @@ def compile_master_draft(
     }
     test_payload_json, test_payload_text = _test_payload(draft)
     flow_payload = IntegrationFlowCreate(
-        name=draft.name,
+        name=flow_name,
         slug=draft.slug,
         description=_description(draft, comment),
         enabled=enabled,
@@ -97,13 +98,13 @@ def compile_master_draft(
     saved_test_case = None
     if create_saved_test_case:
         saved_test_case = {
-            "name": f"Flow {draft.name} Test",
+            "name": f"Flow {flow_name} Test",
             "input_mode": draft.input_mode,
             "body_json": test_payload_json,
             "body_text": test_payload_text,
         }
     flow_config = {
-        "name": draft.name,
+        "name": flow_name,
         "slug": draft.slug,
         "enabled": enabled,
         "source_type": source_type.value,
