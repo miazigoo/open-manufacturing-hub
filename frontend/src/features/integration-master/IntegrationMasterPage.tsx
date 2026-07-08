@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ErrorState } from '../../components/ErrorState';
@@ -35,6 +35,9 @@ export function IntegrationMasterPage() {
   const [fields, setFields] = useState<InputContractField[]>([]);
   const [operationKey, setOperationKey] = useState<InputOperationKey>({ type: 'endpoint', field_path: null, value: null, fallback_paths: [], matcher_preview: { mode: 'endpoint', rules: [] } });
   const [businessKey, setBusinessKey] = useState<InputBusinessKey>({ path: null, fallback_paths: [] });
+  const fieldsStepRef = useRef<HTMLDivElement | null>(null);
+  const odataStepRef = useRef<HTMLDivElement | null>(null);
+  const scrolledDraftId = useRef<string | null>(null);
 
   const parse = useMutation({
     mutationFn: () => integrationMasterApi.parse({ input_mode: inputMode, scenario_key: selected?.key, sample: sampleText }),
@@ -46,6 +49,7 @@ export function IntegrationMasterPage() {
       setSavedDraft(null);
       setPreviousVariables({});
       saveDraft.reset();
+      window.setTimeout(() => fieldsStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
     },
   });
 
@@ -69,6 +73,7 @@ export function IntegrationMasterPage() {
     setFields([]);
     setSavedDraft(null);
     setPreviousVariables({});
+    scrolledDraftId.current = null;
     setOperationKey({ type: 'endpoint', field_path: null, value: null, fallback_paths: [], matcher_preview: { mode: 'endpoint', rules: [] } });
     setBusinessKey({ path: null, fallback_paths: [] });
     validation.reset();
@@ -82,6 +87,7 @@ export function IntegrationMasterPage() {
     setFields([]);
     setSavedDraft(null);
     setPreviousVariables({});
+    scrolledDraftId.current = null;
     validation.reset();
     saveDraft.reset();
   }
@@ -115,6 +121,12 @@ export function IntegrationMasterPage() {
   const hasSavedForeachStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'foreach_odata'));
   const hasSavedPayloadStep = Boolean(savedDraft?.odata_steps.some((step) => step.type === 'build_payload'));
 
+  useEffect(() => {
+    if (!savedDraft?.id || scrolledDraftId.current === savedDraft.id) return;
+    scrolledDraftId.current = savedDraft.id;
+    window.setTimeout(() => odataStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  }, [savedDraft?.id]);
+
   return (
     <div className="page-stack integration-master-page">
       <section className="hero-panel integration-master-hero">
@@ -145,9 +157,11 @@ export function IntegrationMasterPage() {
             <SampleInputEditor inputMode={inputMode} value={sampleText} error={parseError} onChange={setSampleText} onParse={() => parse.mutate()} parsing={parse.isPending} />
           </MasterStepLayout>
 
-          <MasterStepLayout index="03" title="Проверьте Input Contract Table" description="Поля из sample считаются required по умолчанию. Здесь можно сделать поле optional и добавить описание для следующих шагов мастера.">
-            <ParsedFieldsTable fields={fields} operationPath={operationKey.field_path} businessPath={businessKey.path} onChange={setFields} onUseOperation={useOperationField} onUseBusiness={useBusinessField} />
-          </MasterStepLayout>
+          <div ref={fieldsStepRef}>
+            <MasterStepLayout index="03" title="Проверьте Input Contract Table" description="Поля из sample считаются required по умолчанию. Здесь можно сделать поле optional и добавить описание для следующих шагов мастера.">
+              <ParsedFieldsTable fields={fields} operationPath={operationKey.field_path} businessPath={businessKey.path} onChange={setFields} onUseOperation={useOperationField} onUseBusiness={useBusinessField} />
+            </MasterStepLayout>
+          </div>
 
           <MasterStepLayout index="04" title="Как OMH поймёт, что это этот сценарий" description="Выберите route key. Например, входящий JSON может нести поле sinc или operation с кодовой фразой сценария.">
             <OperationKeySelector value={operationKey} suggestions={parseResult?.suggested_operation_keys ?? []} fields={fields} onChange={(value) => setOperationKey(withMatcher(value))} />
@@ -159,7 +173,7 @@ export function IntegrationMasterPage() {
 
           <InputContractPreview contract={contract} validation={validation.data ?? null} saved={savedResponse} error={saveError} onValidate={validateContract} onSave={saveContractDraft} validating={validation.isPending} saving={saveDraft.isPending} />
 
-          {savedDraft ? <ODataStepBuilder contract={savedDraft.contract} draft={savedDraft} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
+          {savedDraft ? <div ref={odataStepRef}><ODataStepBuilder contract={savedDraft.contract} draft={savedDraft} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /></div> : null}
 
           {savedDraft && hasSavedODataQuery ? <ODataObjectStepBuilder contract={savedDraft.contract} draft={savedDraft} previousVariables={objectVariables} onDraftUpdated={setSavedDraft} onVariablesUpdated={(variables) => setPreviousVariables((current) => ({ ...current, ...variables }))} /> : null}
 

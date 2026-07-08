@@ -13,7 +13,7 @@ export function ODataTestResult({ result, error, loading, onTest }: ODataTestRes
     <section className="panel odata-test-panel stack-form">
       <div className="panel-toolbar">
         <div><span className="eyebrow">Test</span><h3>Пробный запрос в 1C OData</h3></div>
-        <button type="button" className="primary-button" onClick={onTest} disabled={loading}>{loading ? 'Выполняю...' : 'Test query'}</button>
+        <button type="button" className="primary-button" onClick={onTest} disabled={loading}>{loading ? 'Выполняю...' : 'Выполнить запрос'}</button>
       </div>
       {error ? <div className="error-state compact">{error}</div> : null}
       {result ? (

@@ -24,9 +24,12 @@ export function InputContractPreview({ contract, validation, saved, error, onVal
         <div className="toolbar-actions"><button type="button" className="ghost-button" onClick={onValidate} disabled={validating}>{validating ? 'Проверяю...' : 'Проверить'}</button><button type="button" className="primary-button" onClick={onSave} disabled={saving}>{saving ? 'Сохраняю...' : 'Сохранить draft'}</button></div>
       </div>
       {validation ? <div className={validation.valid ? 'success-note' : 'error-state compact'}><strong>{validation.valid ? 'Контракт валиден' : 'Контракт требует правок'}</strong><span>{validation.valid ? validation.endpoint_url : validation.errors.join('; ')}</span></div> : null}
-      {saved ? <div className="success-note"><strong>Draft сохранён</strong><span>{saved.draft.id} · {saved.draft.endpoint_url}</span></div> : null}
+      {saved ? <div className="success-note"><strong>Draft сохранён</strong><span>{saved.draft.endpoint_url}. Дальше настройте OData Query ниже.</span></div> : null}
       {error ? <div className="error-state compact">{error}</div> : null}
-      <JsonBlock value={contract} title="Input Contract JSON" searchable />
+      <details className="technical-details advanced-json-details">
+        <summary>Показать технический Input Contract JSON</summary>
+        <JsonBlock value={contract} title="Input Contract JSON" searchable />
+      </details>
     </section>
   );
 }

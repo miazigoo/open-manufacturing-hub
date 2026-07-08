@@ -1254,6 +1254,7 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .integration-fields-table input { min-width: 220px; }
 .compact-check { gap: 8px; white-space: nowrap; }
 .input-contract-preview .json-panel { margin-top: 0; }
+.input-contract-preview .advanced-json-details { margin-top: 0; }
 .odata-step-builder {
   border-color: rgba(143,198,180,.32);
   background: radial-gradient(circle at 8% 0%, rgba(143,198,180,.14), transparent 28%), linear-gradient(145deg, rgba(247,239,218,.075), rgba(0,0,0,.2));

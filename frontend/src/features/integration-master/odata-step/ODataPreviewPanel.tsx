@@ -12,12 +12,12 @@ export function ODataPreviewPanel({ preview, error, loading, onPreview }: ODataP
     <section className="panel odata-preview-panel stack-form">
       <div className="panel-toolbar">
         <div><span className="eyebrow">Preview</span><h3>Проверка URL и переменных</h3></div>
-        <button type="button" className="ghost-button" onClick={onPreview} disabled={loading}>{loading ? 'Собираю...' : 'Preview query'}</button>
+        <button type="button" className="ghost-button" onClick={onPreview} disabled={loading}>{loading ? 'Собираю...' : 'Проверить URL'}</button>
       </div>
       {error ? <div className="error-state compact">{error}</div> : null}
       {preview ? (
         <>
-          <div className={preview.valid ? 'success-note' : 'error-state compact'}><strong>{preview.valid ? 'Preview валиден' : 'Нужно исправить'}</strong><span>{preview.valid ? preview.rendered_url : preview.errors.join('; ')}</span></div>
+          <div className={preview.valid ? 'success-note' : 'error-state compact'}><strong>{preview.valid ? 'URL валиден' : 'Нужно исправить'}</strong><span>{preview.valid ? preview.rendered_url : preview.errors.join('; ')}</span></div>
           <div className="metadata-grid compact-grid no-margin">
             <span><small>Template filter</small><strong className="mono">{preview.template_filter || 'нет'}</strong></span>
             <span><small>Rendered filter</small><strong className="mono">{preview.rendered_filter || 'нет'}</strong></span>
