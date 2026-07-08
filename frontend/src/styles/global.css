@@ -332,10 +332,18 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .flow-layout { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 18px; align-items: start; }
 .flow-list-panel { position: sticky; top: 76px; }
 .flow-list { display: grid; gap: 10px; }
-.flow-list-item { width: 100%; border: 1px solid var(--line); background: rgba(0,0,0,.18); color: var(--ink); padding: 12px; display: flex; justify-content: space-between; gap: 12px; text-align: left; align-items: flex-start; }
+.flow-list-item { width: 100%; min-width: 0; border: 1px solid var(--line); background: rgba(0,0,0,.18); color: var(--ink); padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; text-align: left; align-items: flex-start; }
 .flow-list-item.active { border-color: var(--accent); background: rgba(240,179,90,.1); }
 .flow-list-item span { min-width: 0; display: grid; gap: 4px; }
+.flow-list-item strong { overflow-wrap: anywhere; }
 .flow-list-item small { color: var(--muted); overflow-wrap: anywhere; }
+.flow-list-item .status-badge { justify-self: start; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.flow-guide-panel { display: grid; gap: 14px; align-content: start; background: linear-gradient(145deg, rgba(247,239,218,.08), rgba(143,198,180,.055)); }
+.flow-guide-panel p { color: var(--muted); max-width: 860px; line-height: 1.55; }
+.flow-mini-card { border: 1px solid rgba(143,198,180,.24); background: rgba(143,198,180,.07); padding: 14px; display: grid; gap: 7px; min-width: 0; }
+.flow-mini-card span { color: var(--accent); text-transform: uppercase; letter-spacing: .11em; font-size: 11px; font-weight: 800; }
+.flow-mini-card strong { overflow-wrap: anywhere; }
+.flow-mini-card small { color: var(--muted); }
 .flow-wizard { background: linear-gradient(145deg, rgba(247,239,218,.08), rgba(143,198,180,.055)); }
 .wizard-step { border: 1px solid var(--line); background: rgba(0,0,0,.14); padding: 14px; display: grid; gap: 12px; }
 .flow-detail { display: grid; gap: 16px; }
