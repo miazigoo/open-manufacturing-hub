@@ -17,7 +17,7 @@ const languages: Language[] = ['ru', 'en', 'zh'];
 export function Layout() {
   const t = useT();
   const navigation = useQuery({ queryKey: ['ui-navigation'], queryFn: uiApi.navigation, retry: false });
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(['Operate', 'Build', 'Data Tools', 'Packages']));
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(['Operate', 'Build']));
   const [scenarioChooserOpen, setScenarioChooserOpen] = useState(false);
   const [uiMode, setUiMode] = useState<UIMode>(() => {
     const saved = localStorage.getItem(uiModeStorageKey);
@@ -141,24 +141,16 @@ function TopBar({ onCreateIntegration }: { onCreateIntegration: () => void }) {
 
 const scenarioCards = [
   {
-    title: 'Начать с входящего контракта',
-    input: 'JSON, XML или raw text от 1C, WMS, DnP, сайта или внешнего API',
-    output: 'Input Contract draft: поля, route key, business key и endpoint slug',
-    does: 'OMH разбирает пример запроса и готовит понятный контракт для следующих шагов мастера.',
-    best: 'Любая новая интеграция, где сначала нужно понять входящее сообщение.',
+    title: 'Создать интеграцию по шагам',
+    input: 'Пример JSON, XML или raw text от внешней системы',
+    output: 'Готовый endpoint, OData/API шаги, payload и финальный ответ',
+    does: 'OMH ведёт от входящего запроса до сохранённой интеграции без ручного создания endpoint/route.',
+    best: 'Основной старт для оператора или программиста.',
     to: '/master',
     primary: true,
   },
   {
-    title: '1C отправляет данные во внешний API',
-    input: 'Документ или событие из 1C',
-    output: 'POST/PUT в внешний сервис',
-    does: 'OMH помогает выбрать источник, авторизацию, тело запроса и тестовый прогон.',
-    best: 'Маркировка, DNP, CRM, WMS, личный кабинет.',
-    to: '/onec-cockpit/new',
-  },
-  {
-    title: 'Нужно прочитать данные из 1C OData',
+    title: 'Проверить 1C OData',
     input: 'Поля входящего запроса или ручной фильтр',
     output: 'Найденные поля, JSON-выборка или шаг для интеграции',
     does: 'OMH ведёт по подключению, ресурсу, фильтрам $select/$filter и сохранению результата.',
@@ -166,28 +158,20 @@ const scenarioCards = [
     to: '/odata-explorer',
   },
   {
-    title: 'Интеграция с XML',
-    input: 'XML от 1C, EDI, банка или старой системы',
-    output: 'XML ответ, JSON ответ или пересылка дальше',
-    does: 'OMH разбирает XML, даёт выбрать поля и собрать ответ без ручного XPath с нуля.',
-    best: 'HTTP-сервисы 1C, УПД, SOAP-подобные обмены, legacy.',
-    to: '/test-console?mode=build&input=xml',
+    title: 'Посмотреть опубликованные интеграции',
+    input: 'Уже сохранённые flow',
+    output: 'Endpoint, trigger key, шаги, финальное действие и тестовый curl',
+    does: 'Показывает, что реально опубликовано и что вернётся вызывающей системе.',
+    best: 'Проверка после настройки или перед боевым тестом.',
+    to: '/integration-flows',
   },
   {
-    title: 'Печать этикеток',
-    input: 'Событие, заказ, пул кодов или ручной тест',
-    output: 'Задание на принтер и событие в журнале',
-    does: 'OMH связывает сценарий интеграции с установленным пакетом печати.',
-    best: 'Склад, производство, маркировка, Zebra/этикетки.',
-    to: '/printing',
-  },
-  {
-    title: 'Сначала разобраться и потренироваться',
-    input: 'Учебный пример',
-    output: 'Понятный сценарий без риска для продакшена',
-    does: 'OMH открывает обучение, где можно повторить интеграцию по шагам.',
-    best: 'Первый запуск, новый сотрудник, проверка перед боевым контуром.',
-    to: '/training',
+    title: 'Проверить выполнение',
+    input: 'События и ответы интеграций',
+    output: 'Timeline, ошибки, запросы, ответы и повторная диагностика',
+    does: 'Открывает журнал событий, где видно, что произошло после вызова endpoint.',
+    best: 'Разбор ошибки или подтверждение успешной синхронизации.',
+    to: '/events',
   },
 ];
 
