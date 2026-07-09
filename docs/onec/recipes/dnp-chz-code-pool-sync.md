@@ -48,6 +48,7 @@ Source array: products
 Item name: product
 Resource: InformationRegister_ПулКодовМаркировкиСУЗ
 Filter: Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')
+Select: ПолныйКодМаркировки,ДокументОснование,Номенклатура_Key,Статус
 Top: 500
 Pagination: enabled
 Merge: flatten
@@ -93,6 +94,7 @@ DnP JSON:
 Rules:
 
 - `"{{codes}}"` keeps `codes` as JSON array.
+- `codes[]` intentionally contains only `ПолныйКодМаркировки`, `ДокументОснование`, `Номенклатура_Key`, `Статус`.
 - `{{order.Ref_Key}}` in object key renders dynamic JSON key.
 - `codes.length` is available for counters.
 - Missing path returns `VARIABLE_NOT_FOUND`.

@@ -2258,7 +2258,7 @@ export const academyPages: PageSeed[] = [
     '',
     '```text',
     'codes[]',
-    'codes[0].КодМаркировки',
+    'codes[0].ПолныйКодМаркировки',
     'codes[0].Номенклатура_Key',
     '```',
     '',
@@ -3090,6 +3090,7 @@ items: products
 item_as: product
 Resource: InformationRegister_ПулКодовМаркировкиСУЗ
 Filter: Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')
+$select: ПолныйКодМаркировки,ДокументОснование,Номенклатура_Key,Статус
 $top: 500
 paginate: true
 merge: flatten
@@ -3100,7 +3101,7 @@ Future variables:
 
 ~~~text
 codes[]
-codes[0].КодМаркировки
+codes[0].ПолныйКодМаркировки
 codes[0].Номенклатура_Key
 ~~~
 
@@ -3768,7 +3769,7 @@ export const recipePages: PageSeed[] = [
     "## OData steps",
     "1. `Document_ЗаказНаПроизводство2_2`, filter `Number eq '{{request.body.Number}}'`, save as `order`.",
     "2. `Document_ЗаказНаПроизводство2_2(guid'{{order.Ref_Key}}')/Продукция`, save as `products`.",
-    "3. Foreach `products` as `product`, query `InformationRegister_ПулКодовМаркировкиСУЗ`, save merged result as `codes`.",
+    "3. Foreach `products` as `product`, query `InformationRegister_ПулКодовМаркировкиСУЗ` with `$select=ПолныйКодМаркировки,ДокументОснование,Номенклатура_Key,Статус`, save merged result as `codes`.",
     "",
     "## Финальное действие",
     "`POST http://172.16.3.10/api/v2/integrations/omh/chz/codes/import` и вернуть вызывающему `{ \"ok\": true }`.",

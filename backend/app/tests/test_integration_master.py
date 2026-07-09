@@ -59,9 +59,9 @@ async def _create_mock_odata_connector(client):
                         {"Номенклатура_Key": PRODUCT_GUID, "Количество": 180, "КоличествоУпаковок": 180},
                     ],
                     "InformationRegister_ПулКодовМаркировкиСУЗ": [
-                        {"Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "КодМаркировки": "code-001", "Статус": "available"},
-                        {"Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "КодМаркировки": "code-002", "Статус": "available"},
-                        {"Номенклатура_Key": PRODUCT_GUID_2, "ДокументОснование": ORDER_GUID, "КодМаркировки": "code-101", "Статус": "available"},
+                        {"Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "ПолныйКодМаркировки": "full-code-001", "Статус": "available"},
+                        {"Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "ПолныйКодМаркировки": "full-code-002", "Статус": "available"},
+                        {"Номенклатура_Key": PRODUCT_GUID_2, "ДокументОснование": ORDER_GUID, "ПолныйКодМаркировки": "full-code-101", "Статус": "available"},
                     ],
                 },
             },
@@ -141,7 +141,7 @@ def _foreach_step(connector_id, **overrides):
         "item_as": "product",
         "resource": "InformationRegister_ПулКодовМаркировкиСУЗ",
         "filter": "Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')",
-        "select": ["КодМаркировки", "ПолныйКодМаркировки", "Номенклатура_Key", "ДокументОснование", "Статус"],
+        "select": ["ПолныйКодМаркировки", "ДокументОснование", "Номенклатура_Key", "Статус"],
         "top": 500,
         "paginate": True,
         "merge": "flatten",
@@ -169,8 +169,8 @@ def _payload_variables(codes=None, **overrides):
             },
             "codes": codes
             or [
-                {"КодМаркировки": "code-001", "ПолныйКодМаркировки": "full-code-001", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"},
-                {"КодМаркировки": "code-002", "ПолныйКодМаркировки": "full-code-002", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"},
+                {"ПолныйКодМаркировки": "full-code-001", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "Статус": "available"},
+                {"ПолныйКодМаркировки": "full-code-002", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "Статус": "available"},
             ],
             "context": {"run_id": "run-001", "event_id": "evt-001"},
         }
@@ -203,7 +203,6 @@ def _payload_step(**overrides):
                 "order_id": "{{request.body.order_id}}",
                 "order_name": "{{request.body.order_name}}",
                 "codes_count": "{{codes.length}}",
-                "first_gtin": "{{codes[0].GTIN}}",
                 "onec_order_number": "{{order.Number}}",
                 "order_numbers_by_basis": {"{{order.Ref_Key}}": "{{order.Number}}"},
             },
@@ -699,9 +698,8 @@ async def test_foreach_odata_step_preview_renders_first_item_filter_and_url(clie
     assert body["rendered_url"] == (
         "InformationRegister_ПулКодовМаркировкиСУЗ"
         f"?$filter=Номенклатура_Key eq guid'{PRODUCT_GUID}' and ДокументОснование eq cast(guid'{ORDER_GUID}', 'Document_ЗаказНаПроизводство2_2')"
-        "&$select=КодМаркировки,ПолныйКодМаркировки,Номенклатура_Key,ДокументОснование,Статус&$top=500&paginate=true"
+        "&$select=ПолныйКодМаркировки,ДокументОснование,Номенклатура_Key,Статус&$top=500&paginate=true"
     )
-    assert "codes[0].КодМаркировки" in body["variables_after_step"]
     assert "codes[0].ПолныйКодМаркировки" in body["variables_after_step"]
 
 
@@ -719,10 +717,10 @@ async def test_foreach_odata_step_test_runs_query_for_each_product_and_flattens(
     assert body["items_processed"] == 1
     assert body["odata_requests"] == 1
     assert body["rows_found"] == 2
-    assert body["result_preview"][0]["КодМаркировки"] == "code-001"
+    assert body["result_preview"][0]["ПолныйКодМаркировки"] == "full-code-001"
     assert body["requests"][0]["request"]["resource"] == "InformationRegister_ПулКодовМаркировкиСУЗ"
     assert body["requests"][0]["request"]["params"]["$filter"] == f"Номенклатура_Key eq guid'{PRODUCT_GUID}' and ДокументОснование eq cast(guid'{ORDER_GUID}', 'Document_ЗаказНаПроизводство2_2')"
-    assert "codes[0].КодМаркировки" in body["variables_after_step"]
+    assert "codes[0].ПолныйКодМаркировки" in body["variables_after_step"]
 
 
 async def test_foreach_odata_step_test_can_process_multiple_products(client):
@@ -743,8 +741,8 @@ async def test_foreach_odata_step_test_can_process_multiple_products(client):
     assert body["items_processed"] == 2
     assert body["odata_requests"] == 2
     assert body["rows_found"] == 3
-    assert [row["КодМаркировки"] for row in body["result_body"]] == ["code-001", "code-002", "code-101"]
-    assert [row["КодМаркировки"] for row in body["result_preview"]] == ["code-001", "code-002", "code-101"]
+    assert [row["ПолныйКодМаркировки"] for row in body["result_body"]] == ["full-code-001", "full-code-002", "full-code-101"]
+    assert [row["ПолныйКодМаркировки"] for row in body["result_preview"]] == ["full-code-001", "full-code-002", "full-code-101"]
 
 
 async def test_foreach_odata_step_merge_modes(client):
@@ -772,7 +770,7 @@ async def test_foreach_odata_step_merge_modes(client):
     assert first_per_item.status_code == 200, first_per_item.text
     first_body = first_per_item.json()
     assert first_body["success"] is True
-    assert [row["КодМаркировки"] for row in first_body["result_preview"]] == ["code-001", "code-101"]
+    assert [row["ПолныйКодМаркировки"] for row in first_body["result_preview"]] == ["full-code-001", "full-code-101"]
 
 
 async def test_foreach_odata_step_validate_friendly_errors(client):
@@ -897,12 +895,11 @@ async def test_payload_step_preview_renders_dnp_json_with_type_preserving_placeh
     assert rendered["omh"]["run_id"] == "run-001"
     assert rendered["omh"]["correlation_id"] == "dnp-chz-sync:26-0666/6938"
     assert isinstance(rendered["payload"]["rows"], list)
-    assert rendered["payload"]["rows"][0]["КодМаркировки"] == "code-001"
+    assert rendered["payload"]["rows"][0]["ПолныйКодМаркировки"] == "full-code-001"
     assert isinstance(rendered["payload"]["order"], dict)
     assert rendered["payload"]["order"]["Ref_Key"] == ORDER_GUID
     assert rendered["payload"]["order_id"] == 10271
     assert rendered["payload"]["codes_count"] == 2
-    assert rendered["payload"]["first_gtin"] == "04601234567890"
     assert rendered["payload"]["order_numbers_by_basis"] == {ORDER_GUID: "260666/6938"}
     assert body["variables_after_step"] == ["target_payload"]
 
@@ -910,7 +907,7 @@ async def test_payload_step_preview_renders_dnp_json_with_type_preserving_placeh
 async def test_payload_step_preview_keeps_full_rendered_body_when_preview_is_truncated(client):
     contract, _ = await _create_master_contract(client)
     codes = [
-        {"КодМаркировки": f"code-{index:03}", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID, "GTIN": "04601234567890"}
+        {"ПолныйКодМаркировки": f"full-code-{index:03}", "Номенклатура_Key": PRODUCT_GUID, "ДокументОснование": ORDER_GUID}
         for index in range(1, 6)
     ]
 
@@ -951,7 +948,7 @@ async def test_payload_step_json_table_builder_supports_dynamic_object_entries(c
     )
     assert response.status_code == 200, response.text
     rendered = response.json()["rendered_preview"]
-    assert rendered["payload"]["rows"][1]["КодМаркировки"] == "code-002"
+    assert rendered["payload"]["rows"][1]["ПолныйКодМаркировки"] == "full-code-002"
     assert rendered["payload"]["order_numbers_by_basis"][ORDER_GUID] == "260666/6938"
     assert rendered["omh"]["correlation_id"] == "dnp-chz-sync:26-0666/6938"
 
@@ -974,7 +971,7 @@ async def test_payload_step_raw_json_template_string_is_validated_before_render(
     )
     assert valid.status_code == 200, valid.text
     rendered = valid.json()["rendered_preview"]
-    assert rendered["rows"][0]["КодМаркировки"] == "code-001"
+    assert rendered["rows"][0]["ПолныйКодМаркировки"] == "full-code-001"
     assert rendered["keyed"][ORDER_GUID] == "260666/6938"
 
 

@@ -70,7 +70,7 @@ async def test_odata_master_examples_and_preview_accept_dnp_spec(client):
     assert foreach["step"]["top"] == 500
     assert foreach["step"]["paginate"] is True
     assert body["preview"]["valid"] is True
-    assert body["preview"]["target_request_preview"]["body"]["payload"]["rows"][0]["КодМаркировки"] == "code-1"
+    assert body["preview"]["target_request_preview"]["body"]["payload"]["rows"][0]["ПолныйКодМаркировки"] == "full-code-1"
 
 
 async def test_odata_master_rejects_top_above_500(client):

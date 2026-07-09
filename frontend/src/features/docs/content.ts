@@ -236,6 +236,7 @@ items: products
 item_as: product
 Resource: InformationRegister_ПулКодовМаркировкиСУЗ
 Filter: Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')
+$select: ПолныйКодМаркировки,ДокументОснование,Номенклатура_Key,Статус
 $top: 500
 paginate: true
 merge: flatten
@@ -246,7 +247,7 @@ save_as: codes
 
 \`\`\`text
 codes[]
-codes[0].КодМаркировки
+codes[0].ПолныйКодМаркировки
 codes[0].Номенклатура_Key
 \`\`\`
 
@@ -365,7 +366,7 @@ Endpoint slug allows only lowercase letters, numbers, \`-\` and \`_\`, and must 
         '- `codes[]` comes from Step 2C.',
         '- `context.run_id` and `context.event_id` are runtime context values.',
         '',
-        'Supported paths include `order.Ref_Key`, `products[0].Номенклатура_Key`, `codes[0].КодМаркировки` and `codes.length`.',
+        'Supported paths include `order.Ref_Key`, `products[0].Номенклатура_Key`, `codes[0].ПолныйКодМаркировки` and `codes.length`.',
         '',
         '## JSON Rules',
         '',

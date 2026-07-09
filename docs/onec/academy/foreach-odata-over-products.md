@@ -47,6 +47,7 @@
 По какому массиву пройти: products
 Как назвать одну строку массива: product
 OData Resource: InformationRegister_ПулКодовМаркировкиСУЗ
+Select: ПолныйКодМаркировки,ДокументОснование,Номенклатура_Key,Статус
 $top: 500
 Pagination: true
 Merge: flatten
@@ -93,7 +94,7 @@ rows_found: 180
 
 ```text
 codes[]
-codes[0].КодМаркировки
+codes[0].ПолныйКодМаркировки
 codes[0].Номенклатура_Key
 ```
 

@@ -1619,7 +1619,7 @@ def _variables_after_foreach_step(step: ForeachODataStepConfig, first_item: dict
     save_as = step.save_as.strip() or "items"
     fields = list(first_item.keys()) if first_item else list(step.select)
     if not fields:
-        fields = ["КодМаркировки", "Номенклатура_Key"]
+        fields = ["ПолныйКодМаркировки", "ДокументОснование", "Номенклатура_Key"]
     return [f"{save_as}[]"] + [f"{save_as}[0].{field}" for field in fields]
 
 

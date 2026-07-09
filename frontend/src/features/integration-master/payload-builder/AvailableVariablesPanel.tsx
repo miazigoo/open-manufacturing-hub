@@ -7,7 +7,7 @@ const FRIENDLY_PATHS = [
   ['Request body', ['request.body.order_id', 'request.body.order_name', 'request.body.Number']],
   ['Order', ['order.Ref_Key', 'order.Number', 'order.Date']],
   ['Products', ['products[]', 'products[0].Номенклатура_Key']],
-  ['Codes', ['codes[]', 'codes.length', 'codes[0].КодМаркировки', 'codes[0].GTIN']],
+  ['Codes', ['codes[]', 'codes.length', 'codes[0].ПолныйКодМаркировки', 'codes[0].ДокументОснование', 'codes[0].Номенклатура_Key', 'codes[0].Статус']],
   ['Context', ['context.run_id', 'context.event_id']],
 ] as const;
 

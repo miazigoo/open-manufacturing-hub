@@ -311,7 +311,7 @@ Example request:
     "item_as": "product",
     "resource": "InformationRegister_ПулКодовМаркировкиСУЗ",
     "filter": "Номенклатура_Key eq guid'{{product.Номенклатура_Key}}' and ДокументОснование eq cast(guid'{{order.Ref_Key}}', 'Document_ЗаказНаПроизводство2_2')",
-    "select": ["КодМаркировки", "Номенклатура_Key", "ДокументОснование", "Статус"],
+    "select": ["ПолныйКодМаркировки", "ДокументОснование", "Номенклатура_Key", "Статус"],
     "top": 500,
     "paginate": true,
     "merge": "flatten",
@@ -348,7 +348,7 @@ The default merge mode is `flatten`, so rows from all nested OData responses bec
 
 ```text
 codes[]
-codes[0].КодМаркировки
+codes[0].ПолныйКодМаркировки
 codes[0].Номенклатура_Key
 ```
 
@@ -394,8 +394,7 @@ products[]
 products[0].Номенклатура_Key
 codes[]
 codes.length
-codes[0].КодМаркировки
-codes[0].GTIN
+codes[0].ПолныйКодМаркировки
 context.run_id
 context.event_id
 ```

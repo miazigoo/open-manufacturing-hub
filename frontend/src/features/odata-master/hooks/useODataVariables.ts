@@ -23,6 +23,6 @@ export function useODataVariables(spec: ODataWizardSpec): VariableGroup[] {
 function stepVariables(step: ODataWizardStep): VariableGroup {
   const base = step.save_as;
   const common = [base, `${base}.Ref_Key`, `${base}.Number`, `${base}.Date`, `${base}[0].Ref_Key`, `${base}[0].Номенклатура_Key`, `${base}[0].Количество`];
-  if (step.type === 'foreach_odata') return { title: `Шаг: ${base}`, variables: [base, `${base}[]`, `${base}[0].КодМаркировки`, `${base}[0].ПолныйКодМаркировки`, `${base}[0].GTIN`] };
+  if (step.type === 'foreach_odata') return { title: `Шаг: ${base}`, variables: [base, `${base}[]`, `${base}[0].ПолныйКодМаркировки`, `${base}[0].ДокументОснование`, `${base}[0].Номенклатура_Key`, `${base}[0].Статус`] };
   return { title: `Шаг: ${base}`, variables: common };
 }
