@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import os
 from pathlib import Path
@@ -15,7 +17,7 @@ GS = "\x1d"
 
 
 async def export_onec_pool_to_file(session: AsyncSession, request: OneCMarkingCodePoolExportRequest) -> MarkingCodePoolExport:
-    codes = _normalize_codes(request.codes, request.gs_marker)
+    codes = _codes_from_request(request)
     file_name = request.file_name or _default_file_name(request.order_number, len(codes))
     _validate_file_name(file_name)
     payload = _codes_to_file_bytes(codes)
@@ -43,20 +45,53 @@ async def export_onec_pool_to_file(session: AsyncSession, request: OneCMarkingCo
     return record
 
 
-def _normalize_codes(codes: list[str], gs_marker: str) -> list[str]:
+def _codes_from_request(request: OneCMarkingCodePoolExportRequest) -> list[str]:
+    if request.full_codes_base64 is not None:
+        return _normalize_base64_full_codes(request.full_codes_base64)
+    if request.codes is not None:
+        return _normalize_codes(request.codes, request.gs_marker)
+    raise BadRequestError("No marking codes were supplied")
+
+
+def _normalize_base64_full_codes(full_codes_base64: list[str]) -> list[str]:
     normalized: list[str] = []
     seen: set[str] = set()
-    for index, value in enumerate(codes, start=1):
-        code = str(value).replace(gs_marker, GS)
-        if "\n" in code or "\r" in code:
-            raise BadRequestError(f"Code at line {index} contains a newline")
-        if not code.startswith("01"):
-            raise BadRequestError(f"Code at line {index} does not start with GS1 AI 01")
+    for index, value in enumerate(full_codes_base64, start=1):
+        encoded = str(value).strip()
+        try:
+            raw = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise BadRequestError(f"Full marking code at line {index} is not valid Base64") from exc
+        try:
+            code = raw.decode("ascii")
+        except UnicodeDecodeError as exc:
+            raise BadRequestError(f"Full marking code at line {index} contains non-ASCII bytes") from exc
+        _validate_normalized_code(code, index)
         if code in seen:
             raise BadRequestError(f"Duplicate code at line {index}")
         seen.add(code)
         normalized.append(code)
     return normalized
+
+
+def _normalize_codes(codes: list[str], gs_marker: str) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for index, value in enumerate(codes, start=1):
+        code = str(value).replace(gs_marker, GS)
+        _validate_normalized_code(code, index)
+        if code in seen:
+            raise BadRequestError(f"Duplicate code at line {index}")
+        seen.add(code)
+        normalized.append(code)
+    return normalized
+
+
+def _validate_normalized_code(code: str, index: int) -> None:
+    if "\n" in code or "\r" in code:
+        raise BadRequestError(f"Code at line {index} contains a newline")
+    if not code.startswith("01"):
+        raise BadRequestError(f"Code at line {index} does not start with GS1 AI 01")
 
 
 def _codes_to_file_bytes(codes: list[str]) -> bytes:

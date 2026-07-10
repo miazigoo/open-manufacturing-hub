@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class OneCMarkingCodePoolExportRequest(BaseModel):
@@ -13,10 +13,17 @@ class OneCMarkingCodePoolExportRequest(BaseModel):
     source_document_name: str | None = Field(default=None, max_length=255)
     order_number: str = Field(min_length=1, max_length=255)
     file_name: str | None = Field(default=None, max_length=255)
-    codes: list[str] = Field(min_length=1)
+    codes: list[str] | None = Field(default=None, min_length=1)
+    full_codes_base64: list[str] | None = Field(default=None, min_length=1)
     gs_marker: str = Field(default="{GS}", min_length=1, max_length=20)
     allow_overwrite: bool = True
     metadata_json: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def require_one_code_source(self):
+        if bool(self.codes) == bool(self.full_codes_base64):
+            raise ValueError("Pass exactly one of codes or full_codes_base64")
+        return self
 
 
 class MarkingCodePoolExportRead(BaseModel):

@@ -1,9 +1,14 @@
+import base64
 import os
 
 from app.marking_code_pools.service import _default_file_name
 
 
-async def test_onec_marking_code_pool_export_saves_file_with_real_gs(client, tmp_path, monkeypatch):
+def _full_code_base64(value: bytes) -> str:
+    return base64.b64encode(value).decode("ascii")
+
+
+async def test_onec_marking_code_pool_export_saves_base64_full_codes_with_real_gs(client, tmp_path, monkeypatch):
     monkeypatch.setenv("OMH_MARKING_CODE_POOL_EXPORT_DIR", str(tmp_path))
     from app.core.config import get_settings
 
@@ -18,9 +23,9 @@ async def test_onec_marking_code_pool_export_saves_file_with_real_gs(client, tmp
             "source_document_id": "AEAE-000137",
             "source_document_name": "Заказ на эмиссию AEAE-000137",
             "order_number": "260703/5442",
-            "codes": [
-                "0104646151697186215_<qlk<ZbCWFP>W2)foU{GS}93lzhU",
-                "0104646151697186215_3IKhK1tdUba4f<+5IZ{GS}93d6Ba",
+            "full_codes_base64": [
+                _full_code_base64(b"0104646151697186215_<qlk<ZbCWFP>W2)foU" + bytes([29]) + b"93lzhU"),
+                _full_code_base64(b"0104646151697186215_3IKhK1tdUba4f<+5IZ" + bytes([29]) + b"93d6Ba"),
             ],
             "metadata_json": {"product": "power-supply"},
         },
@@ -40,6 +45,29 @@ async def test_onec_marking_code_pool_export_saves_file_with_real_gs(client, tmp
     assert len(data.splitlines()) == 2
     assert payload["export"]["total_codes"] == 2
     assert payload["export"]["status"] == "saved"
+    get_settings.cache_clear()
+
+
+async def test_onec_marking_code_pool_export_keeps_legacy_marker_codes_for_tests(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("OMH_MARKING_CODE_POOL_EXPORT_DIR", str(tmp_path))
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    package = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert package.status_code == 200, package.text
+
+    response = await client.post(
+        "/api/marking-code-pools/onec/export-file",
+        json={
+            "order_number": "260703/5442",
+            "codes": ["0104646151697186215_<qlk<ZbCWFP>W2)foU{GS}93lzhU"],
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    data = (tmp_path / response.json()["export"]["file_name"]).read_bytes()
+    assert bytes([29]) in data
+    assert b"{GS}" not in data
     get_settings.cache_clear()
 
 
