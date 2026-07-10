@@ -1,5 +1,7 @@
 import os
 
+from app.marking_code_pools.service import _default_file_name
+
 
 async def test_onec_marking_code_pool_export_saves_file_with_real_gs(client, tmp_path, monkeypatch):
     monkeypatch.setenv("OMH_MARKING_CODE_POOL_EXPORT_DIR", str(tmp_path))
@@ -26,7 +28,7 @@ async def test_onec_marking_code_pool_export_saves_file_with_real_gs(client, tmp
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    assert payload["export"]["file_name"] == "260703_5442___2_pic.txt"
+    assert payload["export"]["file_name"] == "KM_260703-5442___2_pcs.txt"
     file_path = tmp_path / payload["export"]["file_name"]
     assert file_path.exists()
     data = file_path.read_bytes()
@@ -39,6 +41,10 @@ async def test_onec_marking_code_pool_export_saves_file_with_real_gs(client, tmp
     assert payload["export"]["total_codes"] == 2
     assert payload["export"]["status"] == "saved"
     get_settings.cache_clear()
+
+
+def test_marking_code_pool_default_file_name_matches_laser_format():
+    assert _default_file_name("260891/4450", 4070) == "KM_260891-4450___4 070_pcs.txt"
 
 
 async def test_onec_marking_code_pool_export_rejects_duplicate_codes(client, tmp_path, monkeypatch):

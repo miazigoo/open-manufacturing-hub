@@ -69,15 +69,20 @@ def _codes_to_file_bytes(codes: list[str]) -> bytes:
 
 def _default_file_name(order_number: str, total_codes: int) -> str:
     safe_order = _safe_file_part(order_number)
-    return f"{safe_order}___{total_codes}_pic.txt"
+    return f"KM_{safe_order}___{_format_count(total_codes)}_pcs.txt"
 
 
 def _safe_file_part(value: str) -> str:
     result = value.strip()
-    for char in ('\\', '/', ':', '*', '?', '"', '<', '>', '|'):
+    result = result.replace("/", "-")
+    for char in ('\\', ':', '*', '?', '"', '<', '>', '|'):
         result = result.replace(char, "_")
     result = result.replace(" ", "_")
     return result or "unknown_order"
+
+
+def _format_count(value: int) -> str:
+    return f"{value:,}".replace(",", " ")
 
 
 def _validate_file_name(file_name: str) -> None:
