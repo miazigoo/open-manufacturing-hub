@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     audit_retention_days: int = Field(default=180, validation_alias=AliasChoices("AUDIT_RETENTION_DAYS", "OMH_AUDIT_RETENTION_DAYS"))
     xml_max_bytes: int = Field(default=10485760, validation_alias=AliasChoices("XML_MAX_BYTES", "OMH_XML_MAX_BYTES"))
     xml_full_artifact_max_bytes: int = Field(default=1048576, validation_alias=AliasChoices("XML_FULL_ARTIFACT_MAX_BYTES", "OMH_XML_FULL_ARTIFACT_MAX_BYTES"))
+    marking_code_pool_export_dir: str = Field(default="/tmp/omh-marking-code-pools", validation_alias=AliasChoices("MARKING_CODE_POOL_EXPORT_DIR", "OMH_MARKING_CODE_POOL_EXPORT_DIR"))
     require_worker_heartbeat: bool = Field(default=False, validation_alias=AliasChoices("OMH_REQUIRE_WORKER_HEARTBEAT", "REQUIRE_WORKER_HEARTBEAT"))
     secret_key: str | None = Field(default=None, validation_alias=AliasChoices("OMH_SECRET_KEY", "SECRET_KEY"))
     config_require_test_before_publish: bool | None = Field(default=None, validation_alias=AliasChoices("REQUIRE_TEST_BEFORE_PUBLISH", "OMH_REQUIRE_TEST_BEFORE_PUBLISH"))

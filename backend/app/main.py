@@ -32,6 +32,7 @@ from app.integration_bus.router import router as integration_bus_router
 from app.integration_flows.router import router as integration_flows_router
 from app.integration_master.router import router as integration_master_router
 from app.json_builder.router import router as json_builder_router
+from app.marking_code_pools.router import router as marking_code_pools_router
 from app.mappings.router import router as mappings_router
 from app.matchers.router import router as matchers_router
 from app.maintenance.router import router as maintenance_router
@@ -140,6 +141,7 @@ app.include_router(integration_bus_router)
 app.include_router(integration_flows_router)
 app.include_router(integration_master_router)
 app.include_router(json_builder_router)
+app.include_router(marking_code_pools_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(integration_designer_router)
 app.include_router(matchers_router)
 app.include_router(scenario_library_router)

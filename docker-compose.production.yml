@@ -30,6 +30,7 @@ services:
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-${PUBLIC_BASE_URL:-http://localhost:8000}}
       OMH_ALLOW_DEMO_SEED_IN_PRODUCTION: "false"
       OMH_REQUIRE_WORKER_HEARTBEAT: ${OMH_REQUIRE_WORKER_HEARTBEAT:-false}
+      OMH_MARKING_CODE_POOL_EXPORT_DIR: ${OMH_MARKING_CODE_POOL_EXPORT_DIR:-/app/exports/marking-code-pools}
     volumes:
       - ./backups:/app/backups
       - ./backend/exports:/app/exports
@@ -69,6 +70,7 @@ services:
       OMH_SECRET_KEY: ${OMH_SECRET_KEY:?Set OMH_SECRET_KEY in .env.production}
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-${PUBLIC_BASE_URL:-http://localhost:8000}}
       OMH_ALLOW_DEMO_SEED_IN_PRODUCTION: "false"
+      OMH_MARKING_CODE_POOL_EXPORT_DIR: ${OMH_MARKING_CODE_POOL_EXPORT_DIR:-/app/exports/marking-code-pools}
     volumes:
       - ./backups:/app/backups
       - ./backend/exports:/app/exports
