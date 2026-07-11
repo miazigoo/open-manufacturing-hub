@@ -31,6 +31,25 @@ pip install -e '.[test]'
 pytest
 ```
 
+## CHZ Code Pools To DnP
+
+Endpoint `POST /api/marking-code-pools/onec/export-file` сохраняет пул кодов
+маркировки из 1C в файл для лазера. Если задан DnP endpoint, OMH после записи
+файла дополнительно отправляет этот же пул в DnP без чтения 1C OData.
+
+Переменные окружения:
+
+```bash
+OMH_DNP_CHZ_CODE_POOL_IMPORT_URL=http://<dnp-host>/api/v2/integrations/omh/chz/code-pools/from-1c
+OMH_DNP_SHARED_SECRET=<same-token-as-dnp>
+OMH_DNP_REQUEST_TIMEOUT_SECONDS=180
+```
+
+1C должна передавать `full_codes_base64`: DnP сам декодирует полный код
+маркировки, сохраняет настоящий GS-разделитель и не создает дубли.
+Если `OMH_DNP_CHZ_CODE_POOL_IMPORT_URL` пустой, поведение прежнее: OMH только
+пишет файл в папку лазера.
+
 
 ## Frontend
 

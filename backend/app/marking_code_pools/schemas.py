@@ -48,3 +48,4 @@ class MarkingCodePoolExportRead(BaseModel):
 class MarkingCodePoolExportResponse(BaseModel):
     export: MarkingCodePoolExportRead
     message: str
+    dnp_forward: dict[str, Any] | None = None

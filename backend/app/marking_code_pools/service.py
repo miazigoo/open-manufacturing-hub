@@ -5,7 +5,9 @@ import binascii
 import hashlib
 import os
 from pathlib import Path
+from datetime import UTC, datetime
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -16,7 +18,9 @@ from app.marking_code_pools.schemas import OneCMarkingCodePoolExportRequest
 GS = "\x1d"
 
 
-async def export_onec_pool_to_file(session: AsyncSession, request: OneCMarkingCodePoolExportRequest) -> MarkingCodePoolExport:
+async def export_onec_pool_to_file(
+    session: AsyncSession, request: OneCMarkingCodePoolExportRequest
+) -> tuple[MarkingCodePoolExport, dict | None]:
     codes = _codes_from_request(request)
     file_name = request.file_name or _default_file_name(request.order_number, len(codes))
     _validate_file_name(file_name)
@@ -42,7 +46,13 @@ async def export_onec_pool_to_file(session: AsyncSession, request: OneCMarkingCo
     )
     session.add(record)
     await session.flush()
-    return record
+    dnp_forward = await _forward_to_dnp_if_configured(record, request, codes)
+    if dnp_forward is not None:
+        record.status = "forwarded"
+        record.forwarded_at = datetime.now(UTC)
+        record.metadata_json = {**(record.metadata_json or {}), "dnp_forward": dnp_forward}
+        await session.flush()
+    return record, dnp_forward
 
 
 def _codes_from_request(request: OneCMarkingCodePoolExportRequest) -> list[str]:
@@ -51,6 +61,77 @@ def _codes_from_request(request: OneCMarkingCodePoolExportRequest) -> list[str]:
     if request.codes is not None:
         return _normalize_codes(request.codes, request.gs_marker)
     raise BadRequestError("No marking codes were supplied")
+
+
+async def _forward_to_dnp_if_configured(
+    record: MarkingCodePoolExport,
+    request: OneCMarkingCodePoolExportRequest,
+    codes: list[str],
+) -> dict | None:
+    settings = get_settings()
+    url = settings.dnp_chz_code_pool_import_url.strip()
+    if not url:
+        return None
+
+    payload = {
+        "omh": {
+            "event_id": str(record.id),
+            "correlation_id": f"chz-code-pool:{request.order_number}:{record.id}",
+            "event_type": "ChestniyZnakCodePoolPushedFrom1C",
+            "entity_type": "OneCMarkingCodePool",
+            "entity_id": request.source_document_id or request.order_number,
+            "source_system": "Open Manufacturing Hub",
+            "target_system": "DnP",
+            "sent_at": datetime.now(UTC).isoformat(),
+        },
+        "payload": {
+            "source_system": request.source_system,
+            "source_document_id": request.source_document_id,
+            "source_document_name": request.source_document_name,
+            "order_number": request.order_number,
+            "file_name": record.file_name,
+            "total_codes": record.total_codes,
+            "content_sha256": record.content_sha256,
+            "full_codes_base64": _base64_codes_for_dnp(request, codes),
+            "metadata_json": request.metadata_json,
+        },
+    }
+    headers = {"Content-Type": "application/json"}
+    if settings.dnp_shared_secret:
+        headers["X-OMH-Token"] = settings.dnp_shared_secret
+
+    try:
+        async with httpx.AsyncClient(timeout=settings.dnp_request_timeout_seconds) as client:
+            response = await client.post(url, json=payload, headers=headers)
+    except httpx.HTTPError as exc:
+        record.status = "forward_failed"
+        record.error_message = f"DnP request failed: {exc}"
+        raise BadRequestError(record.error_message) from exc
+
+    if response.status_code >= 400:
+        record.status = "forward_failed"
+        record.error_message = f"DnP rejected code pool with HTTP {response.status_code}: {response.text[:1000]}"
+        raise BadRequestError(record.error_message)
+
+    try:
+        result = response.json()
+    except ValueError as exc:
+        record.status = "forward_failed"
+        record.error_message = "DnP returned non-JSON response"
+        raise BadRequestError(record.error_message) from exc
+
+    if not isinstance(result, dict):
+        record.status = "forward_failed"
+        record.error_message = "DnP returned JSON response that is not an object"
+        raise BadRequestError(record.error_message)
+
+    return result
+
+
+def _base64_codes_for_dnp(request: OneCMarkingCodePoolExportRequest, codes: list[str]) -> list[str]:
+    if request.full_codes_base64 is not None:
+        return [str(value).strip() for value in request.full_codes_base64]
+    return [base64.b64encode(code.encode("latin-1")).decode("ascii") for code in codes]
 
 
 def _normalize_base64_full_codes(full_codes_base64: list[str]) -> list[str]:
