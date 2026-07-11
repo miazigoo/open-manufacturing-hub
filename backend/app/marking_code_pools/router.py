@@ -17,10 +17,11 @@ router = APIRouter(prefix="/api/marking-code-pools", tags=["marking-code-pools"]
 async def export_onec_pool_to_file(request: OneCMarkingCodePoolExportRequest, session: AsyncSession = Depends(get_session)):
     record, dnp_forward = await service.export_onec_pool_to_file(session, request)
     await session.commit()
-    message = f"Saved {record.total_codes} marking codes to {record.file_name}"
+    actions = (record.metadata_json or {}).get("actions", {})
+    message = f"Accepted {record.total_codes} marking codes as {record.file_name}; status={record.status}"
     if dnp_forward is not None:
-        message += " and forwarded the pool to DnP"
-    return MarkingCodePoolExportResponse(export=record, message=message, dnp_forward=dnp_forward)
+        message += "; DnP accepted the pool"
+    return MarkingCodePoolExportResponse(export=record, message=message, actions=actions, dnp_forward=dnp_forward)
 
 
 @router.get("/exports", response_model=list[MarkingCodePoolExportRead])

@@ -5,17 +5,31 @@ import binascii
 import hashlib
 import os
 from pathlib import Path
+from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.errors import BadRequestError
+from app.environments import repository as environments_repository
 from app.marking_code_pools.models import MarkingCodePoolExport
 from app.marking_code_pools.schemas import OneCMarkingCodePoolExportRequest
 
 GS = "\x1d"
+
+
+@dataclass(frozen=True)
+class MarkingCodePoolRuntimeConfig:
+    dnp_url: str
+    dnp_shared_secret: str
+    dnp_timeout_seconds: float
+    laser_file_enabled: bool
+    laser_smb_unc: str
+    laser_smb_username: str
+    laser_smb_password: str
 
 
 async def export_onec_pool_to_file(
@@ -26,12 +40,7 @@ async def export_onec_pool_to_file(
     _validate_file_name(file_name)
     payload = _codes_to_file_bytes(codes)
     content_hash = hashlib.sha256(payload).hexdigest()
-    export_dir = _export_dir()
-    export_dir.mkdir(parents=True, exist_ok=True)
-    file_path = export_dir / file_name
-    if file_path.exists() and not request.allow_overwrite:
-        raise BadRequestError(f"Export file already exists: {file_name}")
-    _atomic_write(file_path, payload)
+    file_path = _export_dir() / file_name
     record = MarkingCodePoolExport(
         source_system=request.source_system,
         source_document_id=request.source_document_id,
@@ -46,12 +55,21 @@ async def export_onec_pool_to_file(
     )
     session.add(record)
     await session.flush()
-    dnp_forward = await _forward_to_dnp_if_configured(record, request, codes)
+
+    config = await _runtime_config(session)
+    actions: dict[str, dict[str, Any]] = {}
+    actions["local_outbox"] = _save_local_outbox(file_path, payload, request.allow_overwrite)
+    actions["laser_file"] = _save_laser_file_if_configured(config, file_name, payload)
+    actions["dnp_forward"] = await _forward_to_dnp_if_configured(config, record, request, codes)
+
+    dnp_forward = actions["dnp_forward"].get("response") if actions["dnp_forward"].get("status") == "success" else None
+    record.status = _overall_status(actions)
+    record.error_message = _overall_error_message(actions)
+    record.metadata_json = {**(record.metadata_json or {}), "actions": actions}
     if dnp_forward is not None:
-        record.status = "forwarded"
         record.forwarded_at = datetime.now(UTC)
-        record.metadata_json = {**(record.metadata_json or {}), "dnp_forward": dnp_forward}
-        await session.flush()
+        record.metadata_json = {**record.metadata_json, "dnp_forward": dnp_forward}
+    await session.flush()
     return record, dnp_forward
 
 
@@ -63,15 +81,90 @@ def _codes_from_request(request: OneCMarkingCodePoolExportRequest) -> list[str]:
     raise BadRequestError("No marking codes were supplied")
 
 
+async def _runtime_config(session: AsyncSession) -> MarkingCodePoolRuntimeConfig:
+    settings = get_settings()
+    values = await _current_environment_values(session)
+    return MarkingCodePoolRuntimeConfig(
+        dnp_url=_config_str(values, "DNP_CHZ_CODE_POOL_IMPORT_URL", settings.dnp_chz_code_pool_import_url),
+        dnp_shared_secret=_config_str(values, "DNP_SHARED_SECRET", settings.dnp_shared_secret),
+        dnp_timeout_seconds=_config_float(values, "DNP_REQUEST_TIMEOUT_SECONDS", settings.dnp_request_timeout_seconds),
+        laser_file_enabled=_config_bool(values, "CHZ_LASER_FILE_ENABLED", settings.chz_laser_file_enabled),
+        laser_smb_unc=_config_str(values, "CHZ_LASER_SMB_UNC", settings.chz_laser_smb_unc),
+        laser_smb_username=_config_str(values, "CHZ_LASER_SMB_USERNAME", settings.chz_laser_smb_username),
+        laser_smb_password=_config_str(values, "CHZ_LASER_SMB_PASSWORD", settings.chz_laser_smb_password),
+    )
+
+
+async def _current_environment_values(session: AsyncSession) -> dict[str, Any]:
+    environment = await environments_repository.current_environment(session)
+    if environment is None:
+        return {}
+    return {item.key: item.value_json for item in environment.variables if not item.secret_ref}
+
+
+def _config_str(values: dict[str, Any], key: str, fallback: str) -> str:
+    value = values.get(key, values.get(f"OMH_{key}", fallback))
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _config_float(values: dict[str, Any], key: str, fallback: float) -> float:
+    value = values.get(key, values.get(f"OMH_{key}", fallback))
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _config_bool(values: dict[str, Any], key: str, fallback: bool) -> bool:
+    value = values.get(key, values.get(f"OMH_{key}", fallback))
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return fallback
+    return str(value).strip().lower() in {"1", "true", "yes", "on", "да"}
+
+
+def _save_local_outbox(file_path: Path, payload: bytes, allow_overwrite: bool) -> dict[str, Any]:
+    try:
+        export_dir = file_path.parent
+        export_dir.mkdir(parents=True, exist_ok=True)
+        if file_path.exists() and not allow_overwrite:
+            return {"status": "failed", "path": str(file_path), "error": f"Export file already exists: {file_path.name}"}
+        _atomic_write(file_path, payload)
+    except OSError as exc:
+        return {"status": "failed", "path": str(file_path), "error": str(exc)}
+    return {"status": "success", "path": str(file_path)}
+
+
+def _save_laser_file_if_configured(config: MarkingCodePoolRuntimeConfig, file_name: str, payload: bytes) -> dict[str, Any]:
+    if not config.laser_file_enabled:
+        return {"status": "disabled", "reason": "CHZ_LASER_FILE_ENABLED is false"}
+    if not config.laser_smb_unc:
+        return {"status": "disabled", "reason": "CHZ_LASER_SMB_UNC is not configured"}
+    try:
+        _write_smb_file(
+            config.laser_smb_unc,
+            file_name,
+            payload,
+            username=config.laser_smb_username,
+            password=config.laser_smb_password,
+        )
+    except Exception as exc:
+        return {"status": "failed", "target": config.laser_smb_unc, "file_name": file_name, "error": str(exc)}
+    return {"status": "success", "target": config.laser_smb_unc, "file_name": file_name}
+
+
 async def _forward_to_dnp_if_configured(
+    config: MarkingCodePoolRuntimeConfig,
     record: MarkingCodePoolExport,
     request: OneCMarkingCodePoolExportRequest,
     codes: list[str],
-) -> dict | None:
-    settings = get_settings()
-    url = settings.dnp_chz_code_pool_import_url.strip()
+) -> dict[str, Any]:
+    url = config.dnp_url
     if not url:
-        return None
+        return {"status": "disabled", "reason": "DNP_CHZ_CODE_POOL_IMPORT_URL is not configured"}
 
     payload = {
         "omh": {
@@ -97,35 +190,69 @@ async def _forward_to_dnp_if_configured(
         },
     }
     headers = {"Content-Type": "application/json"}
-    if settings.dnp_shared_secret:
-        headers["X-OMH-Token"] = settings.dnp_shared_secret
+    if config.dnp_shared_secret:
+        headers["X-OMH-Token"] = config.dnp_shared_secret
 
     try:
-        async with httpx.AsyncClient(timeout=settings.dnp_request_timeout_seconds) as client:
+        async with httpx.AsyncClient(timeout=config.dnp_timeout_seconds) as client:
             response = await client.post(url, json=payload, headers=headers)
     except httpx.HTTPError as exc:
-        record.status = "forward_failed"
-        record.error_message = f"DnP request failed: {exc}"
-        raise BadRequestError(record.error_message) from exc
+        return {"status": "failed", "url": url, "error": f"DnP request failed: {exc}"}
 
     if response.status_code >= 400:
-        record.status = "forward_failed"
-        record.error_message = f"DnP rejected code pool with HTTP {response.status_code}: {response.text[:1000]}"
-        raise BadRequestError(record.error_message)
+        return {
+            "status": "failed",
+            "url": url,
+            "http_status": response.status_code,
+            "error": f"DnP rejected code pool with HTTP {response.status_code}: {response.text[:1000]}",
+        }
 
     try:
         result = response.json()
     except ValueError as exc:
-        record.status = "forward_failed"
-        record.error_message = "DnP returned non-JSON response"
-        raise BadRequestError(record.error_message) from exc
+        return {"status": "failed", "url": url, "error": f"DnP returned non-JSON response: {exc}"}
 
     if not isinstance(result, dict):
-        record.status = "forward_failed"
-        record.error_message = "DnP returned JSON response that is not an object"
-        raise BadRequestError(record.error_message)
+        return {"status": "failed", "url": url, "error": "DnP returned JSON response that is not an object"}
 
-    return result
+    return {"status": "success", "url": url, "response": result}
+
+
+def _write_smb_file(unc_dir: str, file_name: str, payload: bytes, *, username: str, password: str) -> None:
+    try:
+        import smbclient
+    except ImportError as exc:
+        raise RuntimeError("smbprotocol is not installed, cannot write to SMB share") from exc
+
+    normalized_dir = unc_dir.replace("/", "\\").rstrip("\\")
+    if not normalized_dir.startswith("\\\\"):
+        raise ValueError("CHZ_LASER_SMB_UNC must look like \\\\server\\share")
+    parts = normalized_dir.strip("\\").split("\\", 1)
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise ValueError("CHZ_LASER_SMB_UNC must include server and share")
+    server = parts[0]
+    smbclient.register_session(server, username=username or "guest", password=password or "")
+    with smbclient.open_file(f"{normalized_dir}\\{file_name}", mode="wb") as file_obj:
+        file_obj.write(payload)
+
+
+def _overall_status(actions: dict[str, dict[str, Any]]) -> str:
+    required = [actions["local_outbox"]]
+    optional = [actions["laser_file"], actions["dnp_forward"]]
+    if all(action["status"] == "success" for action in required + optional if action["status"] != "disabled"):
+        return "forwarded" if actions["dnp_forward"]["status"] == "success" else "saved"
+    if any(action["status"] == "success" for action in required + optional):
+        return "partial_success"
+    return "failed"
+
+
+def _overall_error_message(actions: dict[str, dict[str, Any]]) -> str | None:
+    errors = [
+        f"{name}: {action['error']}"
+        for name, action in actions.items()
+        if action.get("status") == "failed" and action.get("error")
+    ]
+    return "; ".join(errors) if errors else None
 
 
 def _base64_codes_for_dnp(request: OneCMarkingCodePoolExportRequest, codes: list[str]) -> list[str]:

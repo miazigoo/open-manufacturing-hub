@@ -48,4 +48,5 @@ class MarkingCodePoolExportRead(BaseModel):
 class MarkingCodePoolExportResponse(BaseModel):
     export: MarkingCodePoolExportRead
     message: str
+    actions: dict[str, Any] = Field(default_factory=dict)
     dnp_forward: dict[str, Any] | None = None
