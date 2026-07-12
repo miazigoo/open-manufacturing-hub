@@ -28,6 +28,36 @@ export function ODataMasterShell() {
           <button type="button" disabled>Timeline после запуска</button>
         </div>
       </section>
+      <section className="panel form-panel odata-master-onboarding">
+        <div className="panel-toolbar">
+          <div>
+            <span className="eyebrow">Safe OData workflow</span>
+            <h2>Filter builder, $select и понятный результат</h2>
+            <p className="microcopy">Choose the 1C base where OMH will search data. Затем выберите resource из metadata, соберите безопасный $filter и ограничьте ответ через $select.</p>
+          </div>
+          <Link className="primary-link" to="/odata-connections">Открыть OData Connections</Link>
+        </div>
+        <div className="metadata-grid compact-grid no-margin">
+          <span>1. Connection<strong>Выберите базу 1С</strong></span>
+          <span>2. Resource<strong>Скопируйте имя из metadata</strong></span>
+          <span>3. Filter builder<strong>Не пишите сложный OData filter вслепую</strong></span>
+          <span>4. $select<strong>Верните только поля для следующих шагов</strong></span>
+        </div>
+        <div className="odata-filter-builder">
+          <div className="panel-toolbar compact-toolbar">
+            <div>
+              <h3>Конструктор фильтра</h3>
+              <p className="microcopy">Стартовый пример: поле из 1С + оператор + значение из request. В мастере ниже этот шаблон можно заменить реальными переменными.</p>
+            </div>
+          </div>
+          <div className="success-note">Compiled $filter<span>{"Number eq '{{request.body.Number}}'"}</span></div>
+          <div className="hint-chip-row">
+            {['Number eq {{request.body.Number}}', 'Ref_Key,Number,Date,Posted', 'Catalog_Контрагенты', 'Document_ЗаказНаПроизводство2_2'].map((hint) => (
+              <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)}>{hint}</button>
+            ))}
+          </div>
+        </div>
+      </section>
       {mode === 'build' ? <ODataIntegrationWizard /> : <ODataQuickTestMode />}
     </div>
   );

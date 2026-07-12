@@ -24,7 +24,7 @@ const copy = {
     translation: 'Перевод страницы ещё дорабатывается. Структура стабильна и соответствует русскому оригиналу.',
     startEyebrow: 'Учебная карта продукта',
     startTitle: 'Полный путь настройки интеграции в OMH',
-    startSubtitle: 'Идите по цепочке: Integration Start -> Connection Center -> Operation Catalog -> Data Contracts -> Mapping Center -> Pattern Wizards -> Test/Timeline/Troubleshooting -> Enable integration.',
+    startSubtitle: 'Начните с понятного маршрута: Integration Start -> Connection Center -> Operation Catalog -> Data Contracts -> Mapping Center -> Pattern Wizards -> Test/Timeline/Troubleshooting -> Enable integration.',
     blocks: [
       { title: 'Быстрый старт', items: [
         { label: 'Что такое OMH', detail: 'Простая схема продукта и роль Timeline/artifacts.', to: '/docs/core/learning-path/what-is-omh', action: 'Открыть' },
@@ -78,7 +78,7 @@ const copy = {
     translation: 'Translation is in progress. The structure is stable and follows the Russian source page.',
     startEyebrow: 'Learning map',
     startTitle: 'Full OMH integration setup path',
-    startSubtitle: 'Follow the product chain from scenario selection to connections, operations, contracts, mappings, wizards, tests, Timeline and enable.',
+    startSubtitle: 'Start with a guided path: scenario selection, connections, operations, contracts, mappings, wizards, tests, Timeline and enable.',
     blocks: [
       { title: 'Quick start', items: [
         { label: 'What is OMH', detail: 'Product map and core runtime concepts.', to: '/docs/core/learning-path/what-is-omh', action: 'Open' },
@@ -240,7 +240,7 @@ export function DocumentationPage() {
                         <h3>{block.title}</h3>
                         <div className="docs-start-grid">
                           {block.items.map((item) => (
-                            <Link key={item.to} className="docs-start-card" to={item.to}>
+                            <Link key={`${block.title}:${item.label}:${item.to}`} className="docs-start-card" to={item.to}>
                               <strong>{item.label}</strong>
                               <span>{item.detail}</span>
                               <em>{item.action}</em>
