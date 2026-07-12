@@ -39,9 +39,14 @@ export const navModel: NavModelItem[] = [
   nav('incidents', 'Operate', 'Incidents', '/incidents', 'nav.incidents', advanced, 60),
   nav('training', 'Operate', 'Training Sandbox', '/training', 'nav.training', advanced, 70, 'omh-package-training'),
 
+  nav('integration-start', 'Build', 'Старт интеграции', '/integration-start', 'nav.integrationStart', simple, 5),
   nav('integration-master', 'Build', 'Мастер интеграции', '/master', 'nav.integrationMaster', simple, 10),
+  nav('connection-center', 'Build', 'Подключения', '/connection-center', 'nav.connectionCenter', simple, 15),
+  nav('operation-catalog', 'Build', 'Операции', '/operation-catalog', 'nav.operationCatalog', advanced, 16),
+  nav('mapping-center', 'Build', 'Сопоставления', '/mapping-center', 'nav.mappingCenter', advanced, 17),
   nav('odata-explorer', 'Build', 'Мастер OData', '/odata-explorer', 'nav.odataExplorer', simple, 20, 'omh-package-onec'),
   nav('odata-connections', 'Build', 'OData Connections', '/odata-connections', 'onec.odataConnections', simple, 30, 'omh-package-onec'),
+  nav('marking-code-pools', 'Build', 'Пулы кодов ЧЗ', '/marking-code-pools', 'nav.markingCodePools', simple, 35, 'omh-package-onec'),
   nav('integration-flows', 'Build', 'Integration Flows', '/integration-flows', 'nav.integrationFlows', simple, 40),
   nav('request-response', 'Build', 'Request/Response Workbench', '/test-console', 'nav.testConsole', advanced, 50),
   nav('onec-cockpit', 'Build', '1C Cockpit', '/onec-cockpit', 'nav.onecCockpit', advanced, 60, 'omh-package-onec'),
@@ -78,6 +83,8 @@ export const navModel: NavModelItem[] = [
   nav('onec-scenarios', 'Advanced', '1C Scenarios', '/onec-scenarios', 'nav.onecScenarios', advanced, 60, 'omh-package-onec'),
   nav('onec-workbench', 'Advanced', '1C Workbench', '/onec-workbench', 'nav.onecWorkbench', advanced, 70, 'omh-package-onec'),
   nav('polling', 'Advanced', 'Polling Jobs', '/polling', 'nav.polling', advanced, 80),
+  nav('integration-coverage', 'Advanced', 'Coverage Matrix', '/integration-coverage', 'nav.integrationCoverage', advanced, 85),
+  nav('pattern-certification', 'Advanced', 'Pattern Certification', '/integration-patterns/certification', 'nav.patternCertification', advanced, 86),
   nav('maintenance', 'Advanced', 'Maintenance', '/maintenance', 'nav.maintenance', advanced, 90),
 
   nav('integration-bus', 'Developer', 'Integration Bus', '/integration-bus', 'nav.integrationBus', developer, 10),

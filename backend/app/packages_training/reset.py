@@ -9,6 +9,7 @@ from app.events.models import IntegrationEvent
 from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
 from app.integration_flows.models import IntegrationFlow
 from app.operation_templates.models import OperationTemplate
+from app.polling.models import PollingJob
 from app.test_console.models import SavedTestCase
 from app.workflows.models import Workflow
 
@@ -18,6 +19,7 @@ async def reset_training_data(session: AsyncSession) -> dict[str, int]:
     counts["test_cases"] = await _delete_by_name_prefix(session, SavedTestCase, "Training ")
     counts["flow_test_cases"] = await _delete_by_name_prefix(session, SavedTestCase, "Flow Training ")
     counts["flows"] = await _delete_by_name_prefix(session, IntegrationFlow, "Training ")
+    counts["polling_jobs"] = await _delete_by_name_prefix(session, PollingJob, "Training ")
     counts["endpoints"] = await _delete_by_slug_prefix(session, IntegrationEndpoint, "training-")
     counts["routes"] = await _delete_by_name_prefix(session, IntegrationRoute, "Flow Training ")
     counts["workflows"] = await _delete_by_name_prefix(session, Workflow, "Flow Training ")

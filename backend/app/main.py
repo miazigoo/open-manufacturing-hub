@@ -13,9 +13,11 @@ from app.core.database import async_session
 from app.core.access import optional_auth_guard
 from app.core.config import get_settings
 from app.connectors.router import router as connectors_router
+from app.connection_center.router import router as connection_center_router
 from app.change_sets.router import router as change_sets_router
 from app.config_versions.router import router as config_versions_router
 from app.core.errors import BadRequestError, NotFoundError
+from app.data_contracts.router import router as data_contracts_router
 from app.demo.router import router as demo_router
 from app.docs_portal.router import router as docs_portal_router
 from app.docs_examples.router import router as docs_examples_router
@@ -31,8 +33,11 @@ from app.integration_designer.router import router as integration_designer_route
 from app.integration_bus.router import router as integration_bus_router
 from app.integration_flows.router import router as integration_flows_router
 from app.integration_master.router import router as integration_master_router
+from app.integration_coverage.router import router as integration_coverage_router
+from app.integration_patterns.router import router as integration_patterns_router
 from app.json_builder.router import router as json_builder_router
 from app.marking_code_pools.router import router as marking_code_pools_router
+from app.mapping_center.router import router as mapping_center_router
 from app.mappings.router import router as mappings_router
 from app.matchers.router import router as matchers_router
 from app.maintenance.router import router as maintenance_router
@@ -43,6 +48,7 @@ from app.onec_scenarios.router import router as onec_scenarios_router
 from app.onec_templates.router import router as onec_templates_router
 from app.onboarding.router import router as onboarding_router
 from app.operation_templates.router import router as operation_templates_router
+from app.operation_catalog.router import router as operation_catalog_router
 from app.odata_connections.router import router as odata_connections_router
 from app.odata_explorer.router import router as odata_explorer_router
 from app.odata_master.router import router as odata_master_router
@@ -125,9 +131,12 @@ app.include_router(queue_router)
 app.include_router(dlq_router)
 app.include_router(demo_router)
 app.include_router(connectors_router)
+app.include_router(connection_center_router)
 app.include_router(config_versions_router)
 app.include_router(environments_router)
 app.include_router(change_sets_router)
+app.include_router(data_contracts_router)
+app.include_router(mapping_center_router)
 app.include_router(mappings_router)
 app.include_router(workflows_router)
 app.include_router(execution_router)
@@ -140,6 +149,8 @@ app.include_router(incidents_router)
 app.include_router(integration_bus_router)
 app.include_router(integration_flows_router)
 app.include_router(integration_master_router)
+app.include_router(integration_coverage_router)
+app.include_router(integration_patterns_router)
 app.include_router(json_builder_router)
 app.include_router(marking_code_pools_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(integration_designer_router)
@@ -172,5 +183,6 @@ app.include_router(onec_workbench_router, dependencies=[Depends(require_package_
 app.include_router(onec_scenarios_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(onec_templates_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(operation_templates_router)
+app.include_router(operation_catalog_router)
 app.include_router(onboarding_router)
 app.include_router(mock_onec_router)

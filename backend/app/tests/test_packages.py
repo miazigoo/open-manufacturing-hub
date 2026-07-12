@@ -109,15 +109,21 @@ async def test_registered_package_routes_are_hidden_until_installed_in_ui_naviga
     navigation = await client.get("/api/ui/navigation")
     assert navigation.status_code == 200, navigation.text
     onec_cockpit = next(item for item in navigation.json() if item["route"] == "/onec-cockpit")
+    marking_pools = next(item for item in navigation.json() if item["route"] == "/marking-code-pools")
     assert onec_cockpit["installed"] is False
     assert onec_cockpit["enabled"] is False
+    assert marking_pools["installed"] is False
+    assert marking_pools["enabled"] is False
 
     installed = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
     assert installed.status_code == 200, installed.text
     navigation_after_install = await client.get("/api/ui/navigation")
     onec_cockpit_after_install = next(item for item in navigation_after_install.json() if item["route"] == "/onec-cockpit")
+    marking_pools_after_install = next(item for item in navigation_after_install.json() if item["route"] == "/marking-code-pools")
     assert onec_cockpit_after_install["installed"] is True
     assert onec_cockpit_after_install["enabled"] is True
+    assert marking_pools_after_install["installed"] is True
+    assert marking_pools_after_install["enabled"] is True
 
 
 def test_official_package_check_script_passes():

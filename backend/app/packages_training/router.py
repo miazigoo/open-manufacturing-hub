@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,9 +10,13 @@ from app.core.database import get_session
 from app.core.errors import NotFoundError
 from app.packages_training import service
 from app.packages_training.examples import get_example, list_examples
-from app.packages_training.mock_dnp import submit_marking_pool
+from app.packages_training.mock_dnp import submit_chz_codes, submit_marking_pool
+from app.packages_training.mock_external_api import import_order, sync_contractor
+from app.packages_training.mock_onec_http import accept_raw_xml, accept_shipment_fact, save_order_external_id
 from app.packages_training.mock_odata import metadata_xml, query_mock_odata
 from app.packages_training.mock_printer import print_label
+from app.packages_training.mock_site import import_order_to_site
+from app.packages_training.mock_wms import import_orders
 from app.packages_training.presets import ERP_ODATA, WMS_ODATA
 
 router = APIRouter(prefix="/api/training", tags=["training"])
@@ -98,6 +102,55 @@ async def mock_dnp(payload: dict[str, Any]):
     return JSONResponse(status_code=status, content=body)
 
 
+@router.post("/mock-dnp/chz/codes/import")
+async def mock_dnp_chz_codes(payload: dict[str, Any]):
+    status, body = submit_chz_codes(payload)
+    return JSONResponse(status_code=status, content=body)
+
+
+@router.post("/mock-external-api/orders/import")
+async def mock_external_api_order_import(payload: dict[str, Any]):
+    status, body = import_order(payload)
+    return JSONResponse(status_code=status, content=body)
+
+
+@router.post("/mock-site/orders/import")
+async def mock_site_order_import(payload: dict[str, Any]):
+    status, body = import_order_to_site(payload)
+    return JSONResponse(status_code=status, content=body)
+
+
+@router.post("/mock-wms/orders/import")
+async def mock_wms_order_import(payload: dict[str, Any]):
+    status, body = import_orders(payload)
+    return JSONResponse(status_code=status, content=body)
+
+
+@router.post("/mock-onec/hs/omh/order-external-id")
+async def mock_onec_order_external_id(payload: dict[str, Any]):
+    status, body = save_order_external_id(payload)
+    return JSONResponse(status_code=status, content=body)
+
+
+@router.post("/mock-onec/hs/omh/shipment-facts")
+async def mock_onec_shipment_facts(payload: dict[str, Any]):
+    status, body = accept_shipment_fact(payload)
+    return JSONResponse(status_code=status, content=body)
+
+
+@router.post("/mock-onec/hs/omh/receive-upd-xml")
+async def mock_onec_receive_upd_xml(request: Request):
+    raw_xml = (await request.body()).decode("utf-8", errors="replace")
+    status, body = accept_raw_xml(raw_xml)
+    return JSONResponse(status_code=status, content=body)
+
+
+@router.post("/mock-external-api/contractors/sync")
+async def mock_external_api_contractor_sync(payload: dict[str, Any]):
+    status, body = sync_contractor(payload)
+    return JSONResponse(status_code=status, content=body)
+
+
 @router.post("/mock-printer/print")
 async def mock_printer(payload: dict[str, Any]):
     status, body = print_label(payload)
@@ -110,4 +163,3 @@ def _resources(system: str) -> dict[str, list[dict[str, Any]]]:
     if system == "wms":
         return WMS_ODATA
     raise NotFoundError("Training OData system not found")
-

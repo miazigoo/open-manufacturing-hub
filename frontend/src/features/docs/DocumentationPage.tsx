@@ -13,66 +13,167 @@ import { useI18n } from '../../i18n/useI18n';
 const copy = {
   ru: {
     eyebrow: 'Документация в продукте',
-    title: 'Документация, которая помогает внедрять, а не угадывать.',
-    subtitle: 'Пакетные инструкции, 1C OData/XML маршруты, печать, авторизация, секреты и troubleshooting живут внутри продукта и переключаются вместе с языком UI.',
+    title: 'Документация OMH',
+    subtitle: 'Научитесь настраивать интеграции между 1С, WMS, сайтами, API, XML, принтерами и файловыми обменами.',
     open: 'Открыть текущий раздел',
     pdf: 'Печать / PDF',
-    updated: 'Обновлено 2026-07-04',
+    updated: 'Обновлено 2026-07-13',
     packages: 'пакетов',
     languages: 'языка',
     planned: 'запланирован',
     translation: 'Перевод страницы ещё дорабатывается. Структура стабильна и соответствует русскому оригиналу.',
-    startEyebrow: 'С чего начать',
-    startTitle: 'Если вы здесь впервые, начните с понятного маршрута',
-    startSubtitle: 'Не нужно читать все подряд. Выберите задачу, повторите пример в Test Console, затем откройте Timeline и проверьте результат.',
-    paths: [
-      { label: 'Первый обмен с 1C', detail: 'Что установить, где создать OData profile, как собрать flow и куда смотреть после теста.', to: '/docs/onec/start-here/beginner-path', action: 'Открыть маршрут' },
-      { label: 'Готовые запросы', detail: 'HTTP, 1C-код, payload, OData filter и ожидаемый ответ для типовых сценариев.', to: '/docs/onec/request-examples/request-03-two-lookups-order', action: 'Посмотреть пример' },
-      { label: 'Ошибка в production', detail: 'Понятные playbooks: симптом, где смотреть artifact, как исправить и когда делать replay.', to: '/docs/onec/error-playbooks/odata-empty-required', action: 'Разобрать ошибку' },
+    startEyebrow: 'Учебная карта продукта',
+    startTitle: 'Полный путь настройки интеграции в OMH',
+    startSubtitle: 'Идите по цепочке: Integration Start -> Connection Center -> Operation Catalog -> Data Contracts -> Mapping Center -> Pattern Wizards -> Test/Timeline/Troubleshooting -> Enable integration.',
+    blocks: [
+      { title: 'Быстрый старт', items: [
+        { label: 'Что такое OMH', detail: 'Простая схема продукта и роль Timeline/artifacts.', to: '/docs/core/learning-path/what-is-omh', action: 'Открыть' },
+        { label: 'Как выбрать сценарий интеграции', detail: 'Integration Start examples и правила выбора wizard.', to: '/docs/core/learning-path/choose-scenario', action: 'Выбрать' },
+        { label: 'Первая интеграция за 15 минут', detail: 'Минимальный путь от sample до Timeline.', to: '/docs/onec/start-here/beginner-path', action: 'Начать' },
+        { label: 'Training Sandbox', detail: 'Учебные примеры без реальной 1С, WMS и принтера.', to: '/docs/onec/academy/training-sandbox-executable-docs', action: 'Учиться' },
+      ] },
+      { title: 'Основные понятия', items: [
+        { label: 'Scenario / Pattern', detail: 'Бизнес-сценарий и технический шаблон.', to: '/docs/core/concepts', action: 'Понятия' },
+        { label: 'Connection', detail: 'Куда OMH может подключаться.', to: '/docs/core/connection-center', action: 'Профили' },
+        { label: 'Operation', detail: 'Что OMH делает внутри подключения.', to: '/docs/core/operation-catalog', action: 'Операции' },
+        { label: 'Data Contract', detail: 'Какие поля и типы ожидает операция.', to: '/docs/core/data-contracts-and-mappings', action: 'Контракты' },
+        { label: 'Mapping', detail: 'Как переложить поля без потери типов.', to: '/docs/core/data-contracts-and-mappings', action: 'Mapping' },
+        { label: 'Wizard', detail: 'Пошаговый мастер сценария.', to: '/docs/core/pattern-wizards', action: 'Wizards' },
+        { label: 'Timeline', detail: 'История выполнения события.', to: '/docs/onec/troubleshooting/by-scenario', action: 'Диагностика' },
+        { label: 'Artifact', detail: 'Сохранённый request/response шага.', to: '/docs/core/concepts', action: 'Artifacts' },
+      ] },
+      { title: 'Практические сценарии', items: [
+        { label: 'Внешний сервис спрашивает данные из 1С', detail: 'Request -> OData -> Response.', to: '/docs/onec/recipes/external-service-lookup-contractor', action: 'Инструкция' },
+        { label: '1С отправляет данные во внешний API', detail: 'Request -> OData -> Send Endpoint.', to: '/docs/onec/recipes/request-odata-send-endpoint', action: 'Инструкция' },
+        { label: 'DnP запрашивает пул кодов ЧЗ', detail: 'Order -> products -> foreach codes -> DnP.', to: '/docs/onec/recipes/dnp-chz-code-pool-sync', action: 'Инструкция' },
+        { label: '1С отправляет пул кодов ЧЗ в файл', detail: 'Local archive, SMB/laser, optional forward.', to: '/docs/onec/recipes/onec-sends-chz-code-pool-file', action: 'Инструкция' },
+        { label: 'WMS отправляет факт отгрузки в 1С', detail: 'WMS JSON -> 1C HTTP Service.', to: '/docs/onec/recipes/wms-shipment-fact-to-onec', action: 'Инструкция' },
+        { label: 'XML без изменений в другую 1С', detail: 'Raw XML forwarding with hash artifacts.', to: '/docs/onec/recipes/xml-raw-forwarding', action: 'Инструкция' },
+        { label: 'XML -> OData -> XML ответ', detail: 'Extract XML, lookup 1C, render XML response.', to: '/docs/onec/recipes/xml-input-odata-xml-response', action: 'Инструкция' },
+        { label: '1С отправляет этикетки на печать', detail: 'labels[] -> ZPL -> printer status.', to: '/docs/onec/recipes/onec-print-labels', action: 'Инструкция' },
+        { label: 'OMH сам читает OData по расписанию', detail: 'Polling job, cursor, target send.', to: '/docs/onec/recipes/poll-odata-send-target', action: 'Инструкция' },
+      ] },
+      { title: 'Справочник', items: [
+        { label: 'Connection Center', detail: 'Reusable profiles for 1C, API, printers and files.', to: '/docs/core/connection-center', action: 'Открыть' },
+        { label: 'Operation Catalog', detail: 'Reusable operations, success conditions and extractors.', to: '/docs/core/operation-catalog', action: 'Открыть' },
+        { label: 'Data Contracts', detail: 'Request/response schemas for operations.', to: '/docs/core/data-contracts-and-mappings', action: 'Открыть' },
+        { label: 'Mapping Center', detail: 'Field mapping, dynamic keys and raw JSON fallback.', to: '/docs/core/data-contracts-and-mappings', action: 'Открыть' },
+        { label: 'Pattern Wizards', detail: 'Common wizard steps, preview and disabled-by-default.', to: '/docs/core/pattern-wizards', action: 'Открыть' },
+        { label: 'Training Sandbox', detail: 'Safe examples and mock systems.', to: '/docs/onec/academy/training-sandbox-executable-docs', action: 'Открыть' },
+        { label: 'Production', detail: 'Readiness gate before enable.', to: '/docs/core/learning-path/setup-flow', action: 'Открыть' },
+        { label: 'Troubleshooting', detail: 'Timeline-first playbooks by scenario.', to: '/docs/onec/troubleshooting/by-scenario', action: 'Открыть' },
+      ] },
     ],
   },
   en: {
     eyebrow: 'In-app documentation',
-    title: 'Documentation built for implementation work.',
-    subtitle: 'Package guides, 1C OData/XML routes, printing, auth, secrets and troubleshooting live inside the product.',
+    title: 'OMH Documentation',
+    subtitle: 'Learn to configure integrations between 1C, WMS, websites, APIs, XML, printers and file exchanges.',
     open: 'Open current guide',
     pdf: 'Print / PDF',
-    updated: 'Updated 2026-07-04',
+    updated: 'Updated 2026-07-13',
     packages: 'packages',
     languages: 'languages',
     planned: 'planned',
     translation: 'Translation is in progress. The structure is stable and follows the Russian source page.',
-    startEyebrow: 'Start here',
-    startTitle: 'First time here? Start with a guided path',
-    startSubtitle: 'Do not read everything in order. Pick the job, run the example in Test Console, then inspect Timeline.',
-    paths: [
-      { label: 'First 1C exchange', detail: 'Install package, create OData profile, build a flow and verify the event.', to: '/docs/onec/start-here/beginner-path', action: 'Open path' },
-      { label: 'Ready requests', detail: 'HTTP, 1C code, payload, OData filter and expected response for common scenarios.', to: '/docs/onec/request-examples/request-03-two-lookups-order', action: 'View example' },
-      { label: 'Production error', detail: 'Symptom, artifact, fix and replay guidance in practical playbooks.', to: '/docs/onec/error-playbooks/odata-empty-required', action: 'Open playbook' },
+    startEyebrow: 'Learning map',
+    startTitle: 'Full OMH integration setup path',
+    startSubtitle: 'Follow the product chain from scenario selection to connections, operations, contracts, mappings, wizards, tests, Timeline and enable.',
+    blocks: [
+      { title: 'Quick start', items: [
+        { label: 'What is OMH', detail: 'Product map and core runtime concepts.', to: '/docs/core/learning-path/what-is-omh', action: 'Open' },
+        { label: 'Choose a scenario', detail: 'Integration Start examples.', to: '/docs/core/learning-path/choose-scenario', action: 'Choose' },
+        { label: 'First integration', detail: 'A short practical path.', to: '/docs/onec/start-here/beginner-path', action: 'Start' },
+        { label: 'Training Sandbox', detail: 'Safe examples without real systems.', to: '/docs/onec/academy/training-sandbox-executable-docs', action: 'Learn' },
+      ] },
+      { title: 'Core concepts', items: [
+        { label: 'Scenario / Pattern', detail: 'Business scenario and technical pattern.', to: '/docs/core/concepts', action: 'Open' },
+        { label: 'Connection', detail: 'Where OMH connects.', to: '/docs/core/connection-center', action: 'Open' },
+        { label: 'Operation', detail: 'What OMH does there.', to: '/docs/core/operation-catalog', action: 'Open' },
+        { label: 'Data Contract', detail: 'Expected fields and types.', to: '/docs/core/data-contracts-and-mappings', action: 'Open' },
+        { label: 'Mapping', detail: 'Field mapping without type loss.', to: '/docs/core/data-contracts-and-mappings', action: 'Open' },
+        { label: 'Wizard', detail: 'Guided scenario setup.', to: '/docs/core/pattern-wizards', action: 'Open' },
+        { label: 'Timeline', detail: 'Execution history.', to: '/docs/onec/troubleshooting/by-scenario', action: 'Open' },
+        { label: 'Artifact', detail: 'Saved step payloads.', to: '/docs/core/concepts', action: 'Open' },
+      ] },
+      { title: 'Practical scenarios', items: [
+        { label: 'External service asks 1C', detail: 'Request -> OData -> Response.', to: '/docs/onec/recipes/external-service-lookup-contractor', action: 'Guide' },
+        { label: '1C sends to external API', detail: 'Request -> OData -> Send Endpoint.', to: '/docs/onec/recipes/request-odata-send-endpoint', action: 'Guide' },
+        { label: 'DnP asks CHZ codes', detail: 'Foreach OData and DnP send.', to: '/docs/onec/recipes/dnp-chz-code-pool-sync', action: 'Guide' },
+        { label: '1C sends CHZ file', detail: 'Archive, SMB and forward.', to: '/docs/onec/recipes/onec-sends-chz-code-pool-file', action: 'Guide' },
+        { label: 'WMS shipment fact', detail: 'WMS JSON -> 1C HTTP service.', to: '/docs/onec/recipes/wms-shipment-fact-to-onec', action: 'Guide' },
+        { label: 'Raw XML forwarding', detail: 'No XML changes.', to: '/docs/onec/recipes/xml-raw-forwarding', action: 'Guide' },
+        { label: 'XML -> OData -> XML', detail: 'Lookup and XML response.', to: '/docs/onec/recipes/xml-input-odata-xml-response', action: 'Guide' },
+        { label: 'Print labels', detail: 'labels[] -> ZPL -> printer.', to: '/docs/onec/recipes/onec-print-labels', action: 'Guide' },
+        { label: 'Poll OData', detail: 'Scheduler, cursor and target send.', to: '/docs/onec/recipes/poll-odata-send-target', action: 'Guide' },
+      ] },
+      { title: 'Reference', items: [
+        { label: 'Connection Center', detail: 'Reusable profiles.', to: '/docs/core/connection-center', action: 'Open' },
+        { label: 'Operation Catalog', detail: 'Reusable operations.', to: '/docs/core/operation-catalog', action: 'Open' },
+        { label: 'Data Contracts', detail: 'Schemas.', to: '/docs/core/data-contracts-and-mappings', action: 'Open' },
+        { label: 'Mapping Center', detail: 'Mappings.', to: '/docs/core/data-contracts-and-mappings', action: 'Open' },
+        { label: 'Pattern Wizards', detail: 'Wizard rules.', to: '/docs/core/pattern-wizards', action: 'Open' },
+        { label: 'Training Sandbox', detail: 'Safe examples.', to: '/docs/onec/academy/training-sandbox-executable-docs', action: 'Open' },
+        { label: 'Production', detail: 'Enable gate.', to: '/docs/core/learning-path/setup-flow', action: 'Open' },
+        { label: 'Troubleshooting', detail: 'Timeline-first playbooks.', to: '/docs/onec/troubleshooting/by-scenario', action: 'Open' },
+      ] },
     ],
   },
   zh: {
     eyebrow: '应用内文档',
-    title: '面向实施工作的产品文档。',
-    subtitle: '软件包指南、1C OData/XML 路由、打印、认证、密钥与故障排查都在产品内部。',
+    title: 'OMH 文档',
+    subtitle: '学习配置 1C、WMS、网站、API、XML、打印机和文件交换集成。',
     open: '打开当前指南',
     pdf: '打印 / PDF',
-    updated: '更新于 2026-07-04',
+    updated: '更新于 2026-07-13',
     packages: '软件包',
     languages: '语言',
     planned: '计划中',
     translation: '翻译正在完善中。页面结构稳定，并与俄文原版保持一致。',
-    startEyebrow: '从这里开始',
-    startTitle: '第一次使用？从引导路径开始',
-    startSubtitle: '无需按顺序阅读所有内容。选择任务，在 Test Console 运行示例，然后检查 Timeline。',
-    paths: [
-      { label: '第一个 1C 交换', detail: '安装包、创建 OData 配置、构建 flow 并验证事件。', to: '/docs/onec/start-here/beginner-path', action: '打开路径' },
-      { label: '现成请求', detail: '常见场景的 HTTP、1C 代码、payload、OData filter 和预期响应。', to: '/docs/onec/request-examples/request-03-two-lookups-order', action: '查看示例' },
-      { label: '生产错误', detail: '通过 playbook 查看症状、artifact、修复和 replay。', to: '/docs/onec/error-playbooks/odata-empty-required', action: '打开 playbook' },
+    startEyebrow: '学习地图',
+    startTitle: 'OMH 集成配置完整路径',
+    startSubtitle: '从场景选择到连接、操作、契约、映射、向导、测试、Timeline 和启用。',
+    blocks: [
+      { title: '快速开始', items: [
+        { label: '什么是 OMH', detail: '产品地图和核心概念。', to: '/docs/core/learning-path/what-is-omh', action: '打开' },
+        { label: '选择场景', detail: 'Integration Start 示例。', to: '/docs/core/learning-path/choose-scenario', action: '选择' },
+        { label: '第一个集成', detail: '简短实践路径。', to: '/docs/onec/start-here/beginner-path', action: '开始' },
+        { label: 'Training Sandbox', detail: '安全示例。', to: '/docs/onec/academy/training-sandbox-executable-docs', action: '学习' },
+      ] },
+      { title: '核心概念', items: [
+        { label: 'Scenario / Pattern', detail: '业务场景和技术模式。', to: '/docs/core/concepts', action: '打开' },
+        { label: 'Connection', detail: 'OMH 连接到哪里。', to: '/docs/core/connection-center', action: '打开' },
+        { label: 'Operation', detail: 'OMH 执行动作。', to: '/docs/core/operation-catalog', action: '打开' },
+        { label: 'Data Contract', detail: '字段和类型。', to: '/docs/core/data-contracts-and-mappings', action: '打开' },
+        { label: 'Mapping', detail: '字段映射。', to: '/docs/core/data-contracts-and-mappings', action: '打开' },
+        { label: 'Wizard', detail: '场景向导。', to: '/docs/core/pattern-wizards', action: '打开' },
+        { label: 'Timeline', detail: '执行历史。', to: '/docs/onec/troubleshooting/by-scenario', action: '打开' },
+        { label: 'Artifact', detail: '保存的步骤数据。', to: '/docs/core/concepts', action: '打开' },
+      ] },
+      { title: '实践场景', items: [
+        { label: '外部服务查询 1C', detail: 'Request -> OData -> Response。', to: '/docs/onec/recipes/external-service-lookup-contractor', action: '指南' },
+        { label: '1C 发送到外部 API', detail: 'Request -> OData -> Send Endpoint。', to: '/docs/onec/recipes/request-odata-send-endpoint', action: '指南' },
+        { label: 'DnP 查询 CHZ 码', detail: 'Foreach OData。', to: '/docs/onec/recipes/dnp-chz-code-pool-sync', action: '指南' },
+        { label: '1C 发送 CHZ 文件', detail: '文件、SMB、转发。', to: '/docs/onec/recipes/onec-sends-chz-code-pool-file', action: '指南' },
+        { label: 'WMS 发货事实', detail: 'WMS JSON -> 1C。', to: '/docs/onec/recipes/wms-shipment-fact-to-onec', action: '指南' },
+        { label: 'XML 原样转发', detail: '不修改 XML。', to: '/docs/onec/recipes/xml-raw-forwarding', action: '指南' },
+        { label: 'XML -> OData -> XML', detail: '查询并返回 XML。', to: '/docs/onec/recipes/xml-input-odata-xml-response', action: '指南' },
+        { label: '打印标签', detail: 'labels[] -> ZPL。', to: '/docs/onec/recipes/onec-print-labels', action: '指南' },
+        { label: '轮询 OData', detail: '计划任务和 cursor。', to: '/docs/onec/recipes/poll-odata-send-target', action: '指南' },
+      ] },
+      { title: '参考', items: [
+        { label: 'Connection Center', detail: '可复用连接。', to: '/docs/core/connection-center', action: '打开' },
+        { label: 'Operation Catalog', detail: '可复用操作。', to: '/docs/core/operation-catalog', action: '打开' },
+        { label: 'Data Contracts', detail: '数据契约。', to: '/docs/core/data-contracts-and-mappings', action: '打开' },
+        { label: 'Mapping Center', detail: '字段映射。', to: '/docs/core/data-contracts-and-mappings', action: '打开' },
+        { label: 'Pattern Wizards', detail: '向导规则。', to: '/docs/core/pattern-wizards', action: '打开' },
+        { label: 'Training Sandbox', detail: '安全示例。', to: '/docs/onec/academy/training-sandbox-executable-docs', action: '打开' },
+        { label: 'Production', detail: '启用前检查。', to: '/docs/core/learning-path/setup-flow', action: '打开' },
+        { label: 'Troubleshooting', detail: 'Timeline 优先排错。', to: '/docs/onec/troubleshooting/by-scenario', action: '打开' },
+      ] },
     ],
   },
 };
-
 export function DocumentationPage() {
   const { language, setLanguage } = useI18n();
   const bundle = getDocsBundle(language);
@@ -133,13 +234,20 @@ export function DocumentationPage() {
                     <h2>{texts.startTitle}</h2>
                     <p>{texts.startSubtitle}</p>
                   </div>
-                  <div className="docs-start-grid">
-                    {texts.paths.map((item) => (
-                      <Link key={item.to} className="docs-start-card" to={item.to}>
-                        <strong>{item.label}</strong>
-                        <span>{item.detail}</span>
-                        <em>{item.action}</em>
-                      </Link>
+                  <div className="docs-landing-blocks">
+                    {texts.blocks.map((block) => (
+                      <section className="docs-landing-block" key={block.title}>
+                        <h3>{block.title}</h3>
+                        <div className="docs-start-grid">
+                          {block.items.map((item) => (
+                            <Link key={item.to} className="docs-start-card" to={item.to}>
+                              <strong>{item.label}</strong>
+                              <span>{item.detail}</span>
+                              <em>{item.action}</em>
+                            </Link>
+                          ))}
+                        </div>
+                      </section>
                     ))}
                   </div>
                 </section>

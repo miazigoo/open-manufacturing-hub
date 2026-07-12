@@ -7,6 +7,12 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class MarkingCodePoolActionOverrides(BaseModel):
+    local_outbox: bool | None = None
+    laser_file: bool | None = None
+    external_forward: bool | None = None
+
+
 class OneCMarkingCodePoolExportRequest(BaseModel):
     source_system: str = Field(default="1C ERP", min_length=1, max_length=255)
     source_document_id: str | None = Field(default=None, max_length=255)
@@ -16,7 +22,8 @@ class OneCMarkingCodePoolExportRequest(BaseModel):
     codes: list[str] | None = Field(default=None, min_length=1)
     full_codes_base64: list[str] | None = Field(default=None, min_length=1)
     gs_marker: str = Field(default="{GS}", min_length=1, max_length=20)
-    allow_overwrite: bool = True
+    allow_overwrite: bool | None = None
+    actions_override: MarkingCodePoolActionOverrides | None = None
     metadata_json: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -48,5 +55,100 @@ class MarkingCodePoolExportRead(BaseModel):
 class MarkingCodePoolExportResponse(BaseModel):
     export: MarkingCodePoolExportRead
     message: str
+    success: bool = True
+    status: str = "saved"
+    warnings: list[str] = Field(default_factory=list)
     actions: dict[str, Any] = Field(default_factory=dict)
+    external_forward: dict[str, Any] | None = None
     dnp_forward: dict[str, Any] | None = None
+
+
+class MarkingCodePoolLocalOutboxSettings(BaseModel):
+    enabled: bool = True
+    required: bool = True
+    export_dir: str
+    file_name_template: str = "KM_{{order_number_safe}}___{{total_codes_formatted}}_pcs.txt"
+    allow_overwrite_default: bool = True
+    note: str = "Локальное сохранение обязательно и используется как архив."
+
+
+class MarkingCodePoolLaserSettings(BaseModel):
+    enabled: bool = False
+    smb_unc: str = ""
+    username: str = "guest"
+    password_set: bool = False
+
+
+class MarkingCodePoolForwardSettings(BaseModel):
+    enabled: bool = False
+    service_name: str = "DnP"
+    url: str = ""
+    method: str = "POST"
+    header_name: str = "X-OMH-Token"
+    token_set: bool = False
+    timeout_seconds: float = 180.0
+
+
+class MarkingCodePoolResponseSettings(BaseModel):
+    success_mode: str = "partial_success_allowed"
+
+
+class MarkingCodePoolSettingsRead(BaseModel):
+    local_outbox: MarkingCodePoolLocalOutboxSettings
+    laser: MarkingCodePoolLaserSettings
+    forward: MarkingCodePoolForwardSettings
+    response: MarkingCodePoolResponseSettings
+    source: str
+
+
+class MarkingCodePoolSettingsPatch(BaseModel):
+    local_outbox_enabled: bool | None = None
+    export_dir: str | None = Field(default=None, min_length=1)
+    file_name_template: str | None = Field(default=None, min_length=1, max_length=255)
+    allow_overwrite_default: bool | None = None
+    laser_enabled: bool | None = None
+    laser_smb_unc: str | None = None
+    laser_smb_username: str | None = None
+    laser_smb_password: str | None = None
+    forward_enabled: bool | None = None
+    forward_service_name: str | None = None
+    forward_url: str | None = None
+    forward_method: str | None = None
+    forward_header_name: str | None = None
+    forward_token: str | None = None
+    forward_timeout_seconds: float | None = Field(default=None, gt=0)
+    response_success_mode: str | None = None
+
+
+class MarkingCodePoolPreviewResponse(BaseModel):
+    success: bool
+    file_name: str
+    total_codes: int
+    content_sha256: str
+    would_save_to: str
+    would_laser_copy: dict[str, Any]
+    would_forward: dict[str, Any]
+    warnings: list[str] = Field(default_factory=list)
+
+
+class MarkingCodePoolSettingsTestRequest(BaseModel):
+    dry_run: bool = True
+
+
+class MarkingCodePoolForwardTestRequest(BaseModel):
+    send_test_request: bool = False
+
+
+class MarkingCodePoolSettingsTestResponse(BaseModel):
+    success: bool
+    status: str
+    message: str
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class MarkingCodePoolActionRetryResponse(BaseModel):
+    success: bool
+    status: str
+    message: str
+    error_code: str | None = None
+    action: dict[str, Any] = Field(default_factory=dict)

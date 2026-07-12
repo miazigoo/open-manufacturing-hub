@@ -51,8 +51,10 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
             ("Health", "/health", None, False),
         ]),
         ("Build", [
+            ("Integration Start", "/integration-start", None, False),
             ("1C Integration Cockpit", "/onec-cockpit", ONEC_PACKAGE, False),
             ("Integration Master", "/master", None, False),
+            ("CHZ Code Pools", "/marking-code-pools", ONEC_PACKAGE, False),
             ("Request/Response Workbench", "/test-console", None, False),
             ("Integration Flows", "/integration-flows", None, False),
             ("Training Sandbox", "/training", "omh-package-training", False),

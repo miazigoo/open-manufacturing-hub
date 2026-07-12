@@ -200,6 +200,9 @@ export interface PayloadStepConfig {
   save_as: string;
   json_mode: JsonPayloadMode;
   template?: unknown;
+  mapping_profile_id?: string | null;
+  mapping_profile_code?: string | null;
+  mapping_profile_name?: string | null;
   fields: JsonPayloadFieldConfig[];
   dynamic_entries: JsonPayloadDynamicEntryConfig[];
   overwrite?: boolean;

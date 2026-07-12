@@ -58,6 +58,10 @@ def _read_token(current: Any, token: str | int, path: str) -> Any:
         if token < 0 or token >= len(current):
             raise PathResolutionError(path, f"[{token}]", "List index is out of range")
         return current[token]
+    if token == "length" and not (isinstance(current, dict) and token in current):
+        if isinstance(current, (list, dict, str)):
+            return len(current)
+        raise PathResolutionError(path, token, "Expected list, object or string")
     if isinstance(current, dict):
         if token not in current:
             raise PathResolutionError(path, token, "Key not found")

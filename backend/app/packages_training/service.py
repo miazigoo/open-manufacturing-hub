@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.models import ConnectorInstance
-from app.core.enums import ConnectorDirection, ConnectorInstanceStatus, IntegrationFlowSourceType, IntegrationFlowTargetType
+from app.core.enums import ConnectorDirection, ConnectorInstanceStatus, IntegrationFlowSourceType, IntegrationFlowTargetType, PollingCursorType
 from app.core.errors import NotFoundError
 from app.integration_bus import repository as bus_repository
 from app.integration_flows.models import IntegrationFlow
@@ -16,6 +16,10 @@ from app.packages import repository as package_repository
 from app.packages.installer import PackageInstaller
 from app.packages_training.examples import get_example, list_examples
 from app.packages_training.presets import TRAINING_CONNECTORS, TRAINING_FLOWS
+from app.polling import runner as polling_runner
+from app.polling import service as polling_service
+from app.polling.models import PollingJob
+from app.polling.schemas import PollingJobCreate
 from app.packages_training.reset import reset_training_data
 from app.test_console.models import SavedTestCase
 from app.test_console.schemas import TestConsoleSendRequest
@@ -29,6 +33,7 @@ async def install_training_sandbox(session: AsyncSession) -> dict[str, Any]:
         await PackageInstaller().install_package(session, PACKAGE_ID, install_demo_data=False)
     await reset_training_data(session)
     connectors = [await _upsert_connector(session, item) for item in TRAINING_CONNECTORS]
+    polling_jobs = [await _upsert_training_polling_job(session, connectors)]
     flows = [await _create_training_flow(session, item) for item in TRAINING_FLOWS]
     test_cases = [await _upsert_example_test_case(session, example) for example in list_examples()]
     await session.flush()
@@ -36,6 +41,7 @@ async def install_training_sandbox(session: AsyncSession) -> dict[str, Any]:
         "installed": True,
         "package_id": PACKAGE_ID,
         "connectors": [_connector_row(item) for item in connectors],
+        "polling_jobs": [_polling_job_row(item) for item in polling_jobs],
         "flows": [{"id": str(item.id), "name": item.name, "slug": item.slug, "endpoint_url": flow_service.endpoint_url(item.slug)} for item in flows],
         "examples": list_examples(),
         "test_cases": [{"id": str(item.id), "name": item.name, "endpoint_id": str(item.endpoint_id) if item.endpoint_id else None} for item in test_cases],
@@ -50,11 +56,13 @@ async def status(session: AsyncSession) -> dict[str, Any]:
     package = await package_repository.get_installed(session, PACKAGE_ID)
     connectors = await _training_connectors(session)
     flows = await _training_flows(session)
+    polling_jobs = await _training_polling_jobs(session)
     cases = await _training_test_cases(session)
     return {
         "package": {"installed": package is not None, "enabled": bool(package and package.enabled), "status": package.status.value if package else None},
         "sandbox_installed": bool(connectors and flows and cases),
         "connectors": [_connector_row(item) for item in connectors],
+        "polling_jobs": [_polling_job_row(item) for item in polling_jobs],
         "flows": [{"id": str(item.id), "name": item.name, "slug": item.slug, "endpoint_url": flow_service.endpoint_url(item.slug)} for item in flows],
         "test_cases": [{"id": str(item.id), "name": item.name, "endpoint_id": str(item.endpoint_id) if item.endpoint_id else None, "last_run_status": item.last_run_status} for item in cases],
         "examples": list_examples(),
@@ -65,6 +73,8 @@ async def run_example(session: AsyncSession, example_id: str) -> dict[str, Any]:
     example = get_example(example_id)
     if example is None:
         raise NotFoundError("Training example not found")
+    if example_id == "training.polling.odata_orders_to_wms":
+        return await _run_polling_example(session, example_id)
     endpoint = await bus_repository.get_endpoint_by_slug(session, example["endpoint_slug"])
     if endpoint is None:
         return {
@@ -139,7 +149,7 @@ async def _create_training_flow(session: AsyncSession, data: dict[str, Any]):
         name=data["name"],
         slug=data["slug"],
         description=data.get("description"),
-        source_type=IntegrationFlowSourceType.ONEC,
+        source_type=IntegrationFlowSourceType(data.get("source_type") or "onec"),
         target_type=IntegrationFlowTargetType(data.get("target_type") or "external_api"),
         endpoint=EndpointBuilderConfig(**data.get("endpoint", {})),
         matcher_group_json={"mode": "all", "rules": [{"type": "always"}]},
@@ -178,6 +188,109 @@ async def _upsert_example_test_case(session: AsyncSession, example: dict[str, An
     return test_case
 
 
+async def _upsert_training_polling_job(session: AsyncSession, connectors: list[ConnectorInstance]) -> PollingJob:
+    source = next((item for item in connectors if item.name == "Training OData ERP"), None)
+    if source is None:
+        raise NotFoundError("Training OData ERP connector not found")
+    existing = (await session.execute(select(PollingJob).where(PollingJob.slug == "training-poll-odata-orders-to-wms"))).scalar_one_or_none()
+    payload = PollingJobCreate(
+        name="Training — poll 1C OData orders to WMS",
+        slug="training-poll-odata-orders-to-wms",
+        enabled=False,
+        source_connector_id=source.id,
+        target_system="WMS",
+        resource="Document_ЗаказКлиента",
+        query_json={"$filter": "Date ge datetime'{{cursor.last_success_at}}' and Posted eq true", "$select": "Ref_Key,Number,Date,Posted,Контрагент_Key", "$top": 100},
+        config_json=_training_polling_config(),
+        event_type="ODataPollingOrders",
+        entity_type="ODataPollingBatch",
+        entity_id_field="Ref_Key",
+        correlation_id_field="Number",
+        updated_at_field="Date",
+        cursor_json={},
+        cursor_type=PollingCursorType.CUSTOM,
+        schedule_type="manual_only",
+        interval_seconds=300,
+    )
+    if existing is None:
+        return await polling_service.create_job(session, payload)
+    for key, value in payload.model_dump().items():
+        setattr(existing, key, value)
+    await session.flush()
+    return existing
+
+
+def _training_polling_config() -> dict[str, Any]:
+    return {
+        "mode": "send_target",
+        "pattern_id": "poll_odata_send_target",
+        "schedule": {"type": "manual_only", "interval_minutes": 5},
+        "odata": {
+            "connection_name": "Training OData ERP",
+            "resource": "Document_ЗаказКлиента",
+            "filter": "Date ge datetime'{{cursor.last_success_at}}' and Posted eq true",
+            "select": ["Ref_Key", "Number", "Date", "Posted", "Контрагент_Key"],
+            "top": 100,
+            "paginate": True,
+            "save_as": "orders",
+            "required": False,
+        },
+        "first_run": {"strategy": "fixed_start_date", "fixed_start_at": "2026-01-01T00:00:00", "hours": 24},
+        "cursor": {"cursor_type": "last_success_at", "source_field": "orders[].Date", "update_when": "target_success"},
+        "payload": {
+            "type": "build_payload",
+            "body_type": "json",
+            "save_as": "target_payload",
+            "json_mode": "raw_template",
+            "template": {
+                "omh": {"run_id": "{{context.run_id}}", "event_type": "ODataPollingOrders", "source_system": "1C ERP", "target_system": "WMS"},
+                "payload": {"orders": "{{orders}}", "cursor_from": "{{cursor.last_success_at}}", "count": "{{orders.length}}"},
+            },
+            "fields": [],
+            "dynamic_entries": [],
+            "overwrite": True,
+        },
+        "target": {
+            "method": "POST",
+            "url": "/api/training/mock-wms/orders/import",
+            "headers": {"Content-Type": "application/json"},
+            "body_source": "target_payload",
+            "body_type": "json",
+            "timeout_seconds": 30,
+            "empty_result_behavior": "do_nothing_success",
+        },
+    }
+
+
+async def _run_polling_example(session: AsyncSession, example_id: str) -> dict[str, Any]:
+    job = (await session.execute(select(PollingJob).where(PollingJob.slug == "training-poll-odata-orders-to-wms"))).scalar_one_or_none()
+    if job is None:
+        return {
+            "success": True,
+            "example_id": example_id,
+            "requires_setup": True,
+            "dry_run": True,
+            "response": {"status": "requires_setup", "message": "Install Training Sandbox before running this example.", "open": "/polling"},
+            "event_id": None,
+            "message_id": None,
+            "timeline_url": None,
+            "external_error": None,
+        }
+    run = await polling_runner.run_once(session, job.id, dry_run=False, update_cursor=False, allow_disabled=True)
+    success = run.status.value == "success"
+    return {
+        "success": success,
+        "example_id": example_id,
+        "requires_setup": False,
+        "dry_run": False,
+        "response": {"status": run.status.value, "items_read": run.items_read, "sent_count": run.sent_count, "details": run.details_json},
+        "event_id": None,
+        "message_id": None,
+        "timeline_url": f"/polling?jobId={job.id}",
+        "external_error": run.error_message if not success else None,
+    }
+
+
 async def _mark_example_case(session: AsyncSession, example_id: str, result: dict[str, Any]) -> None:
     db_result = await session.execute(select(SavedTestCase).where(SavedTestCase.name == f"Training Example — {example_id}"))
     test_case = db_result.scalar_one_or_none()
@@ -197,6 +310,11 @@ async def _training_flows(session: AsyncSession):
     return list(result.scalars().all())
 
 
+async def _training_polling_jobs(session: AsyncSession) -> list[PollingJob]:
+    result = await session.execute(select(PollingJob).where(PollingJob.name.like("Training %")).order_by(PollingJob.name.asc()))
+    return list(result.scalars().all())
+
+
 async def _training_test_cases(session: AsyncSession) -> list[SavedTestCase]:
     result = await session.execute(select(SavedTestCase).where(SavedTestCase.name.like("Training Example %")).order_by(SavedTestCase.name.asc()))
     return list(result.scalars().all())
@@ -211,6 +329,19 @@ def _connector_row(item: ConnectorInstance) -> dict[str, Any]:
         "enabled": item.enabled,
         "status": item.status.value if hasattr(item.status, "value") else str(item.status),
         "base_url": (item.config_json or {}).get("base_url") or (item.config_json or {}).get("url"),
+    }
+
+
+def _polling_job_row(item: PollingJob) -> dict[str, Any]:
+    return {
+        "id": str(item.id),
+        "name": item.name,
+        "slug": item.slug,
+        "enabled": item.enabled,
+        "schedule_type": item.schedule_type,
+        "interval_seconds": item.interval_seconds,
+        "resource": item.resource,
+        "target_system": item.target_system,
     }
 
 

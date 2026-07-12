@@ -97,6 +97,36 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 variables[str(step.get("save_as") or step_id)] = result
                 request_preview = {"items": step.get("items"), "items_count": len(source_items), "item_as": item_as, "nested_type": nested.get("type")}
                 variables.setdefault("steps", {})[step_id] = {"items": result, "iterations": iterations, "items_count": len(result), "source_items_count": len(source_items)}
+            elif step_type == "print_labels":
+                printer_selection = step.get("printer_selection") if isinstance(step.get("printer_selection"), dict) else {}
+                labels_config = step.get("labels") if isinstance(step.get("labels"), dict) else {}
+                labels = _collection(labels_config.get("path") or "request.body.labels", scope)
+                if not labels:
+                    raise ValueError("Массив labels пустой.")
+                item_as = str(labels_config.get("item_as") or "label")
+                selected_printer = _preview_printer_name(printer_selection, scope)
+                template = str(step.get("zpl_template") or "")
+                rendered_labels = [_render_print_label(template, scope, item, labels, item_as, index) for index, item in enumerate(labels)]
+                print_job = {
+                    "id": "PRINT-PREVIEW-001",
+                    "status": "dry_run" if step.get("print_mode") == "dry_run" else "sent",
+                    "labels_count": len(labels),
+                }
+                result = {
+                    "success": True,
+                    "print_job_id": print_job["id"],
+                    "labels_count": len(labels),
+                    "printer": selected_printer,
+                    "status": print_job["status"],
+                    "dry_run": step.get("print_mode") == "dry_run",
+                }
+                save_as = str(step.get("save_as") or "print_status")
+                variables[save_as] = result
+                variables["print_job"] = print_job
+                variables["labels"] = {"items": labels, "length": len(labels)}
+                variables["selected_printer"] = {"name": selected_printer}
+                variables["rendered_zpl_labels"] = rendered_labels
+                request_preview = {"printer": selected_printer, "labels_count": len(labels), "print_mode": step.get("print_mode") or "dry_run", "first_zpl": rendered_labels[0]}
             elif step_type == "xml_extract":
                 raw_xml = _sample_xml(sample_request)
                 fields = [field for field in step.get("fields") or [] if isinstance(field, dict)]
@@ -190,6 +220,25 @@ def _collection(value: Any, scope: dict[str, Any]) -> list[Any]:
             return []
         raise ValueError(f"Foreach items resolved to {type(resolved).__name__}, expected array")
     raise ValueError("Foreach items must be an array or a path/template string")
+
+
+def _preview_printer_name(config: dict[str, Any], scope: dict[str, Any]) -> str:
+    mode = str(config.get("mode") or "from_request")
+    if mode == "fixed":
+        return str(config.get("fixed_printer_name") or "").strip()
+    if mode == "rule_based":
+        raise ValueError("Выбор принтера по правилу будет добавлен позже.")
+    value = resolve_path(scope, str(config.get("path") or "request.body.printer"))
+    return str(value or "").strip()
+
+
+def _render_print_label(template: str, scope: dict[str, Any], item: Any, labels: list[Any], item_as: str, index: int) -> str:
+    label_scope = dict(scope)
+    label_scope[item_as] = item
+    label_scope["label"] = item
+    label_scope["labels"] = {"items": labels, "length": len(labels)}
+    label_scope["label_index"] = index
+    return str(render_template(template, label_scope))
 
 
 def _odata_query(step: dict[str, Any], scope: dict[str, Any]) -> dict[str, Any]:

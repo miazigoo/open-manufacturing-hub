@@ -12,6 +12,10 @@ const IncidentsPage = lazy(() => import('./pages/IncidentsPage').then((m) => ({ 
 const IncidentDetailsPage = lazy(() => import('./pages/IncidentDetailsPage').then((m) => ({ default: m.IncidentDetailsPage })));
 const HealthPage = lazy(() => import('./pages/HealthPage').then((m) => ({ default: m.HealthPage })));
 const ConnectorsPage = lazy(() => import('./pages/ConnectorsPage').then((m) => ({ default: m.ConnectorsPage })));
+const ConnectionCenterPage = lazy(() => import('./pages/ConnectionCenterPage').then((m) => ({ default: m.ConnectionCenterPage })));
+const OperationCatalogPage = lazy(() => import('./pages/OperationCatalogPage').then((m) => ({ default: m.OperationCatalogPage })));
+const MappingCenterPage = lazy(() => import('./pages/MappingCenterPage').then((m) => ({ default: m.MappingCenterPage })));
+const MappingBuilderPage = lazy(() => import('./pages/MappingBuilderPage').then((m) => ({ default: m.MappingBuilderPage })));
 const SecretsPage = lazy(() => import('./pages/SecretsPage').then((m) => ({ default: m.SecretsPage })));
 const PackagesPage = lazy(() => import('./pages/PackagesPage').then((m) => ({ default: m.PackagesPage })));
 const PackageDetailsPage = lazy(() => import('./pages/PackageDetailsPage').then((m) => ({ default: m.PackageDetailsPage })));
@@ -19,6 +23,10 @@ const PluginStorePage = lazy(() => import('./pages/PluginStorePage').then((m) =>
 const IntegrationBusPage = lazy(() => import('./pages/IntegrationBusPage').then((m) => ({ default: m.IntegrationBusPage })));
 const IntegrationFlowsPage = lazy(() => import('./pages/IntegrationFlowsPage').then((m) => ({ default: m.IntegrationFlowsPage })));
 const IntegrationMasterPage = lazy(() => import('./features/integration-master/IntegrationMasterPage').then((m) => ({ default: m.IntegrationMasterPage })));
+const IntegrationStartPage = lazy(() => import('./pages/IntegrationStartPage').then((m) => ({ default: m.IntegrationStartPage })));
+const IntegrationPatternDetailPage = lazy(() => import('./pages/IntegrationPatternDetailPage').then((m) => ({ default: m.IntegrationPatternDetailPage })));
+const IntegrationCoveragePage = lazy(() => import('./pages/IntegrationCoveragePage').then((m) => ({ default: m.IntegrationCoveragePage })));
+const PatternCertificationPage = lazy(() => import('./pages/PatternCertificationPage').then((m) => ({ default: m.PatternCertificationPage })));
 const OperationKeysPage = lazy(() => import('./pages/OperationKeysPage').then((m) => ({ default: m.OperationKeysPage })));
 const VisualFlowBuilderPage = lazy(() => import('./pages/VisualFlowBuilderPage').then((m) => ({ default: m.VisualFlowBuilderPage })));
 const IntegrationDesignerPage = lazy(() => import('./pages/IntegrationDesignerPage').then((m) => ({ default: m.IntegrationDesignerPage })));
@@ -54,6 +62,7 @@ const PollingJobsPage = lazy(() => import('./pages/PollingJobsPage').then((m) =>
 const PrintingPage = lazy(() => import('./pages/PrintingPage').then((m) => ({ default: m.PrintingPage })));
 const OneCScenariosPage = lazy(() => import('./pages/OneCScenariosPage').then((m) => ({ default: m.OneCScenariosPage })));
 const OneCWorkbenchPage = lazy(() => import('./pages/OneCWorkbenchPage').then((m) => ({ default: m.OneCWorkbenchPage })));
+const MarkingCodePoolsPage = lazy(() => import('./features/marking-code-pools/MarkingCodePoolsPage').then((m) => ({ default: m.MarkingCodePoolsPage })));
 const NotificationRulesPage = lazy(() => import('./pages/NotificationRulesPage').then((m) => ({ default: m.NotificationRulesPage })));
 const MaintenancePage = lazy(() => import('./pages/MaintenancePage').then((m) => ({ default: m.MaintenancePage })));
 const RetentionPage = lazy(() => import('./pages/RetentionPage').then((m) => ({ default: m.RetentionPage })));
@@ -101,6 +110,11 @@ export function App() {
           <Route path="incidents/:incidentId" element={<IncidentDetailsPage />} />
           <Route path="health" element={<HealthPage />} />
           <Route path="connectors" element={<ConnectorsPage />} />
+          <Route path="connection-center" element={<ConnectionCenterPage />} />
+          <Route path="operation-catalog" element={<OperationCatalogPage />} />
+          <Route path="mapping-center" element={<MappingCenterPage />} />
+          <Route path="mapping-center/mappings/new" element={<MappingBuilderPage />} />
+          <Route path="mapping-center/mappings/:mappingId" element={<MappingBuilderPage />} />
           <Route path="secrets" element={<SecretsPage />} />
           <Route path="packages" element={<PackagesPage />} />
           <Route path="packages/:packageId" element={<PackageDetailsPage />} />
@@ -108,6 +122,10 @@ export function App() {
           <Route path="onec-cockpit" element={onec(<OneCCockpitPage />)} />
           <Route path="onec-cockpit/new" element={onec(<OneCCockpitWizardPage />)} />
           <Route path="integration-bus" element={<IntegrationBusPage />} />
+          <Route path="integration-start" element={<IntegrationStartPage />} />
+          <Route path="integration-patterns/certification" element={<PatternCertificationPage />} />
+          <Route path="integration-patterns/:patternId" element={<IntegrationPatternDetailPage />} />
+          <Route path="integration-coverage" element={<IntegrationCoveragePage />} />
           <Route path="master" element={<IntegrationMasterPage />} />
           <Route path="integration-flows" element={<IntegrationFlowsPage />} />
           <Route path="operation-keys" element={<OperationKeysPage />} />
@@ -145,6 +163,7 @@ export function App() {
           <Route path="printing" element={printer(<PrintingPage />)} />
           <Route path="onec-scenarios" element={onec(<OneCScenariosPage />)} />
           <Route path="onec-workbench" element={onec(<OneCWorkbenchPage />)} />
+          <Route path="marking-code-pools" element={onec(<MarkingCodePoolsPage />)} />
           <Route path="notifications" element={<NotificationRulesPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
           <Route path="retention" element={<RetentionPage />} />

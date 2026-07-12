@@ -62,7 +62,7 @@ export interface ODataConnectionTestResponse {
 
 export const odataConnectionsApi = {
   list: () => request<ODataConnection[]>('/api/odata-connections'),
-  options: () => request<ODataConnectionOption[]>('/api/odata-connections/options'),
+  options: () => request<ODataConnectionOption[]>('/api/connection-center/options/odata'),
   get: (id: string) => request<ODataConnection>(`/api/odata-connections/${id}`),
   create: (payload: ODataConnectionPayload) => request<ODataConnection>('/api/odata-connections', { method: 'POST', body: JSON.stringify(payload) }),
   patch: (id: string, payload: Partial<ODataConnectionPayload>) => request<ODataConnection>(`/api/odata-connections/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),

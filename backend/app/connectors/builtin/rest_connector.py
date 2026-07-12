@@ -15,7 +15,8 @@ class RESTConnector:
         errors: list[str] = []
         url = config.get("url")
         parsed = urlparse(url or "")
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        relative_training_url = isinstance(url, str) and url.startswith("/") and _has_training_marker(config)
+        if not relative_training_url and (parsed.scheme not in {"http", "https"} or not parsed.netloc):
             errors.append("url must be a valid http or https URL")
         method = str(config.get("method", "POST")).upper()
         if method not in {"POST", "PUT", "PATCH"}:
@@ -118,3 +119,7 @@ def _external_message(body: object) -> str | None:
             if nested:
                 return nested
     return None
+
+
+def _has_training_marker(config: dict) -> bool:
+    return any(str(key).startswith("training_mock") for key in config.keys())

@@ -52,8 +52,8 @@ CONNECTOR_CLASS_CODES = {
 }
 
 FLOW_BLOCKS_BY_PACKAGE = {
-    "omh-package-onec": ["odata_query", "odata_lookup", "call_1c_http_service", "xml_extract"],
-    "omh-package-printer": ["call_printer"],
+    "omh-package-onec": ["odata_query", "odata_lookup", "call_1c_http_service", "xml_extract", "polling_jobs", "watermark"],
+    "omh-package-printer": ["call_printer", "print_labels"],
 }
 
 HEALTH_CHECKS_BY_PACKAGE = {

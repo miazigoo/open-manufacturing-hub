@@ -683,13 +683,37 @@
   },
   "training.onec.xml_raw_bridge": {
     "title": {"ru": "1C XML raw bridge", "en": "1C XML raw bridge", "zh": "1C XML 原样桥接"},
-    "description": {"ru": "Исполняемый пример приема XML от 1С без мутации тела.", "en": "Executable example for accepting raw 1C XML without body mutation.", "zh": "接收未修改 1C XML 的可执行示例。"},
+    "description": {"ru": "Исполняемый пример приема XML от 1С, raw forwarding и hash check.", "en": "Executable example for accepting 1C XML, raw forwarding and hash check.", "zh": "接收并原样转发 1C XML 的可执行示例。"},
     "endpoint_slug": "training-onec-xml-raw-bridge",
     "method": "POST",
     "input_mode": "xml",
     "headers": {"Content-Type": "application/xml", "X-OMH-Source": "training-docs"},
     "body_text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Документ>\n  <Номер>SO-1001</Номер>\n  <ИНН>7707083893</ИНН>\n</Документ>",
-    "expected": {"status": "forwarded"},
+    "expected": {"success": true, "message": "XML accepted"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.onec.xml_lookup_order_response": {
+    "title": {"ru": "XML-запрос -> заказ из 1С -> XML-ответ", "en": "XML request -> 1C order -> XML response", "zh": "XML 请求 -> 1C 订单 -> XML 响应"},
+    "description": {"ru": "Исполняемый пример XML extract, OData lookup по номеру заказа и rendered XML response.", "en": "Executable example for XML extraction, OData order lookup and a rendered XML response.", "zh": "XML 提取、OData 订单查询和 XML 响应的可执行示例。"},
+    "endpoint_slug": "training-onec-xml-lookup-order-response",
+    "method": "POST",
+    "input_mode": "xml",
+    "headers": {"Content-Type": "application/xml", "X-OMH-Source": "training-docs"},
+    "body_text": "<Request>\n  <Operation>lookup_order</Operation>\n  <Number>260666/6938</Number>\n  <Format>xml</Format>\n</Request>",
+    "expected": {"status": "success", "response": "xml", "order": "260666/6938"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.onec.lookup_order_products_xml": {
+    "title": {"ru": "Внешний сервис спрашивает заказ и ждёт XML", "en": "External service asks for order XML", "zh": "外部服务请求订单 XML"},
+    "description": {"ru": "Исполняемый пример Request -> OData document -> OData tabular part -> XML response для Document_ЗаказКлиента.", "en": "Executable Request -> OData document -> OData tabular part -> XML response example.", "zh": "请求、OData 单据、表格部分和 XML 响应示例。"},
+    "endpoint_slug": "training-onec-lookup-order-products-xml",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+    "body": {"operation": "lookup_order_products", "number": "260666/6938", "format": "xml"},
+    "expected": {"status": "success", "response": "xml", "order": "260666/6938", "items": 2},
     "runnable": true,
     "requires_setup": false
   },
@@ -701,7 +725,39 @@
     "input_mode": "json",
     "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
     "body": {"printer": "TRAINING-PRINTER-01", "template": "pallet-label-v1", "variables": {"sscc": "046012345678901234", "order": "SO-1001"}},
-    "expected": {"status": "printed"},
+    "expected": {"status": "sent"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.print.labels": {
+    "title": {"ru": "Запрос -> ZPL labels[] -> принтер", "en": "Request -> ZPL labels[] -> printer", "zh": "请求 -> ZPL labels[] -> 打印机"},
+    "description": {"ru": "Исполняемый пример Request -> Printer wizard: labels[] рендерятся в ZPL и возвращают print status.", "en": "Executable Request -> Printer wizard example: labels[] render to ZPL and return print status.", "zh": "打印向导示例：labels[] 渲染为 ZPL 并返回状态。"},
+    "endpoint_slug": "training-print-labels",
+    "method": "POST",
+    "input_mode": "json",
+    "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+    "body": {
+      "operation": "print_labels",
+      "printer": "TRAINING-PRINTER-01",
+      "job_key": "ORDER-123",
+      "labels": [
+        {"sequence_no": 1, "sku": "ABC-123", "title": "Плата ABC", "code": "010464615169738421ABC", "qty": 1},
+        {"sequence_no": 2, "sku": "XYZ-777", "title": "Модуль XYZ", "code": "010464615169738421XYZ", "qty": 1}
+      ]
+    },
+    "expected": {"status": "dry_run", "labels_count": 2, "printer": "TRAINING-PRINTER-01"},
+    "runnable": true,
+    "requires_setup": false
+  },
+  "training.polling.odata_orders_to_wms": {
+    "title": {"ru": "Polling: 1C OData заказы -> WMS", "en": "Polling: 1C OData orders -> WMS", "zh": "轮询：1C OData 订单 -> WMS"},
+    "description": {"ru": "Исполняемый пример: OMH сам читает Training OData ERP, собирает orders payload и отправляет его в mock WMS.", "en": "Executable example: OMH reads Training OData ERP, builds an orders payload and sends it to mock WMS.", "zh": "可执行示例：OMH 读取 Training OData ERP 并发送到模拟 WMS。"},
+    "endpoint_slug": "training-poll-odata-orders-to-wms",
+    "method": "RUN_NOW",
+    "input_mode": "odata",
+    "headers": {},
+    "body": {"schedule": "manual_only", "resource": "Document_ЗаказКлиента"},
+    "expected": {"status": "success", "sent_count": 2, "target": "Training WMS"},
     "runnable": true,
     "requires_setup": false
   },

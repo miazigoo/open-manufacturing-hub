@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.packages_training.presets import BASE_BODY, PRINT_BODY, XML_BODY
+from app.packages_training.presets import BASE_BODY, LOOKUP_ORDER_BODY, PRINT_BODY, PRINT_LABELS_BODY, WMS_SHIPMENT_FACT_BODY, XML_BODY, XML_LOOKUP_ORDER_BODY
 
 TRAINING_EXAMPLES: dict[str, dict[str, Any]] = {
     "training.onec.find_contractor_by_inn": {
@@ -43,13 +43,49 @@ TRAINING_EXAMPLES: dict[str, dict[str, Any]] = {
     },
     "training.onec.xml_raw_bridge": {
         "title": {"ru": "1C XML raw bridge", "en": "1C XML raw bridge", "zh": "1C XML 原样桥接"},
-        "description": {"ru": "Показывает, как принять XML от 1С и сохранить тело без преобразования.", "en": "Shows how to accept raw 1C XML without mutation.", "zh": "展示如何接收未修改的 1C XML。"},
+        "description": {"ru": "Показывает, как принять XML от 1С, переслать его без изменений и проверить hash.", "en": "Shows how to accept raw 1C XML, forward it unchanged and verify the hash.", "zh": "展示如何接收并原样转发 1C XML。"},
         "endpoint_slug": "training-onec-xml-raw-bridge",
         "method": "POST",
         "input_mode": "xml",
         "headers": {"Content-Type": "application/xml", "X-OMH-Source": "training-docs"},
         "body_text": XML_BODY,
-        "expected": {"status": "forwarded"},
+        "expected": {"success": True, "message": "XML accepted"},
+        "runnable": True,
+        "requires_setup": False,
+    },
+    "training.onec.xml_lookup_order_response": {
+        "title": {"ru": "XML-запрос -> заказ из 1С -> XML-ответ", "en": "XML request -> 1C order -> XML response", "zh": "XML 请求 -> 1C 订单 -> XML 响应"},
+        "description": {"ru": "Показывает XML extract, OData lookup по номеру заказа и rendered XML response.", "en": "Shows XML extraction, an OData order lookup and a rendered XML response.", "zh": "展示 XML 提取、OData 订单查询和 XML 响应。"},
+        "endpoint_slug": "training-onec-xml-lookup-order-response",
+        "method": "POST",
+        "input_mode": "xml",
+        "headers": {"Content-Type": "application/xml", "X-OMH-Source": "training-docs"},
+        "body_text": XML_LOOKUP_ORDER_BODY,
+        "expected": {"status": "success", "response": "xml", "order": "260666/6938"},
+        "runnable": True,
+        "requires_setup": False,
+    },
+    "training.onec.lookup_order_products_xml": {
+        "title": {"ru": "Внешний сервис спрашивает заказ и ждёт XML", "en": "External service asks for order XML", "zh": "外部服务请求订单 XML"},
+        "description": {"ru": "Показывает Request -> OData document -> OData tabular part -> XML response для Document_ЗаказКлиента.", "en": "Shows Request -> OData document -> OData tabular part -> XML response for Customer Order.", "zh": "展示请求、OData 单据、表格部分和 XML 响应。"},
+        "endpoint_slug": "training-onec-lookup-order-products-xml",
+        "method": "POST",
+        "input_mode": "json",
+        "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+        "body": LOOKUP_ORDER_BODY,
+        "expected": {"status": "success", "response": "xml", "order": "260666/6938", "items": 2},
+        "runnable": True,
+        "requires_setup": False,
+    },
+    "training.wms.shipment_fact_to_onec": {
+        "title": {"ru": "WMS отправляет факт отгрузки в 1С", "en": "WMS sends shipment fact to 1C", "zh": "WMS 向 1C 发送发货事实"},
+        "description": {"ru": "WMS JSON -> OData заказ -> payload -> Training 1C HTTP service `/shipment-facts`.", "en": "WMS JSON -> OData order -> payload -> Training 1C HTTP service `/shipment-facts`.", "zh": "WMS JSON、OData 订单、payload、Training 1C HTTP service。"},
+        "endpoint_slug": "training-wms-shipment-fact-to-onec",
+        "method": "POST",
+        "input_mode": "json",
+        "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+        "body": WMS_SHIPMENT_FACT_BODY,
+        "expected": {"status": "success", "target": "Training 1C HTTP Service", "order": "260666/6938"},
         "runnable": True,
         "requires_setup": False,
     },
@@ -61,7 +97,31 @@ TRAINING_EXAMPLES: dict[str, dict[str, Any]] = {
         "input_mode": "json",
         "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
         "body": PRINT_BODY,
-        "expected": {"status": "printed"},
+        "expected": {"status": "sent"},
+        "runnable": True,
+        "requires_setup": False,
+    },
+    "training.print.labels": {
+        "title": {"ru": "Запрос -> ZPL labels[] -> принтер", "en": "Request -> ZPL labels[] -> printer", "zh": "请求 -> ZPL labels[] -> 打印机"},
+        "description": {"ru": "Исполняемый пример нового Request -> Printer wizard: labels[] рендерятся в ZPL, создаётся print status и Timeline artifacts.", "en": "Executable Request -> Printer wizard example: labels[] render to ZPL and return print status with Timeline artifacts.", "zh": "新的打印向导示例：labels[] 渲染为 ZPL 并返回打印状态。"},
+        "endpoint_slug": "training-print-labels",
+        "method": "POST",
+        "input_mode": "json",
+        "headers": {"Content-Type": "application/json", "X-OMH-Source": "training-docs"},
+        "body": PRINT_LABELS_BODY,
+        "expected": {"status": "dry_run", "labels_count": 2, "printer": "TRAINING-PRINTER-01"},
+        "runnable": True,
+        "requires_setup": False,
+    },
+    "training.polling.odata_orders_to_wms": {
+        "title": {"ru": "Polling: 1C OData заказы -> WMS", "en": "Polling: 1C OData orders -> WMS", "zh": "轮询：1C OData 订单 -> WMS"},
+        "description": {"ru": "OMH сам читает Training OData ERP, собирает orders payload и отправляет его в mock WMS `/orders/import`.", "en": "OMH reads Training OData ERP, builds an orders payload and sends it to mock WMS `/orders/import`.", "zh": "OMH 读取 Training OData ERP 并发送到模拟 WMS。"},
+        "endpoint_slug": "training-poll-odata-orders-to-wms",
+        "method": "RUN_NOW",
+        "input_mode": "odata",
+        "headers": {},
+        "body": {"schedule": "manual_only", "resource": "Document_ЗаказКлиента"},
+        "expected": {"status": "success", "sent_count": 2, "target": "Training WMS"},
         "runnable": True,
         "requires_setup": False,
     },
@@ -111,4 +171,3 @@ def list_examples() -> list[dict[str, Any]]:
 def get_example(example_id: str) -> dict[str, Any] | None:
     example = TRAINING_EXAMPLES.get(example_id)
     return {"id": example_id, **example} if example else None
-

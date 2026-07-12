@@ -31,6 +31,33 @@ def submit_marking_pool(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
     }
 
 
+def submit_chz_codes(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    body = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
+    order_name = str(body.get("order_name") or body.get("entity_id") or "").strip()
+    rows = body.get("rows")
+    if order_name == "ERROR-500":
+        return 500, {
+            "ok": False,
+            "error": "DNP_CHZ_IMPORT_FAILED",
+            "message": "Training DnP CHZ endpoint returned HTTP 500 by design.",
+            "order_name": order_name,
+        }
+    if not isinstance(rows, list) or not rows:
+        return 422, {
+            "ok": False,
+            "error": "DNP_CHZ_ROWS_REQUIRED",
+            "message": "payload.rows must be a non-empty array.",
+        }
+    return 200, {
+        "ok": True,
+        "errors": [],
+        "rows_count": len(rows),
+        "errors_count": 0,
+        "order_name": order_name,
+        "dnp_request_id": "DNP-CHZ-TRAINING-0001",
+    }
+
+
 def _validate_marking_pool_payload(payload: dict[str, Any]) -> dict[str, str]:
     errors: dict[str, str] = {}
     if not str(payload.get("pool_id") or payload.get("pool") or "").strip():

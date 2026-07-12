@@ -27,6 +27,7 @@ registry = ConnectorRegistry()
 
 
 def register_builtin_connectors() -> None:
+    from app.connectors.builtin.file_target_connectors import LocalDirectoryConnector, SMBShareConnector
     from app.connectors.builtin.mock_erp_connector import MockERPConnector
     from app.connectors.builtin.mock_wms_connector import MockWMSConnector
     from app.connectors.builtin.onec_connector import OneCConnector
@@ -34,7 +35,7 @@ def register_builtin_connectors() -> None:
     from app.connectors.builtin.webhook_connector import WebhookConnector
     from app.connectors.builtin.zpl_printer_connector import ZPLPrinterConnector
 
-    for connector in [RESTConnector(), WebhookConnector(), MockERPConnector(), MockWMSConnector(), OneCConnector(), ZPLPrinterConnector()]:
+    for connector in [RESTConnector(), WebhookConnector(), MockERPConnector(), MockWMSConnector(), OneCConnector(), ZPLPrinterConnector(), SMBShareConnector(), LocalDirectoryConnector()]:
         registry.register(connector)
 
 

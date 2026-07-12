@@ -1,0 +1,36 @@
+import { CompileSuccessPanel } from '../../integration-master/compile/CompileSuccessPanel';
+import type { DnpChzCreateResponse } from './types';
+
+interface SaveStepProps {
+  result?: DnpChzCreateResponse;
+  error?: string | null;
+  loading: boolean;
+  disabled: boolean;
+  onCreate: () => void;
+}
+
+export function SaveStep({ result, error, loading, disabled, onCreate }: SaveStepProps) {
+  if (result) {
+    return <section className="wizard-step integration-master-step dnp-save-step"><span className="step-index">08</span><CompileSuccessPanel result={result.compile} /></section>;
+  }
+  return (
+    <section className="wizard-step integration-master-step dnp-save-step">
+      <span className="step-index">08</span>
+      <div className="odata-step-heading">
+        <div>
+          <span className="eyebrow">Save integration</span>
+          <h2>Создать интеграцию</h2>
+          <p>Интеграция создаётся disabled by default. После создания запустите тест, откройте Timeline и только потом включайте endpoint для DnP.</p>
+        </div>
+        <button type="button" className="primary-button" disabled={loading || disabled} onClick={onCreate}>{loading ? 'Создаю...' : 'Создать интеграцию'}</button>
+      </div>
+      {disabled ? <div className="status-card warning"><strong>Сначала нужен valid preview</strong><span>Создание доступно после успешного preview.</span></div> : null}
+      {error ? <div className="status-card danger"><strong>Create failed</strong><span>{error}</span></div> : null}
+      <div className="metadata-grid compact-grid no-margin">
+        <span className="status-card neutral"><small>Enabled</small><strong>false</strong><span>Включение остаётся ручным действием.</span></span>
+        <span className="status-card neutral"><small>Saved test case</small><strong>true</strong><span>Тест использует default DnP JSON.</span></span>
+        <span className="status-card neutral"><small>DnP errors</small><strong>preserved</strong><span>Оригинальный ответ DnP сохраняется в Timeline.</span></span>
+      </div>
+    </section>
+  );
+}

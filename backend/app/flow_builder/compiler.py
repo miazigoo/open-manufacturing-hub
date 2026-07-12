@@ -15,6 +15,7 @@ HANDLERS = {
     "build_json": "flow_build_json",
     "build_payload": "flow_build_payload",
     "foreach": "flow_foreach",
+    "print_labels": "flow_print_labels",
     "build_xml_response": "flow_return_response",
     "condition": "flow_condition",
     "call_endpoint": "flow_call_endpoint",

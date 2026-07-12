@@ -25,6 +25,7 @@ manifest = PackageManifest(
             {"route": "/xml-tools", "title": "XML Tools", "component": "XmlToolsPage"},
             {"route": "/onec-quick-setup", "title": "1C Quick Setup", "component": "OneCQuickSetupPage"},
             {"route": "/onec-scenarios", "title": "1C Scenarios", "component": "OneCScenariosPage"},
+            {"route": "/marking-code-pools", "title": "CHZ Code Pools", "component": "MarkingCodePoolsPage"},
         ],
         "navigation": [
             {"group": "Integration Packages", "title": "1C Workbench", "route": "/onec-workbench"},
@@ -33,6 +34,7 @@ manifest = PackageManifest(
             {"group": "Integration Packages", "title": "XML Tools", "route": "/xml-tools"},
             {"group": "Integration Packages", "title": "1C Quick Setup", "route": "/onec-quick-setup"},
             {"group": "Integration Packages", "title": "1C Scenarios", "route": "/onec-scenarios"},
+            {"group": "Integration Packages", "title": "CHZ Code Pools", "route": "/marking-code-pools"},
         ],
     },
     presets={"scenarios": "app.scenario_library.presets:SCENARIOS", "flow": "app.integration_flows.presets:TWO_ODATA_TO_ENDPOINT_PRESET"},

@@ -1,5 +1,6 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { asJson } from '../api/client';
 import { connectorsApi } from '../api/connectors';
 import { PollingCursorType, PollingJobPayload, pollingApi } from '../api/polling';
@@ -17,6 +18,7 @@ const defaultQuery = { '$select': 'Ref_Key,Number,Date,Партнер_Key,Скл
 export function PollingJobsPage() {
   const t = useT();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const jobs = useQuery({ queryKey: ['polling-jobs'], queryFn: pollingApi.list });
   const connectors = useQuery({ queryKey: ['connectors'], queryFn: connectorsApi.list });
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -49,7 +51,18 @@ export function PollingJobsPage() {
   const remove = useMutation({ mutationFn: pollingApi.delete, onSuccess: () => { refresh(); setSelectedId(null); } });
   const enable = useMutation({ mutationFn: pollingApi.enable, onSuccess: refresh });
   const disable = useMutation({ mutationFn: pollingApi.disable, onSuccess: refresh });
-  const runOnce = useMutation({ mutationFn: pollingApi.runOnce, onSuccess: (run) => { refresh(); setMessage(t('polling.runFinished', { created: run.events_created, skipped: run.items_skipped })); } });
+  useEffect(() => {
+    const jobId = searchParams.get('jobId');
+    if (jobId) setSelectedId(jobId);
+  }, [searchParams]);
+
+  const runOnce = useMutation({
+    mutationFn: ({ id, dryRun, updateCursor }: { id: string; dryRun: boolean; updateCursor: boolean }) => pollingApi.runOnce(id, { dry_run: dryRun, update_cursor: updateCursor }),
+    onSuccess: (run) => {
+      refresh();
+      setMessage(run.sent_count ? `Run finished: read ${run.items_read}, sent ${run.sent_count}` : t('polling.runFinished', { created: run.events_created, skipped: run.items_skipped }));
+    },
+  });
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -111,19 +124,21 @@ export function PollingJobsPage() {
         <section className="panel">
           <div className="panel-toolbar"><h2>{t('polling.jobs')}</h2><span className="microcopy">{t('connectors.configured', { count: jobs.data?.length ?? 0 })}</span></div>
           {jobs.data?.length ? jobs.data.map((job) => (
-            <article className={`polling-card ${selected?.id === job.id ? 'active' : ''}`} key={job.id} onClick={() => setSelectedId(job.id)}>
+            <article className={`polling-card ${selected?.id === job.id ? 'active' : ''}`} key={job.id} onClick={() => { setSelectedId(job.id); setSearchParams({ jobId: job.id }); }}>
               <div className="connector-card-top">
-                <div><h3>{job.name}</h3><p>{job.resource} → {job.target_system ?? t('common.unassigned')} · {t('polling.everySeconds', { count: job.interval_seconds })}</p></div>
+                <div><h3>{job.name}</h3><p>{job.resource} → {job.target_system ?? t('common.unassigned')} · {scheduleLabel(job.schedule_type, job.interval_seconds)}</p><small>{job.slug ?? job.id}</small></div>
                 <StatusBadge status={job.status} />
               </div>
               <div className="metadata-grid compact-grid">
                 <span>{t('polling.lastRun')}<strong>{formatDateTime(job.last_run_at)}</strong></span>
                 <span>{t('polling.nextRun')}<strong>{formatDateTime(job.next_run_at)}</strong></span>
                 <span>{t('polling.cursor')}<strong>{job.cursor_value ?? t('common.empty')}</strong></span>
+                <span>Mode<strong>{String(job.config_json?.mode ?? 'event_polling')}</strong></span>
               </div>
               {job.last_error && <div className="error-state compact">{job.last_error}</div>}
               <div className="action-row" onClick={(event) => event.stopPropagation()}>
-                <button className="ghost-button" onClick={() => runOnce.mutate(job.id)} disabled={runOnce.isPending}>{t('polling.runOnce')}</button>
+                <button className="ghost-button" onClick={() => runOnce.mutate({ id: job.id, dryRun: true, updateCursor: false })} disabled={runOnce.isPending}>Dry run</button>
+                <button className="ghost-button" onClick={() => runOnce.mutate({ id: job.id, dryRun: false, updateCursor: true })} disabled={runOnce.isPending}>{t('polling.runOnce')}</button>
                 <button className="ghost-button" onClick={() => job.enabled ? disable.mutate(job.id) : enable.mutate(job.id)}>{job.enabled ? t('connectors.disable') : t('connectors.enable')}</button>
                 <button className="ghost-button danger" onClick={() => remove.mutate(job.id)}>{t('connectors.delete')}</button>
               </div>
@@ -133,13 +148,23 @@ export function PollingJobsPage() {
       </section>
 
       <section className="mapping-bottom-grid">
-        <div className="panel"><JsonBlock title={t('polling.selectedQuery')} value={selected?.query_json ?? { hint: t('polling.selectJob') }} searchable={false} /></div>
+        <div className="panel"><JsonBlock title={t('polling.selectedQuery')} value={selected ? { query_json: selected.query_json, config_json: selected.config_json, cursor_json: selected.cursor_json } : { hint: t('polling.selectJob') }} searchable={false} /></div>
         <div className="panel">
           <div className="panel-toolbar"><h2>{t('polling.recentRuns')}</h2><span className="microcopy">{t('polling.records', { count: runs.data?.length ?? 0 })}</span></div>
-          {runs.data?.length ? <div className="run-list compact-run-list">{runs.data.slice(0, 8).map((run) => <div className="run-card" key={run.id}><div className="run-header"><strong>{formatDateTime(run.started_at)}</strong><StatusBadge status={run.status} compact /></div><span className="muted">{t('polling.runSummary', { created: run.events_created, skipped: run.items_skipped, duration: formatDuration(run.started_at, run.finished_at) })}</span>{run.error_message && <small className="error-text">{run.error_message}</small>}</div>)}</div> : <EmptyState title={t('polling.noRuns')} detail={t('polling.noRunsDetail')} />}
+          {runs.data?.length ? <div className="run-list compact-run-list">{runs.data.slice(0, 8).map((run) => <div className="run-card" key={run.id}><div className="run-header"><strong>{formatDateTime(run.started_at)}</strong><StatusBadge status={run.status} compact /></div><span className="muted">{runSummary(run, formatDuration(run.started_at, run.finished_at))}</span>{run.error_message && <small className="error-text">{run.error_message}</small>}<details className="variable-card"><summary><span>Cursor before/after</span><strong>JSON</strong></summary><JsonBlock title="Cursor" value={{ before: run.cursor_before_json, after: run.cursor_after_json, event_id: run.event_id }} searchable={false} /></details></div>)}</div> : <EmptyState title={t('polling.noRuns')} detail={t('polling.noRunsDetail')} />}
         </div>
         <div className="panel"><JsonBlock title={t('polling.latestDetails')} value={runs.data?.[0]?.details_json ?? { hint: t('polling.detailsHint') }} searchable={false} /></div>
       </section>
     </div>
   );
+}
+
+function scheduleLabel(scheduleType: string, intervalSeconds: number) {
+  if (scheduleType === 'manual_only') return 'manual only';
+  return `every ${Math.max(1, Math.round(intervalSeconds / 60))} min`;
+}
+
+function runSummary(run: { items_read: number; events_created: number; sent_count: number; items_skipped: number }, duration: string) {
+  if (run.sent_count || (run.events_created === 0 && run.items_read > 0)) return `read ${run.items_read}, sent ${run.sent_count}, duration ${duration}`;
+  return `created ${run.events_created}, skipped ${run.items_skipped}, duration ${duration}`;
 }

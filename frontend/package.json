@@ -17,7 +17,8 @@
     "i18n:missing": "node scripts/i18n-missing-check.mjs",
     "i18n:check": "node scripts/check-hardcoded-text.mjs",
     "docs:quality-check": "node scripts/docs-quality-check.mjs",
-    "docs:ru-language-check": "node scripts/docs-ru-language-check.mjs"
+    "docs:ru-language-check": "node scripts/docs-ru-language-check.mjs",
+    "docs:platform-learning-check": "node scripts/docs-platform-learning-check.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.83.0",

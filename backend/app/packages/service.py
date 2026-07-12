@@ -393,7 +393,7 @@ def _version_tuple(value: str) -> tuple[int, ...]:
 
 
 def _route_package(path: str) -> tuple[str | None, str | None]:
-    if path.startswith(("/api/onec-workbench", "/api/odata-explorer", "/api/odata-master", "/api/onec/xml", "/api/onec-scenarios", "/api/onec-templates")):
+    if path.startswith(("/api/onec-workbench", "/api/odata-explorer", "/api/odata-master", "/api/onec/xml", "/api/onec-scenarios", "/api/onec-templates", "/api/marking-code-pools")):
         return "omh-package-onec", path.split("/")[2]
     if path.startswith("/api/printing"):
         return "omh-package-printer", "printing"
@@ -411,6 +411,7 @@ def _fallback_route_inventory(existing: list[dict[str, Any]]) -> list[dict[str, 
         ("/api/odata-master/*", "omh-package-onec", "odata_master"),
         ("/api/onec-scenarios/*", "omh-package-onec", "onec_scenarios"),
         ("/api/onec-templates/*", "omh-package-onec", "onec_templates"),
+        ("/api/marking-code-pools/*", "omh-package-onec", "marking_code_pools"),
         ("/api/printing/*", "omh-package-printer", "printing"),
         ("/api/packages/onec/*", "omh-package-onec", "packages_onec"),
         ("/api/packages/printer/*", "omh-package-printer", "packages_printer"),

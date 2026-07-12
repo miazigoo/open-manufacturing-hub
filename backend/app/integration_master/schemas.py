@@ -211,6 +211,9 @@ class PayloadStepConfig(BaseModel):
     save_as: str = "target_payload"
     json_mode: JsonPayloadMode = "table"
     template: Any = None
+    mapping_profile_id: UUID | None = None
+    mapping_profile_code: str | None = None
+    mapping_profile_name: str | None = None
     fields: list[JsonPayloadFieldConfig] = Field(default_factory=list)
     dynamic_entries: list[JsonPayloadDynamicEntryConfig] = Field(default_factory=list)
     overwrite: bool = False

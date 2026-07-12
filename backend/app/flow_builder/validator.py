@@ -90,6 +90,19 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
                     if not nested.get(field):
                         errors.append(_error(step_id, code, f"Nested OData step needs {field}", "Select connector/resource for the repeated lookup."))
                 _validate_odata_top(nested, step_id, errors)
+        if step_type == "print_labels":
+            printer_selection = step.get("printer_selection") if isinstance(step.get("printer_selection"), dict) else {}
+            labels = step.get("labels") if isinstance(step.get("labels"), dict) else {}
+            if printer_selection.get("mode") == "from_request" and not printer_selection.get("path"):
+                errors.append(_error(step_id, "PRINTER_PATH_REQUIRED", "Print step needs printer source path", "Example: request.body.printer."))
+            if printer_selection.get("mode") == "fixed" and not printer_selection.get("fixed_printer_name"):
+                errors.append(_error(step_id, "PRINTER_NAME_REQUIRED", "Print step needs fixed printer name", "Select a configured printer."))
+            if not labels.get("path"):
+                errors.append(_error(step_id, "LABELS_PATH_REQUIRED", "Print step needs labels array path", "Example: request.body.labels."))
+            if not step.get("zpl_template"):
+                errors.append(_error(step_id, "ZPL_TEMPLATE_REQUIRED", "Print step needs a ZPL template", "Paste a ZPL template with variables such as {{label.code}}."))
+            if not step.get("save_as"):
+                errors.append(_error(step_id, "PRINT_SAVE_AS_REQUIRED", "Print step needs save_as", "Save normalized status as print_status."))
         if step_type == "call_endpoint" and not (step.get("connector") or step.get("url")):
             errors.append(_error(step_id, "TARGET_CONNECTOR_NOT_SET", "Endpoint step needs connector or URL", "Select a REST/1C target connector or enter a direct HTTP URL."))
     has_terminal_response = any(isinstance(step, dict) and step.get("type") in {"call_endpoint", "return_response", "build_xml_response", "raw_xml_forward"} for step in steps)

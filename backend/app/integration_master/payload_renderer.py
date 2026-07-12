@@ -11,6 +11,7 @@ from app.integration_master.schemas import PayloadStepConfig
 
 PLACEHOLDER_RE = re.compile(r"{{\s*([^{}]+?)\s*}}")
 FULL_PLACEHOLDER_RE = re.compile(r"^{{\s*([^{}]+?)\s*}}$")
+XML_LOOP_RE = re.compile(r"{{#\s*([^{}#/]+?)\s*}}(.*?){{/\s*\1\s*}}", re.DOTALL)
 TOKEN_RE = re.compile(r"([^.[\]]+)|\[(\d+)\]")
 MAX_PREVIEW_ARRAY_ITEMS = 3
 
@@ -104,7 +105,18 @@ def render_json_fields(fields: list[Any], dynamic_entries: list[Any], variables:
 
 
 def render_xml_template(template: str, variables: dict[str, Any]) -> str:
-    rendered = PLACEHOLDER_RE.sub(lambda match: _stringify_xml(resolve_template_path(match.group(1).strip(), variables)), template)
+    full = FULL_PLACEHOLDER_RE.fullmatch(template.strip())
+    if full:
+        value = _stringify(resolve_template_path(full.group(1).strip(), variables))
+        try:
+            ElementTree.fromstring(value)
+        except ElementTree.ParseError:
+            pass
+        else:
+            return value
+
+    loop_rendered = _render_xml_loops(template, variables)
+    rendered = _render_xml_placeholders(loop_rendered, variables)
     try:
         ElementTree.fromstring(rendered)
     except ElementTree.ParseError as exc:
@@ -114,6 +126,38 @@ def render_xml_template(template: str, variables: dict[str, Any]) -> str:
 
 def render_text_template(template: str, variables: dict[str, Any]) -> str:
     return PLACEHOLDER_RE.sub(lambda match: _stringify(resolve_template_path(match.group(1).strip(), variables)), template)
+
+
+def _render_xml_loops(template: str, variables: dict[str, Any]) -> str:
+    def replace(match: re.Match[str]) -> str:
+        path = match.group(1).strip()
+        block = match.group(2)
+        value = resolve_template_path(path, variables)
+        if not isinstance(value, list):
+            raise PayloadRenderError("PAYLOAD_XML_LOOP_NOT_ARRAY", f"Переменная {path} должна быть массивом для XML loop.")
+        chunks: list[str] = []
+        for index, item in enumerate(value):
+            item_scope = dict(variables)
+            item_scope["item"] = item
+            item_scope["index"] = index
+            if isinstance(item, dict):
+                item_scope.update(item)
+            else:
+                item_scope["value"] = item
+            rendered_block = _render_xml_loops(block, item_scope)
+            chunks.append(_render_xml_placeholders(rendered_block, item_scope))
+        return "".join(chunks)
+
+    previous = None
+    rendered = template
+    while rendered != previous and XML_LOOP_RE.search(rendered):
+        previous = rendered
+        rendered = XML_LOOP_RE.sub(replace, rendered)
+    return rendered
+
+
+def _render_xml_placeholders(template: str, variables: dict[str, Any]) -> str:
+    return PLACEHOLDER_RE.sub(lambda match: _stringify_xml(resolve_template_path(match.group(1).strip(), variables)), template)
 
 
 def resolve_template_path(path: str, variables: dict[str, Any]) -> Any:

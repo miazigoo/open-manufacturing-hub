@@ -141,12 +141,12 @@ function TopBar({ onCreateIntegration }: { onCreateIntegration: () => void }) {
 
 const scenarioCards = [
   {
-    title: 'Создать интеграцию по шагам',
-    input: 'Пример JSON, XML или raw text от внешней системы',
-    output: 'Готовый endpoint, OData/API шаги, payload и финальный ответ',
-    does: 'OMH ведёт от входящего запроса до сохранённой интеграции без ручного создания endpoint/route.',
-    best: 'Основной старт для оператора или программиста.',
-    to: '/master',
+    title: 'Подобрать мастер по сценарию',
+    input: 'Описание реальной задачи: кто вызывает, что приходит, что должно получиться',
+    output: 'Рекомендованный pattern, план шагов и правильный мастер/workbench',
+    does: 'OMH классифицирует сценарий и открывает нужный мастер без терминов endpoint/route/workflow.',
+    best: 'Основной старт для новой интеграции.',
+    to: '/integration-start',
     primary: true,
   },
   {

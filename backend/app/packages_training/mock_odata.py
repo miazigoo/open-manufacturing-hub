@@ -85,6 +85,9 @@ def _parse_literal(value: str) -> Any:
     guid = re.fullmatch(r"guid'((?:''|[^'])*)'", value, flags=re.IGNORECASE)
     if guid:
         return _unquote(guid.group(1))
+    dt = re.fullmatch(r"datetime'((?:''|[^'])*)'", value, flags=re.IGNORECASE)
+    if dt:
+        return _unquote(dt.group(1))
     if value.lower() == "false":
         return False
     if value.lower() == "true":

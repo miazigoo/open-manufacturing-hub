@@ -53,9 +53,9 @@ def main() -> None:
                 fail(f"{example_id}.{field} must contain ru/en/zh")
         if not example.get("endpoint_slug"):
             fail(f"{example_id} must declare endpoint_slug")
-        if example.get("method") != "POST":
-            fail(f"{example_id} must use POST for Test Console examples")
         mode = example.get("input_mode")
+        if example.get("method") != "POST" and not (mode == "odata" and example.get("method") == "RUN_NOW"):
+            fail(f"{example_id} must use POST for Test Console examples or RUN_NOW for polling examples")
         if mode == "json":
             if not isinstance(example.get("body"), dict):
                 fail(f"{example_id} JSON example must use object body")
@@ -66,6 +66,9 @@ def main() -> None:
                 ET.fromstring(body_text)
             except ET.ParseError as exc:
                 fail(f"{example_id} XML body is invalid: {exc}")
+        elif mode == "odata":
+            if example.get("method") != "RUN_NOW":
+                fail(f"{example_id} OData polling example must use RUN_NOW")
         elif mode != "raw_text":
             fail(f"{example_id} has unsupported input_mode {mode!r}")
         if example.get("runnable") and not (example.get("requires_setup") or example.get("endpoint_slug")):

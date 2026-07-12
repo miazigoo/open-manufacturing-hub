@@ -1,4 +1,4 @@
-.PHONY: install-backend install-frontend check-test-env test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke ui-smoke ui-smoke-live ui-deep-smoke-live i18n-check i18n-missing docs-check docs-quality-check docs-ru-language-check docs-examples-check docs-screenshots openapi-export openapi-check route-inventory-check check-official-packages release-fixtures e2e-release release-check release-check-local release-check-docker doctor snapshot backup backup-config backup-db export-config pre-update-check post-update-check rollback-info restore-db packages-list package-install-onec package-install-printer docker-up docker-down docker-prod-up docker-prod-down prod-up prod-down prod-logs prod-migrate prod-backup prod-restore prod-doctor prod-release-check prod-update-mode-on prod-update-mode-off
+.PHONY: docs-platform-learning-check install-backend install-frontend check-test-env test-backend build-frontend lint-backend lint-frontend dev-backend dev-frontend demo-seed seed-local smoke-test integration-smoke pattern-smoke ui-smoke ui-smoke-live ui-deep-smoke-live i18n-check i18n-missing docs-check docs-quality-check docs-ru-language-check docs-examples-check integration-coverage-check integration-docs-coverage-check pattern-docs-check simple-mode-ux-check docs-screenshots openapi-export openapi-check route-inventory-check check-official-packages release-fixtures e2e-release release-check release-check-local release-check-docker doctor snapshot backup backup-config backup-db export-config pre-update-check post-update-check rollback-info restore-db packages-list package-install-onec package-install-printer docker-up docker-down docker-prod-up docker-prod-down prod-up prod-down prod-logs prod-migrate prod-backup prod-restore prod-doctor prod-release-check prod-update-mode-on prod-update-mode-off
 
 PROD_COMPOSE = docker compose --env-file .env.production -f docker-compose.production.yml
 PROD_HTTP_URL ?= http://localhost:$${HTTP_PORT:-80}
@@ -39,6 +39,9 @@ smoke-test:
 integration-smoke:
 	cd backend && python3 scripts/integration_smoke.py
 
+pattern-smoke:
+	cd backend && . .venv/bin/activate && python scripts/pattern_smoke.py
+
 ui-smoke:
 	cd frontend && npm run smoke:ui
 
@@ -63,8 +66,22 @@ docs-quality-check:
 docs-ru-language-check:
 	cd frontend && npm run docs:ru-language-check
 
+docs-platform-learning-check:
+	cd frontend && npm run docs:platform-learning-check
+
 docs-examples-check:
 	cd backend && . .venv/bin/activate && python scripts/check_docs_examples.py
+
+integration-coverage-check:
+	cd backend && . .venv/bin/activate && python scripts/check_integration_coverage.py --write-report
+
+integration-docs-coverage-check: integration-coverage-check
+
+pattern-docs-check:
+	cd backend && . .venv/bin/activate && python scripts/check_pattern_docs.py
+
+simple-mode-ux-check:
+	cd backend && . .venv/bin/activate && python scripts/check_simple_mode_ux.py
 
 docs-screenshots:
 	cd frontend && npm run docs:screenshots

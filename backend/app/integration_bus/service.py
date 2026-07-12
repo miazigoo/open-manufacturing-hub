@@ -448,7 +448,9 @@ async def _response_context_from_run(session: AsyncSession, run: EventRun) -> tu
         .order_by(Artifact.created_at.desc())
     )
     artifacts = list(result.scalars().all())
-    artifact = next((item for item in artifacts if item.name == "incoming_response.json"), artifacts[0] if artifacts else None)
+    artifact = next((item for item in artifacts if item.name == "incoming_response.json"), None)
+    artifact = artifact or next((item for item in artifacts if item.name == "return_response.json"), None)
+    artifact = artifact or (artifacts[0] if artifacts else None)
     from app.external_errors.models import ExternalErrorRecord
 
     error_result = await session.execute(
@@ -491,7 +493,10 @@ def _format_response(
     if endpoint.response_mode == SYNC_RESPONSE:
         if response and "response_body_type" in response and "body" in response:
             response_meta = {key: response.get(key) for key in ("status_code", "response_body_type", "headers") if key in response}
-            return {"success": event.status.value == "success", **base, "response": response.get("body"), "response_meta": response_meta}
+            body = response.get("body")
+            if response.get("response_body_type") == "xml" and isinstance(body, dict) and isinstance(body.get("xml"), str):
+                body = body["xml"]
+            return {"success": event.status.value == "success", **base, "response": body, "response_meta": response_meta}
         return {"success": event.status.value == "success", **base, "response": response}
     return base
 

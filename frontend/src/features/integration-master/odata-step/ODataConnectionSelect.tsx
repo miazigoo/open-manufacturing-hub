@@ -19,8 +19,8 @@ export function ODataConnectionSelect({ value, options, loading, error, onChange
     return (
       <div className="empty-state compact odata-empty-state">
         <h3>Нет OData-подключений</h3>
-        <p>Создайте подключение к 1C OData, затем вернитесь в мастер и выберите его для запроса.</p>
-        <div className="action-row wrap-actions"><Link className="primary-button" to="/odata-connections">Создать OData-подключение</Link><Link className="ghost-button" to="/docs/onec/academy/first-odata-query-contractor">Открыть урок</Link></div>
+        <p>Создайте профиль подключения к 1C OData, затем вернитесь в мастер и выберите его для запроса.</p>
+        <div className="action-row wrap-actions"><Link className="primary-button" to="/connection-center">Создать подключение</Link><Link className="ghost-button" to="/docs/onec/academy/create-connection-profiles">Открыть урок</Link></div>
       </div>
     );
   }
@@ -34,7 +34,7 @@ export function ODataConnectionSelect({ value, options, loading, error, onChange
         <option value="">Выберите подключение к 1C OData</option>
         {options.map((option) => <option key={option.id} value={option.id}>{option.label} · {option.base_url}</option>)}
       </select>
-      <small>{loading ? 'Загружаю подключения...' : 'Используется сохранённый OData connection. Пароли не попадают в draft.'}</small>
+      <small>{loading ? 'Загружаю подключения...' : 'Используется профиль из Connection Center. Disabled-профили скрыты, пароли не попадают в draft.'}</small>
     </label>
   );
 }

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { integrationPatternsApi, localized, type IntegrationPattern } from '../../api/integrationPatterns';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
+import { StatusBadge } from '../../components/StatusBadge';
 import { BusinessKeySelector } from './BusinessKeySelector';
 import { EndpointSlugEditor, slugError, slugify, suggestedSlug } from './EndpointSlugEditor';
 import { InputContractPreview } from './InputContractPreview';
@@ -20,9 +22,22 @@ import { ParsedFieldsTable } from './ParsedFieldsTable';
 import { SampleInputEditor } from './SampleInputEditor';
 import { ScenarioChooser } from './ScenarioChooser';
 import type { BusinessKeySuggestion, InputBusinessKey, InputContract, InputContractField, InputDraftRead, InputMode, InputOperationKey, InputParseResponse, IntegrationScenario, OperationKeySuggestion } from './types';
+import { RequestODataResponseWizard } from '../pattern-wizards/request-odata-response/RequestODataResponseWizard';
+import { RequestODataSendEndpointWizard } from '../pattern-wizards/request-odata-send-endpoint/RequestODataSendEndpointWizard';
+import { DnpChzCodePoolWizard } from '../pattern-wizards/request-odata-object-foreach-send-endpoint/DnpChzCodePoolWizard';
+import { SourceWebApiWritebackOnecWizard } from '../pattern-wizards/source-web-api-writeback-onec/SourceWebApiWritebackOnecWizard';
+import { RequestMultipleODataResponseWizard } from '../pattern-wizards/request-multiple-odata-response/RequestMultipleODataResponseWizard';
+import { RequestPrintWizard } from '../pattern-wizards/request-print/RequestPrintWizard';
+import { WmsFactToOnecWizard } from '../pattern-wizards/wms-fact-to-onec/WmsFactToOnecWizard';
+import { XmlODataXmlResponseWizard } from '../pattern-wizards/xml-odata-xml-response/XmlODataXmlResponseWizard';
+import { XmlRawBridgeWizard } from '../pattern-wizards/xml-raw-bridge/XmlRawBridgeWizard';
+import { PollODataSendTargetWizard } from '../pattern-wizards/poll-odata-send-target/PollODataSendTargetWizard';
 
 export function IntegrationMasterPage() {
+  const [searchParams] = useSearchParams();
+  const patternId = searchParams.get('pattern');
   const scenarios = useQuery({ queryKey: ['integration-master-scenarios'], queryFn: integrationMasterApi.scenarios });
+  const pattern = useQuery({ queryKey: ['integration-pattern', patternId], queryFn: () => integrationPatternsApi.get(patternId || ''), enabled: Boolean(patternId) });
   const [selected, setSelected] = useState<IntegrationScenario | null>(null);
   const [inputMode, setInputMode] = useState<InputMode>('json');
   const [sampleText, setSampleText] = useState('');
@@ -64,8 +79,26 @@ export function IntegrationMasterPage() {
     window.setTimeout(() => odataStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
   }, [savedDraft?.id]);
 
+  useEffect(() => {
+    if (patternId === 'request_odata_response' || patternId === 'request_multiple_odata_response' || patternId === 'request_odata_send_endpoint' || patternId === 'request_odata_object_foreach_send_endpoint' || patternId === 'request_print' || patternId === 'source_web_api_writeback_onec' || patternId === 'wms_fact_to_onec' || patternId === 'xml_raw_bridge' || patternId === 'xml_odata_xml_response' || patternId === 'poll_odata_send_target') return;
+    if (!pattern.data || selected || !scenarios.data?.length) return;
+    const exampleSet = new Set(pattern.data.examples);
+    const matched = scenarios.data.find((scenario) => exampleSet.has(scenario.key));
+    if (matched) applyScenario(matched);
+  }, [pattern.data, patternId, scenarios.data, selected]);
+
+  if (patternId === 'request_odata_response') return <RequestODataResponseWizard />;
+  if (patternId === 'request_multiple_odata_response') return <RequestMultipleODataResponseWizard />;
+  if (patternId === 'request_odata_send_endpoint') return <RequestODataSendEndpointWizard />;
+  if (patternId === 'request_odata_object_foreach_send_endpoint') return <DnpChzCodePoolWizard />;
+  if (patternId === 'request_print') return <RequestPrintWizard />;
+  if (patternId === 'source_web_api_writeback_onec') return <SourceWebApiWritebackOnecWizard />;
+  if (patternId === 'wms_fact_to_onec') return <WmsFactToOnecWizard />;
+  if (patternId === 'xml_raw_bridge') return <XmlRawBridgeWizard />;
+  if (patternId === 'xml_odata_xml_response') return <XmlODataXmlResponseWizard />;
+  if (patternId === 'poll_odata_send_target') return <PollODataSendTargetWizard />;
   if (scenarios.isPending) return <LoadingState label="Загрузка мастера интеграции" />;
-  if (scenarios.error) return <ErrorState error={scenarios.error} />;
+  if (scenarios.error || pattern.error) return <ErrorState error={scenarios.error ?? pattern.error} />;
 
   function applyScenario(scenario: IntegrationScenario) {
     const mode = scenario.default_input_mode;
@@ -139,6 +172,8 @@ export function IntegrationMasterPage() {
         <div className="hero-instrument"><span>IC</span><small>INPUT CONTRACT</small></div>
       </section>
 
+      {pattern.data && <PatternIntentPanel pattern={pattern.data} />}
+
       {!selected ? (
         <MasterStepLayout index="01" title="Выберите сценарий" description="Карточки описывают реальные интеграции человеческим языком: кто вызывает OMH, что приходит и что обычно будет дальше.">
           <ScenarioChooser scenarios={scenarios.data ?? []} selectedKey={undefined} onSelect={applyScenario} />
@@ -187,6 +222,29 @@ export function IntegrationMasterPage() {
         </>
       )}
     </div>
+  );
+}
+
+function PatternIntentPanel({ pattern }: { pattern: IntegrationPattern }) {
+  return (
+    <section className="wizard-step pattern-intent-panel">
+      <div className="panel-toolbar">
+        <div>
+          <span className="eyebrow">Pattern выбран Scenario Router</span>
+          <h2>{localized(pattern.title)}</h2>
+          <p>{localized(pattern.description)}</p>
+        </div>
+        <StatusBadge status={pattern.status} label={pattern.status === 'available' ? 'доступен' : 'скоро'} />
+      </div>
+      <div className="pattern-flow compact">
+        {pattern.initial_steps.map((step) => <span key={step}>{step}</span>)}
+      </div>
+      <div className="metadata-grid compact-grid no-margin">
+        <span>Примеры<strong>{pattern.examples.length ? pattern.examples.join(', ') : '—'}</strong></span>
+        <span>Документация<strong><Link className="primary-link" to={pattern.docs_link}>Открыть</Link></strong><small>{pattern.docs_link}</small></span>
+        <span>Что тестировать<strong>{pattern.test_plan.map((item) => localized(item)).join(' · ') || 'см. steps'}</strong></span>
+      </div>
+    </section>
   );
 }
 

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import re
 from typing import Any
+
+from sqlalchemy import select
 
 from app.connectors import repository as connector_repository
 from app.connectors.builtin.onec.odata import read_odata
@@ -9,17 +12,19 @@ from app.connectors.manager import ConnectorManager
 from app.core.enums import ArtifactType
 from app.execution.context import PipelineContext
 from app.execution.result import ArtifactCreate, StepResult
-from app.integration_master.payload_renderer import PayloadRenderError, render_payload_step
+from app.integration_master.payload_renderer import PayloadRenderError, render_payload_step, render_xml_template as render_payload_xml_template
 from app.integration_master.schemas import PayloadStepConfig
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
 from app.packages_training.mock_dnp import submit_marking_pool
+from app.packages_training.mock_external_api import import_order
+from app.packages_training.mock_onec_http import accept_shipment_fact, save_order_external_id
 from app.packages_training.mock_odata import query_mock_odata
 from app.packages_training.mock_printer import print_label
+from app.packages_training.mock_site import import_order_to_site
 from app.sdk.types import ConnectorContext
 from app.secrets.service import SecretResolver
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
-from app.xml_toolkit.renderer import render_xml_template
 
 
 class ODataStepError(RuntimeError):
@@ -265,14 +270,19 @@ class FlowBuildPayloadStep:
         variables = _variables_with_step(context, config["step_id"], result.rendered_body)
         variables[save_as] = result.rendered_body
         variables["mapped_payload"] = result.rendered_body
-        return StepResult.success(
-            "Payload built",
-            artifacts=[
-                ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "payload_builder_config.json", {"body_type": config.get("body_type"), "json_mode": config.get("json_mode"), "save_as": save_as}),
-                ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "payload_builder_result.json", {"body": result.rendered_body, "size_bytes": result.size_bytes, "warnings": result.warnings}),
-            ],
-            variables_update=variables,
-        )
+        artifacts = [
+            ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "payload_builder_config.json", {"body_type": config.get("body_type"), "json_mode": config.get("json_mode"), "save_as": save_as}),
+            ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "payload_builder_result.json", {"body": result.rendered_body, "size_bytes": result.size_bytes, "warnings": result.warnings}),
+        ]
+        if config.get("response_artifacts"):
+            template_name, rendered_name = _response_artifact_names(str(config.get("body_type") or "raw_text"))
+            artifacts.extend(
+                [
+                    ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, template_name, {"template": config.get("template"), "body_type": config.get("body_type")}),
+                    ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, rendered_name, {"body": result.rendered_body, "size_bytes": result.size_bytes}),
+                ]
+            )
+        return StepResult.success("Payload built", artifacts=artifacts, variables_update=variables)
 
 
 class FlowConditionStep:
@@ -281,7 +291,15 @@ class FlowConditionStep:
 
     async def execute(self, context: PipelineContext) -> StepResult:
         config = _config(context)
-        ok = _evaluate_condition(str(config.get("if") or ""), _scope(context))
+        try:
+            ok = _evaluate_condition(str(config.get("if") or ""), _scope(context))
+        except Exception as exc:
+            return _failed(
+                "CONDITION_EVALUATION_FAILED",
+                str(exc),
+                config,
+                "Check previous step variables and condition path.",
+            )
         artifact = ArtifactCreate(ArtifactType.VALIDATION_RESULT.value, "condition_result.json", {"if": config.get("if"), "matched": ok})
         if ok or str(config.get("else") or "continue") == "continue":
             return StepResult.success("Condition passed", artifacts=[artifact])
@@ -306,12 +324,21 @@ class FlowCallEndpointStep:
         request_payload = {"connector": connector_name or None, "method": method, "url": direct_url or None, "path": config.get("path"), "headers": headers, "body": payload}
         request_artifact = ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "outgoing_request.json", request_payload)
         if direct_url:
+            mock_response = config.get("mock_response_json")
+            if context.dry_run and mock_response is not None:
+                response = {"status_code": 200, "body": mock_response, "mock": True, "dry_run": True}
+                variables = _endpoint_variables(context, config, request_payload, response, mock_response)
+                return StepResult.success(
+                    "Endpoint URL dry-run complete",
+                    artifacts=[request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", response)],
+                    variables_update=variables,
+                )
             connector_context = ConnectorContext(event_id=context.event.id, run_id=context.run.id, step_id=context.current_step.id if context.current_step else None, correlation_id=context.correlation_id, source_system=context.source_system, target_system=direct_url, dry_run=context.dry_run, metadata={"step_name": config["step_id"], "url": direct_url, "method": method})
             connector_config = {"url": direct_url, "method": method, "headers": headers}
             result = await RESTConnector().dry_run_send(connector_config, payload, connector_context) if context.dry_run else await RESTConnector().send(connector_config, payload, connector_context)
             response = {"status_code": result.status_code, "body": result.response_payload or {}}
-            variables = _variables_with_step(context, config["step_id"], {"request": result.request_payload or request_payload, "response": response})
-            variables["response"] = response
+            response_body = _endpoint_response_body(response)
+            variables = _endpoint_variables(context, config, result.request_payload or request_payload, response, response_body)
             artifacts = [ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "outgoing_request.json", result.request_payload or request_payload)]
             if result.response_payload is not None:
                 artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", result.response_payload))
@@ -325,8 +352,7 @@ class FlowCallEndpointStep:
         if training_response is not None:
             status_code, response_body = training_response
             response = {"status_code": status_code, "body": response_body, "mock": True}
-            variables = _variables_with_step(context, config["step_id"], {"request": request_payload, "response": response})
-            variables["response"] = response
+            variables = _endpoint_variables(context, config, request_payload, response, response_body)
             artifacts = [request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", response)]
             if status_code >= 400:
                 artifacts.append(ArtifactCreate(ArtifactType.EXTERNAL_ERROR.value, "external_error.json", response_body))
@@ -335,21 +361,188 @@ class FlowCallEndpointStep:
         mock_response = (connector.config_json or {}).get("mock_response_json") or config.get("mock_response_json")
         if mock_response is not None:
             response = {"status_code": 200, "body": mock_response, "mock": True}
-            variables = _variables_with_step(context, config["step_id"], {"request": request_payload, "response": response})
-            variables["response"] = response
+            variables = _endpoint_variables(context, config, request_payload, response, mock_response)
             return StepResult.success("Endpoint mock call complete", artifacts=[request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", response)], variables_update=variables)
         manager = context.connector_manager or ConnectorManager(context.session)
         connector_context = ConnectorContext(event_id=context.event.id, run_id=context.run.id, step_id=context.current_step.id if context.current_step else None, correlation_id=context.correlation_id, source_system=context.source_system, target_system=connector_name, dry_run=context.dry_run, metadata={"step_name": config["step_id"], "path": config.get("path"), "method": request_payload["method"]})
         result = await manager.send_to_target(connector_name, payload, connector_context)
         response = {"status_code": result.status_code, "body": result.response_payload or {}}
-        variables = _variables_with_step(context, config["step_id"], {"request": result.request_payload or request_payload, "response": response})
-        variables["response"] = response
+        response_body = _endpoint_response_body(response)
+        variables = _endpoint_variables(context, config, result.request_payload or request_payload, response, response_body)
         artifacts = [ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "outgoing_request.json", result.request_payload or request_payload)]
         if result.response_payload is not None:
             artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", result.response_payload))
         if not result.success:
             return _failed(result.error_code or "TARGET_CALL_FAILED", result.error_message or "Target call failed", config, result.hint or "Check target connector settings and payload contract.", artifacts)
         return StepResult.success("Endpoint call complete", artifacts=artifacts, variables_update=variables)
+
+
+class FlowPrintLabelsStep:
+    name = "flow_print_labels"
+    display_name = "Print Labels"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        scope = _scope(context)
+        labels_config = config.get("labels") if isinstance(config.get("labels"), dict) else {}
+        printer_config = config.get("printer_selection") if isinstance(config.get("printer_selection"), dict) else {}
+        item_as = str(labels_config.get("item_as") or "label")
+        required_fields = [str(item).strip() for item in labels_config.get("required_fields") or ["code"] if str(item).strip()]
+
+        try:
+            labels = _collection(labels_config.get("path") or "request.body.labels", scope)
+        except Exception:
+            return _failed("PRINT_LABELS_MISSING", "В запросе нет массива labels[].", config, "Проверьте путь labels array, например request.body.labels.")
+        if not labels:
+            return _failed("PRINT_LABELS_EMPTY", "Массив labels пустой.", config, "Передайте хотя бы одну строку labels[].")
+        for index, item in enumerate(labels):
+            if not isinstance(item, dict):
+                return _failed("PRINT_LABEL_INVALID", f"labels[{index}] должен быть объектом.", config, "Каждая строка labels[] должна быть JSON object.")
+            for field in required_fields:
+                if item.get(field) in (None, ""):
+                    if field == "code":
+                        message = f"В labels[{index}] нет поля code. Нечего печатать в DataMatrix."
+                    else:
+                        message = f"В labels[{index}] нет обязательного поля {field}."
+                    return _failed("PRINT_LABEL_FIELD_MISSING", message, config, "Проверьте sample request и required fields.")
+
+        selected_printer, printer_error = _selected_printer_name(printer_config, scope)
+        if printer_error:
+            return _failed("PRINT_PRINTER_SELECTION_FAILED", printer_error, config, "Проверьте поле request.body.printer или fixed printer.")
+        if not selected_printer:
+            return _failed("PRINT_PRINTER_REQUIRED", "Принтер не выбран.", config, "Передайте printer в request или выберите fixed printer.")
+
+        template = str(config.get("zpl_template") or "")
+        rendered: list[str] = []
+        try:
+            for index, item in enumerate(labels):
+                rendered.append(_render_label_zpl(template, scope, item, labels, item_as, index))
+        except PathResolutionError as exc:
+            return _failed("PRINT_ZPL_VARIABLE_MISSING", _friendly_zpl_missing(exc.path, labels_config), config, "Проверьте переменные в ZPL-шаблоне.")
+        except Exception as exc:
+            return _failed("PRINT_ZPL_RENDER_FAILED", str(exc), config, "Проверьте ZPL-шаблон и переменные.")
+        for index, zpl in enumerate(rendered):
+            if "^XA" not in zpl or "^XZ" not in zpl:
+                return _failed("PRINT_ZPL_INVALID", f"ZPL для labels[{index}] должен содержать ^XA и ^XZ.", config, "Проверьте ZPL template.")
+
+        print_mode = str(config.get("print_mode") or "dry_run")
+        dry_run = context.dry_run or print_mode == "dry_run"
+        limit = 1 if print_mode == "test_one_label" else len(labels)
+        all_zpl = "\n".join(rendered)
+        incoming_request = context.variables.get("payload") or {}
+        artifacts = [
+            ArtifactCreate(ArtifactType.RAW_PAYLOAD.value, "incoming_print_request.json", _as_dict(incoming_request)),
+            ArtifactCreate(ArtifactType.VALIDATION_RESULT.value, "selected_printer.json", {"name": selected_printer, "selection": printer_config}),
+            ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "zpl_template.zpl", {"template": template}),
+            ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "rendered_zpl_first_label.zpl", {"zpl": rendered[0]}),
+            ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "rendered_zpl_all_labels.zpl", {"zpl": all_zpl, "labels_count": len(rendered)}),
+        ]
+
+        target = await _find_print_target(context, selected_printer)
+        if target is None:
+            artifacts.append(ArtifactCreate(ArtifactType.ERROR_DETAILS.value, "printer_lookup_error.json", {"printer": selected_printer}))
+            return _failed(
+                "PRINT_PRINTER_NOT_FOUND",
+                f"Принтер {selected_printer} не найден. Проверьте Printer connector или поле request.body.printer.",
+                config,
+                "Создайте PrintPrinter/ZPL connector или установите Training Sandbox.",
+                artifacts,
+            )
+
+        if target.get("kind") == "training_mock":
+            request_payload = {"printer": selected_printer, "zpl": all_zpl, "labels_count": len(labels), "dry_run": dry_run, "mode": print_mode}
+            status_code, printer_response = print_label(request_payload)
+            artifacts.extend(
+                [
+                    ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "printer_request.json", request_payload),
+                    ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "printer_response.json", printer_response),
+                ]
+            )
+            if status_code >= 400 or printer_response.get("success") is False:
+                artifacts.append(ArtifactCreate(ArtifactType.EXTERNAL_ERROR.value, "external_error.json", printer_response))
+                return _failed(
+                    str(printer_response.get("error_code") or printer_response.get("error") or "PRINTER_UNAVAILABLE"),
+                    str(printer_response.get("error_message") or printer_response.get("message") or "Принтер недоступен."),
+                    config,
+                    str(printer_response.get("hint") or "Проверьте IP, порт, сеть и питание принтера."),
+                    artifacts,
+                )
+            print_job = {"id": printer_response.get("job_id") or "TRAIN-PRINT-001", "status": printer_response.get("status") or ("dry_run" if dry_run else "sent")}
+            status = _normalized_print_status(print_job, selected_printer, labels, dry_run=dry_run, printer_response=printer_response)
+            save_as = str(config.get("save_as") or "print_status")
+            variables = _print_variables(context, config["step_id"], status, print_job, selected_printer, labels, rendered, save_as, printer_response)
+            return StepResult.success("Print labels complete", artifacts=artifacts, variables_update=variables)
+
+        from app.printing import service as printing_service
+        from app.printing.schemas import PrintBatchRequest, PrintJobCreate, PrintJobLineCreate
+
+        printer = target["printer"]
+        job_key = _job_key(scope, context)
+        lines = [
+            PrintJobLineCreate(sequence_no=_sequence_no(item, index), code=str(item.get("code")), zpl=rendered[index])
+            for index, item in enumerate(labels)
+        ]
+        request_payload = {
+            "job_key": job_key,
+            "printer": selected_printer,
+            "printer_id": str(printer.id),
+            "source_system": context.source_system or "OMH",
+            "dry_run": dry_run,
+            "limit": limit,
+            "lines_count": len(lines),
+        }
+        artifacts.append(ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "printer_request.json", request_payload))
+        try:
+            job = await printing_service.create_job(
+                context.session,
+                PrintJobCreate(
+                    job_key=job_key,
+                    printer_id=printer.id,
+                    source_system=context.source_system or "OMH",
+                    source_document_id=str((context.variables.get("payload") or {}).get("job_key") or job_key),
+                    source_document_name=str((context.variables.get("payload") or {}).get("operation") or "print_labels"),
+                    label_settings_json={"pattern": "request_print", "print_mode": print_mode, "dry_run": dry_run},
+                    lines=lines,
+                ),
+            )
+            batch = await printing_service.send_batch(context.session, job.id, PrintBatchRequest(limit=limit, dry_run=dry_run))
+        except Exception as exc:
+            artifacts.append(ArtifactCreate(ArtifactType.ERROR_DETAILS.value, "printer_response.json", {"success": False, "error_message": str(exc)}))
+            return _failed("PRINT_SEND_FAILED", str(exc), config, "Принтер недоступен. Проверьте IP, порт, сеть и питание принтера.", artifacts)
+
+        response_payload = {
+            "job": {"id": str(batch.job.id), "status": batch.job.status.value if hasattr(batch.job.status, "value") else str(batch.job.status)},
+            "processed": batch.processed,
+            "sent": batch.sent,
+            "failed": batch.failed,
+            "dry_run": batch.dry_run,
+            "results": [
+                {
+                    "sequence_no": item.sequence_no,
+                    "status": item.status.value if hasattr(item.status, "value") else str(item.status),
+                    "success": item.success,
+                    "error_code": item.error_code,
+                    "error_message": item.error_message,
+                }
+                for item in batch.results
+            ],
+        }
+        artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "printer_response.json", response_payload))
+        if batch.failed:
+            artifacts.append(ArtifactCreate(ArtifactType.EXTERNAL_ERROR.value, "external_error.json", response_payload))
+            first_error = next((item for item in batch.results if not item.success), None)
+            return _failed(
+                first_error.error_code if first_error else "PRINTER_UNAVAILABLE",
+                first_error.error_message if first_error else "Принтер недоступен.",
+                config,
+                "Проверьте IP, порт, сеть и питание принтера.",
+                artifacts,
+            )
+        print_job = {"id": str(batch.job.id), "status": batch.job.status.value if hasattr(batch.job.status, "value") else str(batch.job.status)}
+        status = _normalized_print_status(print_job, selected_printer, labels, dry_run=dry_run, printer_response=response_payload)
+        save_as = str(config.get("save_as") or "print_status")
+        variables = _print_variables(context, config["step_id"], status, print_job, selected_printer, labels, rendered, save_as, response_payload)
+        return StepResult.success("Print labels complete", artifacts=artifacts, variables_update=variables)
 
 
 class FlowReturnResponseStep:
@@ -361,7 +554,7 @@ class FlowReturnResponseStep:
         try:
             scope = _scope(context)
             if str(config.get("response_body_type") or "").lower() == "xml" and config.get("body_template") is not None:
-                body = render_xml_template(str(config.get("body_template") or ""), scope)
+                body = render_payload_xml_template(str(config.get("body_template") or ""), scope)
             elif config.get("body_template") is not None:
                 body = render_template(str(config.get("body_template") or ""), scope)
             else:
@@ -369,6 +562,8 @@ class FlowReturnResponseStep:
         except Exception as exc:
             return _failed("RETURN_RESPONSE_BUILD_FAILED", str(exc), config, "Check return body variable path.")
         body_type = str(config.get("response_body_type") or ("json" if isinstance(body, dict) else "raw_text"))
+        if body_type == "xml" and isinstance(body, dict) and isinstance(body.get("xml"), str):
+            body = body["xml"]
         status_code = int(config.get("status_code") or 200)
         headers = config.get("headers") if isinstance(config.get("headers"), dict) else {}
         response = {
@@ -385,6 +580,111 @@ class FlowReturnResponseStep:
             artifacts.insert(0, ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "xml_response_template.xml", {"template": str(config.get("body_template") or "")}))
             artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "xml_response_rendered.xml", {"xml": str(body)}))
         return StepResult.success("Response selected", artifacts=artifacts, variables_update={"response": response})
+
+
+def _selected_printer_name(config: dict[str, Any], scope: dict[str, Any]) -> tuple[str | None, str | None]:
+    mode = str(config.get("mode") or "from_request")
+    if mode == "rule_based":
+        return None, "Выбор принтера по правилу будет добавлен позже."
+    if mode == "fixed":
+        return str(config.get("fixed_printer_name") or "").strip(), None
+    try:
+        return str(resolve_path(scope, str(config.get("path") or "request.body.printer")) or "").strip(), None
+    except PathResolutionError:
+        return None, "Принтер не найден в request.body.printer."
+
+
+def _render_label_zpl(template: str, scope: dict[str, Any], item: dict[str, Any], labels: list[Any], item_as: str, index: int) -> str:
+    label_scope = dict(scope)
+    label_scope[item_as] = item
+    label_scope["label"] = item
+    label_scope["labels"] = {"items": labels, "length": len(labels)}
+    label_scope["label_index"] = index
+    return str(render_template(template, label_scope))
+
+
+def _friendly_zpl_missing(path: str, labels_config: dict[str, Any]) -> str:
+    item_as = str(labels_config.get("item_as") or "label")
+    if path.startswith(f"{item_as}."):
+        return f"В ZPL-шаблоне используется {path}, но такого поля нет в labels[0]."
+    if path.startswith("label."):
+        return f"В ZPL-шаблоне используется {path}, но такого поля нет в labels[0]."
+    return f"В ZPL-шаблоне используется {path}, но такой переменной нет."
+
+
+async def _find_print_target(context: PipelineContext, selected_printer: str) -> dict[str, Any] | None:
+    from app.connectors.models import ConnectorInstance
+    from app.printing.models import PrintPrinter
+
+    printer_result = await context.session.execute(select(PrintPrinter).where(PrintPrinter.name == selected_printer))
+    printer = printer_result.scalar_one_or_none()
+    if printer is not None:
+        return {"kind": "print_printer", "printer": printer}
+
+    connector_result = await context.session.execute(select(ConnectorInstance).where(ConnectorInstance.name == selected_printer))
+    connector = connector_result.scalar_one_or_none()
+    if connector is not None and (connector.config_json or {}).get("training_mock_printer"):
+        return {"kind": "training_mock", "connector": connector}
+
+    training_result = await context.session.execute(select(ConnectorInstance).where(ConnectorInstance.name == "Training Printer"))
+    training = training_result.scalar_one_or_none()
+    if training is not None and (training.config_json or {}).get("training_mock_printer"):
+        return {"kind": "training_mock", "connector": training}
+    return None
+
+
+def _job_key(scope: dict[str, Any], context: PipelineContext) -> str:
+    try:
+        value = resolve_path(scope, "request.body.job_key")
+    except PathResolutionError:
+        value = None
+    return str(value or context.correlation_id or context.run.id)
+
+
+def _sequence_no(item: dict[str, Any], index: int) -> int:
+    value = item.get("sequence_no", index + 1)
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return index + 1
+    return parsed if parsed > 0 else index + 1
+
+
+def _normalized_print_status(print_job: dict[str, Any], selected_printer: str, labels: list[Any], *, dry_run: bool, printer_response: Any) -> dict[str, Any]:
+    status = str(print_job.get("status") or ("dry_run" if dry_run else "sent"))
+    if dry_run and status in {"sent", "printed"}:
+        status = "dry_run"
+    return {
+        "success": True,
+        "print_job_id": str(print_job.get("id") or ""),
+        "labels_count": len(labels),
+        "printer": selected_printer,
+        "status": status,
+        "dry_run": dry_run,
+        "printer_response": printer_response,
+    }
+
+
+def _print_variables(
+    context: PipelineContext,
+    step_id: str,
+    status: dict[str, Any],
+    print_job: dict[str, Any],
+    selected_printer: str,
+    labels: list[Any],
+    rendered: list[str],
+    save_as: str,
+    printer_response: Any,
+) -> dict[str, Any]:
+    variables = _variables_with_step(context, step_id, status)
+    variables[save_as] = status
+    variables["print_status"] = status
+    variables["print_job"] = print_job
+    variables["selected_printer"] = {"name": selected_printer}
+    variables["labels"] = {"items": labels, "length": len(labels)}
+    variables["rendered_zpl_labels"] = rendered
+    variables["printer_response"] = printer_response
+    return variables
 
 
 def _config(context: PipelineContext) -> dict[str, Any]:
@@ -410,7 +710,7 @@ async def _read_odata_items(context: PipelineContext, config: dict[str, Any], qu
     if connector.connector_type != "onec":
         raise ODataStepError("ODATA_CONNECTION_NOT_FOUND", f"Connector {connector_name} is not a 1C/OData connector", "Select connector_type=onec.")
     connector_config = await SecretResolver(context.session).resolve_config(connector.config_json)
-    mock_items = _mock_odata_items(config, connector_config, query)
+    mock_items = _mock_odata_items(config, connector_config, query, resource)
     if mock_items is not None:
         return mock_items, {"mock": True, "value": mock_items}
     if config.get("paginate") is False:
@@ -488,13 +788,13 @@ def _positive_int(value: Any, default: int) -> int:
     return parsed if parsed > 0 else default
 
 
-def _mock_odata_items(config: dict[str, Any], connector_config: dict[str, Any], query: dict[str, Any]) -> list[dict[str, Any]] | None:
+def _mock_odata_items(config: dict[str, Any], connector_config: dict[str, Any], query: dict[str, Any], resource: str) -> list[dict[str, Any]] | None:
     if isinstance(config.get("mock_items"), list):
         return [item for item in config["mock_items"] if isinstance(item, dict)]
     mock_odata = (connector_config or {}).get("mock_odata") or {}
     if not isinstance(mock_odata, dict) or not mock_odata:
         return None
-    response = query_mock_odata(mock_odata, str(config.get("resource") or ""), query)
+    response = query_mock_odata(mock_odata, resource or str(config.get("resource") or ""), query)
     items = response.get("value")
     return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else None
 
@@ -502,19 +802,80 @@ def _mock_odata_items(config: dict[str, Any], connector_config: dict[str, Any], 
 def _training_target_response(connector_config: dict[str, Any], payload: dict[str, Any]) -> tuple[int, dict[str, Any]] | None:
     if connector_config.get("training_mock_dnp"):
         return submit_marking_pool(payload)
+    if connector_config.get("training_mock_external_api"):
+        return import_order(payload)
+    if connector_config.get("training_mock_onec_shipment_facts") and _looks_like_shipment_fact(payload):
+        return accept_shipment_fact(payload)
+    if connector_config.get("training_mock_onec_writeback"):
+        return save_order_external_id(payload)
+    if connector_config.get("training_mock_site"):
+        return import_order_to_site(payload)
     if connector_config.get("training_mock_printer"):
         return print_label(payload)
     return None
 
 
+def _looks_like_shipment_fact(payload: dict[str, Any]) -> bool:
+    body = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
+    return isinstance(body, dict) and ("wms_shipment_id" in body or "warehouse_code" in body or "shipped_at" in body)
+
+
 def _evaluate_condition(expression: str, scope: dict[str, Any]) -> bool:
     expression = expression.strip()
+    match = re.fullmatch(r"(.+?)\s*(==|!=|eq|ne)\s*(.+)", expression)
+    if match:
+        left_raw, operator, right_raw = match.groups()
+        left = render_template(left_raw.strip(), scope) if left_raw.strip().startswith("{{") else resolve_path(scope, left_raw.strip())
+        right = _condition_literal(right_raw.strip(), scope)
+        return left != right if operator in {"!=", "ne"} else left == right
     if expression.endswith(" exists"):
         path = expression.removesuffix(" exists").strip()
         value = render_template(path, scope) if path.startswith("{{") else resolve_path(scope, path)
         return value not in (None, "", [], {})
     value = render_template(expression, scope)
     return bool(value)
+
+
+def _endpoint_variables(context: PipelineContext, config: dict[str, Any], request_payload: dict[str, Any], response: dict[str, Any], response_body: Any) -> dict[str, Any]:
+    variables = _variables_with_step(context, config["step_id"], {"request": request_payload, "response": response})
+    variables["response"] = response
+    save_as = str(config.get("save_response_as") or "").strip()
+    if save_as:
+        variables[save_as] = response_body
+        variables[f"{save_as}_http"] = response
+    return variables
+
+
+def _endpoint_response_body(response: dict[str, Any]) -> Any:
+    body = response.get("body")
+    if isinstance(body, dict) and isinstance(body.get("body"), (dict, list, str, int, float, bool, type(None))):
+        return body["body"]
+    return body
+
+
+def _response_artifact_names(body_type: str) -> tuple[str, str]:
+    if body_type == "xml":
+        return "response_template.xml", "rendered_response.xml"
+    if body_type == "json":
+        return "response_template.json", "rendered_response.json"
+    return "response_template.txt", "rendered_response.txt"
+
+
+def _condition_literal(value: str, scope: dict[str, Any]) -> Any:
+    if value.startswith("{{"):
+        return render_template(value, scope)
+    if value.lower() == "true":
+        return True
+    if value.lower() == "false":
+        return False
+    if value.lower() in {"null", "none"}:
+        return None
+    if (value.startswith("'") and value.endswith("'")) or (value.startswith('"') and value.endswith('"')):
+        return value[1:-1]
+    try:
+        return int(value)
+    except ValueError:
+        return value
 
 
 def _failed(code: str, message: str, config: dict[str, Any], hint: str, artifacts: list[ArtifactCreate] | None = None) -> StepResult:
