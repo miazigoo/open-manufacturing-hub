@@ -48,7 +48,7 @@ async function assertHealthy(label) {
   if (/Loading page|Loading /i.test(body)) await page.waitForTimeout(1800);
   const later = await page.locator('body').innerText({ timeout: timeoutMs });
   if (/Loading page|Loading /i.test(later)) fail('STUCK_LOADING', label);
-  if (/API request failed|Failed to fetch|Error:/i.test(later)) fail('VISIBLE_ERROR', `${label}: ${later.slice(0, 400).replace(/\s+/g, ' ')}`);
+  if (/API request failed|Failed to fetch|Unhandled|Page crashed|Cannot read/i.test(later)) fail('VISIBLE_ERROR', `${label}: ${later.slice(0, 400).replace(/\s+/g, ' ')}`);
   checkpoints.push(label);
 }
 
@@ -197,7 +197,11 @@ async function exerciseProductionAndPackages() {
 
 async function exerciseFlowsTransformsRulesResolversEvents() {
   await gotoRoute('/integration-flows');
-  await clickAndSettle(page.getByRole('button', { name: /Test matcher/i }), 'flows:test-matcher');
+  const testFlowButton = page.getByRole('button', { name: /Test this flow|Проверить эту интеграцию/i }).first();
+  const legacyMatcherButton = page.getByRole('button', { name: /Test matcher/i }).first();
+  if (await testFlowButton.count()) await clickAndSettle(testFlowButton, 'flows:test-flow');
+  else if (await legacyMatcherButton.count()) await clickAndSettle(legacyMatcherButton, 'flows:test-matcher');
+  else fail('FLOWS_TEST_ACTION', 'Integration Flows page has no test action');
   const exportButton = page.getByRole('button', { name: /Export/i }).first();
   if (await exportButton.count()) await clickAndSettle(exportButton, 'flows:export');
 

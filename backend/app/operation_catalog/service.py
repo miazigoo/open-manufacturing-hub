@@ -369,7 +369,7 @@ def _connection_base_url(connection: ConnectionProfileRead | None) -> str | None
 
 
 def _join_url(base: str, path: str) -> str:
-    if path.startswith(("http://", "https://", "/api/")):
+    if path.startswith(("http://", "https://")):
         return path
     return f"{base.rstrip('/')}/{path.lstrip('/')}"
 
