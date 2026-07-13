@@ -45,6 +45,7 @@ class MarkingCodePoolRuntimeConfig:
     laser_smb_username: str
     laser_smb_password: str
     laser_smb_require_signing: bool
+    laser_smb_require_secure_negotiate: bool
     response_success_mode: str
 
 
@@ -284,6 +285,7 @@ async def test_laser_dir(session: AsyncSession, *, dry_run: bool = True) -> dict
             username=config.laser_smb_username,
             password=config.laser_smb_password,
             require_signing=config.laser_smb_require_signing,
+            require_secure_negotiate=config.laser_smb_require_secure_negotiate,
         )
     except Exception as exc:
         return {"success": False, "status": "failed", "message": str(exc), "details": {"target": config.laser_smb_unc}}
@@ -440,6 +442,11 @@ async def _runtime_config(session: AsyncSession) -> MarkingCodePoolRuntimeConfig
             values,
             "CHZ_LASER_SMB_REQUIRE_SIGNING",
             settings.chz_laser_smb_require_signing,
+        ),
+        laser_smb_require_secure_negotiate=_config_bool(
+            values,
+            "CHZ_LASER_SMB_REQUIRE_SECURE_NEGOTIATE",
+            settings.chz_laser_smb_require_secure_negotiate,
         ),
         response_success_mode=_normalize_success_mode(
             _config_str(values, "MARKING_CODE_POOL_RESPONSE_SUCCESS_MODE", "partial_success_allowed")
@@ -733,6 +740,7 @@ def _save_laser_file_if_configured(
             username=config.laser_smb_username,
             password=config.laser_smb_password,
             require_signing=config.laser_smb_require_signing,
+            require_secure_negotiate=config.laser_smb_require_secure_negotiate,
         )
     except Exception as exc:
         return {"status": "failed", "target": config.laser_smb_unc, "file_name": file_name, "error": str(exc)}
@@ -813,6 +821,7 @@ def _write_smb_file(
     username: str,
     password: str,
     require_signing: bool,
+    require_secure_negotiate: bool,
 ) -> None:
     try:
         import smbclient
@@ -826,6 +835,7 @@ def _write_smb_file(
     if len(parts) != 2 or not parts[0] or not parts[1]:
         raise ValueError("CHZ_LASER_SMB_UNC must include server and share")
     server = parts[0]
+    smbclient.ClientConfig(require_secure_negotiate=require_secure_negotiate)
     smbclient.register_session(
         server,
         username=username or "guest",

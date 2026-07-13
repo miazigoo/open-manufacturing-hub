@@ -681,7 +681,16 @@ async def test_marking_code_pool_retry_laser_copy_and_missing_file_response(clie
     get_settings.cache_clear()
     smb_calls = []
 
-    def fake_smb_write(unc_dir, file_name, payload, *, username, password, require_signing):
+    def fake_smb_write(
+        unc_dir,
+        file_name,
+        payload,
+        *,
+        username,
+        password,
+        require_signing,
+        require_secure_negotiate,
+    ):
         smb_calls.append(
             {
                 "unc_dir": unc_dir,
@@ -690,6 +699,7 @@ async def test_marking_code_pool_retry_laser_copy_and_missing_file_response(clie
                 "username": username,
                 "password": password,
                 "require_signing": require_signing,
+                "require_secure_negotiate": require_secure_negotiate,
             }
         )
 
