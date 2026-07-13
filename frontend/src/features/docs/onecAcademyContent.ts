@@ -1554,6 +1554,7 @@ export const academyPackBPages: PageSeed[] = [
     '| Headers | Content-Type: application/json | Что target API ожидает получить |',
     '| Token secret | $secret:dnp.api.token | Секретный токен, не raw value в config |',
     '| Timeout | 20 | Сколько ждать target API |',
+    '| Save response as | `dnp_response` | Имя переменной, куда OMH положит body ответа target API |',
     '',
     '## Исходящий запрос',
     '```text',
@@ -1572,11 +1573,29 @@ export const academyPackBPages: PageSeed[] = [
     '}',
     '```',
     '',
+    '## Если нужно вызвать несколько сервисов подряд',
+    'У каждого `Call endpoint` заполните `Save response as`. Тогда ответ первого сервиса можно использовать во втором запросе, а потом собрать общий JSON.',
+    '',
+    '```text',
+    'Call Service A',
+    '  Save response as: service_a',
+    '',
+    'Call Service B',
+    '  Body: {"service_a_id": "{{service_a.id}}"}',
+    '  Save response as: service_b',
+    '',
+    'Build JSON',
+    '  service_a_id: {{service_a.id}}',
+    '  service_b_status: {{service_b.status}}',
+    '```',
+    '',
+    'Для Preview заполните `Mock response JSON for Preview`. OMH не будет дергать внешний сервис, но следующие шаги увидят переменные `service_a` и `service_b` как при реальном запуске.',
+    '',
     '## Что должно получиться',
-    '::expected-result{items="Flow показывает target step after build_json|target.request artifact содержит POST /api/marking/pools|target.response artifact сохраняет status и body|Ошибки target API видны без потери оригинального текста"}',
+    '::expected-result{items="Flow показывает target step after build_json|target.request artifact содержит POST /api/marking/pools|target.response artifact сохраняет status и body|Save response as создает переменную для следующих steps|Ошибки target API видны без потери оригинального текста"}',
     '',
     '## Проверьте себя',
-    '::checklist{id="pack-b-send-to-external-api" items="Создал DNP Service connector|Выбрал POST|Указал path /api/marking/pools|Body source target_payload|Настроил token secret|Настроил timeout|Включил request/response artifacts"}',
+    '::checklist{id="pack-b-send-to-external-api" items="Создал DNP Service connector|Выбрал POST|Указал path /api/marking/pools|Body source target_payload|Заполнил Save response as если ответ нужен дальше|Настроил token secret|Настроил timeout|Включил request/response artifacts"}',
     '',
     '## Частые ошибки',
     '::common-mistakes{items="Хранить target token raw в flow config|Отправлять request.body вместо target_payload|Не указывать Content-Type application/json|Слишком длинный sync timeout для 1C пользователя|Не сохранять target.response artifact"}',
@@ -3429,8 +3448,21 @@ Visual Flow Builder — экран, где внедренец собирает i
 - OData lookup: ищет объект в 1C OData.
 - JSON Builder: собирает target payload.
 - CHZ pool delivery: принимает \`order_number\` и \`full_codes_base64\`, сохраняет файл для лазера и отправляет пул в DnP через настройки CHZ Delivery.
-- Target call: отправляет JSON во внешнюю систему.
+- Target call: отправляет JSON во внешнюю систему. Если заполнить \`Save response as\`, body ответа становится переменной для следующих steps.
 - Preview: проверяет flow на sample request до публикации.
+
+## Endpoint chains
+\`Call endpoint\` можно ставить несколько раз подряд. Это нужно, когда OMH получил запрос от 1C, вызвал сервис A, взял из его ответа \`id\`, вызвал сервис B, а затем собрал общий payload в JSON Builder.
+
+Пример:
+
+~~~text
+Call Service A -> Save response as service_a
+Call Service B -> Body uses {{service_a.id}} -> Save response as service_b
+Build JSON -> uses {{request.body.order_number}}, {{service_a.id}}, {{service_b.status}}
+~~~
+
+Для безопасного Preview заполните \`Mock response JSON for Preview\`: оператор проверит цепочку переменных без реального вызова внешнего API.
 
 ## CHZ pool delivery
 Используйте этот блок, когда 1C сама отправляет пул кодов Честного знака. В production источник кодов должен быть \`Base64 full codes из 1С\`, путь обычно \`request.body.full_codes_base64\`. Режим \`Already decoded codes\` оставлен для редких интеграций, где внешний источник уже передает реальный GS1-код с ASCII 29.

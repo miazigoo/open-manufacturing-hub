@@ -36,7 +36,7 @@ function defaultBuilder(slug = 'onec-pool-to-dnp'): BuilderJson {
       { id: 'resolve_customer', type: 'resolve_object', name: 'Resolve Customer', resolver: 'resolve_customer', object_type: 'Customer', input: { inn: 'request.body.inn' }, save_as: 'customer', inject: { customer_uuid: 'customer.uuid' }, required: true, use_cache: true },
       { id: 'resolve_product', type: 'resolve_object', name: 'Resolve Product', resolver: 'resolve_product', object_type: 'Product', input: { article: 'request.body.product_code' }, save_as: 'product', inject: { product_uuid: 'product.uuid' }, required: true, use_cache: true },
       { id: 'build_payload', type: 'build_json', name: 'Build target JSON', save_as: 'target_payload', template: { pool_id: '{{request.body.pool_id}}', customer_uuid: '{{customer.uuid}}', product_uuid: '{{product.uuid}}', codes: '{{request.body.codes}}' } },
-      { id: 'send_to_target', type: 'call_endpoint', name: 'Send to endpoint', connector: 'DNP Service', method: 'POST', path: '/api/marking/pools', body: '{{target_payload}}' },
+      { id: 'send_to_target', type: 'call_endpoint', name: 'Send to endpoint', connector: 'DNP Service', method: 'POST', path: '/api/marking/pools', headers: { 'Content-Type': 'application/json' }, body: '{{target_payload}}', save_response_as: 'target_response', mock_response_json: { success: true, external_id: 'preview-id' } },
       { id: 'return_response', type: 'return_response', name: 'Return response', body: '{{response}}' },
     ],
   };
@@ -166,7 +166,7 @@ export function VisualFlowBuilderPage() {
         : type === 'build_xml_response'
           ? { id, type, name: 'Build XML response', response_body_type: 'xml', status_code: 200, headers: { 'Content-Type': 'application/xml' }, body_template: '<Response><Success>true</Success><Number>{{number}}</Number></Response>' }
         : type === 'call_endpoint'
-          ? { id, type, name: 'Call endpoint', connector: 'DNP Service', method: 'POST', path: '/', body: '{{target_payload}}' }
+          ? { id, type, name: 'Call endpoint', connector: 'DNP Service', method: 'POST', path: '/', headers: { 'Content-Type': 'application/json' }, body: '{{target_payload}}', save_response_as: 'target_response', mock_response_json: { success: true, id: 'preview-id' } }
           : { id, type, name: 'Read variable', path: 'request.body.value', save_as: 'value' };
     setBuilder({ ...builder, steps: [...builder.steps, base] });
     setSelectedStepId(id);
@@ -412,6 +412,26 @@ export function VisualFlowBuilderPage() {
   }
 
   function CallEndpointEditor({ step, update, connectorNames }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; connectorNames: string[] }) {
-    return <div className="metadata-grid compact-grid no-margin"><label className="field-label">Connector<input list="target-connector-names" value={String(step.connector ?? '')} onChange={(event) => update(step.id, { connector: event.target.value })} /><datalist id="target-connector-names">{connectorNames.map((name) => <option key={name} value={name} />)}</datalist></label><label className="field-label">Method<select value={String(step.method ?? 'POST')} onChange={(event) => update(step.id, { method: event.target.value })}><option value="POST">POST</option><option value="PUT">PUT</option><option value="PATCH">PATCH</option></select></label><label className="field-label">Path<input value={String(step.path ?? '')} onChange={(event) => update(step.id, { path: event.target.value })} /></label><label className="field-label full-span">Body<input value={String(step.body ?? '{{target_payload}}')} onChange={(event) => update(step.id, { body: event.target.value })} /></label></div>;
+    const headersJson = asJson(step.headers ?? { 'Content-Type': 'application/json' });
+    const mockResponseJson = asJson(step.mock_response_json ?? {});
+    return <div className="stack-form">
+      <div className="builder-help-card">
+        <strong>Endpoint response becomes a variable</strong>
+        <span>Этот шаг сохраняет исходящий запрос и ответ в Timeline. Если заполнить <code>Save response as</code>, body ответа станет переменной для следующих шагов: например <code>{'{{service_a.id}}'}</code> в следующем endpoint или Build JSON.</span>
+      </div>
+      <div className="metadata-grid endpoint-call-grid no-margin">
+        <label className="field-label">Connector<input list="target-connector-names" value={String(step.connector ?? '')} onChange={(event) => update(step.id, { connector: event.target.value })} title="Имя REST/HTTP connector. Используйте connector для production: base URL, auth и timeout хранятся централизованно." /><datalist id="target-connector-names">{connectorNames.map((name) => <option key={name} value={name} />)}</datalist></label>
+        <label className="field-label">Direct URL<input value={String(step.url ?? '')} onChange={(event) => update(step.id, { url: event.target.value })} title="Опционально. Если заполнено, OMH вызовет этот URL напрямую вместо connector. Для production обычно лучше connector." /></label>
+        <label className="field-label">Method<select value={String(step.method ?? 'POST')} onChange={(event) => update(step.id, { method: event.target.value })}><option value="POST">POST</option><option value="PUT">PUT</option><option value="PATCH">PATCH</option></select></label>
+        <label className="field-label">Path<input value={String(step.path ?? '')} onChange={(event) => update(step.id, { path: event.target.value })} title="Путь относительно connector base URL. Можно использовать переменные: /orders/{{request.body.order_number}}." /></label>
+        <label className="field-label">Save response as<input value={String(step.save_response_as ?? '')} onChange={(event) => update(step.id, { save_response_as: event.target.value })} placeholder="service_a" title="Имя переменной для body ответа. Следующие шаги смогут читать service_a.id, service_a.status и т.д." /></label>
+      </div>
+      <label className="field-label">Body template<input value={String(step.body ?? '{{target_payload}}')} onChange={(event) => update(step.id, { body: event.target.value })} title="Можно передать целый объект {{target_payload}} или собрать объект в Build JSON перед этим шагом." /></label>
+      <label className="field-label">Headers JSON<CodeEditor value={headersJson} onChange={(value) => { try { update(step.id, { headers: parseJsonObject(value, 'Headers JSON') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid headers JSON'); } }} language="json" minRows={4} /></label>
+      <label className="field-label">Mock response JSON for Preview<CodeEditor value={mockResponseJson} onChange={(value) => { try { update(step.id, { mock_response_json: parseJsonObject(value, 'Mock response JSON') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid mock response JSON'); } }} language="json" minRows={5} title="Preview использует этот ответ без реального вызова внешнего сервиса. Так можно проверить следующие шаги цепочки." /></label>
+      <div className="hint-chip-row">
+        {['{{target_payload}}', '{{response.body}}', '{{service_a.id}}', '{{service_b.status}}'].map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)} title="Click to copy">{hint}</button>)}
+      </div>
+    </div>;
   }
 }

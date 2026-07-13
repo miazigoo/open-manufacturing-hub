@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import select
 
 from app.connectors import repository as connector_repository
+from app.connectors.builtin.onec.client import join_url
 from app.connectors.builtin.onec.odata import read_odata
 from app.connectors.builtin.rest_connector import RESTConnector
 from app.connectors.manager import ConnectorManager
@@ -315,15 +316,17 @@ class FlowCallEndpointStep:
     async def execute(self, context: PipelineContext) -> StepResult:
         config = _config(context)
         connector_name = str(config.get("connector") or context.target_system or "")
-        direct_url = str(config.get("url") or "").strip()
+        scope = _scope(context)
         try:
-            body = render_template(config.get("body") or "{{target_payload}}", _scope(context))
+            direct_url = str(render_template(str(config.get("url") or ""), scope) or "").strip()
+            rendered_path = str(render_template(str(config.get("path") or ""), scope) or "").strip()
+            body = render_template(config.get("body") or "{{target_payload}}", scope)
         except Exception as exc:
             return _failed("TARGET_BODY_BUILD_FAILED", str(exc), config, "Check call body variable path.")
         payload = body if isinstance(body, dict) else {"body": body}
         method = str(config.get("method") or "POST").upper()
         headers = config.get("headers") if isinstance(config.get("headers"), dict) else {}
-        request_payload = {"connector": connector_name or None, "method": method, "url": direct_url or None, "path": config.get("path"), "headers": headers, "body": payload}
+        request_payload = {"connector": connector_name or None, "method": method, "url": direct_url or None, "path": rendered_path or None, "headers": headers, "body": payload}
         request_artifact = ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "outgoing_request.json", request_payload)
         if direct_url:
             mock_response = config.get("mock_response_json")
@@ -366,7 +369,21 @@ class FlowCallEndpointStep:
             variables = _endpoint_variables(context, config, request_payload, response, mock_response)
             return StepResult.success("Endpoint mock call complete", artifacts=[request_artifact, ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", response)], variables_update=variables)
         manager = context.connector_manager or ConnectorManager(context.session)
-        connector_context = ConnectorContext(event_id=context.event.id, run_id=context.run.id, step_id=context.current_step.id if context.current_step else None, correlation_id=context.correlation_id, source_system=context.source_system, target_system=connector_name, dry_run=context.dry_run, metadata={"step_name": config["step_id"], "path": config.get("path"), "method": request_payload["method"]})
+        connector_context = ConnectorContext(event_id=context.event.id, run_id=context.run.id, step_id=context.current_step.id if context.current_step else None, correlation_id=context.correlation_id, source_system=context.source_system, target_system=connector_name, dry_run=context.dry_run, metadata={"step_name": config["step_id"], "path": rendered_path, "method": request_payload["method"]})
+        if connector.connector_type == "rest" and rendered_path:
+            connector_config = await SecretResolver(context.session).resolve_config(connector.config_json or {})
+            base_url = str(connector_config.get("base_url") or connector_config.get("url") or "").strip()
+            connector_config = {**connector_config, "url": join_url(base_url, rendered_path), "method": method, "headers": headers or connector_config.get("headers") or {}}
+            result = await RESTConnector().dry_run_send(connector_config, payload, connector_context) if context.dry_run else await RESTConnector().send(connector_config, payload, connector_context)
+            response = {"status_code": result.status_code, "body": result.response_payload or {}}
+            response_body = _endpoint_response_body(response)
+            variables = _endpoint_variables(context, config, result.request_payload or request_payload, response, response_body)
+            artifacts = [ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "outgoing_request.json", result.request_payload or request_payload)]
+            if result.response_payload is not None:
+                artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "incoming_response.json", result.response_payload))
+            if not result.success:
+                return _failed(result.error_code or "TARGET_CALL_FAILED", result.error_message or "Target call failed", config, result.hint or "Check target connector settings and step path.", artifacts)
+            return StepResult.success("REST endpoint call complete", artifacts=artifacts, variables_update=variables)
         result = await manager.send_to_target(connector_name, payload, connector_context)
         response = {"status_code": result.status_code, "body": result.response_payload or {}}
         response_body = _endpoint_response_body(response)

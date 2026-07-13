@@ -174,9 +174,15 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 request_preview = {"save_as": step.get("save_as") or "target_payload"}
             elif step_type == "call_endpoint":
                 body = render_template(step.get("body") or "{{target_payload}}", scope)
+                rendered_url = str(render_template(str(step.get("url") or ""), scope) or "").strip()
+                rendered_path = str(render_template(str(step.get("path") or ""), scope) or "").strip()
                 response = {"status_code": 200, "body": step.get("mock_response_json") or {"preview": True}}
-                result = {"would_call": {"connector": step.get("connector"), "method": step.get("method", "POST"), "url": step.get("url"), "path": step.get("path"), "body": body}, "response": response}
+                result = {"would_call": {"connector": step.get("connector"), "method": step.get("method", "POST"), "url": rendered_url or None, "path": rendered_path or None, "body": body}, "response": response}
                 variables["response"] = response
+                save_response_as = str(step.get("save_response_as") or "").strip()
+                if save_response_as:
+                    variables[save_response_as] = response["body"]
+                    variables[f"{save_response_as}_http"] = response
                 target_request = result["would_call"]
                 request_preview = result["would_call"]
             elif step_type in {"return_response", "build_xml_response"}:

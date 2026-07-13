@@ -526,6 +526,9 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .chz-pool-field-grid input,
 .chz-pool-field-grid select { min-width: 0; font-family: var(--font-mono); font-size: 12px; }
 .chz-pool-field-grid .check-row { min-height: 64px; align-items: center; border: 1px solid var(--line); background: rgba(0,0,0,.12); padding: 10px 12px; }
+.endpoint-call-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.endpoint-call-grid input,
+.endpoint-call-grid select { min-width: 0; font-family: var(--font-mono); font-size: 12px; }
 .step-editor-panel .hint-chip-row { align-items: stretch; }
 .step-editor-panel .hint-chip { min-width: 0; overflow-wrap: anywhere; text-align: left; }
 @media (max-width: 1320px) { .visual-builder-grid { grid-template-columns: 260px minmax(0, 1fr); } .builder-preview-panel { grid-column: 1 / -1; position: static; } }

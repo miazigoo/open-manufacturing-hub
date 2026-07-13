@@ -135,6 +135,64 @@ async def test_flow_builder_odata_chaining_selects_fields_and_ignores_empty_filt
     }
 
 
+async def test_flow_builder_endpoint_response_can_feed_next_payload(client):
+    builder = {
+        "version": 1,
+        "input": {"endpoint_slug": "endpoint-chain", "input_mode": "json", "response_mode": "sync_response"},
+        "steps": [
+            {
+                "id": "call_service_a",
+                "type": "call_endpoint",
+                "name": "Call service A",
+                "connector": "Service A",
+                "method": "POST",
+                "path": "/lookup",
+                "body": {"order_number": "{{request.body.order_number}}"},
+                "save_response_as": "service_a",
+                "mock_response_json": {"id": "A-100", "status": "accepted"},
+            },
+            {
+                "id": "call_service_b",
+                "type": "call_endpoint",
+                "name": "Call service B",
+                "connector": "Service B",
+                "method": "POST",
+                "path": "/details/{{service_a.id}}",
+                "body": {"service_a_id": "{{service_a.id}}"},
+                "save_response_as": "service_b",
+                "mock_response_json": {"status": "ready", "external_code": "B-200"},
+            },
+            {
+                "id": "build_payload",
+                "type": "build_json",
+                "name": "Build combined payload",
+                "save_as": "target_payload",
+                "template": {
+                    "order_number": "{{request.body.order_number}}",
+                    "service_a_id": "{{service_a.id}}",
+                    "service_b_status": "{{service_b.status}}",
+                    "service_b_code": "{{service_b.external_code}}",
+                },
+            },
+        ],
+    }
+
+    response = await client.post("/api/flow-builder/preview", json={"builder_json": builder, "sample_request": {"order_number": "260703/5442"}})
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    assert body["variables"]["service_a"] == {"id": "A-100", "status": "accepted"}
+    assert body["variables"]["service_b"] == {"status": "ready", "external_code": "B-200"}
+    assert body["steps"][1]["request_preview"]["path"] == "/details/A-100"
+    assert body["final_payload_preview"] == {
+        "order_number": "260703/5442",
+        "service_a_id": "A-100",
+        "service_b_status": "ready",
+        "service_b_code": "B-200",
+    }
+
+
 async def test_flow_builder_foreach_combines_nested_odata_results(client):
     builder = {
         "version": 1,
