@@ -371,6 +371,15 @@ Scenario Router помогает выбрать правильный путь, �
 
 Scenario Router использует эту же матрицу. Поэтому planned/missing сценарии не должны открывать мастер даже если pattern зарегистрирован.
 
+## Если старт заблокирован
+
+Заблокированный старт — это не ошибка UI, а защита от запуска неполного сценария.
+
+1. Откройте \`Покрытие\` и посмотрите, какой gap мешает старту: wizard, docs, training, troubleshooting или E2E.
+2. Откройте \`Инструкцию\`, если она уже есть, и проверьте ручной путь без production-изменений.
+3. Если есть учебный пример, сначала выполните сценарий в \`/training\` и проверьте Timeline.
+4. Не обходите блокировку через advanced editor: production-ready считается только сценарий с понятным dry-run/replay путём.
+
 ## Gate перед релизом
 
 Проверка:
@@ -904,23 +913,23 @@ Mapping берёт:
         ].join('\n') }
       ] },
       { id: 'choosing-integration-scenario', title: 'Как выбрать сценарий интеграции', description: 'Решение от бизнес-задачи к pattern wizard.', order: 20, pages: [
-        { packageId: 'core', sectionId: 'choosing-integration-scenario', slug: 'overview', title: 'Как выбрать сценарий интеграции', description: 'Scenario Router, coverage matrix и pattern certification в одном процессе.', order: 10, markdown: `# Как выбрать сценарий интеграции
+        { packageId: 'core', sectionId: 'choosing-integration-scenario', slug: 'overview', title: 'Как выбрать сценарий интеграции', description: 'Scenario Router, матрица покрытия и готовность мастеров в одном процессе.', order: 10, markdown: `# Как выбрать сценарий интеграции
 
 Используйте порядок:
 
 1. Откройте Scenario Router.
 2. Выберите, кто вызывает OMH, что приходит и какой результат нужен.
-3. Проверьте Coverage Matrix: сценарий должен быть \`ready\` или осознанно \`partial\`.
-4. Проверьте Pattern Certification: мастер должен быть \`ready_for_training\` или иметь понятные gaps.
+3. Проверьте матрицу покрытия: сценарий должен быть \`ready\` или осознанно \`partial\`.
+4. Проверьте готовность мастера: мастер должен быть \`ready_for_training\` или иметь понятные gaps.
 5. Запустите preview/test и только потом включайте production.
 
 ::open-page{route="/integration-start" label="Открыть Scenario Router"}
-::open-page{route="/integration-coverage" label="Открыть Coverage Matrix"}
-::open-page{route="/integration-patterns/certification" label="Открыть Pattern Certification"}
+::open-page{route="/integration-coverage" label="Открыть матрицу покрытия"}
+::open-page{route="/integration-patterns/certification" label="Открыть готовность мастеров"}
 
 ## Почему не начинать с технических объектов
 
-Пользователь знает задачу: 1С отправляет заказ, WMS присылает факт, внешний API ждёт ответ. Поэтому старт должен быть от сценария. Технические детали остаются внутри мастера и в advanced pages.
+Пользователь знает задачу: 1С отправляет заказ, WMS присылает факт, внешний API ждёт ответ. Поэтому старт должен быть от сценария. Технические детали остаются внутри мастера и на расширенных страницах.
 
 ## Быстрые решения
 
@@ -933,12 +942,12 @@ Mapping берёт:
 | OMH сам читает 1С по расписанию | Poll OData -> Send Target |
 | WMS пишет факт в 1С | WMS Fact -> 1C |` },
       ] },
-      { id: 'pattern-readiness', title: 'Готовность паттернов', description: 'Certification statuses и quality gate для мастеров.', order: 30, pages: [
-        { packageId: 'core', sectionId: 'pattern-readiness', slug: 'overview', title: 'Готовность паттернов', description: 'Чем readiness отличается от business coverage.', order: 10, markdown: `# Готовность паттернов
+      { id: 'pattern-readiness', title: 'Готовность паттернов', description: 'Статусы готовности и quality gate для мастеров.', order: 30, pages: [
+        { packageId: 'core', sectionId: 'pattern-readiness', slug: 'overview', title: 'Готовность паттернов', description: 'Чем готовность мастера отличается от покрытия бизнес-сценария.', order: 10, markdown: `# Готовность паттернов
 
-Pattern Certification отвечает на вопрос: **качественно ли реализован мастер для сценария**.
+Готовность мастера отвечает на вопрос: **качественно ли реализован мастер для сценария**.
 
-Coverage Matrix отвечает на другой вопрос: **покрывает ли OMH бизнес-требование**.
+Матрица покрытия отвечает на другой вопрос: **покрывает ли OMH бизнес-требование**.
 
 ::open-page{route="/integration-patterns/certification" label="Открыть готовность сценариев"}
 

@@ -1736,6 +1736,7 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 /* Integration Pattern Library / Scenario Router */
 .integration-start-hero { background: radial-gradient(circle at 82% 18%, rgba(114,167,255,.16), transparent 24rem), linear-gradient(145deg, rgba(143,198,180,.08), rgba(240,179,90,.06)); }
 .scenario-router-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.scenario-router-grid > .empty-state { grid-column: 1 / -1; }
 .scenario-router-card { display: grid; gap: 12px; min-width: 0; }
 .questionnaire-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .questionnaire-grid .wide { grid-column: 1 / -1; }

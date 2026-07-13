@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { integrationCoverageApi, type IntegrationCoverageItem } from '../api/integrationCoverage';
 import { integrationPatternsApi, localized, type IntegrationPattern, type PatternRecommendRequest } from '../api/integrationPatterns';
 import { patternCertificationApi, type PatternCertification, type PatternCertificationStatus } from '../api/patternCertification';
+import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
@@ -80,11 +81,11 @@ export function IntegrationStartPage() {
       <section className="page-header integration-start-hero">
         <span className="eyebrow">Scenario Router</span>
         <h1>Что вы хотите интегрировать?</h1>
-        <p>Начните с реальной задачи. OMH подберёт паттерн из coverage matrix, объяснит шаги и откроет только готовый мастер или production workbench.</p>
+        <p>Начните с реальной задачи. OMH подберёт паттерн из матрицы покрытия, объяснит шаги и откроет только готовый мастер или production workbench.</p>
         <div className="hero-meta">
-          <StatusBadge status="ready" label={`${coverage.data?.summary.ready ?? 0} ready`} />
-          <StatusBadge status="partial" label={`${coverage.data?.summary.partial ?? 0} partial`} />
-          <StatusBadge status="planned" label={`${coverage.data?.summary.planned ?? 0} planned`} />
+          <StatusBadge status="ready" label={`${coverage.data?.summary.ready ?? 0} готово`} />
+          <StatusBadge status="partial" label={`${coverage.data?.summary.partial ?? 0} частично`} />
+          <StatusBadge status="planned" label={`${coverage.data?.summary.planned ?? 0} план`} />
           <Link className="primary-link" to="/integration-coverage">Матрица покрытия</Link>
           <Link className="primary-link" to="/integration-patterns/certification">Готовность мастеров</Link>
           <Link className="primary-link" to="/docs/core/start/integration-scenarios">Какие интеграции можно настроить</Link>
@@ -112,17 +113,30 @@ export function IntegrationStartPage() {
 
       {(startError || recommendError) && <div className="error-state compact">{startError ?? recommendError}</div>}
 
-      <SectionCard title="Выберите по сценарию" description="Карточки берутся из Integration Coverage Matrix. Если сценарий planned или не имеет готового wizard/workbench, старт заблокирован.">
+      <SectionCard title="Выберите по сценарию" description="Карточки берутся из матрицы покрытия. Если сценарий запланирован или мастер ещё не готов, старт заблокирован, но инструкция и причины остаются открытыми.">
         <section className="scenario-router-grid">
-          {scenarioCards.map((card) => {
-            const pattern = card.recommended_pattern ? patternById.get(card.recommended_pattern) : undefined;
-            const patternCertification = card.recommended_pattern ? certificationById.get(card.recommended_pattern) : undefined;
-            return <ScenarioCard key={card.requirement_id} card={card} pattern={pattern} certification={patternCertification} onStart={() => startScenario(card)} starting={start.isPending} />;
-          })}
+          {scenarioCards.length === 0 ? (
+            <EmptyState
+              title="Сценарии не найдены"
+              detail="Матрица покрытия не вернула стартовые карточки. Проверьте coverage или начните с учебного стенда."
+              actions={(
+                <>
+                  <Link className="primary-link" to="/integration-coverage">Открыть матрицу</Link>
+                  <Link className="primary-link" to="/training">Учебный стенд</Link>
+                </>
+              )}
+            />
+          ) : (
+            scenarioCards.map((card) => {
+              const pattern = card.recommended_pattern ? patternById.get(card.recommended_pattern) : undefined;
+              const patternCertification = card.recommended_pattern ? certificationById.get(card.recommended_pattern) : undefined;
+              return <ScenarioCard key={card.requirement_id} card={card} pattern={pattern} certification={patternCertification} onStart={() => startScenario(card)} starting={start.isPending} />;
+            })
+          )}
         </section>
       </SectionCard>
 
-      <SectionCard title="Подобрать мастер по вопросам" description="Если не уверены, ответьте на короткие вопросы. Router вызовет /api/integration-patterns/recommend.">
+      <SectionCard title="Подобрать мастер по вопросам" description="Если не уверены, ответьте на короткие вопросы. OMH подберёт безопасный мастер и покажет, почему он подходит.">
         <form className="questionnaire-grid" onSubmit={submit}>
           <label className="field-label">Кто вызывает OMH?
             <select value={answers.source_system} onChange={(event) => setAnswers({ ...answers, source_system: event.target.value })}>
@@ -155,24 +169,32 @@ export function IntegrationStartPage() {
       </SectionCard>
 
       {recommend.data && (
-        <SectionCard title="Рекомендация Scenario Router" description="Паттерны отсортированы по confidence. Откройте детали или стартуйте доступный мастер.">
+        <SectionCard title="Рекомендация Scenario Router" description="Сначала смотрите причину и статус готовности. Стартуйте только доступный мастер; для заблокированных сценариев откройте покрытие или инструкцию.">
           <div className="recommendation-list">
             {recommend.data.recommended_patterns.map((item) => {
               const coverageItem = coverage.data?.items.find((candidate) => candidate.recommended_pattern === item.pattern_id && candidate.show_in_integration_start);
               const blockedByCoverage = coverageItem ? !canStartRequirement(coverageItem) : false;
+              const guideLink = coverageItem?.recipe_link ?? coverageItem?.docs_links[0] ?? null;
+              const canStartPattern = item.pattern.status === 'available' && !blockedByCoverage;
               return (
                 <article className="recommendation-card" key={item.pattern_id}>
                   <div>
-                    <span className="eyebrow">confidence {Math.round(item.confidence * 100)}%</span>
+                    <span className="eyebrow">совпадение {Math.round(item.confidence * 100)}%</span>
                     <h3>{localized(item.pattern.title)}</h3>
                     <p>{item.reason}</p>
-                    {coverageItem && <small className="muted">Coverage: {localized(coverageItem.title)} · {coverageItem.readiness_score}%</small>}
+                    {coverageItem && <small className="muted">Покрытие: {localized(coverageItem.title)} · {coverageItem.readiness_score}%</small>}
                   </div>
                   <div className="action-row wrap-actions">
-                    <StatusBadge status={coverageItem?.status ?? item.pattern.status} label={coverageItem ? coverageItem.status : (item.pattern.status === 'available' ? 'доступен' : 'скоро')} />
+                    <StatusBadge status={coverageItem?.status ?? item.pattern.status} label={coverageItem ? readinessLabel(coverageItem.status) : readinessLabel(item.pattern.status)} />
                     <StatusBadge status={certificationById.get(item.pattern_id)?.certification_status} label={certificationStartLabel(certificationById.get(item.pattern_id)?.certification_status)} compact />
-                    <Link className="primary-link" to={`/integration-patterns/${item.pattern_id}`}>Детали</Link>
-                    <button className="primary-button" disabled={item.pattern.status !== 'available' || blockedByCoverage || start.isPending} onClick={() => start.mutate(item.pattern_id)}>{blockedByCoverage ? 'Подробнее' : 'Открыть мастер'}</button>
+                    <Link className="primary-link" to={`/integration-patterns/${item.pattern_id}`}>План мастера</Link>
+                    {coverageItem && <Link className="primary-link" to={`/integration-coverage?scenario=${coverageItem.requirement_id}`}>Покрытие</Link>}
+                    {guideLink && <Link className="primary-link" to={guideLink}>Инструкция</Link>}
+                    {canStartPattern ? (
+                      <button className="primary-button" disabled={start.isPending} onClick={() => start.mutate(item.pattern_id)}>Открыть мастер</button>
+                    ) : (
+                      <span className="status-badge muted compact">{blockedByCoverage ? 'Старт заблокирован до закрытия пробелов' : 'Мастер ещё не готов'}</span>
+                    )}
                   </div>
                 </article>
               );
@@ -194,7 +216,7 @@ function ScenarioCard({ card, pattern, certification, onStart, starting }: { car
       <div className="scenario-card-head">
         <span className="eyebrow">{card.requirement_id}</span>
         <div className="badge-row">
-          <StatusBadge status={card.status} label={`${card.status} · ${card.readiness_score}%`} compact />
+          <StatusBadge status={card.status} label={`${readinessLabel(card.status)} · ${card.readiness_score}%`} compact />
           <StatusBadge status={certification?.certification_status} label={certificationStartLabel(certification?.certification_status)} compact />
         </div>
       </div>
@@ -205,13 +227,13 @@ function ScenarioCard({ card, pattern, certification, onStart, starting }: { car
         <div><dt>Что получается</dt><dd>{localized(card.result_summary)}</dd></div>
         <div><dt>Мастер</dt><dd>{routeLabel}</dd></div>
       </dl>
-      {card.gaps.length > 0 && <small className="muted">Gaps: {card.gaps.slice(0, 2).join(' ')}</small>}
+      {card.gaps.length > 0 && <small className="muted">Почему может быть не готово: {card.gaps.slice(0, 2).join(' ')}</small>}
       <div className="action-row wrap-actions">
-        <button className="primary-button" disabled={!canStart || starting} onClick={onStart}>{canStart ? 'Настроить' : 'Настроить недоступно'}</button>
+        <button className="primary-button" disabled={!canStart || starting} onClick={onStart}>{canStart ? 'Настроить' : 'Пока недоступно'}</button>
         {guideLink ? <Link className="primary-link" to={guideLink}>Открыть инструкцию</Link> : <span className="status-badge muted compact">Инструкция будет добавлена позже</span>}
         {trainingExampleId ? <Link className="primary-link" to={`/training?exampleId=${encodeURIComponent(trainingExampleId)}`}>Попробовать на учебном стенде</Link> : <span className="status-badge muted compact">Учебный пример будет добавлен позже</span>}
         {card.recommended_pattern && <Link className="primary-link" to={`/integration-patterns/${card.recommended_pattern}`}>Открыть план</Link>}
-        <Link className="primary-link" to={`/integration-coverage?scenario=${card.requirement_id}`}>Coverage</Link>
+        <Link className="primary-link" to={`/integration-coverage?scenario=${card.requirement_id}`}>Покрытие</Link>
       </div>
     </article>
   );
@@ -219,6 +241,18 @@ function ScenarioCard({ card, pattern, certification, onStart, starting }: { car
 
 function canStartRequirement(item: IntegrationCoverageItem) {
   return Boolean(item.wizard_route ?? item.workbench_route) && startableCoverageStatuses.has(item.status) && startableWizardStatuses.has(item.statuses.wizard);
+}
+
+function readinessLabel(status?: string | null) {
+  if (status === 'ready') return 'готово';
+  if (status === 'partial') return 'частично';
+  if (status === 'planned') return 'запланировано';
+  if (status === 'missing_docs') return 'нет инструкции';
+  if (status === 'missing_wizard') return 'нет мастера';
+  if (status === 'missing_training') return 'нет учебного примера';
+  if (status === 'available') return 'доступен';
+  if (status === 'registered') return 'зарегистрирован';
+  return status ?? 'неизвестно';
 }
 
 function Question({ label, value, onChange, unknown = false }: { label: string; value: boolean | null; onChange: (value: boolean | null) => void; unknown?: boolean }) {
