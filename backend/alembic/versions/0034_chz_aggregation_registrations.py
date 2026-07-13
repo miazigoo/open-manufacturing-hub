@@ -1,6 +1,6 @@
 """chz aggregation registrations
 
-Revision ID: 0034_chz_aggregation_registrations
+Revision ID: 0034_chz_agg_reg
 Revises: 0033_data_contract_mapping
 Create Date: 2026-07-13
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0034_chz_aggregation_registrations"
+revision: str = "0034_chz_agg_reg"
 down_revision: str | None = "0033_data_contract_mapping"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
