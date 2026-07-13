@@ -68,6 +68,7 @@ export const integrationFlowsApi = {
   export: (id: string) => request<Record<string, unknown>>(`/api/integration-flows/${id}/export`),
   test: (id: string, payload: { input_mode: string; payload_json?: Record<string, unknown> | null; payload_text?: string | null; headers_json?: Record<string, string>; dry_run?: boolean }) => request<Record<string, unknown>>(`/api/integration-flows/${id}/test`, { method: 'POST', body: JSON.stringify(payload) }),
   installMarkingPool: () => request<IntegrationFlow>('/api/integration-flows/presets/marking-pool-to-internal-service/install', { method: 'POST' }),
+  installOneCChzPoolDelivery: () => request<IntegrationFlow>('/api/integration-flows/presets/onec-chz-pool-delivery/install', { method: 'POST' }),
   installTwoODataToEndpoint: () => request<IntegrationFlow>('/api/integration-flows/presets/onec-post-two-odata-to-endpoint/install', { method: 'POST' }),
   installOperationKeyODataChain: () => request<IntegrationFlow>('/api/integration-flows/presets/operation-key-odata-chain/install', { method: 'POST' }),
   testMatcher: (payload: { input_mode: string; payload?: unknown; text?: string | null; headers?: Record<string, string>; query?: Record<string, string>; matcher_group: Record<string, unknown> }) => request<MatcherTestResponse>('/api/matchers/test', { method: 'POST', body: JSON.stringify(payload) }),

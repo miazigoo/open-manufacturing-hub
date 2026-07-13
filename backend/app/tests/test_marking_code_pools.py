@@ -205,6 +205,104 @@ async def test_onec_marking_code_pool_export_forwards_base64_pool_to_dnp(client,
     get_settings.cache_clear()
 
 
+async def test_onec_chz_pool_delivery_flow_endpoint_is_visible_and_executable(client, tmp_path, monkeypatch):
+    monkeypatch.setenv("OMH_MARKING_CODE_POOL_EXPORT_DIR", str(tmp_path))
+    monkeypatch.setenv(
+        "OMH_DNP_CHZ_CODE_POOL_IMPORT_URL",
+        "http://dnp.local/api/v2/integrations/omh/chz/code-pools/from-1c",
+    )
+    monkeypatch.setenv("OMH_DNP_SHARED_SECRET", "secret-token")
+    from app.core.config import get_settings
+    from app.marking_code_pools import service
+
+    get_settings.cache_clear()
+    calls = []
+
+    class FakeResponse:
+        status_code = 200
+        text = ""
+
+        @staticmethod
+        def json():
+            return {
+                "ok": True,
+                "sync_run_id": 12,
+                "order_1c_number": "260703/5442",
+                "order_dnp_name": "26-0703/5442",
+                "order_id": 99,
+                "rows_count": 1,
+                "created_count": 1,
+                "updated_count": 0,
+                "errors_count": 0,
+                "errors": [],
+            }
+
+    class FakeAsyncClient:
+        def __init__(self, *, timeout):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url, *, json, headers):
+            calls.append({"url": url, "json": json, "headers": headers, "timeout": self.timeout})
+            return FakeResponse()
+
+    monkeypatch.setattr(service.httpx, "AsyncClient", FakeAsyncClient)
+
+    package = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert package.status_code == 200, package.text
+
+    installed = await client.post("/api/scenario-library/onec_chz_pool_delivery/install")
+    assert installed.status_code == 200, installed.text
+    assert installed.json()["endpoint_url"] == "/api/bus/in/onec-chz-pool-delivery"
+
+    flows = await client.get("/api/integration-flows")
+    assert flows.status_code == 200, flows.text
+    flow = next(item for item in flows.json() if item["slug"] == "onec-chz-pool-delivery")
+    assert flow["builder_json"]["steps"][0]["type"] == "marking_code_pool_export"
+    assert "/api/bus/in/onec-chz-pool-delivery" in flow["onec_http_example"]
+
+    code_b64 = _full_code_base64(
+        b"0104646151697186215_<qlk<ZbCWFP>W2)foU" + bytes([29]) + b"93lzhU"
+    )
+    response = await client.post(
+        "/api/bus/in/onec-chz-pool-delivery",
+        json={
+            "source_document_id": "AEAE-000137",
+            "source_document_name": "Заказ на эмиссию AEAE-000137",
+            "order_number": "260703/5442",
+            "full_codes_base64": [code_b64],
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["event_id"]
+    result = body["response"]
+    assert result["success"] is True
+    assert result["status"] == "forwarded"
+    assert result["export"]["file_name"] == "KM_260703-5442___1_pcs.txt"
+    assert result["actions"]["local_outbox"]["status"] == "success"
+    assert result["actions"]["dnp_forward"]["status"] == "success"
+    assert calls[0]["json"]["payload"]["full_codes_base64"] == [code_b64]
+    assert (tmp_path / "KM_260703-5442___1_pcs.txt").exists()
+
+    timeline = await client.get(f"/api/events/{body['event_id']}/timeline")
+    assert timeline.status_code == 200, timeline.text
+    artifacts = [
+        artifact["name"]
+        for run in timeline.json()["runs"]
+        for step in run["steps"]
+        for artifact in step["artifacts"]
+    ]
+    assert "marking_code_pool_export_actions.json" in artifacts
+    get_settings.cache_clear()
+
+
 async def test_onec_marking_code_pool_export_keeps_dnp_forward_when_laser_share_fails(client, tmp_path, monkeypatch):
     monkeypatch.setenv("OMH_MARKING_CODE_POOL_EXPORT_DIR", str(tmp_path))
     monkeypatch.setenv(

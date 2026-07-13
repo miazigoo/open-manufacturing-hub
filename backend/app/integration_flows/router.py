@@ -34,6 +34,13 @@ async def install_marking_pool_preset(session: AsyncSession = Depends(get_sessio
     return await service._read_flow(flow, session)
 
 
+@router.post("/presets/onec-chz-pool-delivery/install", response_model=IntegrationFlowRead)
+async def install_onec_chz_pool_delivery_preset(session: AsyncSession = Depends(get_session)):
+    flow = await service.install_onec_chz_pool_delivery_preset(session)
+    await session.commit()
+    return await service._read_flow(flow, session)
+
+
 @router.post("/presets/onec-post-two-odata-to-endpoint/install", response_model=IntegrationFlowRead)
 async def install_two_odata_to_endpoint_preset(session: AsyncSession = Depends(get_session)):
     flow = await service.install_two_odata_to_endpoint_preset(session)

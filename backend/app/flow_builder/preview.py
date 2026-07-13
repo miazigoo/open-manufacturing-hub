@@ -127,6 +127,25 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 variables["selected_printer"] = {"name": selected_printer}
                 variables["rendered_zpl_labels"] = rendered_labels
                 request_preview = {"printer": selected_printer, "labels_count": len(labels), "print_mode": step.get("print_mode") or "dry_run", "first_zpl": rendered_labels[0]}
+            elif step_type == "marking_code_pool_export":
+                order_number = _required_preview_text(scope, step.get("order_number_path"), "order_number_path")
+                full_codes_base64 = _optional_preview_list(scope, step.get("full_codes_base64_path"))
+                codes = _optional_preview_list(scope, step.get("codes_path"))
+                if bool(full_codes_base64) == bool(codes):
+                    raise ValueError("Pass exactly one of full_codes_base64_path or codes_path")
+                result = {
+                    "success": True,
+                    "status": "preview",
+                    "order_number": order_number,
+                    "full_codes_base64_count": len(full_codes_base64 or []),
+                    "codes_count": len(codes or []),
+                    "allow_overwrite": step.get("allow_overwrite"),
+                    "actions_override": step.get("actions_override") if isinstance(step.get("actions_override"), dict) else None,
+                }
+                save_as = str(step.get("save_as") or "marking_pool_export")
+                variables[save_as] = result
+                variables["marking_pool_export"] = result
+                request_preview = {"will_save_local_outbox": True, "will_copy_laser_file": True, "will_forward_external": True}
             elif step_type == "xml_extract":
                 raw_xml = _sample_xml(sample_request)
                 fields = [field for field in step.get("fields") or [] if isinstance(field, dict)]
@@ -220,6 +239,31 @@ def _collection(value: Any, scope: dict[str, Any]) -> list[Any]:
             return []
         raise ValueError(f"Foreach items resolved to {type(resolved).__name__}, expected array")
     raise ValueError("Foreach items must be an array or a path/template string")
+
+
+def _required_preview_text(scope: dict[str, Any], path: Any, label: str) -> str:
+    value = _optional_preview_value(scope, path)
+    if value in (None, ""):
+        raise ValueError(f"{label} resolved to empty value")
+    return str(value)
+
+
+def _optional_preview_list(scope: dict[str, Any], path: Any) -> list[str] | None:
+    value = _optional_preview_value(scope, path)
+    if value in (None, ""):
+        return None
+    if not isinstance(value, list):
+        raise ValueError(f"{path} resolved to {type(value).__name__}, expected array")
+    return [str(item) for item in value if str(item)]
+
+
+def _optional_preview_value(scope: dict[str, Any], path: Any) -> Any:
+    if path in (None, ""):
+        return None
+    expression = str(path).strip()
+    if not expression:
+        return None
+    return render_template(expression, scope) if "{{" in expression else resolve_path(scope, expression)
 
 
 def _preview_printer_name(config: dict[str, Any], scope: dict[str, Any]) -> str:

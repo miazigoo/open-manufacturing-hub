@@ -23,6 +23,13 @@ async def install_marking_pool_flow(session: AsyncSession = Depends(get_session)
     return await flow_service._read_flow(flow, session)
 
 
+@router.post("/onec-chz-pool-delivery/install")
+async def install_onec_chz_pool_delivery_flow(session: AsyncSession = Depends(get_session)):
+    flow = await flow_service.install_onec_chz_pool_delivery_preset(session)
+    await session.commit()
+    return await flow_service._read_flow(flow, session)
+
+
 @router.post("/onec-post-two-odata-to-endpoint/install")
 async def install_two_odata_to_endpoint_flow(session: AsyncSession = Depends(get_session)):
     flow = await flow_service.install_two_odata_to_endpoint_preset(session)

@@ -15,6 +15,8 @@ from app.execution.result import ArtifactCreate, StepResult
 from app.integration_master.payload_renderer import PayloadRenderError, render_payload_step, render_xml_template as render_payload_xml_template
 from app.integration_master.schemas import PayloadStepConfig
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
+from app.marking_code_pools import service as marking_code_pool_service
+from app.marking_code_pools.schemas import MarkingCodePoolActionOverrides, OneCMarkingCodePoolExportRequest
 from app.packages_training.mock_dnp import submit_marking_pool
 from app.packages_training.mock_external_api import import_order
 from app.packages_training.mock_onec_http import accept_shipment_fact, save_order_external_id
@@ -545,6 +547,104 @@ class FlowPrintLabelsStep:
         return StepResult.success("Print labels complete", artifacts=artifacts, variables_update=variables)
 
 
+class FlowMarkingCodePoolExportStep:
+    name = "flow_marking_code_pool_export"
+    display_name = "CHZ Marking Code Pool Export"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        scope = _scope(context)
+        try:
+            request = _marking_code_pool_request(config, scope, context)
+        except Exception as exc:
+            return _failed(
+                "MARKING_POOL_REQUEST_BUILD_FAILED",
+                str(exc),
+                config,
+                "Проверьте пути order_number_path/full_codes_base64_path в настройках шага.",
+            )
+
+        request_summary = _marking_pool_request_summary(request)
+        request_artifact = ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "marking_code_pool_export_request.json", request_summary)
+
+        if context.dry_run:
+            try:
+                preview = await marking_code_pool_service.preview_onec_pool_export(context.session, request)
+            except Exception as exc:
+                return _failed(
+                    "MARKING_POOL_PREVIEW_FAILED",
+                    str(exc),
+                    config,
+                    "Проверьте номер заказа, Base64-коды и настройки CHZ delivery.",
+                    [request_artifact],
+                )
+            preview_payload = preview.model_dump(mode="json") if hasattr(preview, "model_dump") else dict(preview)
+            status = {"success": True, "status": "dry_run", "preview": preview_payload}
+            variables = _variables_with_step(context, config["step_id"], status)
+            _store_marking_pool_variables(variables, config, status)
+            return StepResult.dry_run(
+                "CHZ marking code pool export preview complete",
+                artifacts=[
+                    request_artifact,
+                    ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "marking_code_pool_export_preview.json", preview_payload),
+                ],
+                variables_update=variables,
+            )
+
+        try:
+            record, dnp_forward = await marking_code_pool_service.export_onec_pool_to_file(context.session, request)
+        except Exception as exc:
+            return _failed(
+                "MARKING_POOL_EXPORT_FAILED",
+                str(exc),
+                config,
+                "Проверьте кодировку full_codes_base64, доступность SMB-папки и DNP endpoint.",
+                [request_artifact],
+            )
+
+        metadata = record.metadata_json or {}
+        response_meta = metadata.get("response") if isinstance(metadata.get("response"), dict) else {}
+        actions = metadata.get("actions") if isinstance(metadata.get("actions"), dict) else {}
+        success = bool(response_meta.get("success", record.status != "failed"))
+        response_payload = {
+            "success": success,
+            "status": str(response_meta.get("status") or record.status),
+            "message": f"Accepted {record.total_codes} marking codes as {record.file_name}; status={record.status}",
+            "warnings": list(response_meta.get("warnings") or []),
+            "export": {
+                "id": str(record.id),
+                "order_number": record.order_number,
+                "file_name": record.file_name,
+                "file_path": record.file_path,
+                "total_codes": record.total_codes,
+                "content_sha256": record.content_sha256,
+                "status": record.status,
+                "error_message": record.error_message,
+            },
+            "actions": actions,
+            "external_forward": dnp_forward,
+            "dnp_forward": dnp_forward,
+        }
+        variables = _variables_with_step(context, config["step_id"], response_payload)
+        _store_marking_pool_variables(variables, config, response_payload)
+        variables["response"] = {"status_code": 200 if success else 502, "body": response_payload}
+
+        artifacts = [
+            request_artifact,
+            ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "marking_code_pool_export_response.json", response_payload),
+            ArtifactCreate(ArtifactType.VALIDATION_RESULT.value, "marking_code_pool_export_actions.json", {"actions": actions, "warnings": response_payload["warnings"]}),
+        ]
+        if not success:
+            return _failed(
+                "MARKING_POOL_DELIVERY_INCOMPLETE",
+                record.error_message or "CHZ marking code pool delivery failed",
+                config,
+                "Откройте actions artifact: там отдельно видны outbox, laser_file и external_forward.",
+                artifacts,
+            )
+        return StepResult.success("CHZ marking code pool delivered", artifacts=artifacts, variables_update=variables)
+
+
 class FlowReturnResponseStep:
     name = "flow_return_response"
     display_name = "Return Response"
@@ -580,6 +680,94 @@ class FlowReturnResponseStep:
             artifacts.insert(0, ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "xml_response_template.xml", {"template": str(config.get("body_template") or "")}))
             artifacts.append(ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "xml_response_rendered.xml", {"xml": str(body)}))
         return StepResult.success("Response selected", artifacts=artifacts, variables_update={"response": response})
+
+
+def _marking_code_pool_request(
+    config: dict[str, Any],
+    scope: dict[str, Any],
+    context: PipelineContext,
+) -> OneCMarkingCodePoolExportRequest:
+    order_number = _required_text_from_path(scope, config.get("order_number_path"), "order_number_path")
+    full_codes_base64 = _optional_list_from_path(scope, config.get("full_codes_base64_path"))
+    codes = _optional_list_from_path(scope, config.get("codes_path"))
+    source_document_id = _optional_text_from_path(scope, config.get("source_document_id_path"))
+    source_document_name = _optional_text_from_path(scope, config.get("source_document_name_path"))
+
+    action_overrides_config = config.get("actions_override") if isinstance(config.get("actions_override"), dict) else None
+    action_overrides = MarkingCodePoolActionOverrides(**action_overrides_config) if action_overrides_config else None
+    metadata_json = config.get("metadata_json") if isinstance(config.get("metadata_json"), dict) else {}
+    metadata_json = {
+        **metadata_json,
+        "flow_step_id": config.get("step_id"),
+        "event_id": str(context.event.id),
+        "run_id": str(context.run.id),
+    }
+
+    return OneCMarkingCodePoolExportRequest(
+        source_system=str(config.get("source_system") or context.source_system or "1C ERP"),
+        source_document_id=source_document_id,
+        source_document_name=source_document_name,
+        order_number=order_number,
+        file_name=_optional_text_from_path(scope, config.get("file_name_path")) or config.get("file_name"),
+        codes=codes,
+        full_codes_base64=full_codes_base64,
+        gs_marker=str(config.get("gs_marker") or "{GS}"),
+        allow_overwrite=config.get("allow_overwrite"),
+        actions_override=action_overrides,
+        metadata_json=metadata_json,
+    )
+
+
+def _required_text_from_path(scope: dict[str, Any], path: Any, label: str) -> str:
+    value = _optional_value_from_path(scope, path)
+    if value in (None, ""):
+        raise ValueError(f"{label} resolved to empty value")
+    return str(value)
+
+
+def _optional_text_from_path(scope: dict[str, Any], path: Any) -> str | None:
+    value = _optional_value_from_path(scope, path)
+    if value in (None, ""):
+        return None
+    return str(value)
+
+
+def _optional_list_from_path(scope: dict[str, Any], path: Any) -> list[str] | None:
+    value = _optional_value_from_path(scope, path)
+    if value in (None, ""):
+        return None
+    if not isinstance(value, list):
+        raise ValueError(f"{path} resolved to {type(value).__name__}, expected array")
+    return [str(item) for item in value if str(item)]
+
+
+def _optional_value_from_path(scope: dict[str, Any], path: Any) -> Any:
+    if path in (None, ""):
+        return None
+    expression = str(path).strip()
+    if not expression:
+        return None
+    return render_template(expression, scope) if "{{" in expression else resolve_path(scope, expression)
+
+
+def _marking_pool_request_summary(request: OneCMarkingCodePoolExportRequest) -> dict[str, Any]:
+    return {
+        "source_system": request.source_system,
+        "source_document_id": request.source_document_id,
+        "source_document_name": request.source_document_name,
+        "order_number": request.order_number,
+        "file_name": request.file_name,
+        "codes_count": len(request.codes or []),
+        "full_codes_base64_count": len(request.full_codes_base64 or []),
+        "allow_overwrite": request.allow_overwrite,
+        "actions_override": request.actions_override.model_dump(mode="json") if request.actions_override else None,
+    }
+
+
+def _store_marking_pool_variables(variables: dict[str, Any], config: dict[str, Any], status: dict[str, Any]) -> None:
+    save_as = str(config.get("save_as") or "marking_pool_export")
+    variables[save_as] = status
+    variables["marking_pool_export"] = status
 
 
 def _selected_printer_name(config: dict[str, Any], scope: dict[str, Any]) -> tuple[str | None, str | None]:

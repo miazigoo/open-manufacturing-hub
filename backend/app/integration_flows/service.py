@@ -21,7 +21,7 @@ from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
 from app.core.enums import EndpointProcessingMode
 from app.integration_flows import repository
 from app.integration_flows.models import IntegrationFlow
-from app.integration_flows.presets import MARKING_POOL_PRESET, OPERATION_KEY_ODATA_CHAIN_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
+from app.integration_flows.presets import MARKING_POOL_PRESET, ONEC_CHZ_POOL_DELIVERY_PRESET, OPERATION_KEY_ODATA_CHAIN_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
 from app.integration_flows.schemas import FlowTestRequest, IntegrationFlowCreate, IntegrationFlowPatch
 from app.matchers.engine import evaluate_matcher_group
 from app.matchers.validators import validate_matcher_group
@@ -229,6 +229,26 @@ async def install_marking_pool_preset(session: AsyncSession) -> IntegrationFlow:
     if existing:
         return existing
     return await create_flow(session, IntegrationFlowCreate(**MARKING_POOL_PRESET))
+
+
+async def install_onec_chz_pool_delivery_preset(session: AsyncSession) -> IntegrationFlow:
+    existing = await repository.get_by_slug(session, ONEC_CHZ_POOL_DELIVERY_PRESET["slug"])
+    if existing:
+        await patch_flow(
+            session,
+            existing.id,
+            IntegrationFlowPatch(
+                description=ONEC_CHZ_POOL_DELIVERY_PRESET["description"],
+                matcher_group_json=ONEC_CHZ_POOL_DELIVERY_PRESET["matcher_group_json"],
+                action_json=ONEC_CHZ_POOL_DELIVERY_PRESET["action_json"],
+                response_config_json=ONEC_CHZ_POOL_DELIVERY_PRESET["response_config_json"],
+                builder_json=ONEC_CHZ_POOL_DELIVERY_PRESET["builder_json"],
+                test_payload_json=ONEC_CHZ_POOL_DELIVERY_PRESET["test_payload_json"],
+            ),
+        )
+        await compile_flow(session, existing.id)
+        return existing
+    return await create_flow(session, IntegrationFlowCreate(**ONEC_CHZ_POOL_DELIVERY_PRESET))
 
 
 async def install_two_odata_to_endpoint_preset(session: AsyncSession) -> IntegrationFlow:

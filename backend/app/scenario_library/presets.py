@@ -4,6 +4,25 @@ from typing import Any
 
 SCENARIOS: list[dict[str, Any]] = [
     {
+        "code": "onec_chz_pool_delivery",
+        "title": "1C CHZ code pool delivery",
+        "description": "Visible endpoint for 1C: OMH receives a CHZ marking code pool, saves the laser file through CHZ delivery settings and forwards the same pool to DnP.",
+        "source": "1C",
+        "target": "OMH CHZ Delivery",
+        "input_modes": ["json"],
+        "default_slug": "onec-chz-pool-delivery",
+        "event_type": "Flow.onec-chz-pool-delivery",
+        "entity_type": "MarkingCodePoolDelivery",
+        "workflow_steps": ["deliver_chz_pool", "return_delivery_result"],
+        "operation_code": "flow.chz_pool_delivery",
+        "sample_payload": {
+            "order_number": "260703/5442",
+            "source_document_id": "AEAE-000137",
+            "source_document_name": "Заказ на эмиссию кодов маркировки AEAE-000137",
+            "full_codes_base64": ["MDEwNDY0NjE1MTY5NzE4NjIxNV88cWxrPFpiQ1dGUD5XMilmb1UdOTNsemhV"],
+        },
+    },
+    {
         "code": "operation_key_odata_chain",
         "title": "Operation key to 1C OData chained lookup",
         "description": "Inbound JSON uses an operation key and Number. OMH routes by the key, finds the 1C production order and reads its Продукция tabular part.",

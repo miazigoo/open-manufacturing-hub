@@ -11,6 +11,66 @@ MARKING_POOL_PRESET = {
     "test_payload_json": {"pool_type": "DNP", "order_id": "ORD-123", "codes": ["010464615169738421ABC", "010464615169738421DEF"]},
 }
 
+ONEC_CHZ_POOL_DELIVERY_BUILDER = {
+    "version": 1,
+    "input": {
+        "endpoint_slug": "onec-chz-pool-delivery",
+        "input_mode": "json",
+        "response_mode": "sync_response",
+    },
+    "steps": [
+        {
+            "id": "deliver_chz_pool",
+            "type": "marking_code_pool_export",
+            "name": "Save and forward CHZ marking code pool",
+            "order_number_path": "request.body.order_number",
+            "full_codes_base64_path": "request.body.full_codes_base64",
+            "source_document_id_path": "request.body.source_document_id",
+            "source_document_name_path": "request.body.source_document_name",
+            "allow_overwrite": True,
+            "save_as": "marking_pool_export",
+            "metadata_json": {"scenario": "onec_chz_pool_delivery"},
+        },
+        {
+            "id": "return_delivery_result",
+            "type": "return_response",
+            "name": "Return CHZ delivery result",
+            "body": "{{marking_pool_export}}",
+            "status_code": 200,
+        },
+    ],
+}
+
+ONEC_CHZ_POOL_DELIVERY_PRESET = {
+    "name": "1C CHZ Code Pool Delivery",
+    "slug": "onec-chz-pool-delivery",
+    "description": "Visible OMH endpoint for 1C: accepts CHZ full marking codes in Base64, saves the laser file through configured CHZ delivery settings and forwards the same pool to DnP.",
+    "source_type": "onec",
+    "target_type": "internal",
+    "endpoint": {"input_mode": "json", "response_mode": "sync_response", "auth_mode": "none", "auth_config_json": {}},
+    "matcher_group_json": {
+        "mode": "all",
+        "rules": [
+            {"type": "body_path_exists", "path": "order_number"},
+            {"type": "body_path_exists", "path": "full_codes_base64"},
+        ],
+    },
+    "action_json": {
+        "type": "create_event_only",
+        "operation": "chz_pool_delivery",
+        "business_object": "MarkingCodePoolDelivery",
+        "description": "1C pushes a CHZ marking code pool to OMH for file delivery and DnP synchronization.",
+    },
+    "response_config_json": {"response_mode": "sync_response"},
+    "builder_json": ONEC_CHZ_POOL_DELIVERY_BUILDER,
+    "test_payload_json": {
+        "order_number": "260703/5442",
+        "source_document_id": "AEAE-000137",
+        "source_document_name": "Заказ на эмиссию кодов маркировки AEAE-000137",
+        "full_codes_base64": ["MDEwNDY0NjE1MTY5NzE4NjIxNV88cWxrPFpiQ1dGUD5XMilmb1UdOTNsemhV"],
+    },
+}
+
 TWO_ODATA_TO_ENDPOINT_BUILDER = {
     "version": 1,
     "input": {"endpoint_slug": "onec-pool-to-dnp", "input_mode": "json", "response_mode": "proxy_response"},

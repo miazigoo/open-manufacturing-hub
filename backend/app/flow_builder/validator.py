@@ -103,6 +103,17 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
                 errors.append(_error(step_id, "ZPL_TEMPLATE_REQUIRED", "Print step needs a ZPL template", "Paste a ZPL template with variables such as {{label.code}}."))
             if not step.get("save_as"):
                 errors.append(_error(step_id, "PRINT_SAVE_AS_REQUIRED", "Print step needs save_as", "Save normalized status as print_status."))
+        if step_type == "marking_code_pool_export":
+            if not step.get("order_number_path"):
+                errors.append(_error(step_id, "MARKING_POOL_ORDER_PATH_REQUIRED", "Marking code pool export needs order_number_path", "Example: request.body.order_number."))
+            has_base64_path = bool(step.get("full_codes_base64_path"))
+            has_codes_path = bool(step.get("codes_path"))
+            if not has_base64_path and not has_codes_path:
+                errors.append(_error(step_id, "MARKING_POOL_CODES_PATH_REQUIRED", "Marking code pool export needs full_codes_base64_path or codes_path", "Production 1C should pass full_codes_base64."))
+            if has_base64_path and has_codes_path:
+                errors.append(_error(step_id, "MARKING_POOL_CODES_PATH_AMBIGUOUS", "Use only one code source path", "Choose full_codes_base64_path for production or codes_path for already decoded codes."))
+            if not step.get("save_as"):
+                errors.append(_error(step_id, "MARKING_POOL_SAVE_AS_REQUIRED", "Marking code pool export needs save_as", "Save result as marking_pool_export."))
         if step_type == "call_endpoint" and not (step.get("connector") or step.get("url")):
             errors.append(_error(step_id, "TARGET_CONNECTOR_NOT_SET", "Endpoint step needs connector or URL", "Select a REST/1C target connector or enter a direct HTTP URL."))
     has_terminal_response = any(isinstance(step, dict) and step.get("type") in {"call_endpoint", "return_response", "build_xml_response", "raw_xml_forward"} for step in steps)
