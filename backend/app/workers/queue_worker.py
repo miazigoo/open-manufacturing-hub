@@ -11,6 +11,7 @@ from app.core.database import async_session
 from app.core.config import get_settings
 from app.core.enums import HealthComponentType, HealthStatus
 from app.health.models import HealthCheck
+from app.integration_flows.models import IntegrationFlow  # noqa: F401
 from app.workers.runner import process_batch, process_once
 
 logger = logging.getLogger("omh.worker.queue")
