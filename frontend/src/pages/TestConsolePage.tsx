@@ -366,6 +366,26 @@ export function TestConsolePage() {
         <div className="hero-meta"><span className="microcopy">POST /api/bus/in/{mode === 'build' ? slugify(wizard.slug) : selectedEndpoint?.slug || 'endpoint'}</span></div>
       </section>
 
+      <section className="guidance-strip">
+        <div className="guidance-head">
+          <div>
+            <span className="eyebrow">Как выбрать режим</span>
+            <h2>Проверяйте существующий endpoint или собирайте интеграцию пошагово</h2>
+            <p>Если endpoint уже опубликован, используйте быструю проверку: выберите endpoint, вставьте тело запроса и откройте Timeline. Если интеграции ещё нет, включите сборку: мастер проведёт от примера payload до OData-шагов, ответа и сохранённого flow.</p>
+          </div>
+          <div className="action-row wrap-actions">
+            <button type="button" className={mode === 'quick' ? 'primary-button' : 'ghost-button'} onClick={() => setMode('quick')}>Проверить endpoint</button>
+            <button type="button" className={mode === 'build' ? 'primary-button' : 'ghost-button'} onClick={() => setMode('build')}>Собрать интеграцию</button>
+            <Link className="ghost-button" to="/training">Учебный пример</Link>
+          </div>
+        </div>
+        <div className="guidance-step-grid">
+          <div className="guidance-step-card"><span>Quick</span><strong>Endpoint уже есть</strong><small>Подходит для smoke-test, проверки token/header/body и разбора ответа.</small></div>
+          <div className="guidance-step-card"><span>Build</span><strong>Endpoint ещё нужен</strong><small>Подходит для новой синхронной интеграции с OData lookup и JSON/XML/raw ответом.</small></div>
+          <div className="guidance-step-card"><span>After run</span><strong>Смотрите Timeline</strong><small>После отправки запроса проверяйте шаги, внешние ответы и понятную диагностику.</small></div>
+        </div>
+      </section>
+
       <div className="segmented-control request-response-mode"><button className={mode === 'quick' ? 'active' : ''} onClick={() => setMode('quick')}>Проверить endpoint</button><button className={mode === 'build' ? 'active' : ''} onClick={() => setMode('build')}>Собрать интеграцию</button></div>
 
       {mode === 'quick' ? renderQuickSend() : renderBuildIntegration()}

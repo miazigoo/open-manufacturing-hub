@@ -13,13 +13,13 @@ import { formatDateTime } from '../utils';
 
 const scenarioCards = [
   {
-    title: 'Создать интеграцию',
-    input: 'Пример запроса от DnP, сайта, WMS, 1C или другого сервиса',
-    output: 'Endpoint, trigger key, OData/API шаги, payload и финальное действие',
-    does: 'Проводит по настройке от входящего JSON/XML до сохранённой интеграции.',
-    best: 'Новый рабочий сценарий, который нужно настроить и проверить.',
-    to: '/master',
-    cta: 'Открыть мастер',
+    title: 'Подобрать сценарий',
+    input: 'Кто обращается, что приходит и какой результат нужен',
+    output: 'Рекомендованный мастер, readiness, обучение, документация и пробелы в покрытии',
+    does: 'Маршрутизирует задачу к правильному workbench без выбора endpoint, flow или trigger key вручную.',
+    best: 'Новая интеграция, когда понятна бизнес-задача, но ещё не выбран технический шаблон.',
+    to: '/integration-start',
+    cta: 'Открыть Scenario Router',
     primary: true,
   },
   {
@@ -99,6 +99,11 @@ export function DashboardPage() {
         <span className="eyebrow">Принцип OMH</span>
         <h2>Пользователь идёт от задачи, а не от технического термина</h2>
         <p>Если вы знаете только “кто обращается”, “что приходит”, “что нужно найти или отправить” и “что вернуть”, этого достаточно для старта. Endpoint, route, workflow, saved test case и другие внутренние сущности остаются доступными в расширенном режиме.</p>
+        <div className="action-row wrap-actions">
+          <Link className="primary-link" to="/integration-start">Подобрать сценарий</Link>
+          <Link className="ghost-button" to="/training">Пройти учебный пример</Link>
+          <Link className="ghost-button" to="/docs/core/start/integration-scenarios">Открыть примеры</Link>
+        </div>
       </section>
 
       <section className="metric-grid">
