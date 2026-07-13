@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { connectionCenterApi, type ConnectionProfile, type ConnectionProfileKind, type ConnectionProfilePayload, type ConnectionProfileTestResponse } from '../api/connectionCenter';
 import { operationCatalogApi } from '../api/operationCatalog';
@@ -99,6 +99,7 @@ function emptyForm(kind: ConnectionProfileKind = 'onec_odata'): ProfileFormState
 
 export function ConnectionCenterPage() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const profilesQuery = useQuery({ queryKey: ['connection-center-profiles'], queryFn: connectionCenterApi.profiles });
   const [activeTab, setActiveTab] = useState('all');
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -109,10 +110,32 @@ export function ConnectionCenterPage() {
 
   const profiles = profilesQuery.data ?? [];
   const filtered = useMemo(() => profiles.filter((profile) => filterProfile(profile, activeTab)), [profiles, activeTab]);
-  const selected = profiles.find((profile) => profile.id === selectedId) ?? filtered[0] ?? null;
+  const selectedParam = searchParams.get('selected');
+  const selectedFromParam = useMemo(() => {
+    if (!selectedParam) return null;
+    return profiles.find((profile) => profile.id === selectedParam || String(profile.connector_id ?? '') === selectedParam) ?? null;
+  }, [profiles, selectedParam]);
+  const selected = selectedFromParam
+    ?? profiles.find((profile) => profile.id === selectedId)
+    ?? filtered[0]
+    ?? null;
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['connection-center-profiles'] });
 
-  const create = useMutation({ mutationFn: connectionCenterApi.create, onSuccess: (profile) => { setSelectedId(profile.id); setLastResult(profile); refresh(); } });
+  function selectProfile(profile: ConnectionProfile, replace = false) {
+    setSelectedId(profile.id);
+    const next = new URLSearchParams(searchParams);
+    next.set('selected', profile.connector_id || profile.id);
+    setSearchParams(next, { replace });
+  }
+
+  function clearSelection() {
+    setSelectedId(null);
+    const next = new URLSearchParams(searchParams);
+    next.delete('selected');
+    setSearchParams(next, { replace: true });
+  }
+
+  const create = useMutation({ mutationFn: connectionCenterApi.create, onSuccess: (profile) => { selectProfile(profile, true); setLastResult(profile); refresh(); } });
   const createAndTest = useMutation({
     mutationFn: async (payload: ConnectionProfilePayload) => {
       const profile = await connectionCenterApi.create(payload);
@@ -120,7 +143,7 @@ export function ConnectionCenterPage() {
       return { profile, test };
     },
     onSuccess: ({ profile, test }) => {
-      setSelectedId(profile.id);
+      selectProfile(profile, true);
       setLastResult(test);
       setWizardStep(4);
       refresh();
@@ -128,7 +151,7 @@ export function ConnectionCenterPage() {
   });
   const test = useMutation({ mutationFn: (profile: ConnectionProfile) => connectionCenterApi.test(profile.id, testRequestForKind(profile.kind)), onSuccess: (result) => { setLastResult(result); refresh(); } });
   const toggle = useMutation({ mutationFn: (profile: ConnectionProfile) => profile.enabled ? connectionCenterApi.disable(profile.id) : connectionCenterApi.enable(profile.id), onSuccess: (profile) => { setLastResult(profile); refresh(); } });
-  const remove = useMutation({ mutationFn: connectionCenterApi.delete, onSuccess: () => { setSelectedId(null); refresh(); } });
+  const remove = useMutation({ mutationFn: connectionCenterApi.delete, onSuccess: () => { clearSelection(); refresh(); } });
   const mutationError = [create.error, createAndTest.error, test.error, toggle.error, remove.error].find((error): error is Error => error instanceof Error);
 
   if (profilesQuery.isLoading) return <LoadingState label="Загружаю профили подключений" />;
@@ -163,6 +186,25 @@ export function ConnectionCenterPage() {
         </div>
       </section>
 
+      <section className="guidance-strip">
+        <div className="guidance-head">
+          <div>
+            <span className="eyebrow">Как этим пользоваться</span>
+            <h2>Сначала подключение, потом действие</h2>
+            <p>Connection Profile хранит адрес, авторизацию и safe-test. Operation Profile поверх него описывает конкретный вызов, а Mapping Center собирает payload для этого вызова.</p>
+          </div>
+          <div className="action-row wrap-actions">
+            <Link className="ghost-button" to="/operation-catalog">Перейти к операциям</Link>
+            <Link className="ghost-button" to="/mapping-center">Перейти к mapping</Link>
+          </div>
+        </div>
+        <div className="guidance-step-grid">
+          <article className="guidance-step-card"><span>1</span><strong>Создайте профиль</strong><p>Выберите тип: 1С OData для чтения, 1C HTTP Service для записи, REST API для внешней системы, printer/SMB/local для файлов и печати.</p></article>
+          <article className="guidance-step-card"><span>2</span><strong>Проверьте безопасно</strong><p>Кнопка <code>Сохранить и проверить</code> делает metadata/dry-run проверку. Для production используйте <code>$secret:name</code> вместо raw password/token.</p></article>
+          <article className="guidance-step-card"><span>3</span><strong>Создайте операцию</strong><p>Если профиль должен что-то отправлять или записывать, откройте Operation Catalog и задайте path, method, success condition и extractors.</p></article>
+        </div>
+      </section>
+
       <section className="panel connection-center-toolbar">
         <div className="component-strip package-capabilities connection-tabs">
           {tabs.map((tab) => <button type="button" key={tab.id} className={activeTab === tab.id ? 'primary-button' : 'ghost-button'} onClick={() => setActiveTab(tab.id)}>{tab.label}</button>)}
@@ -171,7 +213,7 @@ export function ConnectionCenterPage() {
 
       <section className="panel table-panel connection-profile-table">
         <div className="panel-toolbar"><h2>Сохранённые профили</h2><span className="microcopy">{filtered.length} из {profiles.length}</span></div>
-        {filtered.length === 0 ? <EmptyState title="Нет профилей подключения" detail="Создайте первый профиль или установите Training Sandbox, чтобы увидеть учебные подключения." /> : (
+        {filtered.length === 0 ? <EmptyState title="Нет профилей подключения" detail="Создайте первый профиль или установите Training Sandbox, чтобы увидеть учебные подключения." actions={<><button className="primary-button" onClick={() => { setForm(emptyForm()); setWizardStep(1); setWizardOpen(true); }}>Создать подключение</button><Link className="ghost-button" to="/training">Установить Training Sandbox</Link></>} /> : (
           <div className="table-scroll">
             <table>
               <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Last test</th><th>Used by</th><th>Actions</th></tr></thead>
@@ -183,7 +225,7 @@ export function ConnectionCenterPage() {
                     <td><StatusBadge status={profile.enabled ? 'enabled' : 'disabled'} compact /></td>
                     <td><small>{profile.health.checked_at ? new Date(profile.health.checked_at).toLocaleString() : 'ещё не проверяли'}</small><span>{profile.health.message ?? '—'}</span></td>
                     <td><small>{profile.used_by.slice(0, 3).join(', ') || '—'}</small></td>
-                    <td><div className="action-row wrap-actions compact-actions"><button className="ghost-button" onClick={() => setSelectedId(profile.id)}>Open</button><button className="ghost-button" onClick={() => test.mutate(profile)} disabled={test.isPending}>Test</button><button className="ghost-button" onClick={() => duplicate(profile)}>Duplicate</button><button className="ghost-button" onClick={() => toggle.mutate(profile)} disabled={toggle.isPending}>{profile.enabled ? 'Disable' : 'Enable'}</button><button className="ghost-button danger" onClick={() => window.confirm(`Удалить профиль ${profile.name}?`) && remove.mutate(profile.id)} disabled={remove.isPending}>Delete</button></div></td>
+                    <td><div className="action-row wrap-actions compact-actions"><button className="ghost-button" onClick={() => selectProfile(profile)}>Open</button><button className="ghost-button" onClick={() => test.mutate(profile)} disabled={test.isPending}>Test</button><button className="ghost-button" onClick={() => duplicate(profile)}>Duplicate</button><button className="ghost-button" onClick={() => toggle.mutate(profile)} disabled={toggle.isPending}>{profile.enabled ? 'Disable' : 'Enable'}</button><button className="ghost-button danger" onClick={() => window.confirm(`Удалить профиль ${profile.name}?`) && remove.mutate(profile.id)} disabled={remove.isPending}>Delete</button></div></td>
                   </tr>
                 ))}
               </tbody>

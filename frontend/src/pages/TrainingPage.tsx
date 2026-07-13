@@ -66,6 +66,26 @@ export function TrainingPage() {
         </div>
       </section>
 
+      <section className="guidance-strip">
+        <div className="guidance-head">
+          <div>
+            <span className="eyebrow">Учебный маршрут</span>
+            <h2>Учебный маршрут: сначала безопасный пример, потом свой сценарий</h2>
+            <p>Training Sandbox создаёт mock-подключения, endpoints, flows и test cases. Это самый быстрый способ понять OMH без доступа к реальной 1С, DNP, WMS или принтеру.</p>
+          </div>
+          <div className="action-row wrap-actions">
+            <Link className="ghost-button" to="/integration-start">Подобрать свой сценарий</Link>
+            <Link className="ghost-button" to="/docs/onec/start-here/beginner-path">Путь новичка</Link>
+          </div>
+        </div>
+        <div className="guidance-step-grid">
+          <article className="guidance-step-card"><span>1</span><strong>Установите sandbox</strong><p>Кнопка создаст учебные OData/REST-подключения, интеграции и примеры. Это не трогает production-системы.</p></article>
+          <article className="guidance-step-card"><span>2</span><strong>Запустите пример</strong><p>Нажмите <code>Запустить</code> на карточке урока. OMH выполнит реальный сценарий на mock-данных.</p></article>
+          <article className="guidance-step-card"><span>3</span><strong>Откройте Timeline</strong><p>Проверьте шаги, artifacts, request/response и ошибку, если пример специально падает.</p></article>
+          <article className="guidance-step-card"><span>4</span><strong>Повторите в Test Console</strong><p>Откройте пример в Test Console и меняйте payload, чтобы увидеть, как меняется результат.</p></article>
+        </div>
+      </section>
+
       {(install.error instanceof Error || reset.error instanceof Error || run.error instanceof Error) && <ErrorState error={(install.error || reset.error || run.error) as Error} />}
 
       <section className="metadata-grid training-metrics">

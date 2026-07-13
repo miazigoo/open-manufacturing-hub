@@ -27,6 +27,15 @@ export const helpTopics: Record<string, HelpTopic> = {
   auth: { id: 'auth', title: 'Auth package', description: 'Optional UI access control. It protects the web app without touching integrations.', actions: ['Install package', 'Create first user', 'Save recovery keys'], docId: 'auth.install' },
   production: { id: 'production', title: 'Production safety', description: 'Use backups, doctor checks and update mode before changing a live installation.', actions: ['Export config', 'Run doctor', 'Enable update mode'], docId: 'production.safety' },
   audit: { id: 'audit', title: 'Audit log', description: 'Audit log tracks configuration changes and operator actions.', actions: ['Filter changes', 'Open details', 'Compare before/after'], docId: 'audit.log' },
+  docs: { id: 'docs', title: 'Документация и обучение', description: 'Документация устроена как путь: сначала понять сценарий, затем пройти урок, затем запустить пример в Training Sandbox.', actions: ['Open learning path', 'Run training example', 'Use troubleshooting by symptom'], example: '1C beginner path -> Training Sandbox -> Test Console -> Timeline', docId: 'core.overview' },
+  training: { id: 'training', title: 'Training Sandbox', description: 'Безопасная песочница с mock 1C/OData/DNP/Printer. Нужна, чтобы пользователь мог учиться без реальной 1C и внешних сервисов.', actions: ['Install sandbox', 'Run example', 'Open Test Console', 'Inspect Timeline'], example: 'training.onec.post_two_odata_to_dnp', docId: 'training.sandbox' },
+  'integration-start': { id: 'integration-start', title: 'Scenario Router', description: 'Начинайте не с endpoint или connector, а с бизнес-сценария. Router покажет готовность, мастер, docs и training example.', actions: ['Pick scenario card', 'Answer questionnaire', 'Open available wizard', 'Check coverage gaps'], example: 'External API -> OData lookup -> response', docId: 'integration-scenarios' },
+  'integration-coverage': { id: 'integration-coverage', title: 'Coverage Matrix', description: 'Матрица показывает, какие сценарии готовы, частичные или запланированы, и что ещё мешает production-ready запуску.', actions: ['Filter by status', 'Open scenario', 'Open docs', 'Start training example'], docId: 'integration-coverage' },
+  'connection-center': { id: 'connection-center', title: 'Connection Center', description: 'Connection Profile отвечает только за “куда подключаться”: 1C, REST API, printer, SMB или local directory. Действия поверх подключения живут в Operation Catalog.', actions: ['Create connection', 'Save and test', 'Create operation', 'Use secret references'], example: 'OData ERP + DNP API + LINE-1 Printer', docId: 'connection-center' },
+  'operation-catalog': { id: 'operation-catalog', title: 'Operation Catalog', description: 'Operation Profile отвечает за “что сделать”: method, path, headers, body type, success condition and extractors.', actions: ['Choose connection', 'Define operation path', 'Set success condition', 'Dry-run operation', 'Create mapping'], example: 'POST /api/v2/integrations/omh/chz/codes/import', docId: 'operation-catalog' },
+  'mapping-center': { id: 'mapping-center', title: 'Data Contract & Mapping Center', description: 'Контракт описывает целевые поля, mapping объясняет откуда взять значения: request, OData result, foreach array or constant.', actions: ['Choose target contract', 'Map source variables', 'Preview payload', 'Validate before save'], example: 'codes -> payload.rows', docId: 'data-contracts-and-mappings' },
+  'marking-code-pools': { id: 'marking-code-pools', title: 'CHZ Marking Code Pools', description: 'Workbench для выгрузки пулов кодов ЧЗ: preview, archive, optional copy/send and retryable export journal.', actions: ['Check settings', 'Preview export', 'Run dry-run', 'Retry failed action'], docId: 'chz.marking-code-pools' },
+  'scenario-library': { id: 'scenario-library', title: 'Scenario Library', description: 'Каталог готовых сценариев. Используйте preview перед установкой, чтобы увидеть создаваемые endpoints, flows and operations.', actions: ['Preview scenario', 'Install scenario', 'Open created flow'], docId: 'scenario-library' },
 };
 
 export function helpForPath(pathname: string): HelpTopic | null {
@@ -45,6 +54,15 @@ export function helpForPath(pathname: string): HelpTopic | null {
   if (pathname.startsWith('/users') || pathname.startsWith('/auth-settings')) return helpTopics.auth;
   if (pathname.startsWith('/production') || pathname.startsWith('/maintenance')) return helpTopics.production;
   if (pathname.startsWith('/audit')) return helpTopics.audit;
+  if (pathname.startsWith('/docs')) return helpTopics.docs;
+  if (pathname.startsWith('/training')) return helpTopics.training;
+  if (pathname.startsWith('/integration-start')) return helpTopics['integration-start'];
+  if (pathname.startsWith('/integration-coverage') || pathname.startsWith('/integration-patterns/certification')) return helpTopics['integration-coverage'];
+  if (pathname.startsWith('/connection-center')) return helpTopics['connection-center'];
+  if (pathname.startsWith('/operation-catalog')) return helpTopics['operation-catalog'];
+  if (pathname.startsWith('/mapping-center')) return helpTopics['mapping-center'];
+  if (pathname.startsWith('/marking-code-pools')) return helpTopics['marking-code-pools'];
+  if (pathname.startsWith('/scenario-library')) return helpTopics['scenario-library'];
   return null;
 }
 

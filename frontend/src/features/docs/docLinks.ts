@@ -27,6 +27,14 @@ export const docLinks: Record<string, string> = {
   'secrets.overview': '/docs/secrets/secrets/overview',
   'production.safety': '/docs/core/start/concepts',
   'audit.log': '/docs/core/start/concepts',
+  'training.sandbox': '/docs/onec/academy/training-sandbox-executable-docs',
+  'integration-scenarios': '/docs/core/start/integration-scenarios',
+  'integration-coverage': '/docs/core/start/integration-scenarios',
+  'connection-center': '/docs/core/connection-center',
+  'operation-catalog': '/docs/core/operation-catalog',
+  'data-contracts-and-mappings': '/docs/core/data-contracts-and-mappings',
+  'scenario-library': '/docs/core/start/integration-scenarios',
+  'chz.marking-code-pools': '/docs/onec/recipes/onec-sends-chz-code-pool-file',
 };
 
 export function docUrl(docId: string) {

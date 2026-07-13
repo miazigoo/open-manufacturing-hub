@@ -61,6 +61,25 @@ export function IntegrationCoveragePage() {
         </div>
       </section>
 
+      <section className="guidance-strip">
+        <div className="guidance-head">
+          <div>
+            <span className="eyebrow">Coverage Matrix</span>
+            <h2>Coverage Matrix: проверяйте готовность сценария до настройки</h2>
+            <p>Матрица отвечает на практический вопрос: можно ли уже запускать сценарий пользователю, или сначала не хватает мастера, документации, training example либо troubleshooting playbook.</p>
+          </div>
+          <div className="action-row wrap-actions">
+            <Link className="ghost-button" to="/integration-start">Открыть Scenario Router</Link>
+            <Link className="ghost-button" to="/training">Training Sandbox</Link>
+          </div>
+        </div>
+        <div className="guidance-step-grid">
+          <article className="guidance-step-card"><span>1</span><strong>Найдите нужный результат</strong><p>Смотрите на Source, Input, OMH actions и Result. Это быстрее, чем выбирать по техническому названию мастера.</p></article>
+          <article className="guidance-step-card"><span>2</span><strong>Проверьте статус</strong><p><code>Ready</code> можно настраивать. <code>Partial</code> требует внимательной проверки gaps. <code>Planned</code> не обещает production-ready путь.</p></article>
+          <article className="guidance-step-card"><span>3</span><strong>Откройте недостающий шаг</strong><p>Ссылки Wizard, Docs, Training и Troubleshooting показывают, куда идти дальше без поиска по меню.</p></article>
+        </div>
+      </section>
+
       <section className="metric-grid coverage-metrics">
         <Metric label="Всего сценариев" value={summary.total} />
         <Metric label="Ready" value={summary.ready} tone="good" />

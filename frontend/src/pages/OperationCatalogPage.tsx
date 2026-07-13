@@ -198,6 +198,26 @@ export function OperationCatalogPage() {
         </div>
       </section>
 
+      <section className="guidance-strip">
+        <div className="guidance-head">
+          <div>
+            <span className="eyebrow">Reusable action</span>
+            <h2>Операция превращает подключение в готовое действие</h2>
+            <p>Один профиль подключения может иметь несколько операций: например, DNP API может принимать коды, возвращать статус и отдавать ошибки разными endpoint’ами.</p>
+          </div>
+          <div className="action-row wrap-actions">
+            <Link className="ghost-button" to="/connection-center">Проверить подключения</Link>
+            <Link className="ghost-button" to="/mapping-center">Настроить mapping</Link>
+          </div>
+        </div>
+        <div className="guidance-step-grid">
+          <article className="guidance-step-card"><span>1</span><strong>Выберите Connection Profile</strong><p>Если подключения ещё нет, сначала создайте его в Connection Center. Без подключения можно оставить legacy <code>full_url</code>.</p></article>
+          <article className="guidance-step-card"><span>2</span><strong>Опишите request/response</strong><p>Укажите method, path, body type и контракты. Контракт нужен, чтобы mapping и wizard могли подсказать поля.</p></article>
+          <article className="guidance-step-card"><span>3</span><strong>Задайте критерий успеха</strong><p>Для REST обычно достаточно <code>http_status_2xx</code>; для 1С/внешних API часто полезен <code>json_path_equals</code>.</p></article>
+          <article className="guidance-step-card"><span>4</span><strong>Проверьте dry-run</strong><p>Dry-run покажет final URL, headers, body preview и extractors без реального сетевого вызова.</p></article>
+        </div>
+      </section>
+
       <section className="panel connection-center-toolbar">
         <div className="component-strip package-capabilities connection-tabs">
           {kindFilters.map((tab) => <button type="button" key={tab.id} className={activeTab === tab.id ? 'primary-button' : 'ghost-button'} onClick={() => setActiveTab(tab.id)}>{tab.label}</button>)}
@@ -207,7 +227,7 @@ export function OperationCatalogPage() {
 
       <section className="panel table-panel connection-profile-table">
         <div className="panel-toolbar"><h2>Сохранённые операции</h2><span className="microcopy">{filtered.length} из {operations.length}</span></div>
-        {filtered.length === 0 ? <EmptyState title="Операций пока нет" detail="Создайте операцию вручную или установите presets после создания Connection Profiles." /> : (
+        {filtered.length === 0 ? <EmptyState title="Операций пока нет" detail="Создайте операцию вручную или установите presets после создания Connection Profiles." actions={<><button className="primary-button" onClick={() => openCreate()}>Создать операцию</button><button className="ghost-button" onClick={() => installPresets.mutate()} disabled={installPresets.isPending}>Установить presets</button><Link className="ghost-button" to="/connection-center">Connection Center</Link></>} /> : (
           <div className="table-scroll">
             <table>
               <thead><tr><th>Name</th><th>Kind</th><th>Connection</th><th>Method</th><th>Path</th><th>Status</th><th>Last test</th><th>Used by</th><th>Actions</th></tr></thead>

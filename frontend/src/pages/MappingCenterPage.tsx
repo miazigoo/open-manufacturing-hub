@@ -78,6 +78,25 @@ export function MappingCenterPage() {
         </div>
       </section>
 
+      <section className="guidance-strip">
+        <div className="guidance-head">
+          <div>
+            <span className="eyebrow">Когда нужен mapping</span>
+            <h2>Mapping связывает результат сценария с контрактом операции</h2>
+            <p>Используйте mapping, когда внешний endpoint ждёт другой JSON/XML, чем пришёл в OMH: например, нужно взять <code>codes[]</code> из foreach OData и положить в <code>payload.rows</code>.</p>
+          </div>
+          <div className="action-row wrap-actions">
+            <Link className="ghost-button" to="/operation-catalog">Операции</Link>
+            <Link className="ghost-button" to="/docs/core/data-contracts-and-mappings">Урок</Link>
+          </div>
+        </div>
+        <div className="guidance-step-grid">
+          <article className="guidance-step-card"><span>1</span><strong>Выберите target contract</strong><p>Контракт задаёт ожидаемые поля, типы и required-проверки. Без контракта mapping работает как raw template.</p></article>
+          <article className="guidance-step-card"><span>2</span><strong>Добавьте source context</strong><p>Это пример реальных данных: request body, OData result, foreach array, context/run id. По нему builder покажет доступные переменные.</p></article>
+          <article className="guidance-step-card"><span>3</span><strong>Проверьте Preview</strong><p>Preview показывает rendered payload, warnings и errors до того, как mapping попадёт в wizard или operation.</p></article>
+        </div>
+      </section>
+
       <section className="panel connection-center-toolbar">
         <div className="component-strip package-capabilities connection-tabs">
           {tabs.map((tab) => <button key={tab.id} type="button" className={activeTab === tab.id ? 'primary-button' : 'ghost-button'} onClick={() => setActiveTab(tab.id)}>{tab.label}</button>)}
@@ -93,7 +112,7 @@ export function MappingCenterPage() {
 
       <section className="panel table-panel connection-profile-table">
         <div className="panel-toolbar"><h2>{tabs.find((tab) => tab.id === activeTab)?.label ?? 'Mappings'}</h2><span className="microcopy">{filtered.length} из {mappings.length}</span></div>
-        {filtered.length === 0 ? <EmptyState title="Mappings пока нет" detail="Установите presets или создайте mapping profile для операции с контрактом." /> : (
+        {filtered.length === 0 ? <EmptyState title="Mappings пока нет" detail="Установите presets или создайте mapping profile для операции с контрактом." actions={<><Link className="primary-button" to="/mapping-center/mappings/new">Создать mapping</Link><button className="ghost-button" onClick={() => installPresets.mutate()} disabled={installPresets.isPending}>Установить presets</button><Link className="ghost-button" to="/operation-catalog">Operation Catalog</Link></>} /> : (
           <div className="table-scroll">
             <table>
               <thead><tr><th>Название</th><th>Операция</th><th>Целевой контракт</th><th>Статус</th><th>Используется где</th><th>Действия</th></tr></thead>

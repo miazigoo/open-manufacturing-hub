@@ -187,6 +187,25 @@ export function MappingBuilderPage() {
         </div>
       </section>
 
+      <section className="guidance-strip">
+        <div className="guidance-head">
+          <div>
+            <span className="eyebrow">Как заполнить builder</span>
+            <h2>Работайте слева направо</h2>
+            <p>Сначала задайте пример данных, затем выберите source variable, target field и проверьте rendered payload. Raw JSON ниже нужен только для advanced правок.</p>
+          </div>
+          <div className="action-row wrap-actions">
+            <button type="button" className="ghost-button" onClick={() => preview.mutate()} disabled={preview.isPending}>Preview now</button>
+            <button type="button" className="ghost-button" onClick={() => validate.mutate()} disabled={validate.isPending}>Validate</button>
+          </div>
+        </div>
+        <div className="guidance-step-grid">
+          <article className="guidance-step-card"><span>Source</span><strong>Пример данных</strong><p>Заполните <code>Source context editor</code>: request, OData results, foreach arrays and context. Builder сам разложит это на переменные.</p></article>
+          <article className="guidance-step-card"><span>Map</span><strong>Mapping table</strong><p>Кликните source variable слева, затем выберите target field. Для массивов включайте <code>preserve_type</code>, чтобы не превратить массив в строку.</p></article>
+          <article className="guidance-step-card"><span>Check</span><strong>Preview & Validate</strong><p><code>Preview</code> показывает итоговый payload, <code>Validate</code> проверяет required поля target contract.</p></article>
+        </div>
+      </section>
+
       <section className="panel mapping-workbench-grid">
         <div className="panel-toolbar"><h2>Builder</h2><span className="microcopy">Source variables to target operation payload</span></div>
         <div className="metadata-grid no-margin">

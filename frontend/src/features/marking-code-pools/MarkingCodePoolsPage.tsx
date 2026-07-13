@@ -39,7 +39,7 @@ export function MarkingCodePoolsPage() {
     <div className="page-stack marking-code-pools-page">
       <section className="page-header onec-hero chz-hero">
         <span className="eyebrow">1С / Честный знак</span>
-        <h1>Пулы кодов Честного знака</h1>
+        <h1>Пулы кодов маркировки Честного знака</h1>
         <p>Конкретный production-инструмент: 1С отправила пул кодов, OMH сохранил файл, при необходимости сделал SMB-копию и отправил данные дальше.</p>
         <div className="hero-meta">
           <StatusBadge status={settings.data?.local_outbox.required ? 'enabled' : 'disabled'} label="локальный архив" />
@@ -47,6 +47,25 @@ export function MarkingCodePoolsPage() {
           <StatusBadge status={settings.data?.forward.enabled ? 'enabled' : 'disabled'} label={settings.data?.forward.service_name ?? 'внешняя отправка'} />
           <Link className="primary-link" to="/docs/onec/recipes/onec-sends-chz-code-pool-file">Инструкция</Link>
           <span className="microcopy">{exports.length} экспортов</span>
+        </div>
+      </section>
+
+      <section className="guidance-strip">
+        <div className="guidance-head">
+          <div>
+            <span className="eyebrow">Как не потерять пул кодов</span>
+            <h2>Сначала archive, затем optional copy/send</h2>
+            <p>Workbench сохраняет исходный запрос и файл локально, а SMB-копия и отправка во внешний endpoint идут как отдельные retryable действия. Поэтому сбой лазера или DNP не теряет исходный пул.</p>
+          </div>
+          <div className="action-row wrap-actions">
+            <Link className="ghost-button" to="/connection-center">Профили подключений</Link>
+            <Link className="ghost-button" to="/operation-catalog">Операции отправки</Link>
+          </div>
+        </div>
+        <div className="guidance-step-grid">
+          <article className="guidance-step-card"><span>1</span><strong>Проверьте настройки</strong><p>На вкладке <code>Настройки</code> выберите local outbox, SMB/local target и REST Operation Profile для внешней отправки.</p></article>
+          <article className="guidance-step-card"><span>2</span><strong>Сделайте preview</strong><p>Вкладка <code>Тест</code> показывает имя файла, payload и предупреждения до реального экспорта из 1С.</p></article>
+          <article className="guidance-step-card"><span>3</span><strong>Смотрите журнал</strong><p>В <code>Журнале экспортов</code> видны archive/copy/forward статусы и retry для каждого неуспешного действия.</p></article>
         </div>
       </section>
 

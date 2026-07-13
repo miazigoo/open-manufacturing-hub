@@ -91,6 +91,25 @@ export function IntegrationStartPage() {
         </div>
       </section>
 
+      <section className="guidance-strip">
+        <div className="guidance-head">
+          <div>
+            <span className="eyebrow">Если не знаете, с чего начать</span>
+            <h2>Выбирайте по результату, а не по технологии</h2>
+            <p>Нормально не знать заранее, нужен ли вам endpoint, flow, operation или mapping. Опишите что приходит и что должно получиться, а Router покажет безопасный путь.</p>
+          </div>
+          <div className="action-row wrap-actions">
+            <Link className="ghost-button" to="/training">Учебный стенд</Link>
+            <Link className="ghost-button" to="/docs/core/start/integration-scenarios">Примеры сценариев</Link>
+          </div>
+        </div>
+        <div className="guidance-step-grid">
+          <article className="guidance-step-card"><span>Сценарий</span><strong>Есть похожая карточка?</strong><p>Откройте её: в карточке уже есть readiness, мастер, инструкция, training example и coverage.</p></article>
+          <article className="guidance-step-card"><span>Вопросы</span><strong>Не уверены в выборе?</strong><p>Ответьте на короткую анкету. <code>Не знаю</code> для OData лучше, чем случайный выбор.</p></article>
+          <article className="guidance-step-card"><span>Safety</span><strong>Сначала dry-run</strong><p>Если сценарий новый, начните с Training Sandbox или Test Console, а production-подключения добавляйте после проверки timeline.</p></article>
+        </div>
+      </section>
+
       {(startError || recommendError) && <div className="error-state compact">{startError ?? recommendError}</div>}
 
       <SectionCard title="Выберите по сценарию" description="Карточки берутся из Integration Coverage Matrix. Если сценарий planned или не имеет готового wizard/workbench, старт заблокирован.">
