@@ -75,6 +75,8 @@ const lessonNavigation = read('frontend/src/features/docs/DocsLessonNavigation.t
 const checklistComponent = read('frontend/src/features/docs/DocsChecklist.tsx');
 const docsSearch = read('frontend/src/features/docs/DocsSearch.tsx');
 const docsPage = read('frontend/src/features/docs/DocumentationPage.tsx');
+const app = read('frontend/src/App.tsx');
+const routeScrollManager = read('frontend/src/components/RouteScrollManager.tsx');
 const screenshotPlaceholder = read('frontend/src/features/docs/ScreenshotPlaceholder.tsx');
 const testConsolePage = read('frontend/src/pages/TestConsolePage.tsx');
 const odataConnectionsPage = read('frontend/src/pages/ODataConnectionsPage.tsx');
@@ -121,12 +123,15 @@ assert(content.includes('onecPackageSeed,'), 'content.ts must use onecPackageSee
 assert(content.includes('Translation in progress') && content.includes('翻译正在进行中'), 'language fallback notes are missing');
 assert(renderer.includes('ExampleBlock') && renderer.includes('::example') && renderer.includes('::open-page') && renderer.includes('Screenshot'), 'MarkdownRenderer must support docs assets/examples/actions');
 assert(renderer.includes('::lesson-page') && renderer.includes('::concept-callout') && renderer.includes('::expected-result') && renderer.includes('::common-mistakes') && renderer.includes('::next-lesson'), 'MarkdownRenderer must support academy lesson components');
+assert(renderer.includes('react-router-dom') && renderer.includes("href.startsWith('/')"), 'MarkdownRenderer must use SPA links for internal documentation routes');
+assert(renderer.includes('utilityTocHeadings') && renderer.includes('следующий урок'), 'MarkdownRenderer must keep next-lesson CTA headings out of the table of contents');
 assert(renderer.includes('~~~'), 'MarkdownRenderer must support tilde code fences used by academy pages');
 assert(renderer.includes('<ol') && renderer.includes('orderedList'), 'MarkdownRenderer must support numbered step lists');
 assert(codeBlock.includes('CodeBlock') && sharedCodeBlock.includes('CopyButton'), 'Code blocks must expose copy controls');
-assert(lessonPage.includes('Учебный формат') && conceptCallout.includes('docs-concept-callout') && expectedResult.includes('docs-expected-result') && commonMistakes.includes('docs-common-mistakes') && nextLesson.includes('docs-next-lesson'), 'academy support components are incomplete');
+assert(lessonPage.includes('Учебный формат') && lessonPage.includes('operatorSteps') && lessonPage.includes('docs-operator-rhythm') && conceptCallout.includes('docs-concept-callout') && expectedResult.includes('docs-expected-result') && commonMistakes.includes('docs-common-mistakes') && nextLesson.includes('docs-next-lesson'), 'academy support components are incomplete');
 assert(actionBar.includes('Открыть 1C Cockpit') && actionBar.includes('Скопировать endpoint') && actionBar.includes('Open 1C Cockpit') && docsPage.includes('DocsActionBar'), 'Task 043 DocsActionBar must be mounted on practical docs pages');
 assert(lessonNavigation.includes('Предыдущий урок') && lessonNavigation.includes('Урок') && lessonNavigation.includes('Previous lesson') && docsPage.includes('academyIndex'), 'Task 043 academy previous/next navigation is missing');
+assert(app.includes('RouteScrollManager') && routeScrollManager.includes('useLocation') && routeScrollManager.includes('scrollTo') && routeScrollManager.includes('scrollIntoView'), 'Route scroll manager must keep lesson navigation at the expected viewport position');
 assert(checklistComponent.includes('localStorage') && checklistComponent.includes('percent') && checklistComponent.includes('docs-checklist-progress'), 'Task 043 checklist progress must persist and show percent');
 assert(docsSearch.includes('sectionTitle') && docsSearch.includes('snippet') && docsSearch.includes('совпадение') && docsSearch.includes('язык'), 'Task 043 search result metadata is incomplete');
 assert(screenshotPlaceholder.includes('screenshotPending') && screenshotPlaceholder.includes('openSourcePage') && screenshotPlaceholder.includes('captureLater'), 'Task 043 screenshot placeholder must be user-friendly');
@@ -134,7 +139,7 @@ assert(testConsolePage.includes('responseEmptyTitle') && testConsolePage.include
 assert(onecContent.includes('Endpoint | URL в OMH') && onecContent.includes('Первый тестовый запрос'), '1C beginner path must explain basics in plain language');
 assert(onecContent.includes("page('start-here', 'glossary'") && onecContent.includes('| Endpoint | Входная точка | URL, куда 1C отправляет запрос |'), '1C glossary page must explain product terms in Russian');
 assert(onecContent.includes('OData filters, field selection and chaining') && onecContent.includes('{{contractor.Ref_Key}}') && onecContent.includes('steps.get_contractor.first.Ref_Key'), '1C docs must explain OData field selection and chaining');
-for (const heading of ['## Что вы настроите', '## Зачем это нужно', '## Что нужно заранее', '## Пошаговая настройка', '## Пример значений', '## Что должно получиться', '## Проверьте себя', '## Частые ошибки', '## Следующий урок']) {
+for (const heading of ['## Что вы настроите', '## Зачем это нужно', '## Что нужно заранее', '## Как оператор проходит урок', '## Пошаговая настройка', '## Пример значений', '## Что должно получиться', '## Проверьте себя', '## Частые ошибки', '## Следующий урок']) {
   assert(onecAcademyContent.includes(heading), `academy lesson template missing heading: ${heading}`);
 }
 for (const forbidden of ['## Что вы соберете', '## Перед началом', '## What you will build', '## Before you start']) {

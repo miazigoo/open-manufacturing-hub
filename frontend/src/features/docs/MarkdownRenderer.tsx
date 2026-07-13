@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { Link } from 'react-router-dom';
 import { CodeBlockWithCopy } from './CodeBlockWithCopy';
 import { DocsChecklist } from './DocsChecklist';
 import { DocsCommonMistakes } from './DocsCommonMistakes';
@@ -16,11 +17,15 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, '-').replace(/-+/g, '-');
 }
 
+const utilityTocHeadings = new Set(['следующий урок', 'next lesson', '下一课']);
+
 export function extractToc(markdown: string): TocItem[] {
   return markdown.split('\n').flatMap((line) => {
     const match = /^(#{2,3})\s+(.+)$/.exec(line.trim());
     if (!match) return [];
-    return [{ id: slugify(match[2]), text: stripInline(match[2]), level: match[1].length }];
+    const text = stripInline(match[2]);
+    if (utilityTocHeadings.has(text.toLowerCase().trim())) return [];
+    return [{ id: slugify(match[2]), text, level: match[1].length }];
   });
 }
 
@@ -193,6 +198,7 @@ function renderInline(value: string) {
     if (link) {
       const href = link[2];
       const external = /^https?:\/\//.test(href);
+      if (href.startsWith('/')) return <Link key={index} to={href}>{link[1]}</Link>;
       return <a key={index} href={href} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>{link[1]}</a>;
     }
     if (part.startsWith('`') && part.endsWith('`')) return <code key={index}>{part.slice(1, -1)}</code>;

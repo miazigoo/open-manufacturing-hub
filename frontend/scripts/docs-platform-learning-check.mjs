@@ -19,6 +19,8 @@ const onecContent = read('frontend/src/features/docs/onecContent.ts');
 const academyContent = read('frontend/src/features/docs/onecAcademyContent.ts');
 const tutorialTemplates = read('frontend/src/features/docs/platformTutorialTemplates.ts');
 const integrationStart = read('frontend/src/pages/IntegrationStartPage.tsx');
+const lessonPage = read('frontend/src/features/docs/DocsLessonPage.tsx');
+const routeScrollManager = read('frontend/src/components/RouteScrollManager.tsx');
 const registry = read('backend/app/integration_coverage/registry.py');
 const makefile = read('Makefile');
 const packageJson = JSON.parse(read('frontend/package.json'));
@@ -132,6 +134,9 @@ for (const heading of requiredHeadings) assert(tutorialTemplates.includes(headin
 
 const tutorialMustContain = ['Curl пример:', 'Ожидаемый ответ:', 'Timeline', 'Artifacts:', 'Попробовать на учебном стенде'];
 for (const token of tutorialMustContain) assert(tutorialTemplates.includes(token), `tutorial template missing ${token}`);
+assert(academyContent.includes('## Как оператор проходит урок') && academyContent.includes('## Как учиться оператору'), 'operator learning rhythm is missing from academy docs');
+assert(lessonPage.includes('operatorSteps') && lessonPage.includes('docs-operator-rhythm'), 'lesson shell does not explain operator learning rhythm');
+assert(routeScrollManager.includes('scrollTo') && routeScrollManager.includes('scrollIntoView'), 'route scroll manager is missing expected link/anchor behavior');
 
 for (const slug of ['request-odata-send-endpoint', 'onec-sends-chz-code-pool-file', 'xml-raw-forwarding', 'xml-input-odata-xml-response', 'onec-print-labels']) {
   const index = tutorialTemplates.indexOf(`'${slug}'`);

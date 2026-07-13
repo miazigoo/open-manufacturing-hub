@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { LoadingState } from './components/LoadingState';
+import { RouteScrollManager } from './components/RouteScrollManager';
 import { PackageGate } from './components/product/PackageGate';
 import { useT } from './i18n/useI18n';
 
@@ -94,6 +95,7 @@ function printer(element: React.ReactNode) {
 export function App() {
   return (
     <Suspense fallback={<PageLoading />}>
+      <RouteScrollManager />
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />

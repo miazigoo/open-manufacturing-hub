@@ -879,6 +879,9 @@ hr { border: 0; border-top: 1px solid var(--line); width: 100%; }
 .docs-lesson-shell { padding: 18px; display: grid; gap: 8px; border-color: rgba(240,179,90,.34); background: radial-gradient(circle at 12% 0%, rgba(240,179,90,.16), transparent 34%), linear-gradient(145deg, rgba(247,239,218,.08), rgba(0,0,0,.22)); }
 .docs-lesson-shell strong { font-size: 20px; letter-spacing: -.02em; }
 .docs-lesson-shell p { margin: 0; max-width: 860px; }
+.docs-operator-rhythm { margin: 6px 0 0; padding-left: 22px; display: grid; gap: 6px; color: #d8ceb8; }
+.docs-operator-rhythm li { line-height: 1.55; }
+.docs-operator-rhythm li::marker { color: var(--accent); font-weight: 800; }
 .docs-concept-callout { border-color: rgba(143,198,180,.34); padding: 18px; display: grid; gap: 8px; background: radial-gradient(circle at 86% 14%, rgba(143,198,180,.16), transparent 28%), linear-gradient(145deg, rgba(143,198,180,.08), rgba(0,0,0,.2)); }
 .docs-concept-callout h3 { margin: 0; color: var(--accent-2); }
 .docs-concept-callout p { margin: 0; max-width: 920px; }

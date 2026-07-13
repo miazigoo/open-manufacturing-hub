@@ -15,6 +15,7 @@ const labels = {
 export function DocsNextLesson({ href, label }: DocsNextLessonProps) {
   const { language } = useI18n();
   const nextLabel = labels[language].next;
+  const accessibleLabel = label ? `${nextLabel}: ${label}` : nextLabel;
   const content = (
     <>
       <span className="eyebrow">{nextLabel}</span>
@@ -22,5 +23,5 @@ export function DocsNextLesson({ href, label }: DocsNextLessonProps) {
     </>
   );
   if (!href) return <div className="docs-next-lesson">{content}</div>;
-  return <Link className="docs-next-lesson" to={href}>{content}</Link>;
+  return <Link className="docs-next-lesson" to={href} aria-label={accessibleLabel}>{content}</Link>;
 }

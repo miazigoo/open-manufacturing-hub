@@ -183,6 +183,20 @@ async function clickButton(page, name) {
   await page.waitForTimeout(700);
 }
 
+async function scrollY(page) {
+  return page.evaluate(() => window.scrollY);
+}
+
+async function assertScrollNearTop(page, label, maxY = 120) {
+  const y = await scrollY(page);
+  if (y > maxY) fail('SCROLL_POSITION', `${label}: expected viewport near top, got y=${y}`);
+}
+
+async function assertNoScrollJump(page, label, beforeY, tolerance = 140) {
+  const afterY = await scrollY(page);
+  if (Math.abs(afterY - beforeY) > tolerance) fail('SCROLL_JUMP', `${label}: before=${beforeY}, after=${afterY}`);
+}
+
 async function ensurePackageWorkspace(page, uiBase, route) {
   await gotoRoute(page, uiBase, route);
   const gateAction = page.getByRole('button', { name: /Install package|Enable package|Установить пакет|Включить пакет|安装软件包|启用软件包/i }).first();
@@ -450,7 +464,18 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (!(await page.locator('.docs-checklist-score').count()) || !(await page.locator('.docs-checklist-progress').count())) fail('ACADEMY_CHECKLIST_PROGRESS', 'Academy checklist percent/progress is missing');
   const academyText = await page.locator('body').innerText();
   if (!academyText.includes('Golden Scenario') || !academyText.includes('Что вы настроите') || !academyText.includes('Что нужно заранее') || !academyText.includes('Пошаговая настройка')) fail('ACADEMY_TEMPLATE_COPY', 'Academy lesson does not render required curriculum structure');
+  if (!academyText.includes('Как оператор проходит урок') || !academyText.includes('Откройте этот урок и рабочий экран OMH в соседних вкладках')) fail('ACADEMY_OPERATOR_RHYTHM', 'Academy lesson does not explain the operator learning rhythm');
   if (!academyText.includes('Вопросы для самопроверки') || !academyText.includes('Где вы видите точный OData filter')) fail('TASK_048_SELF_CHECK', 'Academy lesson self-check questions are missing');
+  if (await page.locator('.docs-toc-panel a').filter({ hasText: /^(Следующий урок|Next lesson|下一课)$/i }).count()) fail('ACADEMY_NEXT_TOC', 'Next lesson CTA must not appear as a table-of-contents anchor');
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(150);
+  const bottomY = await scrollY(page);
+  if (bottomY < 300) fail('SCROLL_TEST_SETUP', `Academy lesson page is too short for scroll test: y=${bottomY}`);
+  await page.locator('a.docs-next-lesson').last().click({ timeout: timeoutMs });
+  await stable(page);
+  await assertHealthy(page, 'academy:next-lesson-scroll');
+  if (!page.url().includes('/docs/onec/academy/lesson-07-second-odata-lookup-product-by-article')) fail('ACADEMY_NEXT_URL', page.url());
+  await assertScrollNearTop(page, 'academy next lesson navigation');
 
   await gotoRoute(page, uiBase, '/docs/onec/exercises');
   const exercisesText = await page.locator('body').innerText();
@@ -577,7 +602,14 @@ async function runBrowserSmoke(apiBase, uiBase) {
   if (flowId) {
     await gotoRoute(page, uiBase, `/integration-flows/${flowId}/builder`);
     const odataStep = page.locator('.builder-step-card').filter({ hasText: /OData|contractor|get_contractor|Find contractor/i }).first();
-    if (await odataStep.count()) await odataStep.click({ timeout: timeoutMs });
+    if (await odataStep.count()) {
+      await odataStep.scrollIntoViewIfNeeded({ timeout: timeoutMs });
+      await page.waitForTimeout(150);
+      const beforeStepClickY = await scrollY(page);
+      await odataStep.click({ timeout: timeoutMs });
+      await page.waitForTimeout(350);
+      await assertNoScrollJump(page, 'builder OData step selection', beforeStepClickY);
+    }
     const builderHelpText = await page.locator('body').innerText();
     if (!/OData query result contract|Save as|\$select/i.test(builderHelpText)) fail('BUILDER_ODATA_HELP', 'Visual Flow Builder OData step does not explain result contract');
     if (!(await page.getByRole('button', { name: /Add filter/i }).count())) fail('BUILDER_ODATA_FILTERS', 'Visual Flow Builder OData step cannot add filter conditions');

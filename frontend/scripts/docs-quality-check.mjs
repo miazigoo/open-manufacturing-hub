@@ -16,7 +16,10 @@ const docsContent = read('frontend/src/features/docs/content.ts');
 const allDocsSource = `${docsContent}\n${onecContent}\n${onecAcademyContent}`;
 const renderer = read('frontend/src/features/docs/MarkdownRenderer.tsx');
 const docsPage = read('frontend/src/features/docs/DocumentationPage.tsx');
+const app = read('frontend/src/App.tsx');
+const routeScrollManager = read('frontend/src/components/RouteScrollManager.tsx');
 const actionBar = read('frontend/src/features/docs/DocsActionBar.tsx');
+const lessonPage = read('frontend/src/features/docs/DocsLessonPage.tsx');
 const lessonNav = read('frontend/src/features/docs/DocsLessonNavigation.tsx');
 const checklist = read('frontend/src/features/docs/DocsChecklist.tsx');
 const search = read('frontend/src/features/docs/DocsSearch.tsx');
@@ -124,6 +127,10 @@ assert(checklist.includes('localStorage') && checklist.includes('percent') && ch
 assert(search.includes('sectionTitle') && search.includes('snippet') && search.includes('совпадение') && search.includes('язык'), 'Docs search result metadata is incomplete');
 assert(screenshotPlaceholder.includes('screenshotPending') && screenshotPlaceholder.includes('openSourcePage') && screenshotPlaceholder.includes('captureLater'), 'Screenshot placeholder copy/actions are incomplete');
 assert(renderer.includes('[SCREENSHOT:') && renderer.includes('ScreenshotPlaceholder'), 'MarkdownRenderer must render bracket screenshot placeholders');
+assert(renderer.includes('react-router-dom') && renderer.includes("href.startsWith('/')"), 'MarkdownRenderer must keep internal docs links inside the SPA');
+assert(renderer.includes('utilityTocHeadings') && renderer.includes('следующий урок'), 'MarkdownRenderer must exclude next-lesson CTA headings from the docs table of contents');
+assert(app.includes('RouteScrollManager') && routeScrollManager.includes('useLocation') && routeScrollManager.includes('scrollTo') && routeScrollManager.includes('scrollIntoView'), 'Route scroll manager is missing or incomplete');
+assert(lessonPage.includes('operatorSteps') && lessonPage.includes('docs-operator-rhythm'), 'Academy lesson shell must explain the operator learning rhythm');
 assert(makefile.includes('docs-quality-check') && packageJson.scripts['docs:quality-check'], 'make docs-quality-check command is missing');
 assert(makefile.includes('docs-ru-language-check') && packageJson.scripts['docs:ru-language-check'], 'make docs-ru-language-check command is missing');
 assert(onecContent.includes("page('start-here', 'glossary'") && onecContent.includes('Глоссарий терминов для 1C'), 'Russian 1C glossary page is missing');
@@ -139,6 +146,7 @@ assert(onecAcademyContent.includes('Troubleshooting по симптомам') &&
 assert(onecAcademyContent.includes('Практические упражнения и проверка навыков') && onecAcademyContent.includes('Open Exercise in Test Console') && onecAcademyContent.includes('Readiness checklist для 1C интеграций'), 'Task 048 exercises/readiness docs are incomplete');
 assert(onecAcademyContent.includes('## Вопросы для самопроверки') && onecAcademyContent.includes('Чем OData Connection отличается от Endpoint?') && onecAcademyContent.includes('Где вы видите точный OData filter, который OMH отправил в 1C?'), 'Task 048 academy self-check questions are incomplete');
 assert(onecAcademyContent.includes('- [ ] I can create OData connection.') && onecAcademyContent.includes('- [ ] I can retry failed event.') && onecAcademyContent.includes('You are ready to configure basic 1C integrations if:'), 'Task 048 readiness checklist/mini certification is incomplete');
+assert(onecAcademyContent.includes('## Как оператор проходит урок') && onecAcademyContent.includes('Сверяйтесь с разделом \\`Что должно получиться\\`') && onecAcademyContent.includes('## Как учиться оператору'), 'Operator learning rhythm is missing from academy lessons or Training Sandbox');
 for (const task049Required of [
   '## Если совсем коротко',
   '## Промежуточный результат',
