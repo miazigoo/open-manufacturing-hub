@@ -220,7 +220,7 @@ td small { display: block; color: var(--muted); margin-top: 5px; line-height: 1.
 .compact-health-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
 .agent-contract-panel { position: sticky; top: 78px; display: grid; gap: 14px; }
 .agent-contract-panel .json-block { max-height: none; white-space: pre-wrap; overflow-wrap: anywhere; }
-.two-column-page { grid-template-columns: minmax(330px, .85fr) 1.15fr; align-items: start; }
+.two-column-page { display: grid; grid-template-columns: minmax(330px, .85fr) 1.15fr; gap: 24px; align-items: start; min-width: 0; }
 .form-panel { position: sticky; top: 24px; }
 .full-span { grid-column: 1 / -1; }
 .notification-page { grid-template-columns: minmax(330px, .72fr) minmax(0, 1.28fr); align-items: start; }

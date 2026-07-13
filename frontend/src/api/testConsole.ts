@@ -12,6 +12,7 @@ export const testConsoleApi = {
   trainingExample: (id: string) => request<DocsExample>(`/api/training/examples/${encodeURIComponent(id)}`),
   runDocsExample: (id: string) => request<Record<string, unknown>>(`/api/docs/examples/${encodeURIComponent(id)}/run`, { method: 'POST' }),
   listCases: () => request<SavedTestCase[]>('/api/test-cases'),
+  getCase: (id: string) => request<SavedTestCase>(`/api/test-cases/${id}`),
   createCase: (payload: SavedTestCasePayload) => request<SavedTestCase>('/api/test-cases', { method: 'POST', body: JSON.stringify(payload) }),
   patchCase: (id: string, payload: Partial<SavedTestCasePayload>) => request<SavedTestCase>(`/api/test-cases/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteCase: (id: string) => request<void>(`/api/test-cases/${id}`, { method: 'DELETE' }),

@@ -42,10 +42,10 @@ async def test_training_package_install_status_mocks_and_examples(client):
 
     resources = await client.get(
         "/api/training/mock-odata/erp/odata/standard.odata/Catalog_Контрагенты",
-        params={"$filter": "ИНН eq '7707083893' and DeletionMark eq false", "$select": "Ref_Key,Description,ИНН", "$top": 1},
+        params={"$filter": "ИНН eq '7707083893' and DeletionMark eq false", "$select": "Ref_Key,Description,ИНН,КПП", "$top": 1},
     )
     assert resources.status_code == 200, resources.text
-    assert resources.json()["value"] == [{"Ref_Key": "11111111-1111-1111-1111-111111111111", "Description": "ООО Ромашка", "ИНН": "7707083893"}]
+    assert resources.json()["value"] == [{"Ref_Key": "11111111-1111-1111-1111-111111111111", "Description": "ООО Ромашка", "ИНН": "7707083893", "КПП": "770701001"}]
 
     contains = await client.get(
         "/api/training/mock-odata/erp/odata/standard.odata/Catalog_Номенклатура",

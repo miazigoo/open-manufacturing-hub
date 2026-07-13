@@ -1,12 +1,18 @@
 import httpx
 import pytest
 
+from app.execution.steps.flow_builder_steps import _endpoint_response_body
 from app.integration_master.service import render_1c_object_resource
 
 
 ORDER_GUID = "c3335ee4-43d0-11f1-8388-000c29b755c7"
 PRODUCT_GUID = "ff22288c-2da4-11f1-8388-000c29b755c7"
 PRODUCT_GUID_2 = "aa22288c-2da4-11f1-8388-000c29b755c7"
+
+
+def test_endpoint_response_body_accepts_plain_json_without_nested_body_key():
+    assert _endpoint_response_body({"status_code": 200, "body": {"ok": True, "capture_id": 1}}) == {"ok": True, "capture_id": 1}
+    assert _endpoint_response_body({"status_code": 200, "body": {"body": {"ok": True}}}) == {"ok": True}
 
 
 async def _create_master_contract(client):

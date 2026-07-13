@@ -23,6 +23,7 @@ export function IntegrationBusPage() {
   const [endpointForm, setEndpointForm] = useState({ name: 'Website contractor lookup', slug: 'site-contractor-lookup-custom', input_mode: 'json', response_mode: 'sync_response', default_event_type: 'ContractorLookupRequested', default_source_system: 'Website', default_target_system: '1C ERP', auth_mode: 'none', token: '' });
   const [routeForm, setRouteForm] = useState({ name: 'Route order product lookup', event_type: 'OrderLookupRequested', target_system: '1C OData', operation: 'lookup_order_products', priority: '50' });
   const [consoleForm, setConsoleForm] = useState({ slug: '', input_mode: 'json', headers: '{}', body: asJson(sampleJson) });
+  const [multipartFile, setMultipartFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   const refresh = () => {
@@ -33,9 +34,13 @@ export function IntegrationBusPage() {
   const createEndpoint = useMutation({ mutationFn: integrationBusApi.createEndpoint, onSuccess: refresh });
   const createRoute = useMutation({ mutationFn: integrationBusApi.createRoute, onSuccess: refresh });
   const installPresets = useMutation({ mutationFn: integrationBusApi.installPresets, onSuccess: refresh });
-  const sendTest = useMutation({ mutationFn: ({ slug, inputMode, headers, body }: { slug: string; inputMode: string; headers: Record<string, string>; body: string }) => {
+  const sendTest = useMutation({ mutationFn: ({ slug, inputMode, headers, body, file }: { slug: string; inputMode: string; headers: Record<string, string>; body: string; file?: File | null }) => {
     if (inputMode === 'xml') return integrationBusApi.sendText(slug, body, 'application/xml', headers);
     if (inputMode === 'raw_text') return integrationBusApi.sendText(slug, body, 'text/plain', headers);
+    if (inputMode === 'multipart_file') {
+      if (!file) throw new Error('Выберите файл для multipart endpoint.');
+      return integrationBusApi.sendMultipart(slug, file, {}, headers);
+    }
     return integrationBusApi.sendJson(slug, JSON.parse(body), headers);
   }});
 
@@ -70,7 +75,7 @@ export function IntegrationBusPage() {
     event.preventDefault();
     setFormError(null);
     try {
-      sendTest.mutate({ slug: consoleForm.slug, inputMode: consoleForm.input_mode, headers: JSON.parse(consoleForm.headers), body: consoleForm.body });
+      sendTest.mutate({ slug: consoleForm.slug, inputMode: consoleForm.input_mode, headers: JSON.parse(consoleForm.headers), body: consoleForm.body, file: multipartFile });
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Invalid JSON');
     }
@@ -78,6 +83,7 @@ export function IntegrationBusPage() {
 
   function selectEndpoint(endpoint: IntegrationEndpoint) {
     setConsoleForm({ slug: endpoint.slug, input_mode: endpoint.input_mode, headers: endpoint.auth_mode === 'static_token' ? asJson({ 'X-OMH-Token': 'secret' }) : '{}', body: endpoint.input_mode === 'xml' ? sampleXml : asJson(sampleJson) });
+    setMultipartFile(null);
   }
 
   return (
@@ -114,10 +120,17 @@ export function IntegrationBusPage() {
             if (next) selectEndpoint(next); else setConsoleForm({ ...consoleForm, slug: event.target.value });
           }}><option value="">{t('bus.selectEndpoint')}</option>{(endpoints.data ?? []).map((endpoint) => <option key={endpoint.id} value={endpoint.slug}>{endpoint.name} · {endpoint.slug}</option>)}</select></label>
           <label className="field-label">Headers JSON<CodeEditor value={consoleForm.headers} onChange={(value) => setConsoleForm({ ...consoleForm, headers: value })} language="json" minRows={5} /></label>
-          <label className="field-label">Body<CodeEditor value={consoleForm.body} onChange={(value) => setConsoleForm({ ...consoleForm, body: value })} language={consoleForm.input_mode === 'json' ? 'json' : consoleForm.input_mode === 'xml' ? 'xml' : 'text'} minRows={9} /></label>
+          {consoleForm.input_mode === 'multipart_file' ? (
+            <label className="field-label">File
+              <input type="file" onChange={(event) => setMultipartFile(event.target.files?.[0] ?? null)} />
+              <small>{multipartFile ? `${multipartFile.name} · ${multipartFile.size.toLocaleString()} bytes` : 'Будет отправлен multipart/form-data field `file`.'}</small>
+            </label>
+          ) : (
+            <label className="field-label">Body<CodeEditor value={consoleForm.body} onChange={(value) => setConsoleForm({ ...consoleForm, body: value })} language={consoleForm.input_mode === 'json' ? 'json' : consoleForm.input_mode === 'xml' ? 'xml' : 'text'} minRows={9} /></label>
+          )}
           {formError && <div className="error-state compact">{formError}</div>}
           {sendTest.error instanceof Error && <div className="error-state compact">{sendTest.error.message}</div>}
-          <button className="primary-button" disabled={!consoleForm.slug || sendTest.isPending}>{t('bus.sendTest')}</button>
+          <button className="primary-button" disabled={!consoleForm.slug || sendTest.isPending || (consoleForm.input_mode === 'multipart_file' && !multipartFile)}>{t('bus.sendTest')}</button>
           {busFailure && (
             <section className="bus-error-contract">
               <strong>{String(busFailure.human_summary ?? t('timeline.externalError'))}</strong>

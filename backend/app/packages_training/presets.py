@@ -4,9 +4,9 @@ from typing import Any
 
 ERP_ODATA: dict[str, list[dict[str, Any]]] = {
     "Catalog_Контрагенты": [
-        {"Ref_Key": "11111111-1111-1111-1111-111111111111", "Code": "000000001", "Description": "ООО Ромашка", "ИНН": "7707083893", "DeletionMark": False},
-        {"Ref_Key": "22222222-2222-2222-2222-222222222222", "Code": "000000002", "Description": "ООО Василек", "ИНН": "7708123456", "DeletionMark": False},
-        {"Ref_Key": "33333333-3333-3333-3333-333333333333", "Code": "000000003", "Description": "Удаленный контрагент", "ИНН": "0000000000", "DeletionMark": True},
+        {"Ref_Key": "11111111-1111-1111-1111-111111111111", "Code": "000000001", "Description": "ООО Ромашка", "ИНН": "7707083893", "КПП": "770701001", "DeletionMark": False},
+        {"Ref_Key": "22222222-2222-2222-2222-222222222222", "Code": "000000002", "Description": "ООО Василек", "ИНН": "7708123456", "КПП": "770801001", "DeletionMark": False},
+        {"Ref_Key": "33333333-3333-3333-3333-333333333333", "Code": "000000003", "Description": "Удаленный контрагент", "ИНН": "0000000000", "КПП": "000000000", "DeletionMark": True},
     ],
     "Catalog_Номенклатура": [
         {"Ref_Key": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Code": "000000001", "Description": "Сок яблочный 1л", "Артикул": "A-100", "GTIN": "04640123456789", "DeletionMark": False},

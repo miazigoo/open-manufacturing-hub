@@ -6,7 +6,7 @@ import { integrationBusApi } from '../api/integrationBus';
 import type { IntegrationEndpoint } from '../api/integrationBus';
 import { integrationFlowsApi, type FlowBuilderPreviewResponse, type IntegrationFlow } from '../api/integrationFlows';
 import { odataConnectionsApi } from '../api/odataConnections';
-import { testConsoleApi } from '../api/testConsole';
+import { testConsoleApi, type TestConsoleSendResponse } from '../api/testConsole';
 import { xmlToolkitApi, type XmlPathItem } from '../api/xmlToolkit';
 import { CodeEditor } from '../components/CodeEditor';
 import { ErrorState } from '../components/ErrorState';
@@ -45,6 +45,7 @@ interface XmlMappingDraft { name: string; path: string; required: boolean; mode:
 function sampleForMode(mode: string) {
   if (mode === 'xml') return xmlSample;
   if (mode === 'raw_text') return rawSample;
+  if (mode === 'multipart_file') return 'Выберите файл ниже. Body для multipart не используется.';
   return jsonSample;
 }
 
@@ -52,6 +53,21 @@ function normalizeTimelineUrl(url: string) {
   if (url.startsWith('/events/')) return url;
   if (/^[a-f0-9-]{20,}$/i.test(url)) return `/events/${url}`;
   return url;
+}
+
+function normalizeBusResponse(response: Record<string, unknown>): TestConsoleSendResponse {
+  const success = typeof response.success === 'boolean'
+    ? response.success
+    : response.status === 'completed' || response.status === 'success' || response.accepted === true;
+  return {
+    success,
+    response,
+    event_id: typeof response.event_id === 'string' ? response.event_id : null,
+    message_id: typeof response.message_id === 'string' ? response.message_id : null,
+    timeline_url: typeof response.timeline_url === 'string' ? response.timeline_url : null,
+    external_error: response.external_error && typeof response.external_error === 'object' ? response.external_error as Record<string, unknown> : null,
+    dry_run: false,
+  };
 }
 
 function slugify(value: string) {
@@ -134,14 +150,17 @@ export function TestConsolePage() {
   const [searchParams] = useSearchParams();
   const exampleId = searchParams.get('exampleId');
   const trainingExampleId = searchParams.get('trainingExampleId');
+  const testCaseId = searchParams.get('testCaseId');
   const requestedMode = searchParams.get('mode') === 'build' ? 'build' : 'quick';
   const requestedInput = searchParams.get('input') === 'xml' ? 'xml' : searchParams.get('input') === 'raw_text' ? 'raw_text' : 'json';
   const endpoints = useQuery({ queryKey: ['bus-endpoints'], queryFn: integrationBusApi.endpoints });
   const odataConnections = useQuery({ queryKey: ['odata-connections'], queryFn: odataConnectionsApi.list });
   const docsExample = useQuery({ queryKey: ['docs-example', exampleId], queryFn: () => testConsoleApi.docsExample(exampleId!), enabled: Boolean(exampleId) });
   const trainingExample = useQuery({ queryKey: ['training-example', trainingExampleId], queryFn: () => testConsoleApi.trainingExample(trainingExampleId!), enabled: Boolean(trainingExampleId) });
+  const savedTestCase = useQuery({ queryKey: ['test-case', testCaseId], queryFn: () => testConsoleApi.getCase(testCaseId!), enabled: Boolean(testCaseId) });
   const [mode, setMode] = useState<PageMode>(requestedMode);
   const [form, setForm] = useState({ endpoint_id: '', input_mode: requestedInput, headers_json: '{}', body: sampleForMode(requestedInput) });
+  const [multipartFile, setMultipartFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [builderError, setBuilderError] = useState<string | null>(null);
   const [createdFlow, setCreatedFlow] = useState<IntegrationFlow | null>(null);
@@ -168,15 +187,34 @@ export function TestConsolePage() {
   const xmlParse = useQuery({ queryKey: ['workbench-xml-parse', wizard.sample], queryFn: () => xmlToolkitApi.parse(wizard.sample), enabled: wizard.inputMode === 'xml' && wizard.sample.trim().includes('<') });
 
   const send = useMutation({
-    mutationFn: (payload: { dry_run: boolean; headers: Record<string, string>; bodyJson: Record<string, unknown> | null }) =>
-      testConsoleApi.send({
+    mutationFn: async (payload: { dry_run: boolean; headers: Record<string, string>; bodyJson: Record<string, unknown> | null }) => {
+      if (form.input_mode === 'multipart_file') {
+        const endpoint = endpoints.data?.find((item) => item.id === form.endpoint_id);
+        if (!endpoint) throw new Error('Выберите endpoint для отправки файла.');
+        if (payload.dry_run) {
+          return {
+            success: true,
+            response: { dry_run: true, would_post: `/api/bus/in/${endpoint.slug}`, file_name: multipartFile?.name ?? null, input_mode: 'multipart_file' },
+            event_id: null,
+            message_id: null,
+            timeline_url: null,
+            external_error: null,
+            dry_run: true,
+          } satisfies TestConsoleSendResponse;
+        }
+        if (!multipartFile) throw new Error('Выберите файл для multipart endpoint.');
+        const response = await integrationBusApi.sendMultipart(endpoint.slug, multipartFile, {}, payload.headers) as Record<string, unknown>;
+        return normalizeBusResponse(response);
+      }
+      return testConsoleApi.send({
         endpoint_id: form.endpoint_id,
         input_mode: form.input_mode,
         headers_json: payload.headers,
         body_text: form.body,
         body_json: payload.bodyJson,
         dry_run: payload.dry_run,
-      }),
+      });
+    },
   });
   const preview = useMutation({ mutationFn: () => integrationFlowsApi.previewBuilder({ builder_json: buildBuilderJson(), sample_request: sampleForPreview(), run_real_queries: false }), onSuccess: setBuilderResult });
   const createFlow = useMutation({
@@ -210,6 +248,20 @@ export function TestConsolePage() {
   }, [docsExample.data, trainingExample.data, endpoints.data, endpoints.isLoading]);
 
   useEffect(() => {
+    if (!savedTestCase.data || endpoints.isLoading) return;
+    const item = savedTestCase.data;
+    const body = item.input_mode === 'json' ? JSON.stringify(item.body_json ?? {}, null, 2) : item.body_text ?? sampleForMode(item.input_mode);
+    setForm({
+      endpoint_id: item.endpoint_id ?? '',
+      input_mode: item.input_mode,
+      headers_json: JSON.stringify(item.headers_json ?? {}, null, 2),
+      body,
+    });
+    setMode('quick');
+    setMultipartFile(null);
+  }, [savedTestCase.data, endpoints.isLoading]);
+
+  useEffect(() => {
     if (odataSteps[0]?.connection || !odataConnections.data?.length) return;
     const first = odataConnections.data.find((item) => item.enabled) ?? odataConnections.data[0];
     setODataSteps((steps) => steps.map((step) => ({ ...step, connection: first.name })));
@@ -227,7 +279,7 @@ export function TestConsolePage() {
   const responsePreview = useMemo(() => renderLocalResponsePreview(wizard.responseBody, wizard.responseType, wizard.sample, wizard.inputMode, odataSteps, extractedFields), [wizard.responseBody, wizard.responseType, wizard.sample, wizard.inputMode, odataSteps, extractedFields]);
 
   if (endpoints.isLoading) return <LoadingState label={t('integration.testConsoleLoading')} />;
-  if (endpoints.error) return <ErrorState error={endpoints.error} />;
+  if (endpoints.error || savedTestCase.error) return <ErrorState error={endpoints.error ?? savedTestCase.error} />;
 
   function parsePayload(dryRun: boolean) {
     setFormError(null);
@@ -398,18 +450,25 @@ export function TestConsolePage() {
         <form className="panel form-panel stack-form" onSubmit={submit}>
           <span className="eyebrow">Быстрая проверка</span>
           <h2>Проверить существующий endpoint</h2>
-          <p className="microcopy">Быстрый режим: выберите endpoint, вставьте JSON/XML/raw body и посмотрите ответ с Timeline.</p>
+          <p className="microcopy">Быстрый режим: выберите endpoint, вставьте JSON/XML/raw body или приложите файл, затем посмотрите ответ с Timeline.</p>
           {loadedExample && <div className="docs-example-loaded"><strong>{t(trainingExample.data ? 'integration.loadedTrainingExample' : 'integration.loadedDocsExample', { title: loadedExample.title[language] ?? loadedExample.title.en ?? loadedExample.id })}</strong><span>{t('integration.endpointSlug', { slug: loadedExample.endpoint_slug })}</span>{!form.endpoint_id && <small>{t('integration.endpointMissing')}</small>}</div>}
           {docsExample.error instanceof Error && <div className="error-state compact">{docsExample.error.message}</div>}
           {trainingExample.error instanceof Error && <div className="error-state compact">{trainingExample.error.message}</div>}
-          <label className="field-label" data-tour="test-endpoint">{t('integration.endpoint')}<select value={form.endpoint_id} onChange={(event) => { const endpoint = endpoints.data?.find((item) => item.id === event.target.value); const nextMode = endpoint?.input_mode ?? form.input_mode; setForm({ ...form, endpoint_id: event.target.value, input_mode: nextMode, body: sampleForMode(nextMode) }); }}><option value="">{t('integration.selectEndpoint')}</option>{(endpoints.data ?? []).map((endpoint) => <option key={endpoint.id} value={endpoint.id}>{endpointLabel(endpoint)}</option>)}</select></label>
+          <label className="field-label" data-tour="test-endpoint">{t('integration.endpoint')}<select value={form.endpoint_id} onChange={(event) => { const endpoint = endpoints.data?.find((item) => item.id === event.target.value); const nextMode = endpoint?.input_mode ?? form.input_mode; setForm({ ...form, endpoint_id: event.target.value, input_mode: nextMode, body: sampleForMode(nextMode) }); setMultipartFile(null); }}><option value="">{t('integration.selectEndpoint')}</option>{(endpoints.data ?? []).map((endpoint) => <option key={endpoint.id} value={endpoint.id}>{endpointLabel(endpoint)}</option>)}</select></label>
           {selectedEndpoint && <div className="endpoint-select-preview"><strong>{endpointDisplayName(selectedEndpoint)}</strong><span>/api/bus/in/{selectedEndpoint.slug}</span><small>{selectedEndpoint.input_mode.toUpperCase()} · {responseModeLabel(selectedEndpoint.response_mode)} · {selectedEndpoint.auth_mode === 'static_token' ? 'защищено token' : 'без token для входящего запроса'}</small></div>}
-          <label className="field-label">{t('integration.inputMode')}<select value={form.input_mode} onChange={(event) => setForm({ ...form, input_mode: event.target.value, body: sampleForMode(event.target.value) })}><option value="json">json</option><option value="xml">xml</option><option value="raw_text">raw_text</option></select></label>
+          <label className="field-label">{t('integration.inputMode')}<select value={form.input_mode} onChange={(event) => { setForm({ ...form, input_mode: event.target.value, body: sampleForMode(event.target.value) }); setMultipartFile(null); }}><option value="json">json</option><option value="xml">xml</option><option value="raw_text">raw_text</option><option value="multipart_file">multipart_file</option></select></label>
           <label className="field-label">{t('integration.headersJson')}<CodeEditor value={form.headers_json} onChange={(value) => setForm({ ...form, headers_json: value })} language="json" minRows={5} /></label>
-          <label className="field-label" data-tour="test-body">{t('integration.body')}<CodeEditor value={form.body} onChange={(value) => setForm({ ...form, body: value })} language={form.input_mode === 'json' ? 'json' : form.input_mode === 'xml' ? 'xml' : 'text'} minRows={11} /></label>
+          {form.input_mode === 'multipart_file' ? (
+            <label className="field-label" data-tour="test-body">Файл
+              <input type="file" onChange={(event) => setMultipartFile(event.target.files?.[0] ?? null)} />
+              <small>{multipartFile ? `${multipartFile.name} · ${multipartFile.size.toLocaleString()} bytes` : 'Файл будет отправлен как multipart/form-data field `file`.'}</small>
+            </label>
+          ) : (
+            <label className="field-label" data-tour="test-body">{t('integration.body')}<CodeEditor value={form.body} onChange={(value) => setForm({ ...form, body: value })} language={form.input_mode === 'json' ? 'json' : form.input_mode === 'xml' ? 'xml' : 'text'} minRows={11} /></label>
+          )}
           {formError && <div className="error-state compact">{formError}</div>}
           {send.error instanceof Error && <div className="error-state compact">{send.error.message}</div>}
-          <div className="action-row" data-tour="test-actions"><button className="primary-button" disabled={!form.endpoint_id || send.isPending}>{t('integration.send')}</button><button type="button" className="ghost-button" disabled={!form.endpoint_id || send.isPending} onClick={() => run(true)}>{t('common.buttons.dryRun')}</button></div>
+          <div className="action-row" data-tour="test-actions"><button className="primary-button" disabled={!form.endpoint_id || send.isPending || (form.input_mode === 'multipart_file' && !multipartFile)}>{t('integration.send')}</button><button type="button" className="ghost-button" disabled={!form.endpoint_id || send.isPending} onClick={() => run(true)}>{t('common.buttons.dryRun')}</button></div>
         </form>
         <section className="page-stack">
           {timelineUrl && <Link className="primary-link" to={timelineUrl}>{t('integration.openLastTimeline')}</Link>}

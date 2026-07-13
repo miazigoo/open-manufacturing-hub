@@ -49,9 +49,9 @@ SCENARIOS: list[dict[str, Any]] = [
         "source_system": "external_api",
         "input_modes": ["json"],
         "default_input_mode": "json",
-        "default_slug": "lookup_order_xml",
-        "sample": {"operation": "lookup_order", "number": "260666/6938", "format": "xml"},
-        "recommended_operation_key": {"field_path": "request.body.operation", "value": "lookup_order"},
+        "default_slug": "lookup_order_products",
+        "sample": {"operation": "lookup_order_products", "number": "260666/6938", "format": "xml"},
+        "recommended_operation_key": {"field_path": "request.body.operation", "value": "lookup_order_products"},
         "recommended_business_key": {"path": "request.body.number"},
     },
     {

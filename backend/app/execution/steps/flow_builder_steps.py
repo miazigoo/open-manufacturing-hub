@@ -848,7 +848,7 @@ def _endpoint_variables(context: PipelineContext, config: dict[str, Any], reques
 
 def _endpoint_response_body(response: dict[str, Any]) -> Any:
     body = response.get("body")
-    if isinstance(body, dict) and isinstance(body.get("body"), (dict, list, str, int, float, bool, type(None))):
+    if isinstance(body, dict) and "body" in body and isinstance(body.get("body"), (dict, list, str, int, float, bool, type(None))):
         return body["body"]
     return body
 

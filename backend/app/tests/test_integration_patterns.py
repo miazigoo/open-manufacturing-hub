@@ -443,6 +443,13 @@ async def test_request_multiple_odata_response_create_creates_disabled_flow_test
     assert dry_run.status_code == 200, dry_run.text
     assert dry_run.json()["success"] is True
 
+    enabled = await client.post(f"/api/integration-master/compiled/{compiled['integration_flow_id']}/enable")
+    assert enabled.status_code == 200, enabled.text
+    real_run = await client.post(f"/api/test-cases/{compiled['saved_test_case_id']}/run")
+    assert real_run.status_code == 200, real_run.text
+    assert real_run.json()["success"] is True
+    assert real_run.json()["timeline_url"]
+
 
 async def test_request_multiple_odata_response_json_template_preserves_items_array(client):
     connector = await _create_order_odata_connector(client)

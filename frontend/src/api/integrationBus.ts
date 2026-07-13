@@ -66,4 +66,10 @@ export const integrationBusApi = {
     request<unknown>(`/api/bus/in/${slug}`, { method: 'POST', headers, body: JSON.stringify(payload) }),
   sendText: (slug: string, body: string, contentType: string, headers: Record<string, string> = {}) =>
     request<unknown>(`/api/bus/in/${slug}`, { method: 'POST', headers: { ...headers, 'Content-Type': contentType }, body }),
+  sendMultipart: (slug: string, file: File, fields: Record<string, string> = {}, headers: Record<string, string> = {}) => {
+    const form = new FormData();
+    form.append('file', file);
+    Object.entries(fields).forEach(([key, value]) => form.append(key, value));
+    return request<unknown>(`/api/bus/in/${slug}`, { method: 'POST', headers, body: form });
+  },
 };
