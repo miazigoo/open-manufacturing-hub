@@ -1093,5 +1093,37 @@
     ],
     "runnable": false,
     "requires_setup": true
+  },
+  "onec.chz_aggregation_to_1c": {
+    "title": {
+      "ru": "Агрегированные коды ЧЗ во входящий HTTP-сервис 1C",
+      "en": "CHZ aggregation codes to a 1C HTTP service",
+      "zh": "CHZ 聚合码发送到 1C HTTP 服务"
+    },
+    "description": {
+      "ru": "Внешний сервис присылает CSV/JSON с полными кодами и кодами агрегатов. OMH группирует коды и отправляет в 1C для регистрации агрегации.",
+      "en": "An external service sends CSV/JSON with full marking codes and aggregate codes. OMH groups the codes and forwards them to 1C for aggregation registration.",
+      "zh": "外部服务发送包含完整标识码和聚合码的 CSV/JSON。OMH 对代码分组并转发到 1C 注册聚合。"
+    },
+    "endpoint_slug": "chz-aggregations-register-file",
+    "method": "POST",
+    "input_mode": "multipart_file",
+    "headers": {
+      "Content-Type": "multipart/form-data"
+    },
+    "body": {
+      "file": "chz-packed-codes-26-0530_6543.csv",
+      "order_number": "260530/6543"
+    },
+    "expected": {
+      "http_status": 200,
+      "success": true,
+      "status": "forwarded",
+      "total_codes": "present",
+      "total_aggregates": "present"
+    },
+    "timeline_artifacts": [],
+    "runnable": false,
+    "requires_setup": true
   }
 }

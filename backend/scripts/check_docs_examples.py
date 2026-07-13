@@ -69,6 +69,9 @@ def main() -> None:
         elif mode == "odata":
             if example.get("method") != "RUN_NOW":
                 fail(f"{example_id} OData polling example must use RUN_NOW")
+        elif mode == "multipart_file":
+            if not isinstance(example.get("body"), dict) or not example["body"].get("file"):
+                fail(f"{example_id} multipart_file example must use object body with file")
         elif mode != "raw_text":
             fail(f"{example_id} has unsupported input_mode {mode!r}")
         if example.get("runnable") and not (example.get("requires_setup") or example.get("endpoint_slug")):

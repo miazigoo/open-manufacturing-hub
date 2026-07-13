@@ -15,6 +15,7 @@ from app.core.config import get_settings
 from app.connectors.router import router as connectors_router
 from app.connection_center.router import router as connection_center_router
 from app.change_sets.router import router as change_sets_router
+from app.chz_aggregations.router import router as chz_aggregations_router
 from app.config_versions.router import router as config_versions_router
 from app.core.errors import BadRequestError, NotFoundError
 from app.data_contracts.router import router as data_contracts_router
@@ -152,6 +153,7 @@ app.include_router(integration_master_router)
 app.include_router(integration_coverage_router)
 app.include_router(integration_patterns_router)
 app.include_router(json_builder_router)
+app.include_router(chz_aggregations_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(marking_code_pools_router, dependencies=[Depends(require_package_enabled("omh-package-onec"))])
 app.include_router(integration_designer_router)
 app.include_router(matchers_router)

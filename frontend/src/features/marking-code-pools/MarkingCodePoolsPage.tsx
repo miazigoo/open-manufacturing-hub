@@ -10,12 +10,14 @@ import { ExportsJournalTab } from './ExportsJournalTab';
 import { OverviewTab } from './OverviewTab';
 import { SettingsTab } from './SettingsTab';
 import { TestTab } from './TestTab';
+import { AggregationsTab } from './AggregationsTab';
 
 const tabs = [
   ['overview', 'Обзор'],
   ['settings', 'Настройки'],
   ['endpoint', 'Endpoint для 1С'],
   ['test', 'Тест'],
+  ['aggregations', 'Агрегация -> 1С'],
   ['journal', 'Журнал экспортов'],
 ] as const;
 
@@ -77,6 +79,7 @@ export function MarkingCodePoolsPage() {
       {activeTab === 'settings' && <SettingsTab settings={settings.data} />}
       {activeTab === 'endpoint' && <EndpointTab />}
       {activeTab === 'test' && <TestTab />}
+      {activeTab === 'aggregations' && <AggregationsTab />}
       {activeTab === 'journal' && <ExportsJournalTab exports={exports} settings={settings.data} />}
     </div>
   );

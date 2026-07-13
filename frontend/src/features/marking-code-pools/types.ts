@@ -132,3 +132,58 @@ export interface MarkingCodePoolActionRetryResponse {
   error_code: string | null;
   action: ActionDetails;
 }
+
+export interface ChzAggregationSettings {
+  onec_url: string;
+  method: string;
+  header_name: string;
+  token_set: boolean;
+  timeout_seconds: number;
+  source: string;
+}
+
+export interface ChzAggregationSettingsPatch {
+  onec_url?: string;
+  onec_token?: string;
+  onec_header_name?: string;
+  onec_timeout_seconds?: number;
+}
+
+export interface ChzAggregationPreviewResponse {
+  success: boolean;
+  status: string;
+  order_number_1c: string;
+  order_number_external: string | null;
+  total_codes: number;
+  total_aggregates: number;
+  content_sha256: string;
+  duplicate_codes: number;
+  warnings: string[];
+  sample: Record<string, unknown>;
+}
+
+export interface ChzAggregationRegistration {
+  id: string;
+  source_system: string;
+  source_document_id: string | null;
+  source_file_name: string | null;
+  order_number_1c: string;
+  order_number_external: string | null;
+  total_codes: number;
+  total_aggregates: number;
+  content_sha256: string;
+  status: string;
+  error_message: string | null;
+  metadata_json: Record<string, unknown>;
+  forwarded_at: string | null;
+  created_at: string;
+}
+
+export interface ChzAggregationRegistrationResponse {
+  success: boolean;
+  status: string;
+  message: string;
+  registration: ChzAggregationRegistration;
+  onec_response: Record<string, unknown> | null;
+  warnings: string[];
+}

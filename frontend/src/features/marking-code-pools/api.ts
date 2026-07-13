@@ -1,6 +1,11 @@
 import { apiUrl, request } from '../../api/client';
 import type {
   MarkingCodePoolActionRetryResponse,
+  ChzAggregationPreviewResponse,
+  ChzAggregationRegistration,
+  ChzAggregationRegistrationResponse,
+  ChzAggregationSettings,
+  ChzAggregationSettingsPatch,
   MarkingCodePoolExport,
   MarkingCodePoolExportResponse,
   MarkingCodePoolPreviewResponse,
@@ -11,6 +16,7 @@ import type {
 } from './types';
 
 const base = '/api/marking-code-pools';
+const aggregationBase = '/api/chz-aggregations';
 
 export const markingCodePoolsApi = {
   settings: () => request<MarkingCodePoolSettings>(`${base}/settings`),
@@ -25,4 +31,9 @@ export const markingCodePoolsApi = {
   retryForward: (id: string) => request<MarkingCodePoolActionRetryResponse>(`${base}/exports/${id}/retry-forward`, { method: 'POST' }),
   retryLaserCopy: (id: string) => request<MarkingCodePoolActionRetryResponse>(`${base}/exports/${id}/retry-laser-copy`, { method: 'POST' }),
   downloadUrl: (id: string) => apiUrl(`${base}/exports/${id}/download`),
+  aggregationSettings: () => request<ChzAggregationSettings>(`${aggregationBase}/settings`),
+  patchAggregationSettings: (payload: ChzAggregationSettingsPatch) => request<ChzAggregationSettings>(`${aggregationBase}/settings`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  aggregationPreviewFile: (form: FormData) => request<ChzAggregationPreviewResponse>(`${aggregationBase}/register-file/preview`, { method: 'POST', body: form }),
+  aggregationRegisterFile: (form: FormData) => request<ChzAggregationRegistrationResponse>(`${aggregationBase}/register-file`, { method: 'POST', body: form }),
+  aggregationRegistrations: () => request<ChzAggregationRegistration[]>(`${aggregationBase}/registrations`),
 };
