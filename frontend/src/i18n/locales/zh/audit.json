@@ -8,5 +8,15 @@
   "correlation": "关联",
   "changed": "已更改",
   "added": "已添加",
-  "removed": "已删除"
+  "removed": "已删除",
+  "noFieldChanges": "没有字段级变更",
+  "noJsonDiff": "此事件没有 JSON diff payload。",
+  "noEntries": "暂无记录",
+  "selectEvent": "选择审计事件",
+  "selectEventHint": "详情、请求上下文和 JSON diff 会显示在这里。",
+  "before": "之前",
+  "after": "之后",
+  "details": "详情",
+  "objectHistory": "对象历史",
+  "loadingObjectHistory": "正在加载对象历史"
 }

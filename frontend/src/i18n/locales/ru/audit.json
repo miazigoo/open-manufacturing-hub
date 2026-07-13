@@ -8,5 +8,15 @@
   "correlation": "Корреляция",
   "changed": "Изменено",
   "added": "Добавлено",
-  "removed": "Удалено"
+  "removed": "Удалено",
+  "noFieldChanges": "Изменений по полям нет",
+  "noJsonDiff": "У события нет JSON diff payload.",
+  "noEntries": "Записей нет",
+  "selectEvent": "Выберите событие аудита",
+  "selectEventHint": "Здесь появятся детали, контекст запроса и JSON diff.",
+  "before": "До",
+  "after": "После",
+  "details": "Детали",
+  "objectHistory": "История объекта",
+  "loadingObjectHistory": "Загрузка истории объекта"
 }

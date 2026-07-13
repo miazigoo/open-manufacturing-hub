@@ -8,5 +8,15 @@
   "correlation": "Correlation",
   "changed": "Changed",
   "added": "Added",
-  "removed": "Removed"
+  "removed": "Removed",
+  "noFieldChanges": "No field-level changes",
+  "noJsonDiff": "This event has no JSON diff payload.",
+  "noEntries": "No entries",
+  "selectEvent": "Select an audit event",
+  "selectEventHint": "Details, request context and JSON diff will appear here.",
+  "before": "Before",
+  "after": "After",
+  "details": "Details",
+  "objectHistory": "Object history",
+  "loadingObjectHistory": "Loading object history"
 }

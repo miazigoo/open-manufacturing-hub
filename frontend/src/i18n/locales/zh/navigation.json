@@ -8,5 +8,46 @@
   "developer": "开发者",
   "printing": "打印",
   "i18nDebug": "i18n 调试",
-  "bffUnavailable": "Navigation BFF 不可用，正在使用本地 fallback。"
+  "bffUnavailable": "Navigation BFF 不可用，正在使用本地 fallback。",
+  "scenarioChooser": {
+    "eyebrow": "新集成",
+    "title": "你想集成什么？",
+    "description": "选择一个工作场景。OMH 会在后台创建或建议底层 routes、steps 和 keys。",
+    "recommendedStart": "推荐开始",
+    "scenario": "场景",
+    "whatComes": "输入是什么",
+    "whatReturn": "返回/执行什么",
+    "whatOmhDoes": "OMH 做什么",
+    "bestFor": "最适合",
+    "cards": {
+      "router": {
+        "title": "按场景选择向导",
+        "input": "真实任务描述：谁调用、传入什么、期望得到什么",
+        "output": "推荐 pattern、步骤计划和正确的 wizard/workbench",
+        "does": "OMH 分类场景，并打开正确向导，避免 endpoint/route/workflow 术语干扰。",
+        "best": "新集成的默认入口。"
+      },
+      "odata": {
+        "title": "测试 1C OData",
+        "input": "入站请求字段或手动 filter",
+        "output": "找到的字段、JSON 示例或集成步骤",
+        "does": "OMH 引导连接、resource、$select/$filter 和保存结果。",
+        "best": "查找订单、客户、库存或表格行。"
+      },
+      "flows": {
+        "title": "查看已发布集成",
+        "input": "已保存的 flow",
+        "output": "Endpoint、trigger key、步骤、最终动作和测试 curl",
+        "does": "展示实际发布内容以及调用方会收到什么。",
+        "best": "配置后检查或生产测试前确认。"
+      },
+      "events": {
+        "title": "检查执行",
+        "input": "集成事件和响应",
+        "output": "Timeline、错误、请求、响应和重复诊断",
+        "does": "打开事件日志，查看 endpoint 被调用后发生了什么。",
+        "best": "排查错误或确认同步成功。"
+      }
+    }
+  }
 }

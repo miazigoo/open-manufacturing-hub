@@ -8,5 +8,46 @@
   "developer": "Developer",
   "printing": "Printing",
   "i18nDebug": "i18n Debug",
-  "bffUnavailable": "Navigation BFF unavailable, using local fallback."
+  "bffUnavailable": "Navigation BFF unavailable, using local fallback.",
+  "scenarioChooser": {
+    "eyebrow": "New integration",
+    "title": "What do you want to integrate?",
+    "description": "Choose a working scenario. OMH will create or suggest low-level routes, steps and keys under the hood.",
+    "recommendedStart": "Recommended start",
+    "scenario": "Scenario",
+    "whatComes": "What arrives",
+    "whatReturn": "What to return/do",
+    "whatOmhDoes": "What OMH does",
+    "bestFor": "Best for",
+    "cards": {
+      "router": {
+        "title": "Choose a wizard by scenario",
+        "input": "A real task description: who calls, what arrives and what should happen",
+        "output": "Recommended pattern, step plan and the right wizard/workbench",
+        "does": "OMH classifies the scenario and opens the right wizard without endpoint/route/workflow jargon.",
+        "best": "Default start for a new integration."
+      },
+      "odata": {
+        "title": "Test 1C OData",
+        "input": "Inbound request fields or manual filter",
+        "output": "Found fields, JSON sample or an integration step",
+        "does": "OMH guides connection, resource, $select/$filter and saving the result.",
+        "best": "Finding orders, contractors, stock or tabular-section rows."
+      },
+      "flows": {
+        "title": "View published integrations",
+        "input": "Already saved flows",
+        "output": "Endpoint, trigger key, steps, final action and test curl",
+        "does": "Shows what is really published and what the caller will receive.",
+        "best": "Checking setup results or preparing for a production test."
+      },
+      "events": {
+        "title": "Check execution",
+        "input": "Integration events and responses",
+        "output": "Timeline, errors, requests, responses and repeat diagnostics",
+        "does": "Opens the event journal so you can see what happened after an endpoint call.",
+        "best": "Troubleshooting an error or confirming successful synchronization."
+      }
+    }
+  }
 }

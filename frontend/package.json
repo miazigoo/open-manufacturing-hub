@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --pretty false",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "smoke:ui": "node scripts/ui-smoke.mjs",
     "smoke:ui:live": "UI_SMOKE_API_BASE_URL=http://localhost:8000 UI_SMOKE_BASE_URL=http://localhost:5173 node scripts/ui-smoke.mjs",

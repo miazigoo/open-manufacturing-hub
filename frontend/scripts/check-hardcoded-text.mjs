@@ -14,6 +14,12 @@ const highValue = [
   'src/pages/PackagesPage.tsx',
   'src/pages/PluginStorePage.tsx',
   'src/pages/TestConsolePage.tsx',
+  'src/components/Layout.tsx',
+  'src/components/audit/AuditDiffViewer.tsx',
+  'src/components/audit/AuditEventDetails.tsx',
+  'src/components/audit/ObjectHistoryPanel.tsx',
+  'src/components/integration/FlowPreviewPanel.tsx',
+  'src/components/integration/JsonPayloadBuilder.tsx',
   'src/components/product/PackageGate.tsx',
   'src/features/auth/',
   'src/features/docs/ExampleBlock.tsx',
@@ -67,5 +73,9 @@ if (rest.length) {
   console.warn(`[i18n:check] Project-wide advisory findings: ${rest.length}. Showing first 40:`);
   rest.slice(0, 40).forEach((item) => console.warn(`  ${item.rel}:${item.line} ${item.value}`));
 }
-if (!findings.length) console.log('[i18n:check] OK: no suspicious hardcoded JSX text found');
-else console.log('[i18n:check] Advisory scan completed. Move remaining product copy into namespaces as pages are touched.');
+if (!findings.length) {
+  console.log('[i18n:check] OK: no suspicious hardcoded JSX text found');
+} else {
+  console.log('[i18n:check] Advisory scan completed. Move remaining product copy into namespaces as pages are touched.');
+}
+if (high.length) process.exit(1);

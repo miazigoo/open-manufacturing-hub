@@ -141,62 +141,63 @@ function TopBar({ onCreateIntegration }: { onCreateIntegration: () => void }) {
 
 const scenarioCards = [
   {
-    title: 'Подобрать мастер по сценарию',
-    input: 'Описание реальной задачи: кто вызывает, что приходит, что должно получиться',
-    output: 'Рекомендованный pattern, план шагов и правильный мастер/workbench',
-    does: 'OMH классифицирует сценарий и открывает нужный мастер без терминов endpoint/route/workflow.',
-    best: 'Основной старт для новой интеграции.',
+    titleKey: 'navigation.scenarioChooser.cards.router.title',
+    inputKey: 'navigation.scenarioChooser.cards.router.input',
+    outputKey: 'navigation.scenarioChooser.cards.router.output',
+    doesKey: 'navigation.scenarioChooser.cards.router.does',
+    bestKey: 'navigation.scenarioChooser.cards.router.best',
     to: '/integration-start',
     primary: true,
   },
   {
-    title: 'Проверить 1C OData',
-    input: 'Поля входящего запроса или ручной фильтр',
-    output: 'Найденные поля, JSON-выборка или шаг для интеграции',
-    does: 'OMH ведёт по подключению, ресурсу, фильтрам $select/$filter и сохранению результата.',
-    best: 'Найти заказ, контрагента, остатки или строки табличной части.',
+    titleKey: 'navigation.scenarioChooser.cards.odata.title',
+    inputKey: 'navigation.scenarioChooser.cards.odata.input',
+    outputKey: 'navigation.scenarioChooser.cards.odata.output',
+    doesKey: 'navigation.scenarioChooser.cards.odata.does',
+    bestKey: 'navigation.scenarioChooser.cards.odata.best',
     to: '/odata-explorer',
   },
   {
-    title: 'Посмотреть опубликованные интеграции',
-    input: 'Уже сохранённые flow',
-    output: 'Endpoint, trigger key, шаги, финальное действие и тестовый curl',
-    does: 'Показывает, что реально опубликовано и что вернётся вызывающей системе.',
-    best: 'Проверка после настройки или перед боевым тестом.',
+    titleKey: 'navigation.scenarioChooser.cards.flows.title',
+    inputKey: 'navigation.scenarioChooser.cards.flows.input',
+    outputKey: 'navigation.scenarioChooser.cards.flows.output',
+    doesKey: 'navigation.scenarioChooser.cards.flows.does',
+    bestKey: 'navigation.scenarioChooser.cards.flows.best',
     to: '/integration-flows',
   },
   {
-    title: 'Проверить выполнение',
-    input: 'События и ответы интеграций',
-    output: 'Timeline, ошибки, запросы, ответы и повторная диагностика',
-    does: 'Открывает журнал событий, где видно, что произошло после вызова endpoint.',
-    best: 'Разбор ошибки или подтверждение успешной синхронизации.',
+    titleKey: 'navigation.scenarioChooser.cards.events.title',
+    inputKey: 'navigation.scenarioChooser.cards.events.input',
+    outputKey: 'navigation.scenarioChooser.cards.events.output',
+    doesKey: 'navigation.scenarioChooser.cards.events.does',
+    bestKey: 'navigation.scenarioChooser.cards.events.best',
     to: '/events',
   },
 ];
 
 function ScenarioChooser({ onClose }: { onClose: () => void }) {
+  const t = useT();
   return (
     <div className="scenario-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="scenario-modal" role="dialog" aria-modal="true" aria-labelledby="scenario-modal-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="panel-toolbar">
           <div>
-            <span className="eyebrow">Новая интеграция</span>
-            <h2 id="scenario-modal-title">Что вы хотите интегрировать?</h2>
-            <p>Выберите рабочий сценарий. Низкоуровневые маршруты, шаги и ключи OMH создаст или подскажет под капотом.</p>
+            <span className="eyebrow">{t('navigation.scenarioChooser.eyebrow')}</span>
+            <h2 id="scenario-modal-title">{t('navigation.scenarioChooser.title')}</h2>
+            <p>{t('navigation.scenarioChooser.description')}</p>
           </div>
-          <button type="button" className="ghost-button" onClick={onClose}>Закрыть</button>
+          <button type="button" className="ghost-button" onClick={onClose}>{t('common.buttons.close')}</button>
         </div>
         <div className="scenario-card-grid compact-scenario-grid">
           {scenarioCards.map((card) => (
-            <Link key={card.title} className={`scenario-card ${card.primary ? 'primary' : ''}`} to={card.to} onClick={onClose}>
-              <span className="eyebrow">{card.primary ? 'Рекомендуемый старт' : 'Сценарий'}</span>
-              <h3>{card.title}</h3>
+            <Link key={card.titleKey} className={`scenario-card ${card.primary ? 'primary' : ''}`} to={card.to} onClick={onClose}>
+              <span className="eyebrow">{card.primary ? t('navigation.scenarioChooser.recommendedStart') : t('navigation.scenarioChooser.scenario')}</span>
+              <h3>{t(card.titleKey)}</h3>
               <dl>
-                <div><dt>Что приходит</dt><dd>{card.input}</dd></div>
-                <div><dt>Что вернуть/сделать</dt><dd>{card.output}</dd></div>
-                <div><dt>Что делает OMH</dt><dd>{card.does}</dd></div>
-                <div><dt>Лучше всего для</dt><dd>{card.best}</dd></div>
+                <div><dt>{t('navigation.scenarioChooser.whatComes')}</dt><dd>{t(card.inputKey)}</dd></div>
+                <div><dt>{t('navigation.scenarioChooser.whatReturn')}</dt><dd>{t(card.outputKey)}</dd></div>
+                <div><dt>{t('navigation.scenarioChooser.whatOmhDoes')}</dt><dd>{t(card.doesKey)}</dd></div>
+                <div><dt>{t('navigation.scenarioChooser.bestFor')}</dt><dd>{t(card.bestKey)}</dd></div>
               </dl>
             </Link>
           ))}
