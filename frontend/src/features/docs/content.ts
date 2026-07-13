@@ -320,6 +320,20 @@ GET /api/integration-coverage/{requirement_id}
 
 ::open-page{route="/integration-coverage" label="Открыть матрицу покрытия"}
 ::open-page{route="/integration-start" label="Открыть Scenario Router"}
+::open-page{route="/scenario-library" label="Открыть библиотеку готовых сценариев"}
+
+## Где использовать библиотеку сценариев
+
+Scenario Router помогает выбрать правильный путь, а Scenario Library нужна, когда вы хотите быстро поставить готовую заготовку без ручной сборки backend-конфигурации.
+
+Рабочий порядок:
+
+1. Откройте \`/scenario-library\`.
+2. Нажмите \`Preview\` и проверьте, какие endpoint, flow, operation и тестовые данные будут созданы.
+3. Нажмите \`Установить сценарий\`.
+4. Откройте созданную интеграцию, отправьте тестовый payload через Test Console и проверьте Timeline.
+
+Не переносите preset в production только по факту установки. Production-ready считается только сценарий, у которого проверены response, artifacts, ошибки и replay/dry-run путь.
 
 ## Что считается покрытым
 

@@ -20,23 +20,23 @@ export function ScenarioLibraryPage() {
     },
   });
 
-  if (scenarios.isLoading) return <LoadingState label="Loading scenario library" />;
+  if (scenarios.isLoading) return <LoadingState label="Загрузка библиотеки сценариев" />;
   if (scenarios.error) return <ErrorState error={scenarios.error} />;
 
   return (
     <div className="page-stack">
       <section className="page-header designer-hero">
-        <span className="eyebrow">1C Tools</span>
-        <h1>Scenario Library</h1>
-        <p>Install practical 1C/API/XML/printer integration presets without editing backend code.</p>
+        <span className="eyebrow">Готовые presets</span>
+        <h1>Библиотека сценариев</h1>
+        <p>Установите практический сценарий 1C/API/XML/печати без ручного редактирования backend-конфигурации. Сначала смотрите Preview, затем устанавливайте и проверяйте через Test Console и Timeline.</p>
       </section>
 
       <section className="guidance-strip">
         <div className="guidance-head">
           <div>
             <span className="eyebrow">Как использовать библиотеку</span>
-            <h2>Сначала посмотрите Preview, потом устанавливайте сценарий</h2>
-            <p>Scenario Library ставит готовые endpoint, flow, operation и тестовые примеры. Preview показывает, что именно будет создано, Install добавляет сценарий в рабочую среду, а дальше его нужно открыть в интеграциях или Test Console и проверить на реальном payload.</p>
+            <h2>Сначала Preview, потом установка и тест</h2>
+            <p>Библиотека создаёт готовые endpoint, flow, operation и тестовые примеры. Preview показывает состав изменений до записи, установка добавляет сценарий в рабочую среду, а затем его нужно открыть в интеграциях или Test Console и проверить на реальном payload.</p>
           </div>
           <div className="action-row wrap-actions">
             <Link className="primary-link" to="/integration-start">Подобрать сценарий</Link>
@@ -46,8 +46,8 @@ export function ScenarioLibraryPage() {
         </div>
         <div className="guidance-step-grid">
           <div className="guidance-step-card"><span>01</span><strong>Preview</strong><small>Проверьте slug, источник, цель, operation и тестовые данные до установки.</small></div>
-          <div className="guidance-step-card"><span>02</span><strong>Install</strong><small>Создайте готовую заготовку без ручной сборки backend-конфигурации.</small></div>
-          <div className="guidance-step-card"><span>03</span><strong>Open and test</strong><small>Откройте flow, отправьте тестовый запрос и проверьте Timeline.</small></div>
+          <div className="guidance-step-card"><span>02</span><strong>Установить</strong><small>Создайте готовую заготовку без ручной сборки backend-конфигурации.</small></div>
+          <div className="guidance-step-card"><span>03</span><strong>Открыть и проверить</strong><small>Откройте flow, отправьте тестовый запрос и проверьте Timeline.</small></div>
         </div>
       </section>
 
@@ -61,26 +61,30 @@ export function ScenarioLibraryPage() {
             </div>
             <p>{scenario.description}</p>
             <div className="metadata-grid compact-grid">
-              <span>Source<strong>{scenario.source}</strong></span>
-              <span>Target<strong>{scenario.target}</strong></span>
-              <span>Input<strong>{scenario.input_modes.join(', ')}</strong></span>
+              <span>Источник<strong>{sourceLabel(scenario.source)}</strong></span>
+              <span>Цель<strong>{targetLabel(scenario.target)}</strong></span>
+              <span>Формат входа<strong>{inputModesLabel(scenario.input_modes)}</strong></span>
             </div>
-            <div className="badge-row"><span className="status-badge info compact">{scenario.operation_code}</span><span className="status-badge muted compact">/{scenario.default_slug}</span></div>
-            <div className="action-row">
-              <button className="ghost-button" onClick={() => preview.mutate(scenario.code)} disabled={preview.isPending}>Preview</button>
-              <button className="primary-button" onClick={() => install.mutate(scenario.code)} disabled={install.isPending}>Install</button>
-              <Link className="primary-link" to="/integration-designer">Open designer</Link>
+            <div className="badge-row">
+              <span className="status-badge info compact">operation: {scenario.operation_code}</span>
+              <span className="status-badge muted compact">endpoint: /{scenario.default_slug}</span>
+            </div>
+            <p className="microcopy">После установки проверьте сценарий тестовым payload и откройте Timeline. Не переносите в production без проверки ответа и artifacts.</p>
+            <div className="action-row wrap-actions">
+              <button className="ghost-button" onClick={() => preview.mutate(scenario.code)} disabled={preview.isPending}>Preview: посмотреть состав</button>
+              <button className="primary-button" onClick={() => install.mutate(scenario.code)} disabled={install.isPending}>Установить сценарий</button>
+              <Link className="primary-link" to="/integration-designer">Открыть дизайнер</Link>
             </div>
           </article>
         )) : (
           <EmptyState
-            title="No scenarios"
+            title="Сценариев пока нет"
             detail="Пока нет готовых preset-сценариев. Можно начать через Scenario Router или учебный пример."
             actions={<><Link className="primary-link" to="/integration-start">Подобрать сценарий</Link><Link className="ghost-button" to="/training">Учебный пример</Link></>}
           />
         )}
       </section>
-      {preview.data && <JsonBlock title="Preview" value={preview.data} searchable={false} />}
+      {preview.data && <JsonBlock title="Preview: что будет создано" value={preview.data} searchable={false} />}
       {install.data && (
         <section className="panel page-stack">
           <div className="panel-toolbar">
@@ -91,9 +95,51 @@ export function ScenarioLibraryPage() {
               <Link className="ghost-button" to="/events">Проверить Timeline</Link>
             </div>
           </div>
-          <JsonBlock title="Installed scenario" value={install.data} searchable={false} />
+          <div className="success-note">
+            <strong>Endpoint готов для теста</strong>
+            <span>{install.data.endpoint_url}</span>
+          </div>
+          {install.data.next_steps.length > 0 && (
+            <div className="builder-help-card">
+              <strong>Что сделать дальше</strong>
+              {install.data.next_steps.map((step) => <span key={step}>{step}</span>)}
+            </div>
+          )}
+          <JsonBlock title="Технические детали установки" value={install.data} searchable={false} />
         </section>
       )}
     </div>
   );
+}
+
+function sourceLabel(value: string) {
+  const labels: Record<string, string> = {
+    onec: '1C',
+    external_api: 'Внешний API',
+    website: 'Сайт',
+    wms: 'WMS',
+    omh_scheduler: 'OMH по расписанию',
+  };
+  return labels[value] ?? value;
+}
+
+function targetLabel(value: string) {
+  const labels: Record<string, string> = {
+    onec: '1C',
+    external_api: 'Внешний API',
+    printer: 'Принтер',
+    odata_lookup: 'OData lookup',
+    dnp: 'DNP / ЧЗ',
+  };
+  return labels[value] ?? value;
+}
+
+function inputModesLabel(modes: string[]) {
+  const labels: Record<string, string> = {
+    json: 'JSON',
+    xml: 'XML',
+    raw_text: 'Raw text',
+    file: 'Файл',
+  };
+  return modes.map((mode) => labels[mode] ?? mode).join(', ');
 }
