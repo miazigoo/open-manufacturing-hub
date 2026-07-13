@@ -1,6 +1,6 @@
 """data contracts and mapping center
 
-Revision ID: 0033_data_contract_mapping_center
+Revision ID: 0033_data_contract_mapping
 Revises: 0032_operation_catalog
 Create Date: 2026-07-13
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0033_data_contract_mapping_center"
+revision: str = "0033_data_contract_mapping"
 down_revision: str | None = "0032_operation_catalog"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
