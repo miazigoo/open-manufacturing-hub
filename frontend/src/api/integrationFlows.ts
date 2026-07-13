@@ -33,7 +33,7 @@ export interface FlowCreatePayload {
   enabled?: boolean;
   source_type: string;
   target_type: string;
-  endpoint: { input_mode: string; response_mode: string; auth_mode: string; auth_config_json: Record<string, unknown> };
+  endpoint: { input_mode: string; response_mode: string; processing_mode?: string; auth_mode: string; auth_config_json: Record<string, unknown> };
   matcher_group_json: Record<string, unknown>;
   action_json: Record<string, unknown>;
   response_config_json?: Record<string, unknown>;

@@ -17,9 +17,10 @@ export function OverviewTab({ settings, exports }: OverviewTabProps) {
       <SectionCard title="Что делает инструмент" description="Этот инструмент принимает от 1С пул кодов Честного знака и сохраняет его в файл. Дополнительно OMH может сохранить копию в сетевую директорию для лазера и/или отправить пул во внешний сервис, например DnP.">
         <div className="chz-flow-diagram" aria-label="1C to OMH code pool flow">
           <span>1C</span>
-          <strong>POST /api/marking-code-pools/onec/export-file</strong>
+          <strong>POST /api/bus/in/onec-chz-pool-delivery</strong>
           <span>OMH</span>
           <ul>
+            <li>быстрый accepted-ответ для 1C</li>
             <li>локальный архив</li>
             <li>опциональная копия для лазера / SMB</li>
             <li>опциональная внешняя отправка</li>

@@ -14,13 +14,17 @@ const sampleJson = { operation: 'lookup_order_products', Number: '260666/6938' }
 const sampleXml = '<Документ><Номер>UPD-1001</Номер></Документ>';
 type BusFailureContract = { human_summary?: unknown; timeline_url?: unknown; external_error?: Record<string, unknown> };
 
+function recommendedProcessingMode(responseMode: string) {
+  return responseMode === 'accepted_event' || responseMode === 'accepted_message' ? 'async_queue' : 'sync_then_async_fallback';
+}
+
 export function IntegrationBusPage() {
   const t = useT();
   const queryClient = useQueryClient();
   const endpoints = useQuery({ queryKey: ['bus-endpoints'], queryFn: integrationBusApi.endpoints });
   const routes = useQuery({ queryKey: ['bus-routes'], queryFn: integrationBusApi.routes });
   const lookups = useQuery({ queryKey: ['bus-lookups'], queryFn: integrationBusApi.lookups });
-  const [endpointForm, setEndpointForm] = useState({ name: 'Website contractor lookup', slug: 'site-contractor-lookup-custom', input_mode: 'json', response_mode: 'sync_response', default_event_type: 'ContractorLookupRequested', default_source_system: 'Website', default_target_system: '1C ERP', auth_mode: 'none', token: '' });
+  const [endpointForm, setEndpointForm] = useState({ name: 'Website contractor lookup', slug: 'site-contractor-lookup-custom', input_mode: 'json', response_mode: 'sync_response', processing_mode: 'sync_then_async_fallback', default_event_type: 'ContractorLookupRequested', default_source_system: 'Website', default_target_system: '1C ERP', auth_mode: 'none', token: '' });
   const [routeForm, setRouteForm] = useState({ name: 'Route order product lookup', event_type: 'OrderLookupRequested', target_system: '1C OData', operation: 'lookup_order_products', priority: '50' });
   const [consoleForm, setConsoleForm] = useState({ slug: '', input_mode: 'json', headers: '{}', body: asJson(sampleJson) });
   const [multipartFile, setMultipartFile] = useState<File | null>(null);
@@ -58,6 +62,7 @@ export function IntegrationBusPage() {
       slug: endpointForm.slug,
       input_mode: endpointForm.input_mode,
       response_mode: endpointForm.response_mode,
+      processing_mode: endpointForm.processing_mode,
       default_event_type: endpointForm.default_event_type,
       default_source_system: endpointForm.default_source_system || null,
       default_target_system: endpointForm.default_target_system || null,
@@ -102,7 +107,8 @@ export function IntegrationBusPage() {
             <label className="field-label">{t('common.name')}<input value={endpointForm.name} onChange={(event) => setEndpointForm({ ...endpointForm, name: event.target.value })} /></label>
             <label className="field-label">Slug<input value={endpointForm.slug} onChange={(event) => setEndpointForm({ ...endpointForm, slug: event.target.value })} /></label>
             <label className="field-label">{t('bus.inputMode')}<select value={endpointForm.input_mode} onChange={(event) => setEndpointForm({ ...endpointForm, input_mode: event.target.value })}><option value="json">json</option><option value="xml">xml</option><option value="raw_text">raw_text</option><option value="form">form</option><option value="multipart_file">multipart_file</option></select></label>
-            <label className="field-label">{t('bus.responseMode')}<select value={endpointForm.response_mode} onChange={(event) => setEndpointForm({ ...endpointForm, response_mode: event.target.value })}><option value="accepted_event">accepted_event</option><option value="accepted_message">accepted_message</option><option value="sync_response">sync_response</option><option value="proxy_response">proxy_response</option></select></label>
+            <label className="field-label">{t('bus.responseMode')}<select value={endpointForm.response_mode} onChange={(event) => setEndpointForm({ ...endpointForm, response_mode: event.target.value, processing_mode: recommendedProcessingMode(event.target.value) })}><option value="accepted_event">accepted_event - ответить сразу event_id</option><option value="accepted_message">accepted_message - ответить сразу message_id</option><option value="sync_response">sync_response - вернуть результат flow</option><option value="proxy_response">proxy_response - вернуть ответ target</option></select><small>Для долгих операций из 1C выбирайте accepted_event.</small></label>
+            <label className="field-label">Processing<select value={endpointForm.processing_mode} onChange={(event) => setEndpointForm({ ...endpointForm, processing_mode: event.target.value })}><option value="async_queue">async_queue - шаги выполняет очередь</option><option value="sync_then_async_fallback">sync_then_async_fallback - ждать недолго, потом очередь</option><option value="sync_inline">sync_inline - ждать выполнение в запросе</option></select><small>Определяет, когда OMH отдаёт HTTP-ответ входящему сервису.</small></label>
             <label className="field-label">{t('events.eventType')}<input value={endpointForm.default_event_type} onChange={(event) => setEndpointForm({ ...endpointForm, default_event_type: event.target.value })} /></label>
             <label className="field-label">{t('common.source')}<input value={endpointForm.default_source_system} onChange={(event) => setEndpointForm({ ...endpointForm, default_source_system: event.target.value })} /></label>
             <label className="field-label">{t('common.target')}<input value={endpointForm.default_target_system} onChange={(event) => setEndpointForm({ ...endpointForm, default_target_system: event.target.value })} /></label>
@@ -143,7 +149,7 @@ export function IntegrationBusPage() {
       </section>
 
       <section className="bus-grid lower">
-        <div className="panel"><div className="panel-toolbar"><h2>{t('bus.endpoints')}</h2><span className="microcopy">{endpoints.data?.length ?? 0}</span></div><div className="bus-list">{(endpoints.data ?? []).map((endpoint) => <article className="bus-card" key={endpoint.id} onClick={() => selectEndpoint(endpoint)}><div><strong>{endpoint.name}</strong><span>/api/bus/in/{endpoint.slug}</span><small>{endpoint.input_mode} · {endpoint.response_mode}</small></div><StatusBadge status={endpoint.enabled ? 'ok' : 'unknown'} /></article>)}</div></div>
+        <div className="panel"><div className="panel-toolbar"><h2>{t('bus.endpoints')}</h2><span className="microcopy">{endpoints.data?.length ?? 0}</span></div><div className="bus-list">{(endpoints.data ?? []).map((endpoint) => <article className="bus-card" key={endpoint.id} onClick={() => selectEndpoint(endpoint)}><div><strong>{endpoint.name}</strong><span>/api/bus/in/{endpoint.slug}</span><small>{endpoint.input_mode} · {endpoint.response_mode} · {endpoint.processing_mode}</small></div><StatusBadge status={endpoint.enabled ? 'ok' : 'unknown'} /></article>)}</div></div>
         <div className="panel"><div className="panel-toolbar"><h2>{t('bus.routes')}</h2><span className="microcopy">{routes.data?.length ?? 0}</span></div><form className="stack-form inline-create" onSubmit={submitRoute}><input value={routeForm.name} onChange={(event) => setRouteForm({ ...routeForm, name: event.target.value })} placeholder={t('common.name')} /><input value={routeForm.event_type} onChange={(event) => setRouteForm({ ...routeForm, event_type: event.target.value })} placeholder={t('events.eventType')} /><input value={routeForm.target_system} onChange={(event) => setRouteForm({ ...routeForm, target_system: event.target.value })} placeholder={t('common.target')} /><input value={routeForm.operation} onChange={(event) => setRouteForm({ ...routeForm, operation: event.target.value })} placeholder="sinc / operation key" /><button className="ghost-button" disabled={createRoute.isPending}>{t('common.create')}</button></form><div className="bus-list">{(routes.data ?? []).map((route) => <article className="bus-card" key={route.id}><div><strong>{route.priority} · {route.name}</strong><span>{route.event_type ?? t('common.all')} → {route.target_system ?? t('common.unassigned')}</span><small>{route.operation ?? t('common.none')}</small></div><StatusBadge status={route.enabled ? 'ok' : 'unknown'} /></article>)}</div></div>
       </section>
 

@@ -6,12 +6,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.enums import IntegrationFlowSourceType, IntegrationFlowTargetType
+from app.core.enums import EndpointProcessingMode, IntegrationFlowSourceType, IntegrationFlowTargetType
 
 
 class EndpointBuilderConfig(BaseModel):
     input_mode: str = "json"
     response_mode: str = "accepted_event"
+    processing_mode: EndpointProcessingMode = EndpointProcessingMode.ASYNC_QUEUE
     auth_mode: str = "none"
     auth_config_json: dict[str, Any] = Field(default_factory=dict)
 

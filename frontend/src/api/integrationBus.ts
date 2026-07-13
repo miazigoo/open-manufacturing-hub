@@ -7,6 +7,7 @@ export interface IntegrationEndpoint {
   enabled: boolean;
   input_mode: string;
   response_mode: string;
+  processing_mode: string;
   default_source_system: string | null;
   default_target_system: string | null;
   default_event_type: string;
@@ -57,7 +58,7 @@ export const integrationBusApi = {
   endpoints: () => request<IntegrationEndpoint[]>('/api/integration-bus/endpoints'),
   routes: () => request<IntegrationRoute[]>('/api/integration-bus/routes'),
   lookups: () => request<ODataLookupTemplate[]>('/api/odata-lookups'),
-  createEndpoint: (payload: Partial<IntegrationEndpoint> & { name: string; slug: string; input_mode: string; response_mode: string; default_event_type: string }) =>
+  createEndpoint: (payload: Partial<IntegrationEndpoint> & { name: string; slug: string; input_mode: string; response_mode: string; processing_mode?: string; default_event_type: string }) =>
     request<IntegrationEndpoint>('/api/integration-bus/endpoints', { method: 'POST', body: JSON.stringify(payload) }),
   createRoute: (payload: Partial<IntegrationRoute> & { name: string }) =>
     request<IntegrationRoute>('/api/integration-bus/routes', { method: 'POST', body: JSON.stringify(payload) }),

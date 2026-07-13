@@ -38,56 +38,26 @@ Content-Type: application/json
 
 ## Ответ для 1C
 
-Endpoint работает в режиме `sync_response`. После успешной обработки 1C получает
-HTTP 200 и JSON, где полезный результат продублирован в двух полях. `response`
-и `body` должны содержать один и тот же объект:
+Endpoint работает в режиме `accepted_event + async_queue`. Это значит:
+
+- 1C быстро получает HTTP 200 с `event_id` и `queue_item_id`;
+- OMH сохраняет файл для лазера и отправляет пул в DnP уже после ответа 1C;
+- итоговый результат проверяется в Timeline и журнале выгрузки кодов.
 
 ```json
 {
-  "success": true,
   "accepted": true,
-  "status": "completed",
+  "status": "waiting",
   "event_id": "c87bc74f-41ef-4995-9fb7-7390dbb39481",
-  "response": {
-    "success": true,
-    "status": "forwarded",
-    "message": "Accepted 2010 marking codes as KM_260703-5442___2010_pcs.txt; status=forwarded",
-    "export": {
-      "order_number": "260703/5442",
-      "file_name": "KM_260703-5442___2010_pcs.txt",
-      "total_codes": 2010,
-      "status": "forwarded"
-    },
-    "dnp_forward": {
-      "ok": true,
-      "order_1c_number": "260703/5442",
-      "order_dnp_name": "26-0703/5442",
-      "created_count": 2010
-    }
-  },
-  "body": {
-    "success": true,
-    "status": "forwarded",
-    "message": "Accepted 2010 marking codes as KM_260703-5442___2010_pcs.txt; status=forwarded",
-    "export": {
-      "order_number": "260703/5442",
-      "file_name": "KM_260703-5442___2010_pcs.txt",
-      "total_codes": 2010,
-      "status": "forwarded"
-    },
-    "dnp_forward": {
-      "ok": true,
-      "order_1c_number": "260703/5442",
-      "order_dnp_name": "26-0703/5442",
-      "created_count": 2010
-    }
-  }
+  "queue_item_id": "7b61e4af-5094-4c21-bbf6-80e9357c75e6",
+  "timeline_url": "/events/c87bc74f-41ef-4995-9fb7-7390dbb39481"
 }
 ```
 
-`response` - основной ответ OMH. `body` оставлен как совместимый alias для
-интеграций, которые ожидают поле с таким именем. Для 1C достаточно проверять
-HTTP 2xx и сохранять весь текст ответа в регистр статусов.
+Для 1C достаточно проверить HTTP 2xx и сохранить текст ответа в регистр статусов.
+Если нужен полный синхронный ответ для диагностики, можно временно переключить
+flow в Visual Flow Builder на `sync_response + sync_then_async_fallback`, но для
+боевой отправки больших пулов это не рекомендуется.
 
 ## Как собрать через UI
 
@@ -97,13 +67,17 @@ HTTP 2xx и сохранять весь текст ответа в регист�
 4. Нажмите `Install scenario`.
 5. Откройте созданный flow в `Integration Flows`.
 6. Откройте `Visual Flow Builder`.
-7. В шаге `CHZ pool delivery` проверьте:
+7. В блоке `Input` проверьте:
+   - `Response`: `accepted_event`;
+   - `Processing`: `async_queue`.
+8. В шаге `CHZ pool delivery` проверьте:
    - `Номер заказа из 1С`: `request.body.order_number`;
    - `Источник кодов`: `Base64 full codes из 1С`;
    - `Массив Base64-кодов`: `request.body.full_codes_base64`;
    - `Сохранить результат как`: `marking_pool_export`.
-8. В `Return response` верните `{{marking_pool_export}}`.
-9. Запустите Preview, затем Test Console.
+9. `Return response` оставьте для ручной диагностики sync-режима. В async-режиме
+   1C получает быстрый `accepted` до выполнения этого шага.
+10. Запустите Preview, затем Test Console.
 
 ## Где настраиваются действия
 
@@ -129,10 +103,10 @@ DNP_REQUEST_TIMEOUT_SECONDS
 - `marking_code_pool_export_request.json` - что пришло из 1C.
 - `marking_code_pool_export_response.json` - итоговый статус.
 - `marking_code_pool_export_actions.json` - отдельно outbox, laser file и DnP.
-- `return_response.json` - что вернулось в 1C.
+- `return_response.json` - итоговый бизнес-ответ, если flow запускался в sync-режиме.
 
-В HTTP-ответе `body` и `response` должны содержать одинаковый полезный результат.
-Если `body` пустой, значит endpoint или flow работает не в актуальной версии.
+В обычном async-режиме HTTP-ответ 1C не содержит `marking_pool_export`. Он содержит
+только идентификаторы события и очереди, а результат обработки смотрится в Timeline.
 
 ## Частые ошибки
 

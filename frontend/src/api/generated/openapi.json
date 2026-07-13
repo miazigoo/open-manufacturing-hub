@@ -5649,6 +5649,10 @@
             "title": "Input Mode",
             "type": "string"
           },
+          "processing_mode": {
+            "$ref": "#/components/schemas/EndpointProcessingMode",
+            "default": "async_queue"
+          },
           "response_mode": {
             "default": "accepted_event",
             "title": "Response Mode",

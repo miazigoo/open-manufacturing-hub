@@ -16,7 +16,8 @@ ONEC_CHZ_POOL_DELIVERY_BUILDER = {
     "input": {
         "endpoint_slug": "onec-chz-pool-delivery",
         "input_mode": "json",
-        "response_mode": "sync_response",
+        "response_mode": "accepted_event",
+        "processing_mode": "async_queue",
     },
     "steps": [
         {
@@ -47,7 +48,7 @@ ONEC_CHZ_POOL_DELIVERY_PRESET = {
     "description": "Visible OMH endpoint for 1C: accepts CHZ full marking codes in Base64, saves the laser file through configured CHZ delivery settings and forwards the same pool to DnP.",
     "source_type": "onec",
     "target_type": "internal",
-    "endpoint": {"input_mode": "json", "response_mode": "sync_response", "auth_mode": "none", "auth_config_json": {}},
+    "endpoint": {"input_mode": "json", "response_mode": "accepted_event", "processing_mode": "async_queue", "auth_mode": "none", "auth_config_json": {}},
     "matcher_group_json": {
         "mode": "all",
         "rules": [
@@ -61,7 +62,7 @@ ONEC_CHZ_POOL_DELIVERY_PRESET = {
         "business_object": "MarkingCodePoolDelivery",
         "description": "1C pushes a CHZ marking code pool to OMH for file delivery and DnP synchronization.",
     },
-    "response_config_json": {"response_mode": "sync_response"},
+    "response_config_json": {"response_mode": "accepted_event", "processing_mode": "async_queue"},
     "builder_json": ONEC_CHZ_POOL_DELIVERY_BUILDER,
     "test_payload_json": {
         "order_number": "260703/5442",

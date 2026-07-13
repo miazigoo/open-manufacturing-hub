@@ -346,6 +346,13 @@ curl -sS "$API/api/odata-lookups" \
 
 Supported endpoint `input_mode` values: `json`, `xml`, `raw_text`, `multipart_file`, `form`.
 Supported `response_mode` values: `accepted_event`, `accepted_message`, `sync_response`, `proxy_response`.
+Supported `processing_mode` values:
+
+- `async_queue`: return the HTTP response immediately and process workflow steps in the queue.
+- `sync_then_async_fallback`: try to finish the workflow in the request, then continue in the queue if it takes too long.
+- `sync_inline`: wait for workflow execution in the HTTP request.
+
+For large 1C payloads and slow downstream systems, use `accepted_event + async_queue`.
 Supported auth modes in v1: `none`, `static_token`.
 
 ## Health Heartbeat

@@ -4,6 +4,7 @@ import { CopyButton } from '../../components/product/CopyButton';
 import { SectionCard } from '../../components/product/SectionCard';
 
 const endpointPath = '/api/marking-code-pools/onec/export-file';
+const busEndpointPath = '/api/bus/in/onec-chz-pool-delivery';
 
 const base64Example = `{
   "source_system": "1C ERP",
@@ -32,7 +33,7 @@ const legacyExample = `{
 }`;
 
 const oneCExample = `Соединение = Новый HTTPСоединение("omh-server", 8710);
-Запрос = Новый HTTPЗапрос("/api/marking-code-pools/onec/export-file");
+Запрос = Новый HTTPЗапрос("/api/bus/in/onec-chz-pool-delivery");
 Запрос.Заголовки.Вставить("Content-Type", "application/json");
 
 // Сформируйте JSON с order_number и full_codes_base64
@@ -42,12 +43,21 @@ const oneCExample = `Соединение = Новый HTTPСоединение(
 
 export function EndpointTab() {
   const url = `${API_BASE_URL.replace(/\/$/, '')}${endpointPath}`;
+  const busUrl = `${API_BASE_URL.replace(/\/$/, '')}${busEndpointPath}`;
   const curl = `curl -X POST '${url}' \\
   -H 'Content-Type: application/json' \\
   -d '${base64Example.replaceAll("'", "'\\''")}'`;
   return (
     <div className="page-stack">
-      <SectionCard title="Endpoint для 1С" description="Используйте этот адрес из 1С. Если backend опубликован за reverse proxy, задайте PUBLIC_BASE_URL/PUBLIC_API_BASE_URL в окружении и используйте внешний URL.">
+      <SectionCard title="Рабочий endpoint для 1С" description="Для 1С используйте bus endpoint: он быстро возвращает event_id/queue_item_id, а сохранение файла и отправку в DnP выполняет очередь OMH.">
+        <div className="endpoint-url-box">
+          <span>POST</span>
+          <code>{busUrl}</code>
+          <CopyButton value={busUrl} label="Скопировать URL" copiedLabel="URL скопирован" />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Низкоуровневый endpoint" description="Этот адрес оставлен для диагностики и ручных проверок workbench. Он выполняет экспорт синхронно и не должен быть основным endpoint для больших пулов из 1С.">
         <div className="endpoint-url-box">
           <span>POST</span>
           <code>{url}</code>

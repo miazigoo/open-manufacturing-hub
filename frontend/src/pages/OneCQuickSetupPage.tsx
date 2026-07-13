@@ -34,7 +34,7 @@ export function OneCQuickSetupPage() {
           <div className="bus-list">
             {install.data.endpoints.map((endpoint) => (
               <article className="bus-card" key={endpoint.id}>
-                <div><strong>{endpoint.name}</strong><span>{API_BASE_URL}/api/bus/in/{endpoint.slug}</span><small>{endpoint.input_mode} · {endpoint.response_mode}</small></div>
+                <div><strong>{endpoint.name}</strong><span>{API_BASE_URL}/api/bus/in/{endpoint.slug}</span><small>{endpoint.input_mode} · {endpoint.response_mode} · {endpoint.processing_mode}</small></div>
                 <Link className="primary-link" to="/integration-bus">{t('bus.testConsole')}</Link>
               </article>
             ))}

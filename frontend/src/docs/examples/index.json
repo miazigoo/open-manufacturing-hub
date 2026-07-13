@@ -1080,9 +1080,10 @@
     },
     "expected": {
       "http_status": 200,
-      "response.status": "forwarded",
-      "body.status": "forwarded",
-      "body_equals_response": true
+      "accepted": true,
+      "status": "waiting",
+      "event_id": "present",
+      "queue_item_id": "present"
     },
     "timeline_artifacts": [
       "marking_code_pool_export_request.json",

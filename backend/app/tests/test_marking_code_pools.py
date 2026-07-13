@@ -264,6 +264,9 @@ async def test_onec_chz_pool_delivery_flow_endpoint_is_visible_and_executable(cl
     assert flows.status_code == 200, flows.text
     flow = next(item for item in flows.json() if item["slug"] == "onec-chz-pool-delivery")
     assert flow["builder_json"]["steps"][0]["type"] == "marking_code_pool_export"
+    assert flow["builder_json"]["input"]["response_mode"] == "accepted_event"
+    assert flow["builder_json"]["input"]["processing_mode"] == "async_queue"
+    assert flow["response_config_json"]["response_mode"] == "accepted_event"
     assert "/api/bus/in/onec-chz-pool-delivery" in flow["onec_http_example"]
 
     code_b64 = _full_code_base64(
@@ -281,18 +284,21 @@ async def test_onec_chz_pool_delivery_flow_endpoint_is_visible_and_executable(cl
 
     assert response.status_code == 200, response.text
     body = response.json()
+    assert body["accepted"] is True
     assert body["event_id"]
-    result = body["response"]
-    assert result["success"] is True
-    assert result["status"] == "forwarded"
-    assert result["export"]["file_name"] == "KM_260703-5442___1_pcs.txt"
-    assert result["actions"]["local_outbox"]["status"] == "success"
-    assert result["actions"]["dnp_forward"]["status"] == "success"
+    assert body["queue_item_id"]
+    assert body["status"] == "waiting"
+
+    processed = await client.post("/api/queue/process-once?worker=test-worker")
+    assert processed.status_code == 200, processed.text
+    assert processed.json()["completed"] == 1
+
     assert calls[0]["json"]["payload"]["full_codes_base64"] == [code_b64]
     assert (tmp_path / "KM_260703-5442___1_pcs.txt").exists()
 
     timeline = await client.get(f"/api/events/{body['event_id']}/timeline")
     assert timeline.status_code == 200, timeline.text
+    assert timeline.json()["event"]["status"] == "success"
     artifacts = [
         artifact["name"]
         for run in timeline.json()["runs"]

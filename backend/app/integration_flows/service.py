@@ -148,6 +148,7 @@ async def patch_flow(session: AsyncSession, flow_id: UUID, request: IntegrationF
                 endpoint = await session.get(IntegrationEndpoint, flow.endpoint_id)
                 if endpoint:
                     endpoint.workflow_id = workflow.id
+            await _sync_endpoint_modes_from_builder(session, flow)
             if flow.route_id:
                 route = await session.get(IntegrationRoute, flow.route_id)
                 if route:
@@ -184,6 +185,7 @@ async def save_builder(session: AsyncSession, flow_id: UUID, builder_json: dict[
     flow = await get_flow_or_404(session, flow_id)
     flow.builder_json = builder_json
     flow.last_validation_json = validate_builder(builder_json)
+    await _sync_endpoint_modes_from_builder(session, flow)
     await session.flush()
     return flow
 
@@ -205,6 +207,7 @@ async def compile_flow(session: AsyncSession, flow_id: UUID) -> dict[str, Any]:
         endpoint = await session.get(IntegrationEndpoint, flow.endpoint_id)
         if endpoint:
             endpoint.workflow_id = workflow.id
+    await _sync_endpoint_modes_from_builder(session, flow)
     if flow.route_id:
         route = await session.get(IntegrationRoute, flow.route_id)
         if route:
@@ -247,7 +250,10 @@ async def install_onec_chz_pool_delivery_preset(session: AsyncSession) -> Integr
             ),
         )
         await compile_flow(session, existing.id)
-        return existing
+        refreshed = await get_flow_or_404(session, existing.id)
+        await _sync_endpoint_modes_from_preset(session, refreshed, ONEC_CHZ_POOL_DELIVERY_PRESET)
+        await session.flush()
+        return refreshed
     return await create_flow(session, IntegrationFlowCreate(**ONEC_CHZ_POOL_DELIVERY_PRESET))
 
 
@@ -293,7 +299,7 @@ async def _upsert_endpoint(session: AsyncSession, request: IntegrationFlowCreate
         "description": request.description,
         "input_mode": request.endpoint.input_mode,
         "response_mode": request.endpoint.response_mode,
-        "processing_mode": EndpointProcessingMode.SYNC_THEN_ASYNC_FALLBACK.value if request.endpoint.response_mode in {"sync_response", "proxy_response"} else EndpointProcessingMode.ASYNC_QUEUE.value,
+        "processing_mode": _normalized_processing_mode(request.endpoint.response_mode, request.endpoint.processing_mode),
         "default_source_system": request.source_type.value,
         "default_target_system": request.target_type.value,
         "default_event_type": f"Flow.{request.slug}",
@@ -312,6 +318,48 @@ async def _upsert_endpoint(session: AsyncSession, request: IntegrationFlowCreate
             setattr(endpoint, key, value)
     await session.flush()
     return endpoint
+
+
+def _normalized_processing_mode(response_mode: str, processing_mode: Any | None) -> str:
+    if processing_mode is None:
+        return EndpointProcessingMode.SYNC_THEN_ASYNC_FALLBACK.value if response_mode in {"sync_response", "proxy_response"} else EndpointProcessingMode.ASYNC_QUEUE.value
+    value = processing_mode.value if hasattr(processing_mode, "value") else str(processing_mode)
+    if response_mode in {"sync_response", "proxy_response"} and value == EndpointProcessingMode.ASYNC_QUEUE.value:
+        return EndpointProcessingMode.SYNC_THEN_ASYNC_FALLBACK.value
+    return value
+
+
+async def _sync_endpoint_modes_from_builder(session: AsyncSession, flow: IntegrationFlow) -> None:
+    if not flow.endpoint_id or not flow.builder_json:
+        return
+    input_config = flow.builder_json.get("input") if isinstance(flow.builder_json, dict) else None
+    if not isinstance(input_config, dict):
+        return
+    endpoint = await session.get(IntegrationEndpoint, flow.endpoint_id)
+    if endpoint is None:
+        return
+    if input_config.get("input_mode"):
+        endpoint.input_mode = str(input_config["input_mode"])
+    if input_config.get("response_mode"):
+        endpoint.response_mode = str(input_config["response_mode"])
+    endpoint.processing_mode = _normalized_processing_mode(endpoint.response_mode, input_config.get("processing_mode", endpoint.processing_mode))
+    flow.response_config_json = {
+        **(flow.response_config_json or {}),
+        "response_mode": endpoint.response_mode,
+        "processing_mode": endpoint.processing_mode.value if hasattr(endpoint.processing_mode, "value") else str(endpoint.processing_mode),
+    }
+
+
+async def _sync_endpoint_modes_from_preset(session: AsyncSession, flow: IntegrationFlow, preset: dict[str, Any]) -> None:
+    if not flow.endpoint_id:
+        return
+    endpoint_config = preset.get("endpoint") or {}
+    endpoint = await session.get(IntegrationEndpoint, flow.endpoint_id)
+    if endpoint is None:
+        return
+    endpoint.input_mode = str(endpoint_config.get("input_mode") or endpoint.input_mode)
+    endpoint.response_mode = str(endpoint_config.get("response_mode") or endpoint.response_mode)
+    endpoint.processing_mode = _normalized_processing_mode(endpoint.response_mode, endpoint_config.get("processing_mode", endpoint.processing_mode))
 
 
 async def _upsert_route(session: AsyncSession, request: IntegrationFlowCreate, workflow_id: UUID, operation_id: UUID, connector_id: UUID | None) -> IntegrationRoute:
