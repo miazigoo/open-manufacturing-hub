@@ -150,6 +150,19 @@ export function VisualFlowBuilderPage() {
         ? { id, type, name: 'Resolve Customer', resolver: 'resolve_customer', object_type: 'Customer', input: { inn: 'request.body.inn' }, save_as: 'customer', inject: { customer_uuid: 'customer.uuid' }, required: true, use_cache: true }
       : type === 'build_json'
         ? { id, type, name: 'Build JSON', save_as: 'target_payload', template: { id: '{{request.body.id}}' } }
+        : type === 'marking_code_pool_export'
+          ? {
+              id,
+              type,
+              name: 'CHZ pool delivery',
+              order_number_path: 'request.body.order_number',
+              full_codes_base64_path: 'request.body.full_codes_base64',
+              source_document_id_path: 'request.body.source_document_id',
+              source_document_name_path: 'request.body.source_document_name',
+              allow_overwrite: true,
+              save_as: 'marking_pool_export',
+              metadata_json: { created_from: 'visual_flow_builder' },
+            }
         : type === 'build_xml_response'
           ? { id, type, name: 'Build XML response', response_body_type: 'xml', status_code: 200, headers: { 'Content-Type': 'application/xml' }, body_template: '<Response><Success>true</Success><Number>{{number}}</Number></Response>' }
         : type === 'call_endpoint'
@@ -194,7 +207,7 @@ export function VisualFlowBuilderPage() {
           <div className="builder-step-list">
             {builder.steps.map((step, index) => <button key={step.id} className={`builder-step-card ${selectedStep?.id === step.id ? 'active' : ''}`} onClick={() => setSelectedStepId(step.id)}><span className="step-index">{String(index + 1).padStart(2, '0')}</span><strong>{step.name ?? step.id}</strong><small>{step.type} · {String(step.save_as ?? step.id)}</small></button>)}
           </div>
-          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('xml_extract')}>Extract XML</button><button className="ghost-button" onClick={() => addStep('raw_xml_forward')}>Raw XML</button><button className="ghost-button" onClick={() => addStep('apply_transforms')}>Transform</button><button className="ghost-button" onClick={() => addStep('evaluate_rules')}>Rule</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('resolve_object')}>Resolve</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('build_xml_response')}>XML response</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
+          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('xml_extract')}>Extract XML</button><button className="ghost-button" onClick={() => addStep('raw_xml_forward')}>Raw XML</button><button className="ghost-button" onClick={() => addStep('apply_transforms')}>Transform</button><button className="ghost-button" onClick={() => addStep('evaluate_rules')}>Rule</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('resolve_object')}>Resolve</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('marking_code_pool_export')}>CHZ pool</button><button className="ghost-button" onClick={() => addStep('build_xml_response')}>XML response</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
         </aside>
 
         <main className="builder-main stack-form">
@@ -207,7 +220,7 @@ export function VisualFlowBuilderPage() {
 
           {selectedStep && <section className="panel step-editor-panel">
             <div className="panel-toolbar"><div><span className="eyebrow">Step Editor</span><h2>{selectedStep.name ?? selectedStep.id}</h2></div><div className="toolbar-actions"><button className="ghost-button" onClick={() => moveStep(selectedStep.id, -1)}>Up</button><button className="ghost-button" onClick={() => moveStep(selectedStep.id, 1)}>Down</button><button className="ghost-button" onClick={() => duplicateStep(selectedStep)}>Duplicate</button><button className="ghost-button danger" onClick={() => deleteStep(selectedStep.id)}>Delete</button></div></div>
-            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="xml_extract">Extract XML</option><option value="raw_xml_forward">Raw XML forward</option><option value="apply_transforms">Transform Field</option><option value="evaluate_rules">Business Rule</option><option value="odata_query">OData query</option><option value="resolve_object">Resolve Business Object</option><option value="build_json">Build JSON</option><option value="build_xml_response">Build XML response</option><option value="condition">Condition</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
+            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="xml_extract">Extract XML</option><option value="raw_xml_forward">Raw XML forward</option><option value="apply_transforms">Transform Field</option><option value="evaluate_rules">Business Rule</option><option value="odata_query">OData query</option><option value="resolve_object">Resolve Business Object</option><option value="build_json">Build JSON</option><option value="marking_code_pool_export">CHZ pool delivery</option><option value="build_xml_response">Build XML response</option><option value="condition">Condition</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
             {selectedStep.type === 'read_variable' && <ReadVariableEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'apply_transforms' && <TransformStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'evaluate_rules' && <BusinessRuleStepEditor step={selectedStep} update={updateStep} />}
@@ -216,6 +229,7 @@ export function VisualFlowBuilderPage() {
             {selectedStep.type === 'odata_query' && <ODataStepEditor step={selectedStep} update={updateStep} odataOptions={odataOptions} steps={builder.steps} />}
             {selectedStep.type === 'resolve_object' && <ResolveObjectEditor step={selectedStep} update={updateStep} resolverOptions={resolverOptions} />}
             {selectedStep.type === 'build_json' && <BuildJsonEditor step={selectedStep} update={updateStep} />}
+            {selectedStep.type === 'marking_code_pool_export' && <MarkingCodePoolExportEditor step={selectedStep} update={updateStep} setSampleText={setSampleText} />}
             {selectedStep.type === 'build_xml_response' && <BuildXmlResponseEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'call_endpoint' && <CallEndpointEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
             {selectedStep.type === 'return_response' && <label className="field-label">Response body<input value={String(selectedStep.body ?? '{{response}}')} onChange={(event) => updateStep(selectedStep.id, { body: event.target.value })} /></label>}
@@ -338,6 +352,58 @@ export function VisualFlowBuilderPage() {
   function BuildJsonEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {
     const template = asJson(step.template ?? {});
     return <div className="stack-form"><label className="field-label">Save as<input value={String(step.save_as ?? 'target_payload')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label><div className="builder-help-card"><strong>Собирайте только нужные поля</strong><span>Используйте OData result variables напрямую: <code>{'{{contractor.Ref_Key}}'}</code>, <code>{'{{product.Description}}'}</code>, <code>{'{{steps.get_prices.items}}'}</code>. Если placeholder занимает всё значение, массивы и объекты сохраняют тип; если он вставлен внутрь строки, получится строка.</span></div><label className="field-label">JSON template<CodeEditor value={template} onChange={(value) => { try { update(step.id, { template: parseJsonObject(value, 'JSON template') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid JSON template'); } }} language="json" minRows={8} title="Rendered after OData/Resolver/Transform steps. Use only fields target endpoint needs." /></label><div className="hint-chip-row">{['{{request.body.pool_id}}', '{{contractor.Ref_Key}}', '{{product.Ref_Key}}', '{{steps.get_contractor.first.Description}}'].map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)}>{hint}</button>)}</div><div className="success-note">Full placeholders preserve source type<span>{'"codes": "{{request.body.codes}}"'}</span></div></div>;
+  }
+
+  function MarkingCodePoolExportEditor({ step, update, setSampleText }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; setSampleText: (value: string) => void }) {
+    const sourceMode = step.full_codes_base64_path ? 'base64' : 'decoded';
+    const metadataJson = asJson(step.metadata_json ?? {});
+    const actionOverridesJson = asJson(step.actions_override ?? {});
+    const sample = {
+      order_number: '260703/5442',
+      source_document_id: 'AEAE-000137',
+      source_document_name: 'Заказ на эмиссию кодов маркировки AEAE-000137',
+      full_codes_base64: ['MDEwNDY0NjE1MTY5NzE4NjIxNV88cWxrPFpiQ1dGUD5XMilmb1UdOTNsemhV'],
+    };
+    const switchSourceMode = (mode: string) => {
+      if (mode === 'base64') {
+        update(step.id, { full_codes_base64_path: 'request.body.full_codes_base64', codes_path: undefined });
+      } else {
+        update(step.id, { full_codes_base64_path: undefined, codes_path: 'request.body.codes' });
+      }
+    };
+    return <div className="stack-form">
+      <div className="builder-help-card">
+        <strong>Что делает этот шаг</strong>
+        <span>Принимает пул кодов ЧЗ от 1С, проверяет дубли, сохраняет файл для лазера через настройки CHZ Delivery и отправляет тот же пул во внешний сервис, например DnP. В production используйте <code>full_codes_base64</code>: это полный код маркировки из 1С без потери GS-разделителя.</span>
+      </div>
+      <div className="metadata-grid compact-grid no-margin">
+        <label className="field-label">Номер заказа из 1С<input value={String(step.order_number_path ?? 'request.body.order_number')} onChange={(event) => update(step.id, { order_number_path: event.target.value })} title="Путь к номеру заказа в JSON. Пример: request.body.order_number со значением 260703/5442." /></label>
+        <label className="field-label">Источник кодов<select value={sourceMode} onChange={(event) => switchSourceMode(event.target.value)} title="Production режим - Base64 из ПолныйКодМаркировки. Decoded codes оставлен только для интеграций, которые уже передают реальный GS1-код."><option value="base64">Base64 full codes из 1С</option><option value="decoded">Already decoded codes</option></select></label>
+        {sourceMode === 'base64' ? <label className="field-label">Массив Base64-кодов<input value={String(step.full_codes_base64_path ?? 'request.body.full_codes_base64')} onChange={(event) => update(step.id, { full_codes_base64_path: event.target.value, codes_path: undefined })} title="Путь к массиву строк Base64. Каждая строка - ПолныйКодМаркировки из 1С." /></label> : <label className="field-label">Массив готовых кодов<input value={String(step.codes_path ?? 'request.body.codes')} onChange={(event) => update(step.id, { codes_path: event.target.value, full_codes_base64_path: undefined })} title="Путь к массиву уже декодированных кодов. Для production лучше не использовать." /></label>}
+        <label className="field-label">Сохранить результат как<input value={String(step.save_as ?? 'marking_pool_export')} onChange={(event) => update(step.id, { save_as: event.target.value })} title="Переменная результата. Обычно marking_pool_export, затем Return response возвращает {{marking_pool_export}}." /></label>
+      </div>
+      <div className="metadata-grid compact-grid no-margin">
+        <label className="field-label">ID документа 1С<input value={String(step.source_document_id_path ?? '')} onChange={(event) => update(step.id, { source_document_id_path: event.target.value })} title="Необязательно. Например request.body.source_document_id. Попадает в журнал и forwarding payload." /></label>
+        <label className="field-label">Название документа 1С<input value={String(step.source_document_name_path ?? '')} onChange={(event) => update(step.id, { source_document_name_path: event.target.value })} title="Необязательно. Например request.body.source_document_name. Помогает оператору видеть источник в Timeline." /></label>
+        <label className="field-label">Имя файла из запроса<input value={String(step.file_name_path ?? '')} onChange={(event) => update(step.id, { file_name_path: event.target.value })} title="Обычно пусто: OMH сам строит имя KM_260703-5442___1_pcs.txt. Заполняйте только если 1С должна явно задать имя файла." /></label>
+        <label className="check-row"><input type="checkbox" checked={step.allow_overwrite !== false} onChange={(event) => update(step.id, { allow_overwrite: event.target.checked })} /> Разрешить перезаписать файл с тем же именем</label>
+      </div>
+      <div className="builder-help-card">
+        <strong>Где настраиваются действия</strong>
+        <span>Папка outbox, SMB-папка лазера, DnP URL и timeout задаются не в этом flow, а один раз в <code>Marking Code Pools {'->'} Settings</code> или в Environment Variables. Flow хранит только правила, откуда взять данные из JSON 1С.</span>
+      </div>
+      <label className="field-label">Metadata JSON<CodeEditor value={metadataJson} onChange={(value) => { try { update(step.id, { metadata_json: parseJsonObject(value, 'Metadata JSON') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid metadata JSON'); } }} language="json" minRows={4} /></label>
+      <label className="field-label">Action overrides JSON<CodeEditor value={actionOverridesJson} onChange={(value) => { try { update(step.id, { actions_override: parseJsonObject(value, 'Action overrides JSON') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid action overrides JSON'); } }} language="json" minRows={4} title="Обычно оставляем пустым. Можно точечно отключить laser_file или external_forward для отдельного flow." /></label>
+      <div className="hint-chip-row">
+        {['request.body.order_number', 'request.body.full_codes_base64', 'request.body.source_document_id', 'request.body.source_document_name', '{{marking_pool_export}}'].map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)} title="Click to copy">{hint}</button>)}
+      </div>
+      <div className="action-row wrap-actions">
+        <button type="button" className="ghost-button" onClick={() => setSampleText(asJson(sample))}>Use CHZ sample request</button>
+        <button type="button" className="ghost-button" onClick={runPreview} disabled={preview.isPending}>Preview CHZ step</button>
+        <Link className="primary-link" to="/marking-code-pools">CHZ delivery settings</Link>
+        <Link className="primary-link" to="/docs/onec/recipes/onec-chz-pool-delivery">Open lesson</Link>
+      </div>
+    </div>;
   }
 
   function BuildXmlResponseEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {

@@ -33,8 +33,20 @@ pytest
 
 ## CHZ Code Pools To DnP
 
-Endpoint `POST /api/marking-code-pools/onec/export-file` принимает пул кодов
-маркировки из 1C и выполняет независимые действия:
+Production-вариант для 1C - видимый Integration Flow:
+
+```text
+POST /api/bus/in/onec-chz-pool-delivery
+```
+
+Оператор может установить его через UI: `Scenario Library -> 1C CHZ code
+pool delivery -> Preview -> Install scenario`. После установки endpoint,
+curl-пример, пример кода 1C и Timeline доступны в карточке flow.
+
+Низкоуровневый endpoint `POST /api/marking-code-pools/onec/export-file`
+остается системным API. Его использует flow step `marking_code_pool_export`.
+Оба варианта принимают пул кодов маркировки из 1C и выполняют независимые
+действия:
 
 - сохраняет локальный outbox-файл внутри OMH;
 - если настроена SMB-папка лазера, доставляет файл туда;
