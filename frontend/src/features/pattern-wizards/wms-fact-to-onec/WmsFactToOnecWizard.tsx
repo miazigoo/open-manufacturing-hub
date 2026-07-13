@@ -15,7 +15,45 @@ import { SaveStep } from './SaveStep';
 import { wmsFactToOnecApi } from './api';
 import type { WmsFactToOneCCallerResponseConfig, WmsFactToOneCODataLookupConfig, WmsFactToOneCPatternRequest, WmsFactToOneCServiceConfig } from './types';
 
-const DEFAULT_SAMPLE = `{
+type WmsFactPresetKey = 'shipment_fact' | 'stock_balance' | 'inventory_result' | 'movement_fact';
+
+interface WmsFactPreset {
+  key: WmsFactPresetKey;
+  label: string;
+  description: string;
+  name: string;
+  slug: string;
+  operation: string;
+  businessKey: string;
+  businessFallbacks: string[];
+  odataLookupEnabled: boolean;
+  serviceOperation: string;
+  servicePath: string;
+  eventType: string;
+  entityType: string;
+  entityIdPath: string;
+  correlationPrefix: string;
+  sample: string;
+}
+
+const WMS_FACT_PRESETS: Record<WmsFactPresetKey, WmsFactPreset> = {
+  shipment_fact: {
+    key: 'shipment_fact',
+    label: 'Отгрузка',
+    description: 'WMS сообщает, что заказ отгружен или изменил статус отгрузки.',
+    name: 'WMS отправляет складской факт в 1С',
+    slug: 'wms-shipment-fact',
+    operation: 'shipment_fact',
+    businessKey: 'request.body.wms_shipment_id',
+    businessFallbacks: ['request.body.order_number'],
+    odataLookupEnabled: true,
+    serviceOperation: 'update_shipment_status',
+    servicePath: '/shipment-facts',
+    eventType: 'WmsShipmentFactReceived',
+    entityType: 'ShipmentFact',
+    entityIdPath: 'request.body.wms_shipment_id',
+    correlationPrefix: 'wms-shipment',
+    sample: `{
   "operation": "shipment_fact",
   "wms_shipment_id": "WMS-SHIP-123",
   "order_number": "260666/6938",
@@ -29,22 +67,124 @@ const DEFAULT_SAMPLE = `{
       "barcode": "04646151697384"
     }
   ]
-}`;
+}`,
+  },
+  stock_balance: {
+    key: 'stock_balance',
+    label: 'Остатки',
+    description: 'WMS отправляет актуальный остаток по складу, SKU, партии или ячейке.',
+    name: 'WMS отправляет остатки в 1С',
+    slug: 'wms-stock-balance-to-1c',
+    operation: 'stock_balance',
+    businessKey: 'request.body.stock_balance_id',
+    businessFallbacks: ['request.body.warehouse_code', 'request.body.moment'],
+    odataLookupEnabled: false,
+    serviceOperation: 'update_stock_balance',
+    servicePath: '/stock-balances',
+    eventType: 'WmsStockBalanceReceived',
+    entityType: 'StockBalance',
+    entityIdPath: 'request.body.stock_balance_id',
+    correlationPrefix: 'wms-stock',
+    sample: `{
+  "operation": "stock_balance",
+  "stock_balance_id": "WMS-STOCK-20260713-001",
+  "warehouse_code": "MAIN",
+  "moment": "2026-07-13T10:00:00",
+  "items": [
+    {
+      "sku": "A-100",
+      "quantity": 125.5,
+      "uom": "pcs",
+      "batch": "BATCH-001",
+      "cell": "A-01-01"
+    }
+  ]
+}`,
+  },
+  inventory_result: {
+    key: 'inventory_result',
+    label: 'Инвентаризация',
+    description: 'WMS передает результат пересчета: ожидали одно количество, фактически нашли другое.',
+    name: 'WMS отправляет результат инвентаризации в 1С',
+    slug: 'wms-inventory-result-to-1c',
+    operation: 'inventory_result',
+    businessKey: 'request.body.inventory_id',
+    businessFallbacks: ['request.body.warehouse_code'],
+    odataLookupEnabled: false,
+    serviceOperation: 'send_inventory_result',
+    servicePath: '/inventory-results',
+    eventType: 'WmsInventoryResultReceived',
+    entityType: 'InventoryResult',
+    entityIdPath: 'request.body.inventory_id',
+    correlationPrefix: 'wms-inventory',
+    sample: `{
+  "operation": "inventory_result",
+  "inventory_id": "WMS-INV-9001",
+  "warehouse_code": "MAIN",
+  "completed_at": "2026-07-13T12:30:00",
+  "items": [
+    {
+      "sku": "A-100",
+      "expected_qty": 120,
+      "actual_qty": 118,
+      "uom": "pcs",
+      "cell": "A-01-01"
+    }
+  ]
+}`,
+  },
+  movement_fact: {
+    key: 'movement_fact',
+    label: 'Перемещение',
+    description: 'WMS сообщает о перемещении товара между складами, зонами или ячейками.',
+    name: 'WMS отправляет перемещение в 1С',
+    slug: 'wms-movement-to-1c',
+    operation: 'movement_fact',
+    businessKey: 'request.body.movement_id',
+    businessFallbacks: ['request.body.source_warehouse_code', 'request.body.target_warehouse_code'],
+    odataLookupEnabled: false,
+    serviceOperation: 'send_movement_fact',
+    servicePath: '/movements',
+    eventType: 'WmsMovementFactReceived',
+    entityType: 'MovementFact',
+    entityIdPath: 'request.body.movement_id',
+    correlationPrefix: 'wms-movement',
+    sample: `{
+  "operation": "movement_fact",
+  "movement_id": "WMS-MOVE-7001",
+  "source_warehouse_code": "MAIN",
+  "target_warehouse_code": "PACK",
+  "moved_at": "2026-07-13T13:10:00",
+  "items": [
+    {
+      "sku": "A-100",
+      "qty": 20,
+      "uom": "pcs",
+      "source_cell": "A-01-01",
+      "target_cell": "P-02-04"
+    }
+  ]
+}`,
+  },
+};
+
+const DEFAULT_PRESET = WMS_FACT_PRESETS.shipment_fact;
 
 export function WmsFactToOnecWizard() {
   const autoParsed = useRef(false);
-  const [name, setName] = useState('WMS отправляет факт отгрузки в 1С');
-  const [slug, setSlug] = useState('wms-shipment-fact');
+  const [factPreset, setFactPreset] = useState<WmsFactPresetKey>(DEFAULT_PRESET.key);
+  const [name, setName] = useState(DEFAULT_PRESET.name);
+  const [slug, setSlug] = useState(DEFAULT_PRESET.slug);
   const [sourceSystem, setSourceSystem] = useState('wms');
   const [inputMode, setInputMode] = useState<InputMode>('json');
-  const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE);
+  const [sampleText, setSampleText] = useState(DEFAULT_PRESET.sample);
   const [parseResult, setParseResult] = useState<InputParseResponse | null>(null);
   const [fields, setFields] = useState<InputContractField[]>([]);
-  const [operationKey, setOperationKey] = useState<InputOperationKey>(() => withMatcher({ type: 'field', field_path: 'request.body.operation', value: 'shipment_fact', fallback_paths: [], matcher_preview: {} }));
-  const [businessKey, setBusinessKey] = useState<InputBusinessKey>({ path: 'request.body.wms_shipment_id', fallback_paths: ['request.body.order_number'] });
-  const [odataLookup, setODataLookup] = useState<WmsFactToOneCODataLookupConfig>(() => ({ enabled: true, config: defaultODataStep(), order_ref_key_path: 'request.body.order_ref_key' }));
-  const [onecPayload, setOnecPayload] = useState<PayloadStepConfig>(() => defaultOnecPayloadStep('order'));
-  const [onecHttpService, setOnecHttpService] = useState<WmsFactToOneCServiceConfig>(() => defaultOnecService());
+  const [operationKey, setOperationKey] = useState<InputOperationKey>(() => operationKeyForPreset(DEFAULT_PRESET));
+  const [businessKey, setBusinessKey] = useState<InputBusinessKey>({ path: DEFAULT_PRESET.businessKey, fallback_paths: DEFAULT_PRESET.businessFallbacks });
+  const [odataLookup, setODataLookup] = useState<WmsFactToOneCODataLookupConfig>(() => ({ enabled: DEFAULT_PRESET.odataLookupEnabled, config: defaultODataStep(), order_ref_key_path: 'request.body.order_ref_key' }));
+  const [onecPayload, setOnecPayload] = useState<PayloadStepConfig>(() => defaultOnecPayloadStep('order', DEFAULT_PRESET));
+  const [onecHttpService, setOnecHttpService] = useState<WmsFactToOneCServiceConfig>(() => defaultOnecService(DEFAULT_PRESET));
   const [callerResponse, setCallerResponse] = useState<WmsFactToOneCCallerResponseConfig>(() => ({ type: 'normalized', status_code: 200, body: defaultCallerBody(), headers: { 'Content-Type': 'application/json' } }));
   const [previewSignature, setPreviewSignature] = useState<string | null>(null);
 
@@ -53,8 +193,9 @@ export function WmsFactToOnecWizard() {
     onSuccess: (data) => {
       setParseResult(data);
       setFields(data.fields);
-      setOperationKey(withMatcher({ type: 'field', field_path: 'request.body.operation', value: 'shipment_fact', fallback_paths: [], matcher_preview: {} }));
-      setBusinessKey(businessFromSuggestion(data.suggested_business_keys.find((item) => item.path === 'request.body.wms_shipment_id') ?? data.suggested_business_keys[0]));
+      const preset = WMS_FACT_PRESETS[factPreset];
+      setOperationKey(operationKeyForPreset(preset));
+      setBusinessKey(businessFromSuggestion(data.suggested_business_keys.find((item) => item.path === preset.businessKey) ?? data.suggested_business_keys[0], preset));
     },
   });
 
@@ -86,12 +227,29 @@ export function WmsFactToOnecWizard() {
   }
 
   function changeInputMode(mode: InputMode) {
+    const preset = WMS_FACT_PRESETS[factPreset];
     setInputMode(mode);
-    setSampleText(DEFAULT_SAMPLE);
+    setSampleText(preset.sample);
     setFields([]);
     setParseResult(null);
-    setOperationKey(withMatcher({ type: 'field', field_path: 'request.body.operation', value: 'shipment_fact', fallback_paths: [], matcher_preview: {} }));
-    setBusinessKey({ path: 'request.body.wms_shipment_id', fallback_paths: ['request.body.order_number'] });
+    setOperationKey(operationKeyForPreset(preset));
+    setBusinessKey({ path: preset.businessKey, fallback_paths: preset.businessFallbacks });
+    invalidatePreview();
+  }
+
+  function applyFactPreset(nextPresetKey: WmsFactPresetKey) {
+    const preset = WMS_FACT_PRESETS[nextPresetKey];
+    setFactPreset(nextPresetKey);
+    setName(preset.name);
+    setSlug(preset.slug);
+    setSampleText(preset.sample);
+    setParseResult(null);
+    setFields([]);
+    setOperationKey(operationKeyForPreset(preset));
+    setBusinessKey({ path: preset.businessKey, fallback_paths: preset.businessFallbacks });
+    setODataLookup({ enabled: preset.odataLookupEnabled, config: defaultODataStep(), order_ref_key_path: 'request.body.order_ref_key' });
+    setOnecPayload(defaultOnecPayloadStep('order', preset));
+    setOnecHttpService(defaultOnecService(preset));
     invalidatePreview();
   }
 
@@ -109,7 +267,7 @@ export function WmsFactToOnecWizard() {
     const previousSaveAs = odataLookup.config.save_as || 'order';
     setODataLookup(next);
     const nextSaveAs = next.config.save_as || 'order';
-    if (nextSaveAs !== previousSaveAs) setOnecPayload((payload) => ({ ...payload, template: defaultOnecPayloadTemplate(nextSaveAs) }));
+    if (nextSaveAs !== previousSaveAs) setOnecPayload((payload) => ({ ...payload, template: defaultOnecPayloadTemplate(nextSaveAs, WMS_FACT_PRESETS[factPreset]) }));
     invalidatePreview();
   }
 
@@ -151,6 +309,32 @@ export function WmsFactToOnecWizard() {
           <span>1C HTTP Service</span>
           <small>response to WMS</small>
         </div>
+      </section>
+
+      <section className="wizard-step integration-master-step">
+        <span className="step-index">00</span>
+        <div className="odata-step-heading">
+          <div>
+            <span className="eyebrow">Warehouse fact preset</span>
+            <h2>Какой складской факт отправляет WMS</h2>
+            <p>Пресет меняет sample, route key, business key, payload и операцию 1С. После выбора нажмите Parse request.</p>
+          </div>
+          <span className="status-card neutral"><small>Operation</small><strong>{WMS_FACT_PRESETS[factPreset].operation}</strong></span>
+        </div>
+        <div className="metadata-grid compact-grid no-margin">
+          {(Object.values(WMS_FACT_PRESETS) as WmsFactPreset[]).map((preset) => (
+            <button
+              type="button"
+              key={preset.key}
+              className={preset.key === factPreset ? 'primary-button' : 'ghost-button'}
+              onClick={() => applyFactPreset(preset.key)}
+              title={preset.description}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <p className="microcopy">{WMS_FACT_PRESETS[factPreset].description}</p>
       </section>
 
       <InputStep
@@ -201,7 +385,7 @@ interface BuildContractInput {
 function buildContract({ name, slug, inputMode, sourceSystem, sample, fields, operationKey, businessKey }: BuildContractInput): InputContract {
   const normalizedSlug = slugify(slug || 'wms-shipment-fact') || 'wms-shipment-fact';
   return {
-    name: name || 'WMS отправляет факт отгрузки в 1С',
+    name: name || 'WMS отправляет складской факт в 1С',
     slug: normalizedSlug,
     input_mode: inputMode,
     source_system: sourceSystem,
@@ -212,6 +396,10 @@ function buildContract({ name, slug, inputMode, sourceSystem, sample, fields, op
     business_key: businessKey,
     endpoint_url: `/api/bus/in/${normalizedSlug}`,
   };
+}
+
+function operationKeyForPreset(preset: WmsFactPreset): InputOperationKey {
+  return withMatcher({ type: 'field', field_path: 'request.body.operation', value: preset.operation, fallback_paths: [], matcher_preview: {} });
 }
 
 function defaultODataStep(): ODataStepConfig {
@@ -232,21 +420,58 @@ function defaultODataStep(): ODataStepConfig {
   };
 }
 
-function defaultOnecPayloadStep(orderSaveAs: string): PayloadStepConfig {
-  return { type: 'build_payload', body_type: 'json', save_as: 'onec_payload', json_mode: 'raw_template', template: defaultOnecPayloadTemplate(orderSaveAs), fields: [], dynamic_entries: [], overwrite: true };
+function defaultOnecPayloadStep(orderSaveAs: string, preset: WmsFactPreset): PayloadStepConfig {
+  return { type: 'build_payload', body_type: 'json', save_as: 'onec_payload', json_mode: 'raw_template', template: defaultOnecPayloadTemplate(orderSaveAs, preset), fields: [], dynamic_entries: [], overwrite: true };
 }
 
-function defaultOnecPayloadTemplate(orderSaveAs: string) {
+function defaultOnecPayloadTemplate(orderSaveAs: string, preset: WmsFactPreset) {
+  const omh = {
+    event_id: '{{context.event_id}}',
+    run_id: '{{context.run_id}}',
+    correlation_id: `${preset.correlationPrefix}:{{${preset.entityIdPath}}}`,
+    event_type: preset.eventType,
+    entity_type: preset.entityType,
+    entity_id: `{{${preset.entityIdPath}}}`,
+    source_system: 'WMS',
+    target_system: '1C ERP',
+  };
+  if (preset.key === 'stock_balance') {
+    return {
+      omh,
+      payload: {
+        stock_balance_id: '{{request.body.stock_balance_id}}',
+        warehouse_code: '{{request.body.warehouse_code}}',
+        moment: '{{request.body.moment}}',
+        items: '{{request.body.items}}',
+      },
+    };
+  }
+  if (preset.key === 'inventory_result') {
+    return {
+      omh,
+      payload: {
+        inventory_id: '{{request.body.inventory_id}}',
+        warehouse_code: '{{request.body.warehouse_code}}',
+        completed_at: '{{request.body.completed_at}}',
+        items: '{{request.body.items}}',
+      },
+    };
+  }
+  if (preset.key === 'movement_fact') {
+    return {
+      omh,
+      payload: {
+        movement_id: '{{request.body.movement_id}}',
+        source_warehouse_code: '{{request.body.source_warehouse_code}}',
+        target_warehouse_code: '{{request.body.target_warehouse_code}}',
+        moved_at: '{{request.body.moved_at}}',
+        items: '{{request.body.items}}',
+      },
+    };
+  }
   return {
     omh: {
-      event_id: '{{context.event_id}}',
-      run_id: '{{context.run_id}}',
-      correlation_id: 'wms-shipment:{{request.body.wms_shipment_id}}',
-      event_type: 'WmsShipmentFactReceived',
-      entity_type: 'ShipmentFact',
-      entity_id: '{{request.body.wms_shipment_id}}',
-      source_system: 'WMS',
-      target_system: '1C ERP',
+      ...omh,
     },
     payload: {
       order_ref_key: `{{${orderSaveAs}.Ref_Key}}`,
@@ -260,8 +485,8 @@ function defaultOnecPayloadTemplate(orderSaveAs: string) {
   };
 }
 
-function defaultOnecService(): WmsFactToOneCServiceConfig {
-  return { connector_id: null, connector_name: '', operation: 'update_shipment_status', method: 'POST', base_url: 'http://1c-server/erp/hs/omh', path: '/shipment-facts', url: '', headers: { 'Content-Type': 'application/json' }, body_source: 'onec_payload', body_type: 'json', timeout_seconds: 30, save_response_as: 'onec_response' };
+function defaultOnecService(preset: WmsFactPreset): WmsFactToOneCServiceConfig {
+  return { connector_id: null, connector_name: '', operation: preset.serviceOperation, method: 'POST', base_url: 'http://1c-server/erp/hs/omh', path: preset.servicePath, url: '', headers: { 'Content-Type': 'application/json' }, body_source: 'onec_payload', body_type: 'json', timeout_seconds: 30, save_response_as: 'onec_response' };
 }
 
 function withMatcher(key: InputOperationKey): InputOperationKey {
@@ -274,6 +499,6 @@ function matcherPreview(path: string | null, value: unknown, fallbacks: string[]
   return { mode: 'any', rules };
 }
 
-function businessFromSuggestion(suggestion?: BusinessKeySuggestion): InputBusinessKey {
-  return { path: suggestion?.path ?? 'request.body.wms_shipment_id', fallback_paths: suggestion?.fallback_paths?.length ? suggestion.fallback_paths : ['request.body.order_number'] };
+function businessFromSuggestion(suggestion: BusinessKeySuggestion | undefined, preset: WmsFactPreset): InputBusinessKey {
+  return { path: suggestion?.path ?? preset.businessKey, fallback_paths: suggestion?.fallback_paths?.length ? suggestion.fallback_paths : preset.businessFallbacks };
 }

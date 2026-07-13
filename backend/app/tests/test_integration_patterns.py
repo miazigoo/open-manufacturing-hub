@@ -824,7 +824,7 @@ async def test_wms_fact_to_onec_preview_shipment_pattern(client):
     assert body["onec_request"]["url"] == "http://1c-server/erp/hs/omh/shipment-facts"
     assert body["onec_request"]["body_preview"]["payload"]["items"][0]["qty"] == 10
     assert body["response_to_caller"]["onec_response"]["success"] is True
-    assert body["human_steps"] == ["Получен факт отгрузки от WMS", "Найден заказ в 1С", "Собран payload для 1С", "Отправлено в 1С HTTP service", "Ответ 1С возвращён WMS"]
+    assert body["human_steps"] == ["Получен складской факт от WMS: отгрузка", "Найден заказ в 1С", "Собран payload для 1С", "Отправлено в 1С HTTP service", "Ответ 1С возвращён WMS"]
 
 
 async def test_wms_fact_to_onec_create_creates_disabled_flow_and_run_test(client):
@@ -891,6 +891,32 @@ async def test_wms_fact_to_onec_optional_odata_disabled_uses_order_ref_key(clien
     assert body["valid"] is True
     assert body["odata_request"]["enabled"] is False
     assert body["onec_payload"]["payload"]["order_ref_key"] == "request-order-ref-key"
+
+
+async def test_wms_fact_to_onec_stock_balance_without_odata_creates_flow(client):
+    connector = await _create_order_odata_connector(client)
+    payload = await _wms_stock_balance_to_onec_payload(client, connector["id"], slug="wms-stock-create")
+
+    preview = await client.post("/api/integration-patterns/wms-fact-to-onec/preview", json=payload)
+
+    assert preview.status_code == 200, preview.text
+    preview_body = preview.json()
+    assert preview_body["valid"] is True
+    assert preview_body["odata_request"] == {"enabled": False, "order_ref_key_path": "request.body.order_ref_key", "save_as": "order", "order_ref_key_required": False}
+    assert preview_body["onec_payload"]["payload"]["stock_balance_id"] == "WMS-STOCK-20260713-001"
+    assert preview_body["onec_request"]["url"] == "http://1c-server/erp/hs/omh/stock-balances"
+    assert preview_body["human_steps"][0] == "Получен складской факт от WMS: остатки"
+    assert preview_body["human_steps"][1] == "OData lookup заказа пропущен"
+
+    created = await client.post("/api/integration-patterns/wms-fact-to-onec/create", json=payload)
+
+    assert created.status_code == 200, created.text
+    flow = await client.get(f"/api/integration-flows/{created.json()['compile']['integration_flow_id']}")
+    assert flow.status_code == 200, flow.text
+    steps = flow.json()["builder_json"]["steps"]
+    assert [step["type"] for step in steps] == ["build_payload", "call_endpoint", "return_response"]
+    assert steps[1]["operation"] == "update_stock_balance"
+    assert steps[1]["path"] == "/stock-balances"
 
 
 async def test_wms_fact_to_onec_validation_errors_are_friendly(client):
@@ -1968,10 +1994,10 @@ async def _wms_fact_to_onec_payload(client, connection_id: str, *, slug: str):
     assert parse.status_code == 200, parse.text
     parse_result = parse.json()
     return {
-        "name": "WMS отправляет факт отгрузки в 1С",
+        "name": "WMS отправляет складской факт в 1С",
         "slug": slug,
         "input_contract": {
-            "name": "WMS отправляет факт отгрузки в 1С",
+            "name": "WMS отправляет складской факт в 1С",
             "slug": slug,
             "input_mode": "json",
             "source_system": "wms",
@@ -2056,6 +2082,116 @@ async def _wms_fact_to_onec_payload(client, connection_id: str, *, slug: str):
                 "success": "{{onec_response.success}}",
                 "wms_shipment_id": "{{request.body.wms_shipment_id}}",
                 "order_number": "{{request.body.order_number}}",
+                "onec_response": "{{onec_response}}",
+            },
+            "headers": {"Content-Type": "application/json"},
+        },
+    }
+
+
+async def _wms_stock_balance_to_onec_payload(client, connection_id: str, *, slug: str):
+    sample = {
+        "operation": "stock_balance",
+        "stock_balance_id": "WMS-STOCK-20260713-001",
+        "warehouse_code": "MAIN",
+        "moment": "2026-07-13T10:00:00",
+        "items": [{"sku": "A-100", "quantity": 125.5, "uom": "pcs", "batch": "B-001", "cell": "A-01-01"}],
+    }
+    parse = await client.post(
+        "/api/integration-master/input/parse",
+        json={
+            "input_mode": "json",
+            "scenario_key": "wms_shipment_fact",
+            "sample": sample,
+        },
+    )
+    assert parse.status_code == 200, parse.text
+    parse_result = parse.json()
+    return {
+        "name": "WMS отправляет складской факт в 1С",
+        "slug": slug,
+        "input_contract": {
+            "name": "WMS отправляет складской факт в 1С",
+            "slug": slug,
+            "input_mode": "json",
+            "source_system": "wms",
+            "scenario_key": "wms_shipment_fact",
+            "sample": parse_result["normalized_sample"],
+            "fields": parse_result["fields"],
+            "operation_key": {
+                "type": "field",
+                "field_path": "request.body.operation",
+                "value": "stock_balance",
+                "fallback_paths": [],
+                "matcher_preview": {"mode": "any", "rules": [{"type": "body_path_equals", "path": "operation", "value": "stock_balance"}]},
+            },
+            "business_key": {"path": "request.body.stock_balance_id", "fallback_paths": ["request.body.warehouse_code"]},
+        },
+        "odata_lookup": {
+            "enabled": False,
+            "config": {
+                "type": "odata_query",
+                "connection_id": connection_id,
+                "resource": "Document_ЗаказКлиента",
+                "filter_mode": "raw",
+                "filter_rule": {"field": "Number", "operator": "eq", "value_type": "variable", "value": "request.body.order_number"},
+                "filter": "Number eq '{{request.body.order_number}}'",
+                "select": ["Ref_Key", "Number", "Date", "Posted"],
+                "top": 1,
+                "orderby": None,
+                "paginate": False,
+                "save_as": "order",
+                "required": True,
+            },
+            "order_ref_key_path": "request.body.order_ref_key",
+        },
+        "onec_payload": {
+            "type": "build_payload",
+            "body_type": "json",
+            "save_as": "onec_payload",
+            "json_mode": "raw_template",
+            "template": {
+                "omh": {
+                    "event_id": "{{context.event_id}}",
+                    "run_id": "{{context.run_id}}",
+                    "correlation_id": "wms-stock:{{request.body.stock_balance_id}}",
+                    "event_type": "WmsStockBalanceReceived",
+                    "entity_type": "StockBalance",
+                    "entity_id": "{{request.body.stock_balance_id}}",
+                    "source_system": "WMS",
+                    "target_system": "1C ERP",
+                },
+                "payload": {
+                    "stock_balance_id": "{{request.body.stock_balance_id}}",
+                    "warehouse_code": "{{request.body.warehouse_code}}",
+                    "moment": "{{request.body.moment}}",
+                    "items": "{{request.body.items}}",
+                },
+            },
+            "fields": [],
+            "dynamic_entries": [],
+            "overwrite": True,
+        },
+        "onec_http_service": {
+            "method": "POST",
+            "connector_id": None,
+            "connector_name": None,
+            "operation": "update_stock_balance",
+            "base_url": "http://1c-server/erp/hs/omh",
+            "path": "/stock-balances",
+            "url": "",
+            "headers": {"Content-Type": "application/json"},
+            "body_source": "onec_payload",
+            "body_type": "json",
+            "timeout_seconds": 30,
+            "save_response_as": "onec_response",
+        },
+        "caller_response": {
+            "type": "normalized",
+            "status_code": 200,
+            "body": {
+                "success": "{{onec_response.success}}",
+                "stock_balance_id": "{{request.body.stock_balance_id}}",
                 "onec_response": "{{onec_response}}",
             },
             "headers": {"Content-Type": "application/json"},

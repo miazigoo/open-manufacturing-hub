@@ -423,7 +423,7 @@ async function runBrowserSmoke(apiBase, uiBase) {
     ['/docs/onec/recipes/recipe-04-onec-xml-inn-lookup', ['XML из 1C с поиском по ИНН', '/Envelope/Customer/INN', 'contractor_uuid', 'ORDER_NOT_FOUND', 'target.response.json']],
     ['/docs/onec/recipes/recipe-05-onec-print-request-to-zebra', ['запрос печати на Zebra', 'Zebra-01', 'zpl.rendered.txt', 'Connection refused 192.168.1.50:9100', 'print_job_id']],
     ['/docs/onec/recipes/recipe-06-website-api-query-onec-odata', ['запросить 1C OData', 'sync_response', 'return_response.json', 'AccumulationRegister', 'website-token']],
-    ['/docs/onec/recipes/recipe-07-wms-shipment-fact-to-onec', ['WMS отправляет факт отгрузки в 1C', 'SHIP-404', 'ORDER_NOT_FOUND', 'mapping.output.json', '/hs/wms/shipment-fact']],
+    ['/docs/onec/recipes/recipe-07-wms-shipment-fact-to-onec', ['WMS отправляет складской факт в 1C', 'SHIP-404', 'ORDER_NOT_FOUND', 'mapping.output.json', '/hs/wms/shipment-fact']],
     ['/docs/onec/recipes/recipe-08-route-by-key-phrase-value', ['Маршрутизация по ключевому phrase/value', 'pool_type == DNP', 'pool_type == PRINT', 'UNSUPPORTED_POOL_TYPE', 'business_rule.result.json']],
   ];
   for (const [route, requiredItems] of recipeChecks) {

@@ -146,6 +146,7 @@ interface OneCFormState {
   shipment_path: string;
   stock_path: string;
   inventory_path: string;
+  movement_path: string;
 }
 
 function OneCConfigEditor({ connectors, onSaved }: { connectors: ConnectorInstance[]; onSaved: () => void }) {
@@ -226,6 +227,7 @@ function OneCConfigEditor({ connectors, onSaved }: { connectors: ConnectorInstan
       <div className="metadata-grid compact-grid no-margin">
         <label className="field-label">{t('connectors.stockPath')}<input value={form.stock_path} onChange={(event) => setForm({ ...form, stock_path: event.target.value })} /></label>
         <label className="field-label">{t('connectors.inventoryPath')}<input value={form.inventory_path} onChange={(event) => setForm({ ...form, inventory_path: event.target.value })} /></label>
+        <label className="field-label">{t('connectors.movementPath')}<input value={form.movement_path} onChange={(event) => setForm({ ...form, movement_path: event.target.value })} /></label>
       </div>
       {error && <div className="error-state compact">{error}</div>}
       {save.error instanceof Error && <div className="error-state compact">{save.error.message}</div>}
@@ -257,6 +259,7 @@ function onecFormFromConfig(connector?: { id: string; config_json: Record<string
     shipment_path: operationPath(operations, 'update_shipment_status') || servicePath(services, 'shipment_facts') || '/shipment-facts',
     stock_path: operationPath(operations, 'update_stock_balance') || servicePath(services, 'stock_balances') || '/stock-balances',
     inventory_path: operationPath(operations, 'send_inventory_result') || servicePath(services, 'inventory_results') || '/inventory-results',
+    movement_path: operationPath(operations, 'send_movement_fact') || servicePath(services, 'movements') || '/movements',
   };
 }
 
@@ -283,12 +286,14 @@ function onecConfigFromForm(form: OneCFormState): Record<string, unknown> {
         { name: 'shipment_facts', method: 'POST', path: normalizePath(form.shipment_path) },
         { name: 'stock_balances', method: 'POST', path: normalizePath(form.stock_path) },
         { name: 'inventory_results', method: 'POST', path: normalizePath(form.inventory_path) },
+        { name: 'movements', method: 'POST', path: normalizePath(form.movement_path) },
       ],
     },
     operations: {
       update_shipment_status: { method: 'POST', path: normalizePath(form.shipment_path) },
       update_stock_balance: { method: 'POST', path: normalizePath(form.stock_path) },
       send_inventory_result: { method: 'POST', path: normalizePath(form.inventory_path) },
+      send_movement_fact: { method: 'POST', path: normalizePath(form.movement_path) },
     },
   };
 }

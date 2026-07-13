@@ -2030,13 +2030,24 @@ const onecSiteWritebackRecipe = page('recipes', 'onec-site-writeback', '1С → 
   '- Final response caller-у.',
 ));
 
-const wmsShipmentFactToOnecRecipe = page('recipes', 'wms-shipment-fact-to-onec', 'WMS отправляет факт отгрузки в 1С', 'WMS/API -> OMH -> 1C HTTP service: incoming WMS JSON, optional OData lookup, 1C payload, response и troubleshooting.', 2, md(
-  '# WMS отправляет факт отгрузки в 1С',
+const wmsShipmentFactToOnecRecipe = page('recipes', 'wms-shipment-fact-to-onec', 'WMS отправляет складской факт в 1С', 'WMS/API -> OMH -> 1C HTTP service: отгрузка, остатки, инвентаризация, перемещение, optional OData lookup, response и troubleshooting.', 2, md(
+  '# WMS отправляет складской факт в 1С',
   '',
   '## Когда использовать',
-  'Используйте этот pattern, когда WMS или внешний складской API присылает факт отгрузки, а 1С должна создать или обновить факт операции через HTTP service.',
+  'Используйте этот pattern, когда WMS или внешний складской API присылает складской факт, а 1С должна создать или обновить факт операции через HTTP service.',
   '',
   '::open-page{route="/master?pattern=wms_fact_to_onec" label="Открыть мастер WMS → 1С HTTP service"}',
+  '',
+  '## Пресеты мастера',
+  '',
+  '| Пресет | Operation | Endpoint по умолчанию | Операция 1С | Когда нужен OData lookup заказа |',
+  '| --- | --- | --- | --- | --- |',
+  '| Отгрузка | `shipment_fact` | `/api/bus/in/wms-shipment-fact` | `update_shipment_status` → `/shipment-facts` | Обычно да: найти заказ по номеру и передать `order_ref_key` |',
+  '| Остатки | `stock_balance` | `/api/bus/in/wms-stock-balance-to-1c` | `update_stock_balance` → `/stock-balances` | Обычно нет: факт идет по складу/SKU/партии |',
+  '| Инвентаризация | `inventory_result` | `/api/bus/in/wms-inventory-result-to-1c` | `send_inventory_result` → `/inventory-results` | Обычно нет: важен номер инвентаризации WMS |',
+  '| Перемещение | `movement_fact` | `/api/bus/in/wms-movement-to-1c` | `send_movement_fact` → `/movements` | Обычно нет: важны source/target склад или ячейка |',
+  '',
+  'Для production у каждого входящего факта должен быть стабильный business key: `wms_shipment_id`, `stock_balance_id`, `inventory_id` или `movement_id`. Он нужен для идемпотентности и повторной обработки без дублей.',
   '',
   '## Incoming WMS JSON',
   '```json',

@@ -91,13 +91,14 @@ async def preview_pattern(session: AsyncSession, request: WmsFactToOneCPatternRe
         }
     else:
         order_save_as = lookup.config.save_as.strip() or "order"
-        order_ref_key, disabled_errors = _disabled_order_ref(lookup, base_variables)
+        order_required = _template_uses_variable(payload_step.template, order_save_as)
+        order_ref_key, disabled_errors = _disabled_order_ref(lookup, base_variables) if order_required else (None, [])
         lookup_errors.extend(disabled_errors)
         lookup_variables[order_save_as] = {
-            "Ref_Key": order_ref_key or "66666666-6666-6666-6666-666666666666",
-            "Number": _business_value(contract, "request.body.order_number") or "260666/6938",
+            "Ref_Key": order_ref_key or "",
+            "Number": _business_value(contract, "request.body.order_number") or "",
         }
-        odata_request = {"enabled": False, "order_ref_key_path": lookup.order_ref_key_path, "save_as": order_save_as}
+        odata_request = {"enabled": False, "order_ref_key_path": lookup.order_ref_key_path, "save_as": order_save_as, "order_ref_key_required": order_required}
 
     payload_preview = master_service.preview_payload_step(PayloadStepRequest(input_contract=contract, previous_variables=lookup_variables, payload_step=payload_step))
     variables_after_payload = dict(lookup_variables)
@@ -146,8 +147,8 @@ async def preview_pattern(session: AsyncSession, request: WmsFactToOneCPatternRe
         onec_response=onec_response,
         response_to_caller=response_to_caller,
         human_steps=[
-            "Получен факт отгрузки от WMS",
-            "Найден заказ в 1С" if lookup.enabled else "Ref_Key заказа получен из WMS",
+            f"Получен складской факт от WMS: {_operation_label(contract)}",
+            "Найден заказ в 1С" if lookup.enabled else "OData lookup заказа пропущен",
             "Собран payload для 1С",
             "Отправлено в 1С HTTP service",
             "Ответ 1С возвращён WMS",
@@ -238,22 +239,23 @@ async def _builder_json(session: AsyncSession, request: WmsFactToOneCPatternRequ
         )
     else:
         save_as = lookup.config.save_as.strip() or "order"
-        steps.append(
-            {
-                "id": "map_order_ref_key",
-                "type": "build_payload",
-                "name": "Ref_Key заказа получен из WMS",
-                "body_type": "json",
-                "save_as": save_as,
-                "json_mode": "raw_template",
-                "template": {
-                    "Ref_Key": "{{" + lookup.order_ref_key_path.strip() + "}}",
-                    "Number": "{{request.body.order_number}}",
-                },
-                "fields": [],
-                "dynamic_entries": [],
-            }
-        )
+        if _template_uses_variable(payload.template, save_as):
+            steps.append(
+                {
+                    "id": "map_order_ref_key",
+                    "type": "build_payload",
+                    "name": "Ref_Key заказа получен из WMS",
+                    "body_type": "json",
+                    "save_as": save_as,
+                    "json_mode": "raw_template",
+                    "template": {
+                        "Ref_Key": "{{" + lookup.order_ref_key_path.strip() + "}}",
+                        "Number": "{{request.body.order_number}}",
+                    },
+                    "fields": [],
+                    "dynamic_entries": [],
+                }
+            )
     steps.extend(
         [
             _payload_builder_step("build_onec_payload", "Собран payload для 1С", payload),
@@ -586,11 +588,40 @@ def _validate_wms_sample(contract: InputContract) -> list[str]:
     items = source.get("items")
     if not isinstance(items, list):
         return ["В запросе WMS нет массива items."]
+    operation = str(source.get("operation") or "").strip()
     for index, item in enumerate(items):
-        if isinstance(item, dict) and "qty" in item:
+        if not isinstance(item, dict):
+            return [f"Строка items[{index}] должна быть объектом."]
+        if operation == "inventory_result":
+            if "actual_qty" in item or "actual_quantity" in item:
+                continue
+            return [f"В строке items[{index}] нет поля actual_qty."]
+        if "qty" in item or "quantity" in item:
             continue
-        return [f"В строке items[{index}] нет поля qty."]
+        return [f"В строке items[{index}] нет поля qty или quantity."]
     return []
+
+
+def _operation_label(contract: InputContract) -> str:
+    value = _business_value(contract, "request.body.operation") or "warehouse_fact"
+    labels = {
+        "shipment_fact": "отгрузка",
+        "stock_balance": "остатки",
+        "inventory_result": "инвентаризация",
+        "movement_fact": "перемещение",
+    }
+    return labels.get(value, value)
+
+
+def _template_uses_variable(value: Any, variable_name: str) -> bool:
+    needle = "{{" + variable_name
+    if isinstance(value, str):
+        return needle in value
+    if isinstance(value, dict):
+        return any(_template_uses_variable(item, variable_name) for item in value.values())
+    if isinstance(value, list):
+        return any(_template_uses_variable(item, variable_name) for item in value)
+    return False
 
 
 def _friendly_odata_error(contract: InputContract, result: ODataStepTestResponse) -> str:

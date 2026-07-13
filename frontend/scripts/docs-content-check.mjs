@@ -303,7 +303,7 @@ for (const recipeRequired of [
   'Сайт/API просит OMH запросить 1C OData',
   'sync_response',
   'return_response.json',
-  'WMS отправляет факт отгрузки в 1C',
+  'WMS отправляет складской факт в 1C',
   'ORDER_NOT_FOUND',
   'Маршрутизация по ключевому phrase/value',
   'UNSUPPORTED_POOL_TYPE',

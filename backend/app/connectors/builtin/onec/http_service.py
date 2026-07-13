@@ -11,6 +11,7 @@ OPERATION_PRESETS: dict[str, dict[str, str]] = {
     "update_shipment_status": {"method": "POST", "path": "/shipment-facts", "body_mode": "json_envelope", "content_type": "application/json"},
     "update_stock_balance": {"method": "POST", "path": "/stock-balances", "body_mode": "json_envelope", "content_type": "application/json"},
     "send_inventory_result": {"method": "POST", "path": "/inventory-results", "body_mode": "json_envelope", "content_type": "application/json"},
+    "send_movement_fact": {"method": "POST", "path": "/movements", "body_mode": "json_envelope", "content_type": "application/json"},
 }
 
 

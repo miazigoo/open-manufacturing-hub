@@ -63,12 +63,15 @@ BIDIRECTIONAL_ONEC_CONFIG: dict[str, Any] = {
             {"name": "health", "method": "GET", "path": "/health"},
             {"name": "shipment_facts", "method": "POST", "path": "/shipment-facts"},
             {"name": "stock_balances", "method": "POST", "path": "/stock-balances"},
+            {"name": "inventory_results", "method": "POST", "path": "/inventory-results"},
+            {"name": "movements", "method": "POST", "path": "/movements"},
         ],
     },
     "operations": {
         "update_shipment_status": {"method": "POST", "path": "/shipment-facts"},
         "update_stock_balance": {"method": "POST", "path": "/stock-balances"},
         "send_inventory_result": {"method": "POST", "path": "/inventory-results"},
+        "send_movement_fact": {"method": "POST", "path": "/movements"},
     },
 }
 

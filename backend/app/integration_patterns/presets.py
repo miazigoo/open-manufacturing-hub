@@ -276,7 +276,7 @@ BUILTIN_PATTERNS: list[IntegrationPattern] = [
     ),
     _pattern(
         pattern_id="wms_fact_to_onec",
-        title=tr("WMS отправляет факт отгрузки в 1С", "WMS sends shipment fact to 1C"),
+        title=tr("WMS отправляет складской факт в 1С", "WMS sends warehouse fact to 1C"),
         description=tr("WMS/API → факт операции → 1С: OMH принимает JSON, optionally находит заказ в 1С OData, собирает payload и вызывает 1С HTTP service.", "WMS/API -> operation fact -> 1C: OMH receives JSON, optionally finds the order in 1C OData, builds the payload and calls a 1C HTTP service."),
         category="writeback",
         difficulty="intermediate",

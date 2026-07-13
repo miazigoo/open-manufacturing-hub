@@ -26,7 +26,7 @@ export function OneCHttpServiceStep({ service, payloadSaveAs, onChange }: OneCHt
       <div className="odata-step-heading">
         <div>
           <span className="eyebrow">1C HTTP service</span>
-          <h2>Куда отправить факт отгрузки</h2>
+          <h2>Куда отправить складской факт</h2>
           <p>Рекомендуется выбрать connector 1С HTTP Service. Если connector ещё не создан, используйте полный URL.</p>
         </div>
         <span className="status-card neutral"><small>Target</small><strong>{route}</strong></span>
@@ -45,7 +45,7 @@ export function OneCHttpServiceStep({ service, payloadSaveAs, onChange }: OneCHt
             <option value="">Manual 1C HTTP service</option>
             {(operations.data ?? []).map((option) => <option key={option.id} value={option.id}>{option.label} · {option.path ?? option.final_url ?? 'configured'}</option>)}
           </select>
-          <small>{operations.isLoading ? 'Загружаю операции...' : 'Например onec_accept_wms_shipment_fact из Operation Catalog.'}</small>
+          <small>{operations.isLoading ? 'Загружаю операции...' : 'Например update_shipment_status, update_stock_balance, send_inventory_result или send_movement_fact.'}</small>
         </label>
         <label className="field-label full-span">Профиль подключения
           <select value={service.connector_id ?? ''} onChange={(event) => {
@@ -62,7 +62,7 @@ export function OneCHttpServiceStep({ service, payloadSaveAs, onChange }: OneCHt
         <label className="field-label">Method<select value={service.method} onChange={(event) => patch({ method: event.target.value as FinalActionMethod })}>{['POST', 'PUT', 'PATCH', 'DELETE', 'GET'].map((method) => <option key={method} value={method}>{method}</option>)}</select></label>
         <label className="field-label">Base URL<input value={service.base_url} onChange={(event) => patch({ base_url: event.target.value })} placeholder="http://1c-server/erp/hs/omh" /></label>
         <label className="field-label">Path<input value={service.path} onChange={(event) => patch({ path: event.target.value })} placeholder="/shipment-facts" /></label>
-        <label className="field-label full-span">Override full URL<input value={service.url} onChange={(event) => patch({ url: event.target.value })} placeholder="Optional. If set, overrides connector/base URL." /><small>Default fallback: <code>http://1c-server/erp/hs/omh/shipment-facts</code>.</small></label>
+        <label className="field-label full-span">Override full URL<input value={service.url} onChange={(event) => patch({ url: event.target.value })} placeholder="Optional. If set, overrides connector/base URL." /><small>Examples: <code>/shipment-facts</code>, <code>/stock-balances</code>, <code>/inventory-results</code>, <code>/movements</code>.</small></label>
         <label className="field-label">Body source<input value={service.body_source} onChange={(event) => patch({ body_source: event.target.value })} placeholder={payloadSaveAs || 'onec_payload'} /><small>Payload step сейчас сохраняет: {payloadSaveAs || 'onec_payload'}.</small></label>
         <label className="field-label">Body type<select value={service.body_type} onChange={(event) => patch({ body_type: event.target.value as FinalActionBodyType })}><option value="json">JSON</option><option value="xml">XML</option><option value="raw_text">Raw text</option><option value="form" disabled>Form, позже</option></select></label>
         <label className="field-label">Timeout, sec<input type="number" min={1} max={300} value={service.timeout_seconds} onChange={(event) => patch({ timeout_seconds: Number(event.target.value) || 30 })} /></label>

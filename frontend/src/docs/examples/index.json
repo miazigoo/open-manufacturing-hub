@@ -244,10 +244,17 @@
       "X-OMH-Source": "wms"
     },
     "body": {
-      "sku": "A-100",
+      "operation": "stock_balance",
+      "stock_balance_id": "WMS-STOCK-20260713-001",
       "warehouse_code": "MAIN",
-      "quantity": 125.5,
-      "moment": "2026-07-05T10:00:00Z"
+      "moment": "2026-07-05T10:00:00Z",
+      "items": [
+        {
+          "sku": "A-100",
+          "quantity": 125.5,
+          "uom": "pcs"
+        }
+      ]
     },
     "expected": {
       "target": "1C HTTP service",

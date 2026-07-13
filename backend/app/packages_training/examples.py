@@ -78,8 +78,8 @@ TRAINING_EXAMPLES: dict[str, dict[str, Any]] = {
         "requires_setup": False,
     },
     "training.wms.shipment_fact_to_onec": {
-        "title": {"ru": "WMS отправляет факт отгрузки в 1С", "en": "WMS sends shipment fact to 1C", "zh": "WMS 向 1C 发送发货事实"},
-        "description": {"ru": "WMS JSON -> OData заказ -> payload -> Training 1C HTTP service `/shipment-facts`.", "en": "WMS JSON -> OData order -> payload -> Training 1C HTTP service `/shipment-facts`.", "zh": "WMS JSON、OData 订单、payload、Training 1C HTTP service。"},
+        "title": {"ru": "WMS отправляет складской факт в 1С", "en": "WMS sends warehouse fact to 1C", "zh": "WMS 向 1C 发送仓库事实"},
+        "description": {"ru": "WMS JSON -> optional OData заказ -> payload -> Training 1C HTTP service.", "en": "WMS JSON -> optional OData order -> payload -> Training 1C HTTP service.", "zh": "WMS JSON、可选 OData 订单、payload、Training 1C HTTP service。"},
         "endpoint_slug": "training-wms-shipment-fact-to-onec",
         "method": "POST",
         "input_mode": "json",

@@ -74,7 +74,8 @@ OMH supports these operation names by default:
 {
   "update_shipment_status": {"method": "POST", "path": "/shipment-facts"},
   "update_stock_balance": {"method": "POST", "path": "/stock-balances"},
-  "send_inventory_result": {"method": "POST", "path": "/inventory-results"}
+  "send_inventory_result": {"method": "POST", "path": "/inventory-results"},
+  "send_movement_fact": {"method": "POST", "path": "/movements"}
 }
 ```
 

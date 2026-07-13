@@ -19,6 +19,7 @@ frontend/tsconfig.tsbuildinfo
 !.env.example
 !.env.production.example
 !frontend/.env.production.example
+secret.txt
 *.sqlite
 *.sqlite3
 *.db

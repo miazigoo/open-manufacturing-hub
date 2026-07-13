@@ -71,8 +71,8 @@ SCENARIOS: list[dict[str, Any]] = [
     },
     {
         "key": "wms_shipment_fact",
-        "title": "WMS отправляет факт отгрузки в 1C",
-        "description": "WMS сообщает факт отгрузки, OMH находит заказ и вызывает 1C HTTP service.",
+        "title": "WMS отправляет складской факт в 1C",
+        "description": "WMS сообщает отгрузку, остатки, инвентаризацию или перемещение, OMH собирает payload и вызывает 1C HTTP service.",
         "caller": "WMS или внешний складской API",
         "incoming": "JSON с номером заказа, статусом, складом и строками отгрузки",
         "next_action": "OMH сможет найти заказ в 1C, собрать payload для 1C HTTP service и вернуть WMS понятный ответ.",

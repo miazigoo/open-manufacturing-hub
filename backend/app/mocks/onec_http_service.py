@@ -39,6 +39,13 @@ async def mock_onec_inventory_results(body: dict[str, Any]):
     return {"success": True, "external_document_id": f"1C-INV-{inventory_id}", "status": "accepted", "message": "Inventory result accepted", "echo": payload}
 
 
+@router.post("/api/mock-onec/hs/omh/movements")
+async def mock_onec_movements(body: dict[str, Any]):
+    payload = body.get("payload") if isinstance(body.get("payload"), dict) else {}
+    movement_id = payload.get("movement_id") or "UNKNOWN"
+    return {"success": True, "external_document_id": f"1C-MOV-{movement_id}", "status": "accepted", "message": "Movement fact accepted", "echo": payload}
+
+
 @router.post("/api/mock-onec/hs/omh/xml/inbound")
 async def mock_onec_xml_inbound(request: Request):
     xml = (await request.body()).decode("utf-8")
