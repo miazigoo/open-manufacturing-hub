@@ -15,6 +15,10 @@ POST /api/bus/in/onec-chz-pool-delivery
 Content-Type: application/json
 ```
 
+Это стабильный endpoint для текущей 1C-интеграции. При переходе от ручной
+кнопки к автоматической отправке в 1C менять ссылку не нужно: меняется только
+момент вызова.
+
 ## Payload из 1C
 
 ```json
@@ -31,6 +35,59 @@ Content-Type: application/json
 `full_codes_base64` - production-поле. В него 1C кладет `ПолныйКодМаркировки`
 как Base64. OMH не теряет настоящий GS-разделитель ASCII 29 и передает пул
 дальше без ручной сборки кода.
+
+## Ответ для 1C
+
+Endpoint работает в режиме `sync_response`. После успешной обработки 1C получает
+HTTP 200 и JSON, где полезный результат продублирован в двух полях. `response`
+и `body` должны содержать один и тот же объект:
+
+```json
+{
+  "success": true,
+  "accepted": true,
+  "status": "completed",
+  "event_id": "c87bc74f-41ef-4995-9fb7-7390dbb39481",
+  "response": {
+    "success": true,
+    "status": "forwarded",
+    "message": "Accepted 2010 marking codes as KM_260703-5442___2010_pcs.txt; status=forwarded",
+    "export": {
+      "order_number": "260703/5442",
+      "file_name": "KM_260703-5442___2010_pcs.txt",
+      "total_codes": 2010,
+      "status": "forwarded"
+    },
+    "dnp_forward": {
+      "ok": true,
+      "order_1c_number": "260703/5442",
+      "order_dnp_name": "26-0703/5442",
+      "created_count": 2010
+    }
+  },
+  "body": {
+    "success": true,
+    "status": "forwarded",
+    "message": "Accepted 2010 marking codes as KM_260703-5442___2010_pcs.txt; status=forwarded",
+    "export": {
+      "order_number": "260703/5442",
+      "file_name": "KM_260703-5442___2010_pcs.txt",
+      "total_codes": 2010,
+      "status": "forwarded"
+    },
+    "dnp_forward": {
+      "ok": true,
+      "order_1c_number": "260703/5442",
+      "order_dnp_name": "26-0703/5442",
+      "created_count": 2010
+    }
+  }
+}
+```
+
+`response` - основной ответ OMH. `body` оставлен как совместимый alias для
+интеграций, которые ожидают поле с таким именем. Для 1C достаточно проверять
+HTTP 2xx и сохранять весь текст ответа в регистр статусов.
 
 ## Как собрать через UI
 
@@ -73,6 +130,9 @@ DNP_REQUEST_TIMEOUT_SECONDS
 - `marking_code_pool_export_response.json` - итоговый статус.
 - `marking_code_pool_export_actions.json` - отдельно outbox, laser file и DnP.
 - `return_response.json` - что вернулось в 1C.
+
+В HTTP-ответе `body` и `response` должны содержать одинаковый полезный результат.
+Если `body` пустой, значит endpoint или flow работает не в актуальной версии.
 
 ## Частые ошибки
 
