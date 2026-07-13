@@ -52,6 +52,7 @@ async def test_bus_endpoint_static_token_sync_response_and_timeline(client):
     assert body["success"] is True
     assert body["event_id"]
     assert body["response"]["external_document_id"] == "WMS-SHIP-SO-1"
+    assert body["body"] == body["response"]
     timeline = (await client.get(f"/api/events/{body['event_id']}/timeline")).json()
     assert timeline["event"]["status"] == "success"
 

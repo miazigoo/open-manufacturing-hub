@@ -496,8 +496,8 @@ def _format_response(
             body = response.get("body")
             if response.get("response_body_type") == "xml" and isinstance(body, dict) and isinstance(body.get("xml"), str):
                 body = body["xml"]
-            return {"success": event.status.value == "success", **base, "response": body, "response_meta": response_meta}
-        return {"success": event.status.value == "success", **base, "response": response}
+            return {"success": event.status.value == "success", **base, "response": body, "body": body, "response_meta": response_meta}
+        return {"success": event.status.value == "success", **base, "response": response, "body": response}
     return base
 
 
