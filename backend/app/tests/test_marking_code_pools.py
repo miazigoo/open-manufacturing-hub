@@ -681,8 +681,17 @@ async def test_marking_code_pool_retry_laser_copy_and_missing_file_response(clie
     get_settings.cache_clear()
     smb_calls = []
 
-    def fake_smb_write(unc_dir, file_name, payload, *, username, password):
-        smb_calls.append({"unc_dir": unc_dir, "file_name": file_name, "payload": payload, "username": username, "password": password})
+    def fake_smb_write(unc_dir, file_name, payload, *, username, password, require_signing):
+        smb_calls.append(
+            {
+                "unc_dir": unc_dir,
+                "file_name": file_name,
+                "payload": payload,
+                "username": username,
+                "password": password,
+                "require_signing": require_signing,
+            }
+        )
 
     monkeypatch.setattr(service, "_write_smb_file", fake_smb_write)
     package = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})

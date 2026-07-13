@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     chz_laser_smb_unc: str = Field(default="", validation_alias=AliasChoices("CHZ_LASER_SMB_UNC", "OMH_CHZ_LASER_SMB_UNC"))
     chz_laser_smb_username: str = Field(default="guest", validation_alias=AliasChoices("CHZ_LASER_SMB_USERNAME", "OMH_CHZ_LASER_SMB_USERNAME"))
     chz_laser_smb_password: str = Field(default="", validation_alias=AliasChoices("CHZ_LASER_SMB_PASSWORD", "OMH_CHZ_LASER_SMB_PASSWORD"))
+    chz_laser_smb_require_signing: bool = Field(default=False, validation_alias=AliasChoices("CHZ_LASER_SMB_REQUIRE_SIGNING", "OMH_CHZ_LASER_SMB_REQUIRE_SIGNING"))
     require_worker_heartbeat: bool = Field(default=False, validation_alias=AliasChoices("OMH_REQUIRE_WORKER_HEARTBEAT", "REQUIRE_WORKER_HEARTBEAT"))
     secret_key: str | None = Field(default=None, validation_alias=AliasChoices("OMH_SECRET_KEY", "SECRET_KEY"))
     config_require_test_before_publish: bool | None = Field(default=None, validation_alias=AliasChoices("REQUIRE_TEST_BEFORE_PUBLISH", "OMH_REQUIRE_TEST_BEFORE_PUBLISH"))
