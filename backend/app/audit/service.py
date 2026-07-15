@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
@@ -13,6 +14,8 @@ from app.audit.diff import json_diff, redact_secrets
 from app.audit.models import AuditEvent
 from app.core.config import get_settings
 from app.core.enums import AuditActorType, AuditSeverity
+
+logger = logging.getLogger(__name__)
 
 
 def utcnow() -> datetime:
@@ -35,7 +38,7 @@ async def actor_from_request(session: AsyncSession, request: Request | None) -> 
             if user is not None:
                 return {"actor_type": AuditActorType.USER, "actor_user_id": user.id, "actor_username": user.username, "actor_display_name": user.display_name}
     except Exception:
-        pass
+        logger.warning("Failed to resolve actor from request; recording audit event with unknown actor", exc_info=True)
     return {"actor_type": AuditActorType.UNKNOWN}
 
 

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.core.enums import IntegrationPackageStatus
+from app.core.errors import NotFoundError
 from app.packages.capabilities import PackageCapability, capabilities_for_manifest
 from app.packages.manifest import PackageManifest
 from app.packages.models import InstalledPackage, PackageRuntimeCapability
@@ -94,7 +95,7 @@ async def sync_all_installed_capabilities(session: AsyncSession) -> None:
     for package in await repository.list_installed(session):
         try:
             manifest = package_registry.get(package.package_id)
-        except Exception:
+        except NotFoundError:
             manifest = _manifest_from_package(package)
         await sync_package_capabilities(session, package, manifest)
 
@@ -123,5 +124,5 @@ def _manifest_from_package(package: InstalledPackage) -> PackageManifest:
 def _manifest_name(package_id: str) -> str:
     try:
         return package_registry.get(package_id).name
-    except Exception:
+    except NotFoundError:
         return package_id

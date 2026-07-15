@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,8 @@ from app.production import backups, checks, export_import, snapshots, update_saf
 from app.production.models import BackupRecord
 from app.production.schemas import ExportConfigRequest, ImportConfigRequest, ProductionCheck
 from app.workflows.models import Workflow
+
+logger = logging.getLogger(__name__)
 
 
 def utcnow() -> datetime:
@@ -114,6 +117,7 @@ async def _promotion_summary(session: AsyncSession) -> dict[str, Any]:
         pending = int(await session.scalar(select(func.count()).select_from(ChangeSet).where(ChangeSet.status.in_([ChangeSetStatus.DRAFT, ChangeSetStatus.EXPORTED, ChangeSetStatus.IMPORT_PREVIEWED, ChangeSetStatus.FAILED]))) or 0)
         last = (await session.execute(select(ChangeSet).where(ChangeSet.status == ChangeSetStatus.APPLIED).order_by(ChangeSet.applied_at.desc().nullslast(), ChangeSet.created_at.desc()).limit(1))).scalar_one_or_none()
     except Exception:
+        logger.warning("Failed to build promotion summary; returning empty summary", exc_info=True)
         return {"current_environment": None, "pending_change_sets": 0, "last_applied_change_set": None}
     return {
         "current_environment": _environment_row(current) if current else None,
@@ -210,6 +214,7 @@ async def _count_optional(session: AsyncSession, model: type) -> int | None:
     try:
         return await _count(session, model)
     except Exception:
+        logger.warning("Failed to count rows for %s; reporting count as unavailable", getattr(model, "__name__", model), exc_info=True)
         return None
 
 

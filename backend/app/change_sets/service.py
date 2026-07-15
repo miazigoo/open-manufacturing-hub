@@ -291,13 +291,11 @@ async def _existing_object(session: AsyncSession, object_type: str, item: dict[s
     if model is None:
         raise BadRequestError(f"Unsupported change set object type: {object_type}")
     object_id = item.get("object_id")
-    if object_id:
-        try:
-            by_id = await session.get(model, UUID(str(object_id)))
-            if by_id is not None:
-                return by_id
-        except Exception:
-            pass
+    parsed_id = _uuid_or_none(object_id)
+    if parsed_id is not None:
+        by_id = await session.get(model, parsed_id)
+        if by_id is not None:
+            return by_id
     if key and identity:
         return (await session.execute(select(model).where(getattr(model, key) == identity).limit(1))).scalar_one_or_none()
     return None
@@ -383,14 +381,14 @@ async def _ensure_runtime_object(session: AsyncSession, object_type: str, item: 
 def _source_uuid_or_new(value: Any) -> UUID:
     try:
         return UUID(str(value)) if value else new_uuid()
-    except Exception:
+    except (ValueError, TypeError):
         return new_uuid()
 
 
 def _uuid_or_none(value: Any) -> UUID | None:
     try:
         return UUID(str(value)) if value else None
-    except Exception:
+    except (ValueError, TypeError):
         return None
 
 

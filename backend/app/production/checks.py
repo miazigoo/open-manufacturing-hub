@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import shutil
 import os
 from pathlib import Path
@@ -23,6 +24,8 @@ from app.resolvers.models import ResolverDefinitionV2
 from app.secrets.models import Secret
 from app.secrets.redaction import collect_secret_references, raw_secret_warnings
 
+logger = logging.getLogger(__name__)
+
 MIGRATION_HEAD = "0034_chz_agg_reg"
 
 
@@ -30,6 +33,7 @@ async def database_revision(session: AsyncSession) -> str | None:
     try:
         return await session.scalar(text("select version_num from alembic_version limit 1"))
     except Exception:
+        logger.warning("Failed to read alembic revision; treating database revision as unknown", exc_info=True)
         return None
 
 
