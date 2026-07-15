@@ -13,13 +13,10 @@ from app.core.enums import IntegrationFlowSourceType, IntegrationFlowTargetType
 from app.core.errors import BadRequestError, NotFoundError
 from app.flow_builder.compiler import FlowCompiler
 from app.flow_builder.validator import validate_builder
-from app.integration_bus import repository as bus_repository
-from app.integration_flows import repository as flow_repository
 from app.integration_flows import service as integration_flows_service
 from app.integration_flows.models import IntegrationFlow
 from app.integration_flows.schemas import EndpointBuilderConfig, IntegrationFlowCreate
 from app.integration_master import service as master_service
-from app.integration_master.models import IntegrationMasterDraft
 from app.integration_master.payload_renderer import PayloadRenderError, render_json_template, resolve_template_path
 from app.integration_master.schemas import (
     CompileDraftResponse,
@@ -44,6 +41,11 @@ from app.integration_patterns.schemas import (
     SourceWebApiWritebackOneCRunTestRequest,
     SourceWebApiWritebackOneCRunTestResponse,
     SourceWebApiWritebackOneCServiceConfig,
+)
+from app.integration_patterns._common import (
+    request_variable as _request_variable,
+    ensure_slug_available as _ensure_slug_available,
+    dedupe as _dedupe,
 )
 
 
@@ -566,20 +568,6 @@ def _base_variables(contract: InputContract) -> dict[str, Any]:
     return {"request": _request_variable(contract), "context": {"run_id": "preview-run-001", "event_id": "preview-event-001", "queue_item_id": "preview-queue-item-001"}}
 
 
-def _request_variable(contract: InputContract) -> dict[str, Any]:
-    if contract.input_mode == "json":
-        sample = contract.sample
-        if isinstance(sample, str):
-            try:
-                sample = json.loads(sample)
-            except json.JSONDecodeError:
-                sample = {"payload": sample}
-        return {"body": sample if isinstance(sample, dict) else {"payload": sample}}
-    if contract.input_mode == "raw_text":
-        return {"body": {}, "raw_text": str(contract.sample or "")}
-    return {"body": {}, "xml": str(contract.sample or "")}
-
-
 def _sample_odata_object(select_fields: list[str]) -> dict[str, Any]:
     fields = select_fields or ["Ref_Key", "Number", "Date", "Posted"]
     sample: dict[str, Any] = {}
@@ -596,17 +584,6 @@ def _sample_odata_object(select_fields: list[str]) -> dict[str, Any]:
         else:
             sample[field] = f"sample_{field}"
     return sample
-
-
-async def _ensure_slug_available(session: AsyncSession, slug: str) -> None:
-    master_service.validate_slug(slug)
-    draft_result = await session.execute(select(IntegrationMasterDraft.id).where(IntegrationMasterDraft.slug == slug).limit(1))
-    if draft_result.scalar_one_or_none() is not None:
-        raise BadRequestError(f"Endpoint {master_service.endpoint_url(slug)} уже существует. Выберите другой slug.")
-    if await bus_repository.get_endpoint_by_slug(session, slug):
-        raise BadRequestError(f"Endpoint {master_service.endpoint_url(slug)} уже существует. Выберите другой slug.")
-    if await flow_repository.get_by_slug(session, slug):
-        raise BadRequestError(f"Integration Flow со slug {slug} уже существует. Выберите другой slug.")
 
 
 def _friendly_odata_error(contract: InputContract, result: ODataStepTestResponse) -> str:
@@ -658,12 +635,3 @@ def _friendly_payload_errors(errors: list[str], known_save_as: list[str]) -> lis
     return result
 
 
-def _dedupe(items: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for item in items:
-        if not item or item in seen:
-            continue
-        seen.add(item)
-        result.append(item)
-    return result

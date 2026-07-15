@@ -4,14 +4,10 @@ import json
 import re
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError
-from app.integration_bus import repository as bus_repository
-from app.integration_flows import repository as flow_repository
 from app.integration_master import service as master_service
-from app.integration_master.models import IntegrationMasterDraft
 from app.integration_master.schemas import (
     CompileDraftRequest,
     CompiledRunTestRequest,
@@ -33,6 +29,11 @@ from app.integration_patterns.schemas import (
     RequestODataSendEndpointRunTestRequest,
     RequestODataSendEndpointRunTestResponse,
     RequestODataSendEndpointTargetConfig,
+)
+from app.integration_patterns._common import (
+    request_variable as _request_variable,
+    ensure_slug_available as _ensure_slug_available,
+    dedupe as _dedupe,
 )
 
 
@@ -181,20 +182,6 @@ def _previous_variables(contract: InputContract, save_as: str, odata_result: dic
     }
 
 
-def _request_variable(contract: InputContract) -> dict[str, Any]:
-    if contract.input_mode == "json":
-        sample = contract.sample
-        if isinstance(sample, str):
-            try:
-                sample = json.loads(sample)
-            except json.JSONDecodeError:
-                sample = {"payload": sample}
-        return {"body": sample if isinstance(sample, dict) else {"payload": sample}}
-    if contract.input_mode == "raw_text":
-        return {"body": {}, "raw_text": str(contract.sample or "")}
-    return {"body": {}, "xml": str(contract.sample or "")}
-
-
 def _sample_odata_object(select_fields: list[str]) -> dict[str, Any]:
     fields = select_fields or ["Ref_Key", "Number", "Date", "Posted"]
     sample: dict[str, Any] = {}
@@ -211,17 +198,6 @@ def _sample_odata_object(select_fields: list[str]) -> dict[str, Any]:
         else:
             sample[field] = f"sample_{field}"
     return sample
-
-
-async def _ensure_slug_available(session: AsyncSession, slug: str) -> None:
-    master_service.validate_slug(slug)
-    draft_result = await session.execute(select(IntegrationMasterDraft.id).where(IntegrationMasterDraft.slug == slug).limit(1))
-    if draft_result.scalar_one_or_none() is not None:
-        raise BadRequestError(f"Endpoint {master_service.endpoint_url(slug)} уже существует. Выберите другой slug.")
-    if await bus_repository.get_endpoint_by_slug(session, slug):
-        raise BadRequestError(f"Endpoint {master_service.endpoint_url(slug)} уже существует. Выберите другой slug.")
-    if await flow_repository.get_by_slug(session, slug):
-        raise BadRequestError(f"Integration Flow со slug {slug} уже существует. Выберите другой slug.")
 
 
 def _friendly_odata_error(contract: InputContract, result: ODataStepTestResponse) -> str:
@@ -296,12 +272,3 @@ def _caller_step_label(response: RequestODataSendEndpointResponseConfig) -> str:
     return "return configured caller response"
 
 
-def _dedupe(items: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for item in items:
-        if not item or item in seen:
-            continue
-        seen.add(item)
-        result.append(item)
-    return result

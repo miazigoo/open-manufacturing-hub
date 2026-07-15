@@ -14,13 +14,10 @@ from app.core.enums import IntegrationFlowSourceType, IntegrationFlowTargetType
 from app.core.errors import BadRequestError
 from app.flow_builder.preview import preview_builder
 from app.flow_builder.validator import validate_builder
-from app.integration_bus import repository as bus_repository
-from app.integration_flows import repository as flow_repository
 from app.integration_flows import service as integration_flows_service
 from app.integration_flows.models import IntegrationFlow
 from app.integration_flows.schemas import EndpointBuilderConfig, IntegrationFlowCreate
 from app.integration_master import service as master_service
-from app.integration_master.models import IntegrationMasterDraft
 from app.integration_master.payload_renderer import PayloadRenderError, render_payload_step, resolve_template_path
 from app.integration_master.schemas import CompileDraftResponse, CompiledRunTestRequest, InputContract, InputParseRequest, ODataFilterRule, ODataStepConfig, PayloadStepConfig
 from app.integration_patterns.schemas import (
@@ -37,6 +34,11 @@ from app.test_console.models import SavedTestCase
 from app.variables.resolver import render_template
 from app.xml_toolkit import service as xml_service
 from app.xml_toolkit.schemas import XmlExtractField
+from app.integration_patterns._common import (
+    default_headers as _default_headers,
+    ensure_slug_available as _ensure_slug_available,
+    dedupe as _dedupe,
+)
 
 DEFAULT_XML = """<Request>
   <Operation>lookup_order</Operation>
@@ -507,14 +509,6 @@ def _xml_matcher_path(path: str) -> str:
     return clean.replace("/", ".")
 
 
-def _default_headers(body_type: str) -> dict[str, Any]:
-    if body_type == "xml":
-        return {"Content-Type": "application/xml; charset=utf-8"}
-    if body_type == "raw_text":
-        return {"Content-Type": "text/plain; charset=utf-8"}
-    return {"Content-Type": "application/json"}
-
-
 def _compile_response(flow: IntegrationFlow, test_case: SavedTestCase | None) -> CompileDraftResponse:
     return CompileDraftResponse(
         success=True,
@@ -539,17 +533,6 @@ async def _test_case_for_flow(session: AsyncSession, flow: IntegrationFlow) -> S
         return None
     result = await session.execute(select(SavedTestCase).where(SavedTestCase.endpoint_id == flow.endpoint_id).limit(1))
     return result.scalar_one_or_none()
-
-
-async def _ensure_slug_available(session: AsyncSession, slug: str) -> None:
-    master_service.validate_slug(slug)
-    draft_result = await session.execute(select(IntegrationMasterDraft.id).where(IntegrationMasterDraft.slug == slug).limit(1))
-    if draft_result.scalar_one_or_none() is not None:
-        raise BadRequestError(f"Endpoint {master_service.endpoint_url(slug)} уже существует. Выберите другой slug.")
-    if await bus_repository.get_endpoint_by_slug(session, slug):
-        raise BadRequestError(f"Endpoint {master_service.endpoint_url(slug)} уже существует. Выберите другой slug.")
-    if await flow_repository.get_by_slug(session, slug):
-        raise BadRequestError(f"Integration Flow со slug {slug} уже существует. Выберите другой slug.")
 
 
 def _source_type(source_system: str) -> IntegrationFlowSourceType:
@@ -577,12 +560,3 @@ def _friendly_empty_odata(step: ODataStepConfig, extracted: dict[str, Any]) -> s
     return f"OData не вернул записей по значению {value}." if value else "OData не вернул записей."
 
 
-def _dedupe(items: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for item in items:
-        if not item or item in seen:
-            continue
-        seen.add(item)
-        result.append(item)
-    return result

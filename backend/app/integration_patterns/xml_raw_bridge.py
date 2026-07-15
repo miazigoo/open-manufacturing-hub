@@ -9,13 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import IntegrationFlowSourceType, IntegrationFlowTargetType
 from app.core.errors import BadRequestError
 from app.flow_builder.validator import validate_builder
-from app.integration_bus import repository as bus_repository
-from app.integration_flows import repository as flow_repository
 from app.integration_flows import service as integration_flows_service
 from app.integration_flows.models import IntegrationFlow
 from app.integration_flows.schemas import EndpointBuilderConfig, IntegrationFlowCreate
 from app.integration_master import service as master_service
-from app.integration_master.models import IntegrationMasterDraft
 from app.integration_master.payload_renderer import PayloadRenderError, render_json_template, resolve_template_path
 from app.integration_master.schemas import CompileDraftResponse, CompiledRunTestRequest, InputContract, InputParseRequest
 from app.integration_patterns.schemas import (
@@ -30,6 +27,10 @@ from app.integration_patterns.schemas import (
 from app.packages_training.mock_onec_http import accept_raw_xml
 from app.test_console.models import SavedTestCase
 from app.xml_toolkit import service as xml_service
+from app.integration_patterns._common import (
+    ensure_slug_available as _ensure_slug_available,
+    dedupe as _dedupe,
+)
 
 
 DEFAULT_XML = """<Документ>
@@ -402,28 +403,6 @@ def _document_number_preview(raw_xml: str) -> str | None:
 def _source_type(source_system: str) -> IntegrationFlowSourceType:
     mapping = {"onec": IntegrationFlowSourceType.ONEC, "external_api": IntegrationFlowSourceType.EXTERNAL_API, "webhook": IntegrationFlowSourceType.WEBHOOK}
     return mapping.get((source_system or "").lower(), IntegrationFlowSourceType.ONEC)
-
-
-async def _ensure_slug_available(session: AsyncSession, slug: str) -> None:
-    master_service.validate_slug(slug)
-    draft_result = await session.execute(select(IntegrationMasterDraft.id).where(IntegrationMasterDraft.slug == slug).limit(1))
-    if draft_result.scalar_one_or_none() is not None:
-        raise BadRequestError(f"Endpoint {master_service.endpoint_url(slug)} уже существует. Выберите другой slug.")
-    if await bus_repository.get_endpoint_by_slug(session, slug):
-        raise BadRequestError(f"Endpoint {master_service.endpoint_url(slug)} уже существует. Выберите другой slug.")
-    if await flow_repository.get_by_slug(session, slug):
-        raise BadRequestError(f"Integration Flow со slug {slug} уже существует. Выберите другой slug.")
-
-
-def _dedupe(items: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for item in items:
-        if not item or item in seen:
-            continue
-        seen.add(item)
-        result.append(item)
-    return result
 
 
 def _input_errors(errors: list[str], *, allow_unparsed_xml: bool) -> list[str]:
