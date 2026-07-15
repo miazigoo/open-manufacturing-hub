@@ -21,11 +21,22 @@ def validate_xml_size(xml_text: str, max_size_bytes: int = MAX_XML_SIZE_BYTES) -
     return size
 
 
+def reject_unsafe_xml(xml_text: str) -> None:
+    """Block DOCTYPE/ENTITY declarations to prevent XXE and entity-expansion (billion laughs) attacks."""
+    if "<!doctype" in xml_text.lower() or "<!entity" in xml_text.lower():
+        raise XMLBridgeError("XML_UNSAFE", "DOCTYPE and ENTITY declarations are not allowed")
+
+
+def secure_fromstring(xml_text: str, max_size_bytes: int = MAX_XML_SIZE_BYTES) -> ElementTree.Element:
+    """Parse untrusted XML into an Element after size and entity-safety checks."""
+    validate_xml_size(xml_text, max_size_bytes)
+    reject_unsafe_xml(xml_text)
+    return ElementTree.fromstring(xml_text)
+
+
 def parse_xml_safe(xml_text: str, max_size_bytes: int = MAX_XML_SIZE_BYTES) -> dict[str, Any]:
     validate_xml_size(xml_text, max_size_bytes)
-    prefix = xml_text[:1024].lower()
-    if "<!doctype" in prefix or "<!entity" in prefix:
-        raise XMLBridgeError("XML_UNSAFE", "DOCTYPE and ENTITY declarations are not allowed")
+    reject_unsafe_xml(xml_text)
     try:
         root = ElementTree.fromstring(xml_text)
     except ElementTree.ParseError as exc:

@@ -100,8 +100,8 @@ def _encoding(raw_xml: str) -> str | None:
 
 
 def _reject_unsafe_xml(raw_xml: str) -> None:
-    prefix = raw_xml[:1024].lower()
-    if "<!doctype" in prefix or "<!entity" in prefix:
+    lowered = raw_xml.lower()
+    if "<!doctype" in lowered or "<!entity" in lowered:
         raise XMLBridgeError("XML_UNSAFE", "DOCTYPE and ENTITY declarations are not allowed")
 
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any
 import xml.etree.ElementTree as ET
 
+from app.xml_bridge.parser import XMLBridgeError, reject_unsafe_xml
+
 
 def save_order_external_id(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
     external_id = str(payload.get("external_id") or "").strip()
@@ -70,8 +72,9 @@ def accept_raw_xml(raw_xml: str) -> tuple[int, dict[str, Any]]:
 
 def _xml_text(raw_xml: str, tag_name: str) -> str | None:
     try:
+        reject_unsafe_xml(raw_xml)
         root = ET.fromstring(raw_xml)
-    except ET.ParseError:
+    except (ET.ParseError, XMLBridgeError):
         return None
     for item in root.iter():
         if item.tag.split("}", 1)[-1] == tag_name:

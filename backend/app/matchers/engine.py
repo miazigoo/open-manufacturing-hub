@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from typing import Any
 
 from app.matchers.validators import validate_matcher_group
+from app.xml_bridge.parser import reject_unsafe_xml
 
 
 def evaluate_matcher_group(group: dict[str, Any] | None, context: dict[str, Any]) -> dict[str, Any]:
@@ -99,6 +100,7 @@ def _case_get(values: dict[str, Any], key: str) -> Any:
 def _xml_path(xml: str, path: str) -> str | None:
     if not xml.strip() or not path:
         return None
+    reject_unsafe_xml(xml)
     root = ET.fromstring(xml)
     current = root
     parts = path.split(".")

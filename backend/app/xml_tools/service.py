@@ -3,7 +3,7 @@ import difflib
 import hashlib
 from typing import Any
 from xml.dom import minidom
-from app.xml_bridge.parser import parse_xml_safe
+from app.xml_bridge.parser import parse_xml_safe, reject_unsafe_xml
 from app.xml_toolkit import service as toolkit_service
 
 
@@ -42,6 +42,7 @@ def _sha(value: str) -> str:
 
 def _pretty(value: str) -> str:
     try:
+        reject_unsafe_xml(value)
         return minidom.parseString(value.encode("utf-8")).toprettyxml(indent="  ")
     except Exception:
         return value

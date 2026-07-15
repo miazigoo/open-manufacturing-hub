@@ -7,6 +7,7 @@ from typing import Any
 
 from app.core.errors import BadRequestError
 from app.integration_master.schemas import InputContractField, InputMode
+from app.xml_bridge.parser import XMLBridgeError, reject_unsafe_xml
 
 MAX_SAMPLE_SIZE = 256 * 1024
 
@@ -61,7 +62,10 @@ def _walk_json(value: Any, path: str, fields: list[InputContractField]) -> None:
 def _parse_xml(sample: Any) -> dict[str, Any]:
     text = sample if isinstance(sample, str) else str(sample)
     try:
+        reject_unsafe_xml(text)
         root = ET.fromstring(text)
+    except XMLBridgeError as exc:
+        raise BadRequestError(str(exc)) from exc
     except ET.ParseError as exc:
         position = getattr(exc, "position", None)
         if position:

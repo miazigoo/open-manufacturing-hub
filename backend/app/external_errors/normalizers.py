@@ -8,6 +8,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
+from app.xml_bridge.parser import reject_unsafe_xml
+
 JSON_MESSAGE_KEYS = ("error_message", "message", "detail", "details", "description", "error", "fault", "faultstring", "ExceptionMessage")
 JSON_CODE_KEYS = ("error_code", "code", "errorCode", "faultcode", "type")
 XML_MESSAGE_TAGS = {"error", "message", "faultstring", "ОписаниеОшибки", "Сообщение", "ТекстОшибки"}
@@ -171,6 +173,7 @@ def _extract_xml_message(xml_text: str | None) -> str | None:
     if not xml_text:
         return None
     try:
+        reject_unsafe_xml(xml_text)
         root = ET.fromstring(xml_text.encode("utf-8"))
     except Exception:
         return None

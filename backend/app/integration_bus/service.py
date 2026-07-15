@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import hmac
 from typing import Any
 from uuid import UUID
 
@@ -367,7 +368,7 @@ async def _check_auth(session: AsyncSession, endpoint: IntegrationEndpoint, requ
         auth_config = await SecretResolver(session).resolve_config(endpoint.auth_config_json or {})
         expected = str(auth_config.get("token") or "")
         supplied = request.headers.get("x-omh-token") or request.headers.get("authorization", "").removeprefix("Bearer ")
-        if not expected or supplied != expected:
+        if not expected or not hmac.compare_digest(supplied, expected):
             raise BadRequestError("BUS_AUTH_FAILED")
 
 
