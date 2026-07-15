@@ -9,6 +9,16 @@
   "printing": "打印",
   "i18nDebug": "i18n 调试",
   "bffUnavailable": "Navigation BFF 不可用，正在使用本地 fallback。",
+  "commandPalette": {
+    "title": "跳转到页面",
+    "placeholder": "搜索页面…",
+    "empty": "未找到页面",
+    "triggerLabel": "搜索",
+    "shortcut": "Ctrl K",
+    "openHint": "打开命令面板 (Ctrl+K)",
+    "footerNavigate": "↑↓ 导航 · Enter 打开",
+    "footerHint": "Esc 关闭"
+  },
   "scenarioChooser": {
     "eyebrow": "新集成",
     "title": "你想集成什么？",

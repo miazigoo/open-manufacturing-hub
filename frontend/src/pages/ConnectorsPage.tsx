@@ -10,6 +10,8 @@ import { ErrorState } from '../components/ErrorState';
 import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
+import { SearchToolbar } from '../components/table/TableControls';
+import { useTableControls } from '../hooks/useTableControls';
 import { useT } from '../i18n/useI18n';
 import { formatDateTime } from '../utils';
 
@@ -42,13 +44,24 @@ export function ConnectorsPage() {
 
   const typeById = useMemo(() => new Map((types.data ?? []).map((type) => [type.connector_type, type])), [types.data]);
 
-  const create = useMutation({ mutationFn: connectorsApi.create, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['connectors'] }); setResult(t('connectors.created')); } });
-  const remove = useMutation({ mutationFn: connectorsApi.delete, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectors'] }) });
-  const enable = useMutation({ mutationFn: connectorsApi.enable, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectors'] }) });
-  const disable = useMutation({ mutationFn: connectorsApi.disable, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectors'] }) });
+  const create = useMutation({ mutationFn: connectorsApi.create, meta: { successMessage: t('connectors.created') }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['connectors'] }); setResult(t('connectors.created')); } });
+  const remove = useMutation({ mutationFn: connectorsApi.delete, meta: { successMessage: t('connectors.deleted') }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectors'] }) });
+  const enable = useMutation({ mutationFn: connectorsApi.enable, meta: { successMessage: t('connectors.enabledToast') }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectors'] }) });
+  const disable = useMutation({ mutationFn: connectorsApi.disable, meta: { successMessage: t('connectors.disabledToast') }, onSuccess: () => queryClient.invalidateQueries({ queryKey: ['connectors'] }) });
   const health = useMutation({ mutationFn: connectorsApi.healthcheck, onSuccess: (data) => { queryClient.invalidateQueries({ queryKey: ['connectors'] }); setResult(`Health: ${data.status} · ${data.message}`); } });
   const validate = useMutation({ mutationFn: connectorsApi.testConfig, onSuccess: (data) => setResult(data.valid ? t('connectors.valid') : t('connectors.invalid', { errors: data.errors.join(', ') })) });
   const generate = useMutation({ mutationFn: connectorsApi.generateMockErpEvents, onSuccess: (data) => { queryClient.invalidateQueries({ queryKey: ['events'] }); setResult(t('connectors.generated', { count: data.created.length })); } });
+
+  const connectorList = useMemo(() => connectors.data ?? [], [connectors.data]);
+  const table = useTableControls(connectorList, {
+    storageKey: 'omh.connectors.table.v1',
+    searchText: (connector) => [connector.name, connector.connector_type, connector.direction, connector.status, connector.last_health_status].filter(Boolean).join(' '),
+    columns: {
+      name: (connector) => connector.name,
+      type: (connector) => connector.connector_type,
+      status: (connector) => connector.last_health_status ?? connector.status,
+    },
+  });
 
   function selectType(connectorType: string) {
     const metadata = typeById.get(connectorType);
@@ -104,7 +117,17 @@ export function ConnectorsPage() {
       <section className="panel">
         <OneCConfigEditor connectors={onecConnectors} onSaved={() => { queryClient.invalidateQueries({ queryKey: ['connectors'] }); setResult(t('connectors.saved')); }} />
         <div className="panel-toolbar"><h2>{t('connectors.instances')}</h2><span className="microcopy">{t('connectors.configured', { count: connectors.data?.length ?? 0 })}</span></div>
-        {connectors.data?.length ? connectors.data.map((connector) => (
+        {connectorList.length ? (
+        <>
+        <SearchToolbar value={table.search} onChange={table.setSearch} shown={table.shown} total={table.total} isFiltered={table.isFiltered} onReset={table.reset}>
+          <select value={table.sort.key ?? ''} onChange={(event) => table.toggleSort(event.target.value)} aria-label={t('common.table.sortBy')}>
+            <option value="">{t('common.table.sortDefault')}</option>
+            <option value="name">{t('common.labels.name')}</option>
+            <option value="type">{t('connectors.type')}</option>
+            <option value="status">{t('common.status')}</option>
+          </select>
+        </SearchToolbar>
+        {table.rows.length === 0 ? <EmptyState title={t('common.table.noResults')} detail={t('common.table.noResultsDetail')} /> : table.rows.map((connector) => (
           <article className="connector-card" key={connector.id}>
             <div className="connector-card-top">
               <div><h3>{connector.name}</h3><p>{connector.connector_type} · {connector.direction}</p></div>
@@ -124,7 +147,9 @@ export function ConnectorsPage() {
               <button className="ghost-button danger" onClick={() => remove.mutate(connector.id)}>{t('connectors.delete')}</button>
             </div>
           </article>
-        )) : <EmptyState title={t('connectors.noInstances')} detail={t('connectors.noInstancesDetail')} actions={<><Link className="primary-button" to="/onboarding">Open onboarding</Link><Link className="ghost-button" to="/docs/onec/tools/connector">1C connector docs</Link></>} />}
+        ))}
+        </>
+        ) : <EmptyState title={t('connectors.noInstances')} detail={t('connectors.noInstancesDetail')} actions={<><Link className="primary-button" to="/onboarding">Open onboarding</Link><Link className="ghost-button" to="/docs/onec/tools/connector">1C connector docs</Link></>} />}
       </section>
     </div>
   );

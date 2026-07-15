@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../api/client';
 import { uiApi } from '../api/ui';
 import { ProductionBanner } from './ProductionBanner';
+import { CommandPalette } from './command-palette/CommandPalette';
 import { UserMenu } from '../features/auth/UserMenu';
 import { ContextHelpButton } from '../features/help/ContextHelpButton';
 import { helpForPath } from '../features/help/helpRegistry';
@@ -109,6 +110,7 @@ export function Layout() {
         </div>
       </main>
       {scenarioChooserOpen && <ScenarioChooser onClose={() => setScenarioChooserOpen(false)} />}
+      <CommandPalette />
     </div>
   );
 }
@@ -124,6 +126,10 @@ function TopBar({ onCreateIntegration }: { onCreateIntegration: () => void }) {
         <strong>{t('topbar.product')}</strong>
       </div>
       <button type="button" className="create-integration-button" onClick={onCreateIntegration}>{t('nav.createIntegration')}</button>
+      <button type="button" className="command-palette-trigger" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))} aria-label={t('navigation.commandPalette.openHint')} title={t('navigation.commandPalette.openHint')}>
+        <span>{t('navigation.commandPalette.triggerLabel')}</span>
+        <kbd>{t('navigation.commandPalette.shortcut')}</kbd>
+      </button>
       <div className="language-switcher" aria-label={t('topbar.language')}>
         <span className="microcopy">{t('topbar.language')}</span>
         {languages.map((item) => (

@@ -42,5 +42,18 @@
     "missingKeys": "缺失键",
     "noMissingKeys": "本会话未捕获缺失键。"
   },
-  "loadingPage": "正在加载页面"
+  "loadingPage": "正在加载页面",
+  "table": {
+    "searchPlaceholder": "搜索…",
+    "showing": "{total} 中的 {shown}",
+    "sortBy": "排序",
+    "sortDefault": "默认顺序",
+    "reset": "重置",
+    "noResults": "没有符合筛选的项",
+    "noResultsDetail": "请修改搜索文本或筛选条件。"
+  },
+  "toast": {
+    "region": "通知",
+    "dismiss": "关闭通知"
+  }
 }

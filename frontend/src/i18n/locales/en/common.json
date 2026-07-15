@@ -42,5 +42,18 @@
     "missingKeys": "Missing keys",
     "noMissingKeys": "No missing keys captured in this session."
   },
-  "loadingPage": "Loading page"
+  "loadingPage": "Loading page",
+  "table": {
+    "searchPlaceholder": "Search…",
+    "showing": "{shown} of {total}",
+    "sortBy": "Sort by",
+    "sortDefault": "Default order",
+    "reset": "Reset",
+    "noResults": "Nothing matches your filters",
+    "noResultsDetail": "Try changing the search text or filters."
+  },
+  "toast": {
+    "region": "Notifications",
+    "dismiss": "Dismiss notification"
+  }
 }

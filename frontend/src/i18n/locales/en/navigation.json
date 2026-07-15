@@ -9,6 +9,16 @@
   "printing": "Printing",
   "i18nDebug": "i18n Debug",
   "bffUnavailable": "Navigation BFF unavailable, using local fallback.",
+  "commandPalette": {
+    "title": "Go to page",
+    "placeholder": "Search pages\u2026",
+    "empty": "No pages found",
+    "triggerLabel": "Search",
+    "shortcut": "Ctrl K",
+    "openHint": "Open command palette (Ctrl+K)",
+    "footerNavigate": "\u2191\u2193 to navigate \u00b7 Enter to open",
+    "footerHint": "Esc to close"
+  },
   "scenarioChooser": {
     "eyebrow": "New integration",
     "title": "What do you want to integrate?",

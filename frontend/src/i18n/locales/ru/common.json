@@ -42,5 +42,18 @@
     "missingKeys": "Отсутствующие ключи",
     "noMissingKeys": "В этой сессии отсутствующие ключи не зафиксированы."
   },
-  "loadingPage": "Загрузка страницы"
+  "loadingPage": "Загрузка страницы",
+  "table": {
+    "searchPlaceholder": "Поиск…",
+    "showing": "{shown} из {total}",
+    "sortBy": "Сортировка",
+    "sortDefault": "Без сортировки",
+    "reset": "Сбросить",
+    "noResults": "Ничего не найдено по фильтрам",
+    "noResultsDetail": "Измените текст поиска или фильтры."
+  },
+  "toast": {
+    "region": "Уведомления",
+    "dismiss": "Закрыть уведомление"
+  }
 }

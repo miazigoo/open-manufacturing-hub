@@ -9,6 +9,16 @@
   "printing": "Печать",
   "i18nDebug": "i18n Debug",
   "bffUnavailable": "Navigation BFF недоступен, используется локальный fallback.",
+  "commandPalette": {
+    "title": "Перейти на страницу",
+    "placeholder": "Поиск по страницам…",
+    "empty": "Страницы не найдены",
+    "triggerLabel": "Поиск",
+    "shortcut": "Ctrl K",
+    "openHint": "Открыть командную палитру (Ctrl+K)",
+    "footerNavigate": "↑↓ навигация · Enter — открыть",
+    "footerHint": "Esc — закрыть"
+  },
   "scenarioChooser": {
     "eyebrow": "Новая интеграция",
     "title": "Что вы хотите интегрировать?",

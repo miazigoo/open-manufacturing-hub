@@ -11,6 +11,7 @@ import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
 import { VersionHistoryPanel } from '../features/configVersions';
+import { useTableControls } from '../hooks/useTableControls';
 import { useI18n } from '../i18n/useI18n';
 
 const sampleJson = { pool_type: 'DNP', order_id: 'ORD-123', codes: ['010464615169738421ABC', '010464615169738421DEF'] };
@@ -315,6 +316,12 @@ export function IntegrationFlowsPage() {
   const flows = useQuery({ queryKey: ['integration-flows'], queryFn: integrationFlowsApi.list });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(() => (flows.data ?? []).find((item) => item.id === selectedId) ?? flows.data?.[0] ?? null, [flows.data, selectedId]);
+  const flowList = useMemo(() => flows.data ?? [], [flows.data]);
+  const flowTable = useTableControls(flowList, {
+    storageKey: 'omh.flows.list.v1',
+    searchText: (flow) => [flow.name, flow.endpoint_url].filter(Boolean).join(' '),
+    columns: { name: (flow) => flow.name },
+  });
   const [result, setResult] = useState<unknown>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
@@ -473,7 +480,10 @@ export function IntegrationFlowsPage() {
       <section className="flow-layout">
         <section className="panel flow-list-panel">
           <div className="panel-toolbar"><h2>{t('integration.flowBuilder.flows')}</h2><span className="microcopy">{flows.data?.length ?? 0}</span></div>
-          {(flows.data ?? []).length === 0 ? <EmptyState title={t('integration.flowBuilder.noFlows')} detail={t('integration.flowBuilder.noFlowsDetail')} actions={<><Link className="primary-button" to="/onboarding/first-integration">{t('integration.flowBuilder.createFirst')}</Link><Link className="ghost-button" to="/docs/onec/tools/visual-flow-builder">{t('integration.flowBuilder.openGuide')}</Link></>} /> : <div className="flow-list">{(flows.data ?? []).map((flow) => <button key={flow.id} className={`flow-list-item ${selected?.id === flow.id ? 'active' : ''}`} onClick={() => setSelectedId(flow.id)}><span><strong>{flow.name}</strong><small>{flow.endpoint_url}</small></span><StatusBadge status={flow.enabled ? 'ok' : 'cancelled'} label={flow.enabled ? t('integration.flowBuilder.enabled') : t('integration.flowBuilder.disabled')} compact /></button>)}</div>}
+          {flowList.length === 0 ? <EmptyState title={t('integration.flowBuilder.noFlows')} detail={t('integration.flowBuilder.noFlowsDetail')} actions={<><Link className="primary-button" to="/onboarding/first-integration">{t('integration.flowBuilder.createFirst')}</Link><Link className="ghost-button" to="/docs/onec/tools/visual-flow-builder">{t('integration.flowBuilder.openGuide')}</Link></>} /> : <>
+            {flowList.length > 5 && <input type="search" className="flow-list-search" value={flowTable.search} onChange={(event) => flowTable.setSearch(event.target.value)} placeholder={t('common.table.searchPlaceholder')} aria-label={t('common.table.searchPlaceholder')} />}
+            {flowTable.rows.length === 0 ? <EmptyState title={t('common.table.noResults')} detail={t('common.table.noResultsDetail')} /> : <div className="flow-list">{flowTable.rows.map((flow) => <button key={flow.id} className={`flow-list-item ${selected?.id === flow.id ? 'active' : ''}`} onClick={() => setSelectedId(flow.id)}><span><strong>{flow.name}</strong><small>{flow.endpoint_url}</small></span><StatusBadge status={flow.enabled ? 'ok' : 'cancelled'} label={flow.enabled ? t('integration.flowBuilder.enabled') : t('integration.flowBuilder.disabled')} compact /></button>)}</div>}
+          </>}
         </section>
 
         <section className="panel flow-guide-panel" data-tour="flow-create">
