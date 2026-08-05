@@ -61,7 +61,7 @@ curl-пример, пример кода 1C и Timeline доступны в ка
 OMH_MARKING_CODE_POOL_EXPORT_DIR=/data/marking-code-pool-outbox
 OMH_DNP_CHZ_CODE_POOL_IMPORT_URL=http://<dnp-host>/api/v2/integrations/omh/chz/code-pools/from-1c
 OMH_DNP_REQUEST_TIMEOUT_SECONDS=180
-OMH_CHZ_DNP_PACKED_CODES_EXPORT_URL=http://<dnp-host>/api/v2/integrations/omh/chz/packed-codes/export-for-1c
+OMH_CHZ_DNP_PACKED_CODES_EXPORT_URL=http://<dnp-host>/api/v2/integrations/omh/chz/packed-codes-export-for-1c
 OMH_CHZ_DNP_PACKED_CODES_TIMEOUT_SECONDS=180
 OMH_CHZ_LASER_SMB_UNC=\\172.16.8.133\DataMatrixCodes
 OMH_CHZ_LASER_SMB_USERNAME=guest

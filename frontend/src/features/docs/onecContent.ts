@@ -2590,7 +2590,7 @@ const chzDnpPullForOneCRecipe = page('recipes', 'chz-dnp-pull-for-1c', 'Полу
   'Переменные env backend или переменные текущего environment (`Settings -> Environments -> Variables`, ключи без `OMH_`):',
   '',
   '```bash',
-  'OMH_CHZ_DNP_PACKED_CODES_EXPORT_URL=http://<dnp-host>/api/v2/integrations/omh/chz/packed-codes/export-for-1c',
+  'OMH_CHZ_DNP_PACKED_CODES_EXPORT_URL=http://<dnp-host>/api/v2/integrations/omh/chz/packed-codes-export-for-1c',
   'OMH_CHZ_DNP_PACKED_CODES_TIMEOUT_SECONDS=180',
   '```',
   '',

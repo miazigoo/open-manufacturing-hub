@@ -97,7 +97,6 @@ async def patch_settings(session: AsyncSession, patch: ChzAggregationSettingsPat
     for key, value in updates.items():
         await _upsert_environment_value(session, environment, key, value)
     await session.flush()
-    session.expire(environment, ["variables"])
     return await read_settings(session)
 
 
@@ -644,25 +643,32 @@ async def _ensure_current_environment(session: AsyncSession) -> EnvironmentProfi
     environment = await environments_repository.current_environment(session)
     if environment is not None:
         return environment
-    environment = EnvironmentProfile(name="Production", environment_type=EnvironmentType.production, is_current=True)
+    environment = EnvironmentProfile(
+        name="Default Environment",
+        code="default",
+        environment_type=EnvironmentType.DEVELOPMENT,
+        description="Created automatically for CHZ aggregation settings.",
+        is_current=True,
+    )
     session.add(environment)
     await session.flush()
-    return environment
+    loaded = await environments_repository.current_environment(session)
+    return loaded or environment
 
 
 async def _upsert_environment_value(session: AsyncSession, environment: EnvironmentProfile, key: str, value: Any) -> None:
-    current = next((item for item in environment.variables if item.key == key), None)
+    current = await environments_repository.get_variable(session, environment.id, key)
     if current is None:
-        session.add(EnvironmentVariable(environment_id=environment.id, key=key, value=str(value)))
+        session.add(EnvironmentVariable(environment_id=environment.id, key=key, value_json=str(value)))
         return
-    current.value = str(value)
+    current.value_json = str(value)
 
 
 def _config_str(values: dict[str, EnvironmentVariable], key: str, fallback: str) -> str:
     value = values.get(key)
     if value is None:
         return fallback or ""
-    return str(value.value or "")
+    return str(value.value_json or "")
 
 
 def _config_float(values: dict[str, EnvironmentVariable], key: str, fallback: float) -> float:
@@ -670,6 +676,6 @@ def _config_float(values: dict[str, EnvironmentVariable], key: str, fallback: fl
     if value is None:
         return float(fallback)
     try:
-        return float(value.value)
+        return float(value.value_json)
     except (TypeError, ValueError):
         return float(fallback)

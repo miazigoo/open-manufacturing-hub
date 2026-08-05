@@ -176,3 +176,20 @@ def _async_dnp_config(export_url: str):
 
     return _config
 
+
+
+@pytest.mark.anyio
+async def test_chz_aggregation_settings_roundtrip_via_environment_variables(client):
+    package = await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    assert package.status_code == 200, package.text
+
+    patched = await client.patch(
+        "/api/chz-aggregations/settings",
+        json={"onec_url": "http://onec.test/hs/chz/aggregation", "onec_timeout_seconds": 240},
+    )
+    assert patched.status_code == 200, patched.text
+
+    settings = await client.get("/api/chz-aggregations/settings")
+    assert settings.status_code == 200, settings.text
+    assert settings.json()["onec_url"] == "http://onec.test/hs/chz/aggregation"
+    assert settings.json()["timeout_seconds"] == 240
