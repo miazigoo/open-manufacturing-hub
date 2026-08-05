@@ -1,7 +1,7 @@
 import type { ODataWizardSpec } from '../types';
 import { prettyJson, safeJsonParse } from './placeholders';
 
-export const defaultIncomingJson = {
+const defaultIncomingJson = {
   operation: 'dnp_sinc_pull_codes',
   sinc: 'dnp_sinc_pull_codes',
   order_id: 10271,

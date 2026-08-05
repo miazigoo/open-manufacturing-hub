@@ -239,11 +239,6 @@ async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, 
     return _format_response(endpoint, event, message, route, queue_item, response, external_error)
 
 
-async def select_route(session: AsyncSession, endpoint: IntegrationEndpoint, parsed: dict[str, Any]) -> IntegrationRoute | None:
-    route, _ = await select_route_with_trace(session, endpoint, parsed)
-    return route
-
-
 async def select_route_with_trace(session: AsyncSession, endpoint: IntegrationEndpoint, parsed: dict[str, Any]) -> tuple[IntegrationRoute | None, dict[str, Any]]:
     if endpoint.route_id is not None:
         route = await repository.get_route(session, endpoint.route_id)

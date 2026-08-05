@@ -14,13 +14,18 @@ from app.marking_code_pools.schemas import (
     MarkingCodePoolExportResponse,
     MarkingCodePoolForwardTestRequest,
     MarkingCodePoolPreviewResponse,
+    MarkingCodePoolRoutingRuleCreate,
+    MarkingCodePoolRoutingRulePatch,
+    MarkingCodePoolRoutingRuleRead,
     MarkingCodePoolSettingsPatch,
     MarkingCodePoolSettingsRead,
     MarkingCodePoolSettingsTestRequest,
     MarkingCodePoolSettingsTestResponse,
     OneCMarkingCodePoolExportRequest,
+    RoutingRuleTestRequest,
+    RoutingRuleTestResponse,
 )
-from app.marking_code_pools import service
+from app.marking_code_pools import routing, service
 
 router = APIRouter(prefix="/api/marking-code-pools", tags=["marking-code-pools"])
 
@@ -31,7 +36,12 @@ async def export_onec_pool_to_file(request: OneCMarkingCodePoolExportRequest, se
     await session.commit()
     actions = (record.metadata_json or {}).get("actions", {})
     response_meta = (record.metadata_json or {}).get("response", {})
-    message = f"Accepted {record.total_codes} marking codes as {record.file_name}; status={record.status}"
+    segments = (record.metadata_json or {}).get("segments", [])
+    if segments:
+        total = sum(int(item.get("total_codes") or 0) for item in segments)
+        message = f"Accepted {total} marking codes in {len(segments)} segments; status={response_meta.get('status', record.status)}"
+    else:
+        message = f"Accepted {record.total_codes} marking codes as {record.file_name}; status={record.status}"
     if dnp_forward is not None:
         message += "; external service accepted the pool"
     return MarkingCodePoolExportResponse(
@@ -41,6 +51,7 @@ async def export_onec_pool_to_file(request: OneCMarkingCodePoolExportRequest, se
         status=str(response_meta.get("status", record.status)),
         warnings=list(response_meta.get("warnings") or []),
         actions=actions,
+        segments=segments,
         external_forward=dnp_forward,
         dnp_forward=dnp_forward,
     )
@@ -78,6 +89,41 @@ async def test_laser_dir(payload: MarkingCodePoolSettingsTestRequest | None = No
 async def test_forward(payload: MarkingCodePoolForwardTestRequest | None = None, session: AsyncSession = Depends(get_session)):
     payload = payload or MarkingCodePoolForwardTestRequest()
     return await service.test_forward(session, send_test_request=payload.send_test_request)
+
+
+@router.get("/routing-rules", response_model=list[MarkingCodePoolRoutingRuleRead])
+async def list_routing_rules(session: AsyncSession = Depends(get_session)):
+    return await routing.list_rules(session)
+
+
+@router.post("/routing-rules", response_model=MarkingCodePoolRoutingRuleRead)
+async def create_routing_rule(payload: MarkingCodePoolRoutingRuleCreate, session: AsyncSession = Depends(get_session)):
+    rule = await routing.create_rule(session, payload)
+    await session.commit()
+    return rule
+
+
+@router.post("/routing-rules/test", response_model=RoutingRuleTestResponse)
+async def test_routing_rules(payload: RoutingRuleTestRequest, session: AsyncSession = Depends(get_session)):
+    return await routing.test_rules(session, payload)
+
+
+@router.get("/routing-rules/{rule_id}", response_model=MarkingCodePoolRoutingRuleRead)
+async def get_routing_rule(rule_id: UUID, session: AsyncSession = Depends(get_session)):
+    return await routing.get_rule_or_404(session, rule_id)
+
+
+@router.patch("/routing-rules/{rule_id}", response_model=MarkingCodePoolRoutingRuleRead)
+async def patch_routing_rule(rule_id: UUID, payload: MarkingCodePoolRoutingRulePatch, session: AsyncSession = Depends(get_session)):
+    rule = await routing.patch_rule(session, rule_id, payload)
+    await session.commit()
+    return rule
+
+
+@router.delete("/routing-rules/{rule_id}", status_code=204)
+async def delete_routing_rule(rule_id: UUID, session: AsyncSession = Depends(get_session)):
+    await routing.delete_rule(session, rule_id)
+    await session.commit()
 
 
 @router.get("/exports", response_model=list[MarkingCodePoolExportRead])

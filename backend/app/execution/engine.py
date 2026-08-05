@@ -20,6 +20,8 @@ from app.execution.registry import StepRegistry, registry as default_registry
 from app.execution.result import ArtifactCreate, StepResult, StepResultStatus
 from app.execution.workflow import DEFAULT_EXECUTION_STEPS, DEFAULT_VALIDATION, normalize_step_configs, step_condition
 from app.external_errors import service as external_error_service
+from app.matchers.engine import evaluate_matcher_group
+from app.variables.resolver import build_runtime_scope
 from app.workflows import service as workflow_service
 from app.workflows.models import Workflow
 
@@ -174,7 +176,18 @@ class ExecutionEngine:
         context.current_step = event_step
         try:
             can_execute = await step.can_execute(context) if hasattr(step, "can_execute") else True
-            result = await step.execute(context) if can_execute else StepResult.skipped("Step can_execute returned false")
+            run_if = (config.get("config") or {}).get("run_if")
+            if can_execute and run_if:
+                matched, trace = _evaluate_run_if(context, run_if)
+                if not matched:
+                    result = StepResult.skipped(
+                        "run_if condition did not match",
+                        artifacts=[ArtifactCreate(ArtifactType.VALIDATION_RESULT.value, "run_if_trace.json", {"run_if": run_if, "matched": False, "trace": trace})],
+                    )
+                else:
+                    result = await step.execute(context)
+            else:
+                result = await step.execute(context) if can_execute else StepResult.skipped("Step can_execute returned false")
         except StepNotFoundError:
             raise
         except Exception as exc:
@@ -321,3 +334,22 @@ class ExecutionEngine:
 
 def _duration_ms(started_at: datetime, finished_at: datetime) -> int:
     return int((finished_at - started_at).total_seconds() * 1000)
+
+
+def _evaluate_run_if(context: PipelineContext, run_if: dict[str, Any]) -> tuple[bool, list[dict[str, Any]]]:
+    payload = context.variables.get("payload") or {}
+    headers = payload.get("_headers") if isinstance(payload, dict) else {}
+    query = payload.get("_query") if isinstance(payload, dict) else {}
+    raw_text = payload.get("text") if isinstance(payload, dict) else None
+    xml = payload.get("xml") if isinstance(payload, dict) else None
+    scope = build_runtime_scope(
+        request_body=payload,
+        variables=context.variables,
+        headers=headers,
+        query=query,
+        raw_text=raw_text,
+        xml=xml,
+        context={"event_id": str(context.event.id), "run_id": str(context.run.id), "correlation_id": context.correlation_id},
+    )
+    result = evaluate_matcher_group(run_if, {"body": scope, "text": raw_text or "", "xml": xml or "", "headers": headers or {}, "query": query or {}})
+    return bool(result["matched"]), list(result["trace"])

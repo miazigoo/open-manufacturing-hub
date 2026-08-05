@@ -2,9 +2,11 @@
 
 PROD_COMPOSE = docker compose --env-file .env.production -f docker-compose.production.yml
 PROD_HTTP_URL ?= http://localhost:$${HTTP_PORT:-80}
+# Interpreter used to create backend/.venv when it does not exist yet.
+PYTHON ?= python3
 
 install-backend:
-	cd backend && python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[test]"
+	cd backend && { [ -x .venv/bin/python ] || $(PYTHON) -m venv .venv; } && . .venv/bin/activate && pip install -e ".[test]"
 
 install-frontend:
 	cd frontend && npm install

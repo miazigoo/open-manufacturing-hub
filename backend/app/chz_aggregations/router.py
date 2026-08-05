@@ -13,6 +13,8 @@ from app.chz_aggregations.schemas import (
     ChzAggregationRegistrationResponse,
     ChzAggregationSettingsPatch,
     ChzAggregationSettingsRead,
+    ChzDnpPullRequest,
+    ChzDnpPullResponse,
 )
 from app.core.database import get_session
 
@@ -79,6 +81,13 @@ async def preview_aggregation_file(
         source_system=source_system,
         source_document_id=source_document_id,
     )
+
+
+@router.post("/pull-from-dnp", response_model=ChzDnpPullResponse)
+async def pull_packed_codes_from_dnp(request: ChzDnpPullRequest, session: AsyncSession = Depends(get_session)):
+    result = await service.pull_from_dnp(session, request)
+    await session.commit()
+    return result
 
 
 @router.get("/registrations", response_model=list[ChzAggregationRegistrationRead])

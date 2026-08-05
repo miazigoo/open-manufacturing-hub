@@ -2,10 +2,6 @@ export function placeholder(path: string) {
   return `{{${path.trim().replace(/^{{\s*|\s*}}$/g, '')}}}`;
 }
 
-export function insertAtEnd(current: string, value: string, separator = '') {
-  return `${current || ''}${current && separator ? separator : ''}${value}`;
-}
-
 export function extractJsonPaths(value: unknown, prefix = 'request.body'): string[] {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
   return Object.entries(value as Record<string, unknown>).flatMap(([key, item]) => {

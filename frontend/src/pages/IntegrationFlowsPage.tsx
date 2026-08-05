@@ -11,6 +11,7 @@ import { JsonBlock } from '../components/JsonBlock';
 import { LoadingState } from '../components/LoadingState';
 import { StatusBadge } from '../components/StatusBadge';
 import { VersionHistoryPanel } from '../features/configVersions';
+import { ConditionBuilder } from '../components/integration/ConditionBuilder';
 import { useI18n } from '../i18n/useI18n';
 
 const sampleJson = { pool_type: 'DNP', order_id: 'ORD-123', codes: ['010464615169738421ABC', '010464615169738421DEF'] };
@@ -486,6 +487,7 @@ export function IntegrationFlowsPage() {
       </section>
 
       {selected && <VersionHistoryPanel objectType="integration_flow" objectId={selected.id} compact onChanged={refresh} />}
+      {selected && <FlowMatcherEditor key={selected.id} flow={selected} onSaved={refresh} />}
       {selected && (
         <section className="panel flow-detail" data-tour="flow-detail">
           <div className="panel-toolbar">
@@ -693,5 +695,48 @@ export function IntegrationFlowsPage() {
       )}
       {result !== null && <JsonBlock title={t('integration.flowBuilder.flowResult')} value={(result as Record<string, unknown>) ?? {}} searchable />}
     </div>
+  );
+}
+
+const FLOW_MATCHER_FIELDS = [
+  { label: 'operation / sinc', path: 'operation' },
+  { label: 'sinc', path: 'sinc' },
+  { label: 'Номер заказа', path: 'order_number' },
+  { label: 'Номер заказа 1С', path: 'order_number_1c' },
+];
+
+function FlowMatcherEditor({ flow, onSaved }: { flow: IntegrationFlow; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<Record<string, unknown>>(flow.matcher_group_json ?? { mode: 'all', rules: [] });
+  const save = useMutation({
+    mutationFn: () => integrationFlowsApi.patch(flow.id, { matcher_group_json: draft }),
+    onSuccess: () => {
+      setOpen(false);
+      onSaved();
+    },
+  });
+  return (
+    <section className="panel">
+      <div className="panel-toolbar">
+        <div>
+          <span className="eyebrow">Маршрутизация</span>
+          <h2>Условия маршрута</h2>
+          <p className="microcopy">Эти условия решают, попадет ли входящий запрос в эту интеграцию. Редактор без кода: поле — оператор — значение.</p>
+        </div>
+        <button className="ghost-button" type="button" onClick={() => { setDraft(flow.matcher_group_json ?? { mode: 'all', rules: [] }); setOpen(!open); }}>
+          {open ? 'Скрыть редактор' : 'Изменить условия'}
+        </button>
+      </div>
+      {open && (
+        <div className="page-stack">
+          <ConditionBuilder value={draft} onChange={setDraft} fieldPresets={FLOW_MATCHER_FIELDS} />
+          {save.error instanceof Error && <div className="error-state compact">{save.error.message}</div>}
+          <div className="action-row">
+            <button className="primary-button" type="button" onClick={() => save.mutate()} disabled={save.isPending}>Сохранить условия</button>
+            <button className="ghost-button" type="button" onClick={() => setOpen(false)}>Отмена</button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

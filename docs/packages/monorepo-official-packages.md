@@ -18,7 +18,7 @@ The current monorepo official packages are:
 - `omh-package-auth`
 - `omh-package-secrets`
 
-Their backend manifests live under `backend/app/packages_*`. Auth frontend package entry files live under `frontend/src/packages/auth` and re-export the implementation from `frontend/src/features/auth`.
+Their backend manifests live under `backend/app/packages_*`. Auth frontend package entry files live under `frontend/src/features/auth` (API client in `frontend/src/api/auth.ts`).
 
 ## Lifecycle Terms
 

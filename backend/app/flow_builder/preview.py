@@ -9,6 +9,9 @@ from app.connectors.builtin.onec.odata import read_odata
 from app.flow_builder.validator import validate_builder
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
 from app.business_rules.engine import engine as rules_engine
+from app.execution.steps.flow_builder_steps import _evaluate_condition, _extract_field
+from app.integration_master.payload_renderer import render_xml_template as render_payload_xml_template
+from app.matchers.engine import evaluate_matcher_group
 from app.transforms.engine import engine as transform_engine
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
@@ -26,10 +29,18 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
     steps_preview: list[dict[str, Any]] = []
     final_payload = None
     target_request = None
+    skipped_step_ids: set[str] = set()
     for step in builder_json.get("steps") or []:
         step_id = str(step["id"])
         step_type = str(step["type"])
         scope = _scope(sample_request, variables)
+        if step_id in skipped_step_ids:
+            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "skipped", "request_preview": None, "result_preview": None})
+            continue
+        run_if = step.get("run_if")
+        if run_if and not evaluate_matcher_group(run_if, _preview_matcher_context(scope))["matched"]:
+            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "skipped", "request_preview": {"run_if": run_if}, "result_preview": None})
+            continue
         try:
             if step_type == "read_variable":
                 name = str(step.get("save_as") or step.get("variable") or step.get("name"))
@@ -62,6 +73,54 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 request_preview = {"rule_set": step.get("rule_set"), "matched_rules": rule_result.matched_rules, "status": rule_result.status}
                 if rule_result.status == "failed":
                     raise ValueError(rule_result.error_message or rule_result.error_code or "BUSINESS_RULE_FAILED")
+            elif step_type == "condition":
+                matcher = step.get("matcher_group")
+                if matcher is not None:
+                    matched = bool(evaluate_matcher_group(matcher, _preview_matcher_context(scope))["matched"])
+                else:
+                    matched = _evaluate_condition(str(step.get("if") or ""), scope)
+                else_action = str(step.get("else") or "continue")
+                result = {"matched": matched, "else": else_action}
+                request_preview = {"matcher_group": matcher, "if": step.get("if")}
+                if not matched and else_action == "skip":
+                    skipped_step_ids.update(str(item) for item in step.get("skip_steps") or [])
+                if not matched and else_action == "fail":
+                    raise ValueError(str(step.get("error_message") or "Condition failed"))
+            elif step_type == "extract":
+                source_path = str(step.get("source") or "request.body")
+                source_value = resolve_path(scope, source_path)
+                extracted: dict[str, Any] = {}
+                missing: list[str] = []
+                for field in step.get("fields") or []:
+                    if not isinstance(field, dict):
+                        continue
+                    name = str(field.get("name") or "").strip()
+                    if not name:
+                        continue
+                    value, found = _extract_field(field, source_value, scope, source_path)
+                    if found:
+                        extracted[name] = value
+                    elif field.get("required", True):
+                        missing.append(name)
+                if missing:
+                    raise ValueError(f"Required fields not found: {', '.join(missing)}")
+                variables.update(extracted)
+                result = extracted
+                request_preview = {"source": source_path}
+            elif step_type == "filter_array":
+                items_value = resolve_path(scope, str(step.get("items") or ""))
+                if not isinstance(items_value, list):
+                    raise ValueError("filter_array items path did not resolve to an array")
+                where = step.get("where") or {"mode": "all", "rules": [{"type": "always"}]}
+                passed = [item for index, item in enumerate(items_value) if evaluate_matcher_group(where, {"body": {"item": item, "index": index}})["matched"]]
+                variables[str(step.get("save_as") or step_id)] = passed
+                result = {"items": passed, "passed": len(passed), "dropped": len(items_value) - len(passed)}
+                request_preview = {"items": step.get("items"), "where": where}
+            elif step_type == "build_xml":
+                rendered = render_payload_xml_template(str(step.get("body_template") or step.get("template") or ""), scope)
+                variables[str(step.get("save_as") or step_id)] = rendered
+                result = {"xml": rendered}
+                request_preview = {"body_template": step.get("body_template") or step.get("template")}
             elif step_type == "odata_query":
                 query = _odata_query(step, scope)
                 request_preview = {"connection": step.get("connection"), "resource": step.get("resource"), "query": query}
@@ -71,8 +130,9 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
             elif step_type == "foreach":
                 source_items = _collection(step.get("items"), scope)
                 nested = step.get("step") or step.get("do") or {}
-                if not isinstance(nested, dict) or nested.get("type") != "odata_query":
-                    raise ValueError("Foreach currently supports nested odata_query")
+                nested_type = nested.get("type") if isinstance(nested, dict) else None
+                if nested_type not in {"odata_query", "call_endpoint", "build_json", "extract"}:
+                    raise ValueError("Foreach supports nested odata_query, call_endpoint, build_json or extract")
                 item_as = str(step.get("item_as") or "item")
                 index_as = str(step.get("index_as") or "index")
                 flatten = bool(step.get("flatten", True))
@@ -83,16 +143,36 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                     iteration_scope[item_as] = item
                     iteration_scope[index_as] = index
                     iteration_scope["foreach"] = {"item": item, "index": index}
-                    query = _odata_query(nested, iteration_scope)
-                    resource = str(render_template(nested.get("resource") or "", iteration_scope))
-                    nested_for_preview = dict(nested)
-                    nested_for_preview["resource"] = resource
-                    items = await _preview_odata_items(session, nested_for_preview, query, run_real_queries)
-                    if flatten:
-                        combined.extend(items)
+                    if nested_type == "odata_query":
+                        query = _odata_query(nested, iteration_scope)
+                        resource = str(render_template(nested.get("resource") or "", iteration_scope))
+                        nested_for_preview = dict(nested)
+                        nested_for_preview["resource"] = resource
+                        items = await _preview_odata_items(session, nested_for_preview, query, run_real_queries)
+                        if flatten:
+                            combined.extend(items)
+                        else:
+                            combined.append(_saved_odata_result(items, nested))
+                        iterations.append({"index": index, "item": item, "resource": resource, "query": query, "items_count": len(items)})
+                    elif nested_type == "build_json":
+                        combined.append(build_json_from_template(nested.get("template") or {}, iteration_scope))
+                        iterations.append({"index": index, "item": item, "nested_type": nested_type})
+                    elif nested_type == "extract":
+                        nested_source_path = str(nested.get("source") or item_as)
+                        nested_source = resolve_path(iteration_scope, nested_source_path)
+                        extracted: dict[str, Any] = {}
+                        for field in nested.get("fields") or []:
+                            if not isinstance(field, dict) or not field.get("name"):
+                                continue
+                            value, found = _extract_field(field, nested_source, iteration_scope, nested_source_path)
+                            if found:
+                                extracted[str(field["name"])] = value
+                        combined.append(extracted)
+                        iterations.append({"index": index, "item": item, "nested_type": nested_type})
                     else:
-                        combined.append(_saved_odata_result(items, nested))
-                    iterations.append({"index": index, "item": item, "resource": resource, "query": query, "items_count": len(items)})
+                        mock = nested.get("mock_response_json") if isinstance(nested.get("mock_response_json"), (dict, list)) else {"mock": True, "item": item}
+                        combined.append(mock)
+                        iterations.append({"index": index, "item": item, "nested_type": nested_type})
                 result = combined
                 variables[str(step.get("save_as") or step_id)] = result
                 request_preview = {"items": step.get("items"), "items_count": len(source_items), "item_as": item_as, "nested_type": nested.get("type")}
@@ -223,6 +303,17 @@ def _scope(sample_request: dict[str, Any], variables: dict[str, Any]) -> dict[st
         xml=sample_request.get("xml") if isinstance(sample_request, dict) else None,
         context={"event_id": "preview-event-id", "run_id": "preview-run-id", "correlation_id": "preview-correlation-id"},
     )
+
+
+def _preview_matcher_context(scope: dict[str, Any]) -> dict[str, Any]:
+    request = scope.get("request") or {}
+    return {
+        "body": scope,
+        "text": request.get("raw_text") or "",
+        "xml": request.get("xml") or "",
+        "headers": request.get("headers") or {},
+        "query": request.get("query") or {},
+    }
 
 
 def _sample_xml(sample_request: dict[str, Any]) -> str:

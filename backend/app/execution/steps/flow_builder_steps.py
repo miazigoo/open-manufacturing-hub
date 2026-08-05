@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
+import json
 import re
+import xml.etree.ElementTree as ElementTree
+from types import SimpleNamespace
 from typing import Any
 
 from sqlalchemy import select
@@ -12,12 +16,13 @@ from app.connectors.builtin.rest_connector import RESTConnector
 from app.connectors.manager import ConnectorManager
 from app.core.enums import ArtifactType
 from app.execution.context import PipelineContext
-from app.execution.result import ArtifactCreate, StepResult
+from app.execution.result import ArtifactCreate, StepResult, StepResultStatus
 from app.integration_master.payload_renderer import PayloadRenderError, render_payload_step, render_xml_template as render_payload_xml_template
 from app.integration_master.schemas import PayloadStepConfig
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
 from app.marking_code_pools import service as marking_code_pool_service
 from app.marking_code_pools.schemas import MarkingCodePoolActionOverrides, OneCMarkingCodePoolExportRequest
+from app.matchers.engine import evaluate_matcher_group
 from app.packages_training.mock_dnp import submit_marking_pool
 from app.packages_training.mock_external_api import import_order
 from app.packages_training.mock_onec_http import accept_shipment_fact, save_order_external_id
@@ -116,8 +121,14 @@ class FlowForEachStep:
             return _failed("FOREACH_ITEMS_BUILD_FAILED", str(exc), config, "Check foreach items path. It must resolve to an array.")
 
         nested = config.get("step") or config.get("do") or {}
-        if not isinstance(nested, dict) or nested.get("type") != "odata_query":
-            return _failed("FOREACH_STEP_UNSUPPORTED", "Foreach currently supports nested odata_query", config, "Set step.type to odata_query.")
+        nested_type = nested.get("type") if isinstance(nested, dict) else None
+        if nested_type not in FOREACH_NESTED_TYPES:
+            return _failed(
+                "FOREACH_STEP_UNSUPPORTED",
+                f"Foreach supports nested steps: {', '.join(sorted(FOREACH_NESTED_TYPES))}",
+                config,
+                "Set step.type to odata_query, call_endpoint, build_json or extract.",
+            )
 
         item_as = str(config.get("item_as") or "item")
         index_as = str(config.get("index_as") or "index")
@@ -161,49 +172,55 @@ class FlowForEachStep:
             iteration_scope[index_as] = index
             iteration_scope["foreach"] = {"item": item, "index": index}
             try:
-                query = _odata_query(nested, iteration_scope)
-                resource = str(render_template(nested.get("resource") or "", iteration_scope))
-                nested_config = dict(nested)
-                nested_config["resource"] = resource
-                items, response_payload = await _read_odata_items(context, nested_config, query, resource)
-                if not items and nested.get("required", True):
-                    raise ValueError(f"Nested OData query returned no rows for item #{index + 1}")
-                result_value: Any = items if flatten else _saved_odata_value(items, nested)
-                if flatten:
-                    combined.extend(items)
+                if nested_type == "odata_query":
+                    query = _odata_query(nested, iteration_scope)
+                    resource = str(render_template(nested.get("resource") or "", iteration_scope))
+                    nested_config = dict(nested)
+                    nested_config["resource"] = resource
+                    items, response_payload = await _read_odata_items(context, nested_config, query, resource)
+                    if not items and nested.get("required", True):
+                        raise ValueError(f"Nested OData query returned no rows for item #{index + 1}")
+                    result_value: Any = items if flatten else _saved_odata_value(items, nested)
+                    if flatten:
+                        combined.extend(items)
+                    else:
+                        combined.append(result_value)
+                    if max_result_rows and len(combined) > max_result_rows:
+                        return _failed(
+                            "FOREACH_MAX_RESULT_ROWS_EXCEEDED",
+                            f"Foreach result has more than max_result_rows={max_result_rows} rows",
+                            config,
+                            "For large code pools keep $top=500, enable pagination, and increase max_result_rows deliberately.",
+                            artifacts,
+                        )
+                    iterations.append(
+                        {
+                            "index": index,
+                            "item": item,
+                            "resource": resource,
+                            "query": query,
+                            "items_count": len(items),
+                        }
+                    )
+                    artifacts.append(
+                        ArtifactCreate(
+                            ArtifactType.OUTGOING_REQUEST.value,
+                            f"foreach_{index + 1}_odata_request.json",
+                            {"connection": nested.get("connection"), "resource": resource, "query": query},
+                        )
+                    )
+                    artifacts.append(
+                        ArtifactCreate(
+                            ArtifactType.INCOMING_RESPONSE.value,
+                            f"foreach_{index + 1}_odata_response.json",
+                            _as_dict(response_payload),
+                        )
+                    )
                 else:
-                    combined.append(result_value)
-                if max_result_rows and len(combined) > max_result_rows:
-                    return _failed(
-                        "FOREACH_MAX_RESULT_ROWS_EXCEEDED",
-                        f"Foreach result has more than max_result_rows={max_result_rows} rows",
-                        config,
-                        "For large code pools keep $top=500, enable pagination, and increase max_result_rows deliberately.",
-                        artifacts,
-                    )
-                iterations.append(
-                    {
-                        "index": index,
-                        "item": item,
-                        "resource": resource,
-                        "query": query,
-                        "items_count": len(items),
-                    }
-                )
-                artifacts.append(
-                    ArtifactCreate(
-                        ArtifactType.OUTGOING_REQUEST.value,
-                        f"foreach_{index + 1}_odata_request.json",
-                        {"connection": nested.get("connection"), "resource": resource, "query": query},
-                    )
-                )
-                artifacts.append(
-                    ArtifactCreate(
-                        ArtifactType.INCOMING_RESPONSE.value,
-                        f"foreach_{index + 1}_odata_response.json",
-                        _as_dict(response_payload),
-                    )
-                )
+                    nested_value, nested_artifacts = await _run_foreach_nested(nested_type, nested, context, item_as, index_as, item, index)
+                    combined.append(nested_value)
+                    iterations.append({"index": index, "item": item, "nested_type": nested_type})
+                    artifacts.extend(nested_artifacts)
             except Exception as exc:
                 error = {"index": index, "item": item, "error": str(exc)}
                 errors.append(error)
@@ -294,8 +311,16 @@ class FlowConditionStep:
 
     async def execute(self, context: PipelineContext) -> StepResult:
         config = _config(context)
+        scope = _scope(context)
+        matcher_group = config.get("matcher_group")
         try:
-            ok = _evaluate_condition(str(config.get("if") or ""), _scope(context))
+            if matcher_group is not None:
+                evaluation = evaluate_matcher_group(matcher_group, _matcher_context_from_scope(scope))
+                ok = bool(evaluation["matched"])
+                detail: dict[str, Any] = {"matcher_group": matcher_group, "matched": ok, "trace": evaluation["trace"]}
+            else:
+                ok = _evaluate_condition(str(config.get("if") or ""), scope)
+                detail = {"if": config.get("if"), "matched": ok}
         except Exception as exc:
             return _failed(
                 "CONDITION_EVALUATION_FAILED",
@@ -303,10 +328,167 @@ class FlowConditionStep:
                 config,
                 "Check previous step variables and condition path.",
             )
-        artifact = ArtifactCreate(ArtifactType.VALIDATION_RESULT.value, "condition_result.json", {"if": config.get("if"), "matched": ok})
-        if ok or str(config.get("else") or "continue") == "continue":
-            return StepResult.success("Condition passed", artifacts=[artifact])
+        artifact = ArtifactCreate(ArtifactType.VALIDATION_RESULT.value, "condition_result.json", detail)
+        else_action = str(config.get("else") or "continue")
+        if ok or else_action == "continue":
+            return StepResult.success("Condition passed" if ok else "Condition not matched, continuing", artifacts=[artifact])
+        if else_action == "skip":
+            requested = [str(step) for step in config.get("skip_steps") or []]
+            current = [str(step) for step in context.variables.get("skip_steps") or []]
+            merged = list(dict.fromkeys([*current, *requested]))
+            return StepResult.success(
+                f"Condition not matched, skipping steps: {', '.join(requested) or 'none'}",
+                artifacts=[artifact],
+                variables_update={"skip_steps": merged},
+            )
         return _failed("CONDITION_FAILED", str(config.get("error_message") or "Condition failed"), config, "Check previous lookup results or adjust the condition.", [artifact])
+
+
+def _matcher_context_from_scope(scope: dict[str, Any]) -> dict[str, Any]:
+    request = scope.get("request") or {}
+    return {
+        "body": scope,
+        "text": request.get("raw_text") or "",
+        "xml": request.get("xml") or "",
+        "headers": request.get("headers") or {},
+        "query": request.get("query") or {},
+    }
+
+
+class FlowExtractStep:
+    name = "flow_extract"
+    display_name = "Extract Fields"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        scope = _scope(context)
+        source_path = str(config.get("source") or "request.body")
+        try:
+            source_value = resolve_path(scope, source_path)
+        except Exception as exc:
+            return _failed("EXTRACT_SOURCE_FAILED", str(exc), config, "Check the extract source path, e.g. request.body or steps.send_target.response.")
+        fields = config.get("fields") or []
+        if not isinstance(fields, list) or not fields:
+            return _failed("EXTRACT_FIELDS_REQUIRED", "Extract step needs at least one field", config, "Add fields with name + path or regex.")
+        extracted: dict[str, Any] = {}
+        missing: list[str] = []
+        traces: list[dict[str, Any]] = []
+        for field in fields:
+            if not isinstance(field, dict):
+                continue
+            name = str(field.get("name") or "").strip()
+            if not name:
+                continue
+            try:
+                value, found = _extract_field(field, source_value, scope, source_path)
+            except Exception as exc:
+                return _failed("EXTRACT_FIELD_FAILED", f"{name}: {exc}", config, "Check the field path or regex.")
+            traces.append({"name": name, "found": found, "value": value})
+            if found:
+                extracted[name] = value
+            elif field.get("required", True):
+                missing.append(name)
+        artifact = ArtifactCreate(ArtifactType.VALIDATION_RESULT.value, "extract_result.json", {"source": source_path, "fields": traces})
+        if missing:
+            return _failed("EXTRACT_FIELD_MISSING", f"Required fields not found: {', '.join(missing)}", config, "Open extract_result.json artifact and fix the paths/regex.", [artifact])
+        variables = _variables_with_step(context, config["step_id"], extracted)
+        variables.update(extracted)
+        return StepResult.success("Fields extracted", artifacts=[artifact], variables_update=variables)
+
+
+def _extract_field(field: dict[str, Any], source_value: Any, scope: dict[str, Any], source_path: str) -> tuple[Any, bool]:
+    pattern = field.get("regex")
+    if pattern:
+        text = source_value if isinstance(source_value, str) else json.dumps(source_value, ensure_ascii=False, default=str)
+        matches = list(re.finditer(str(pattern), text))
+        if not matches:
+            return None, False
+        group = int(field.get("group") or 1)
+
+        def group_value(match: re.Match[str]) -> str:
+            return match.group(group) if match.re.groups >= group else match.group(0)
+
+        if str(field.get("mode") or "first") == "all":
+            return [group_value(match) for match in matches], True
+        return group_value(matches[0]), True
+    sub_path = str(field.get("path") or "").strip()
+    if not sub_path:
+        return source_value, source_value is not None
+    try:
+        value = resolve_path(scope, f"{source_path}.{sub_path}")
+    except Exception:
+        return None, False
+    return value, value is not None
+
+
+class FlowFilterArrayStep:
+    name = "flow_filter_array"
+    display_name = "Filter Array"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        scope = _scope(context)
+        items_path = str(config.get("items") or "").strip()
+        if not items_path:
+            return _failed("FILTER_ITEMS_REQUIRED", "Filter step needs an items path", config, "Example: request.body.rows or steps.lookup.items.")
+        try:
+            value = resolve_path(scope, items_path)
+        except Exception as exc:
+            return _failed("FILTER_ITEMS_FAILED", str(exc), config, "Check the items path.")
+        if not isinstance(value, list):
+            return _failed("FILTER_ITEMS_NOT_ARRAY", f"Path {items_path} did not resolve to an array", config, "Point items to an array value.")
+        where = config.get("where") or {"mode": "all", "rules": [{"type": "always"}]}
+        passed: list[Any] = []
+        dropped = 0
+        for index, item in enumerate(value):
+            matched = evaluate_matcher_group(where, {"body": {"item": item, "index": index}})["matched"]
+            if matched:
+                passed.append(item)
+            else:
+                dropped += 1
+        save_as = str(config.get("save_as") or config["step_id"])
+        step_value = {"items": passed, "passed": len(passed), "dropped": dropped, "source_count": len(value)}
+        variables = _variables_with_step(context, config["step_id"], step_value)
+        variables[save_as] = passed
+        return StepResult.success(
+            f"Filter kept {len(passed)} of {len(value)} items",
+            artifacts=[
+                ArtifactCreate(ArtifactType.VALIDATION_RESULT.value, "filter_result.json", {"items_path": items_path, "where": where, "passed": len(passed), "dropped": dropped}),
+                ArtifactCreate(ArtifactType.CANONICAL_PAYLOAD.value, "filter_items.json", {"save_as": save_as, "items": passed}),
+            ],
+            variables_update=variables,
+        )
+
+
+class FlowBuildXmlStep:
+    name = "flow_build_xml"
+    display_name = "Build XML"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        scope = _scope(context)
+        template = str(config.get("body_template") or config.get("template") or "")
+        if not template.strip():
+            return _failed("XML_TEMPLATE_EMPTY", "Build XML step needs a body_template", config, "Add an XML template with {{variables}}.")
+        try:
+            rendered = render_payload_xml_template(template, scope)
+        except PayloadRenderError as exc:
+            return _failed("XML_NOT_WELL_FORMED", str(exc), config, "Escape special characters in values or fix the template structure.")
+        except Exception as exc:
+            return _failed("XML_RENDER_FAILED", str(exc), config, "Check template variables against previous steps.")
+        try:
+            ElementTree.fromstring(rendered)
+        except ElementTree.ParseError as exc:
+            artifact = ArtifactCreate(ArtifactType.ERROR_DETAILS.value, "xml_rendered_invalid.txt", {"rendered": rendered[:4000]})
+            return _failed("XML_NOT_WELL_FORMED", f"Rendered XML is not well-formed: {exc}", config, "Escape special characters in values or fix the template structure.", [artifact])
+        save_as = str(config.get("save_as") or config["step_id"])
+        variables = _variables_with_step(context, config["step_id"], {"xml": rendered})
+        variables[save_as] = rendered
+        return StepResult.success(
+            "XML built",
+            artifacts=[ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "built_xml.txt", {"save_as": save_as, "xml": rendered[:4000]})],
+            variables_update=variables,
+        )
 
 
 class FlowCallEndpointStep:
@@ -1027,7 +1209,7 @@ def _looks_like_shipment_fact(payload: dict[str, Any]) -> bool:
 
 def _evaluate_condition(expression: str, scope: dict[str, Any]) -> bool:
     expression = expression.strip()
-    match = re.fullmatch(r"(.+?)\s*(==|!=|eq|ne)\s*(.+)", expression)
+    match = re.fullmatch(r"(.+?)\s*(==|!=)\s*(.+)", expression) or re.fullmatch(r"(.+?)\s+(eq|ne)\s+(.+)", expression)
     if match:
         left_raw, operator, right_raw = match.groups()
         left = render_template(left_raw.strip(), scope) if left_raw.strip().startswith("{{") else resolve_path(scope, left_raw.strip())
@@ -1090,3 +1272,41 @@ def _failed(code: str, message: str, config: dict[str, Any], hint: str, artifact
 
 def _as_dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {"value": value}
+
+
+FOREACH_NESTED_TYPES = {"odata_query", "call_endpoint", "build_json", "extract"}
+
+_FOREACH_NESTED_HANDLERS = {
+    "call_endpoint": FlowCallEndpointStep,
+    "build_json": FlowBuildJsonStep,
+    "extract": FlowExtractStep,
+}
+
+
+async def _run_foreach_nested(
+    nested_type: str,
+    nested: dict[str, Any],
+    context: PipelineContext,
+    item_as: str,
+    index_as: str,
+    item: Any,
+    index: int,
+) -> tuple[Any, list[ArtifactCreate]]:
+    nested_config = {key: value for key, value in nested.items() if key != "type"}
+    nested_config["step_id"] = f"foreach_{index + 1}_{nested_type}"
+    iteration_variables = dict(context.variables)
+    iteration_variables[item_as] = item
+    iteration_variables[index_as] = index
+    iteration_variables["foreach"] = {"item": item, "index": index}
+    fake_step = SimpleNamespace(id=None, step_config_json={"config": nested_config})
+    sub_context = dataclasses.replace(context, current_step=fake_step, variables=iteration_variables)
+    result = await _FOREACH_NESTED_HANDLERS[nested_type]().execute(sub_context)
+    if result.status != StepResultStatus.SUCCESS:
+        raise ValueError(result.error_message or result.message or f"nested {nested_type} step failed")
+    save_key = str(nested.get("save_as") or nested.get("save_response_as") or "result")
+    value = (result.variables_update or {}).get(save_key)
+    artifacts = [
+        ArtifactCreate(artifact.artifact_type, f"foreach_{index + 1}_{artifact.name}", artifact.content)
+        for artifact in result.artifacts
+    ]
+    return value, artifacts

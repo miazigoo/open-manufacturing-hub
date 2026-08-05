@@ -59,6 +59,7 @@ class MarkingCodePoolExportResponse(BaseModel):
     status: str = "saved"
     warnings: list[str] = Field(default_factory=list)
     actions: dict[str, Any] = Field(default_factory=dict)
+    segments: list[dict[str, Any]] = Field(default_factory=list)
     external_forward: dict[str, Any] | None = None
     dnp_forward: dict[str, Any] | None = None
 
@@ -129,6 +130,7 @@ class MarkingCodePoolPreviewResponse(BaseModel):
     would_laser_copy: dict[str, Any]
     would_forward: dict[str, Any]
     warnings: list[str] = Field(default_factory=list)
+    segments: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class MarkingCodePoolSettingsTestRequest(BaseModel):
@@ -152,3 +154,88 @@ class MarkingCodePoolActionRetryResponse(BaseModel):
     message: str
     error_code: str | None = None
     action: dict[str, Any] = Field(default_factory=dict)
+
+
+ROUTING_TARGET_TYPES = {"laser_file", "local_outbox", "http_forward"}
+
+
+class RoutingRuleTarget(BaseModel):
+    type: str
+    file_name_template: str | None = Field(default=None, max_length=255)
+    name: str | None = Field(default=None, max_length=255)
+    url: str | None = Field(default=None, max_length=2000)
+    method: str = Field(default="POST", max_length=10)
+    header_name: str | None = Field(default=None, max_length=255)
+    token: str | None = Field(default=None, max_length=2000)
+    timeout_seconds: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_target(self):
+        if self.type not in ROUTING_TARGET_TYPES:
+            raise ValueError(f"Unsupported routing target type: {self.type}")
+        if self.type == "http_forward":
+            if not self.url:
+                raise ValueError("http_forward target requires url")
+            if self.method.upper() != "POST":
+                raise ValueError("http_forward target supports only POST")
+        return self
+
+
+class MarkingCodePoolRoutingRuleRead(BaseModel):
+    id: UUID
+    name: str
+    enabled: bool
+    priority: int
+    match_json: dict[str, Any]
+    targets_json: list[dict[str, Any]]
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MarkingCodePoolRoutingRuleCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    enabled: bool = True
+    priority: int = 100
+    match_json: dict[str, Any] = Field(default_factory=dict)
+    targets_json: list[RoutingRuleTarget] = Field(default_factory=list)
+
+
+class MarkingCodePoolRoutingRulePatch(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    enabled: bool | None = None
+    priority: int | None = None
+    match_json: dict[str, Any] | None = None
+    targets_json: list[RoutingRuleTarget] | None = None
+
+
+class RoutingRuleTestRequest(BaseModel):
+    codes: list[str] | None = Field(default=None, min_length=1)
+    full_codes_base64: list[str] | None = Field(default=None, min_length=1)
+    gs_marker: str = Field(default="{GS}", min_length=1, max_length=20)
+    order_number: str = Field(default="", max_length=255)
+    source_document_id: str | None = Field(default=None, max_length=255)
+    source_system: str = Field(default="1C ERP", max_length=255)
+
+    @model_validator(mode="after")
+    def require_one_code_source(self):
+        if bool(self.codes) == bool(self.full_codes_base64):
+            raise ValueError("Pass exactly one of codes or full_codes_base64")
+        return self
+
+
+class RoutingRuleTestCodeResult(BaseModel):
+    code_preview: str
+    gtin: str
+    serial: str
+    segment: str
+    rule_id: UUID | None
+    rule_name: str | None
+    targets: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class RoutingRuleTestResponse(BaseModel):
+    total_codes: int
+    matched_codes: int
+    default_codes: int
+    results: list[RoutingRuleTestCodeResult]

@@ -11,13 +11,17 @@ import { OverviewTab } from './OverviewTab';
 import { SettingsTab } from './SettingsTab';
 import { TestTab } from './TestTab';
 import { AggregationsTab } from './AggregationsTab';
+import { PullFromDnpTab } from './PullFromDnpTab';
+import { RoutingRulesTab } from './RoutingRulesTab';
 
 const tabs = [
   ['overview', 'Обзор'],
   ['settings', 'Настройки'],
   ['endpoint', 'Endpoint для 1С'],
   ['test', 'Тест'],
+  ['routing', 'Маршрутизация'],
   ['aggregations', 'Агрегация -> 1С'],
+  ['pull-from-dnp', 'Получение кодов из DnP'],
   ['journal', 'Журнал экспортов'],
 ] as const;
 
@@ -68,6 +72,8 @@ export function MarkingCodePoolsPage() {
           <article className="guidance-step-card"><span>1</span><strong>Проверьте настройки</strong><p>На вкладке <code>Настройки</code> выберите local outbox, SMB/local target и REST Operation Profile для внешней отправки.</p></article>
           <article className="guidance-step-card"><span>2</span><strong>Сделайте preview</strong><p>Вкладка <code>Тест</code> показывает имя файла, payload и предупреждения до реального экспорта из 1С.</p></article>
           <article className="guidance-step-card"><span>3</span><strong>Смотрите журнал</strong><p>В <code>Журнале экспортов</code> видны archive/copy/forward статусы и retry для каждого неуспешного действия.</p></article>
+          <article className="guidance-step-card"><span>4</span><strong>Коды для 1С</strong><p>Вкладка <code>Получение кодов из DnP</code> забирает упакованные коды из DnP для документа «Нанесение и ввод в оборот».</p></article>
+          <article className="guidance-step-card"><span>5</span><strong>Правила</strong><p>Вкладка <code>Маршрутизация</code> делит пул по GTIN, серийнику или заказу и отправляет части в разные места — без программирования.</p></article>
         </div>
       </section>
 
@@ -79,7 +85,9 @@ export function MarkingCodePoolsPage() {
       {activeTab === 'settings' && <SettingsTab settings={settings.data} />}
       {activeTab === 'endpoint' && <EndpointTab />}
       {activeTab === 'test' && <TestTab />}
+      {activeTab === 'routing' && <RoutingRulesTab />}
       {activeTab === 'aggregations' && <AggregationsTab />}
+      {activeTab === 'pull-from-dnp' && <PullFromDnpTab />}
       {activeTab === 'journal' && <ExportsJournalTab exports={exports} settings={settings.data} />}
     </div>
   );

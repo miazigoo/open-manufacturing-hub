@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -105,3 +105,27 @@ class ChzAggregationSettingsPatch(BaseModel):
     onec_token: str | None = None
     onec_header_name: str | None = None
     onec_timeout_seconds: float | None = Field(default=None, gt=0)
+
+
+class ChzDnpPullRequest(BaseModel):
+    order_number_1c: str = Field(min_length=1, max_length=255)
+    date_from: date | None = None
+    date_to: date | None = None
+    only_new: bool = True
+
+
+class ChzDnpPullRow(BaseModel):
+    full_code_base64: str
+    sscc: str | None = None
+
+
+class ChzDnpPullResponse(BaseModel):
+    ok: bool
+    order_number_1c: str
+    order_name_dnp: str | None = None
+    codes_count: int
+    boxes_count: int
+    tsv_text_base64: str
+    rows: list[ChzDnpPullRow] = Field(default_factory=list)
+    event_id: UUID | None = None
+    timeline_url: str | None = None

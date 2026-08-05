@@ -51,8 +51,11 @@ def register_builtin_steps() -> None:
     from app.execution.steps.flow_builder_steps import (
         FlowBuildJsonStep,
         FlowBuildPayloadStep,
+        FlowBuildXmlStep,
         FlowCallEndpointStep,
         FlowConditionStep,
+        FlowExtractStep,
+        FlowFilterArrayStep,
         FlowForEachStep,
         FlowMarkingCodePoolExportStep,
         FlowODataQueryStep,
@@ -84,6 +87,9 @@ def register_builtin_steps() -> None:
     registry.register(FlowBuildJsonStep())
     registry.register(FlowBuildPayloadStep())
     registry.register(FlowConditionStep())
+    registry.register(FlowExtractStep())
+    registry.register(FlowFilterArrayStep())
+    registry.register(FlowBuildXmlStep())
     registry.register(FlowCallEndpointStep())
     registry.register(FlowPrintLabelsStep())
     registry.register(FlowMarkingCodePoolExportStep())

@@ -15,6 +15,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { XmlPathPicker } from '../components/xml/XmlPathPicker';
 import { XmlResponseBuilder } from '../components/xml/XmlResponseBuilder';
 import { VersionHistoryPanel } from '../features/configVersions';
+import { ConditionBuilder } from '../components/integration/ConditionBuilder';
 
 type BuilderStep = Record<string, unknown> & { id: string; type: string; name?: string; save_as?: string };
 type BuilderJson = { version: number; input: Record<string, unknown>; variables: Array<Record<string, unknown>>; steps: BuilderStep[] };
@@ -169,6 +170,16 @@ export function VisualFlowBuilderPage() {
             }
         : type === 'build_xml_response'
           ? { id, type, name: 'Build XML response', response_body_type: 'xml', status_code: 200, headers: { 'Content-Type': 'application/xml' }, body_template: '<Response><Success>true</Success><Number>{{number}}</Number></Response>' }
+        : type === 'condition'
+          ? { id, type, name: 'Condition', matcher_group: { mode: 'all', rules: [{ type: 'body_path_equals', path: 'request.body.pool_type', value: 'DNP' }] }, else: 'continue' }
+        : type === 'foreach'
+          ? { id, type, name: 'For each item', items: 'request.body.items', item_as: 'item', save_as: 'results', step: { type: 'call_endpoint', connector: '', method: 'POST', path: '/', body: '{{item}}', save_response_as: 'item_result' } }
+        : type === 'extract'
+          ? { id, type, name: 'Extract fields', source: 'request.body', fields: [{ name: 'field', path: 'response.field', required: false }] }
+        : type === 'filter_array'
+          ? { id, type, name: 'Filter array', items: 'request.body.items', where: { mode: 'all', rules: [{ type: 'body_path_exists', path: 'item.sku' }] }, save_as: 'filtered' }
+        : type === 'build_xml'
+          ? { id, type, name: 'Build XML', body_template: '<Request><Number>{{request.body.number}}</Number></Request>', save_as: 'xml_body' }
         : type === 'call_endpoint'
           ? { id, type, name: 'Call endpoint', connector: 'DNP Service', method: 'POST', path: '/', headers: { 'Content-Type': 'application/json' }, body: '{{target_payload}}', save_response_as: 'target_response', mock_response_json: { success: true, id: 'preview-id' } }
           : { id, type, name: 'Read variable', path: 'request.body.value', save_as: 'value' };
@@ -211,7 +222,7 @@ export function VisualFlowBuilderPage() {
           <div className="builder-step-list">
             {builder.steps.map((step, index) => <button key={step.id} className={`builder-step-card ${selectedStep?.id === step.id ? 'active' : ''}`} onClick={() => setSelectedStepId(step.id)}><span className="step-index">{String(index + 1).padStart(2, '0')}</span><strong>{step.name ?? step.id}</strong><small>{step.type} · {String(step.save_as ?? step.id)}</small></button>)}
           </div>
-          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('xml_extract')}>Extract XML</button><button className="ghost-button" onClick={() => addStep('raw_xml_forward')}>Raw XML</button><button className="ghost-button" onClick={() => addStep('apply_transforms')}>Transform</button><button className="ghost-button" onClick={() => addStep('evaluate_rules')}>Rule</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('resolve_object')}>Resolve</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('marking_code_pool_export')}>CHZ pool</button><button className="ghost-button" onClick={() => addStep('build_xml_response')}>XML response</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
+          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('xml_extract')}>Extract XML</button><button className="ghost-button" onClick={() => addStep('extract')}>Extract</button><button className="ghost-button" onClick={() => addStep('filter_array')}>Filter</button><button className="ghost-button" onClick={() => addStep('condition')}>Condition</button><button className="ghost-button" onClick={() => addStep('foreach')}>Foreach</button><button className="ghost-button" onClick={() => addStep('raw_xml_forward')}>Raw XML</button><button className="ghost-button" onClick={() => addStep('apply_transforms')}>Transform</button><button className="ghost-button" onClick={() => addStep('evaluate_rules')}>Rule</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('resolve_object')}>Resolve</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('build_xml')}>Build XML</button><button className="ghost-button" onClick={() => addStep('marking_code_pool_export')}>CHZ pool</button><button className="ghost-button" onClick={() => addStep('build_xml_response')}>XML response</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
         </aside>
 
         <main className="builder-main stack-form">
@@ -224,7 +235,8 @@ export function VisualFlowBuilderPage() {
 
           {selectedStep && <section className="panel step-editor-panel">
             <div className="panel-toolbar"><div><span className="eyebrow">Step Editor</span><h2>{selectedStep.name ?? selectedStep.id}</h2></div><div className="toolbar-actions"><button className="ghost-button" onClick={() => moveStep(selectedStep.id, -1)}>Up</button><button className="ghost-button" onClick={() => moveStep(selectedStep.id, 1)}>Down</button><button className="ghost-button" onClick={() => duplicateStep(selectedStep)}>Duplicate</button><button className="ghost-button danger" onClick={() => deleteStep(selectedStep.id)}>Delete</button></div></div>
-            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="xml_extract">Extract XML</option><option value="raw_xml_forward">Raw XML forward</option><option value="apply_transforms">Transform Field</option><option value="evaluate_rules">Business Rule</option><option value="odata_query">OData query</option><option value="resolve_object">Resolve Business Object</option><option value="build_json">Build JSON</option><option value="marking_code_pool_export">CHZ pool delivery</option><option value="build_xml_response">Build XML response</option><option value="condition">Condition</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
+            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="xml_extract">Extract XML</option><option value="extract">Extract fields</option><option value="filter_array">Filter array</option><option value="condition">Condition</option><option value="foreach">For each</option><option value="raw_xml_forward">Raw XML forward</option><option value="apply_transforms">Transform Field</option><option value="evaluate_rules">Business Rule</option><option value="odata_query">OData query</option><option value="resolve_object">Resolve Business Object</option><option value="build_json">Build JSON</option><option value="build_xml">Build XML</option><option value="marking_code_pool_export">CHZ pool delivery</option><option value="build_xml_response">Build XML response</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
+            <RunIfEditor step={selectedStep} update={updateStep} />
             {selectedStep.type === 'read_variable' && <ReadVariableEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'apply_transforms' && <TransformStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'evaluate_rules' && <BusinessRuleStepEditor step={selectedStep} update={updateStep} />}
@@ -235,6 +247,11 @@ export function VisualFlowBuilderPage() {
             {selectedStep.type === 'build_json' && <BuildJsonEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'marking_code_pool_export' && <MarkingCodePoolExportEditor step={selectedStep} update={updateStep} setSampleText={setSampleText} />}
             {selectedStep.type === 'build_xml_response' && <BuildXmlResponseEditor step={selectedStep} update={updateStep} />}
+            {selectedStep.type === 'condition' && <ConditionStepEditor step={selectedStep} update={updateStep} steps={builder.steps} />}
+            {selectedStep.type === 'foreach' && <ForeachStepEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
+            {selectedStep.type === 'extract' && <ExtractStepEditor step={selectedStep} update={updateStep} />}
+            {selectedStep.type === 'filter_array' && <FilterArrayStepEditor step={selectedStep} update={updateStep} />}
+            {selectedStep.type === 'build_xml' && <BuildXmlStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'call_endpoint' && <CallEndpointEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
             {selectedStep.type === 'return_response' && <label className="field-label">Response body<input value={String(selectedStep.body ?? '{{response}}')} onChange={(event) => updateStep(selectedStep.id, { body: event.target.value })} /></label>}
           </section>}
@@ -244,7 +261,7 @@ export function VisualFlowBuilderPage() {
           <div className="panel-toolbar"><div><span className="eyebrow">Preview & Compile</span><h2>Dry-run without code</h2></div></div>
           <div className="action-row wrap-actions"><button className="primary-button" onClick={runPreview} disabled={preview.isPending}>Preview</button><button className="ghost-button" onClick={runSave} disabled={save.isPending}>Save Draft</button><Link className="ghost-button" to={`/config-history/integration_flow/${flow.data.id}`}>Release control</Link><button className="primary-button" onClick={() => compile.mutate()} disabled={compile.isPending}>Compile workflow</button>{flow.data.workflow_id && <Link className="primary-link" to={`/pipelines/${flow.data.workflow_id}/edit`}>Open workflow</Link>}</div>
           {(error || preview.error || save.error || compile.error) && <div className="error-state compact">{error ?? (preview.error as Error | null)?.message ?? (save.error as Error | null)?.message ?? (compile.error as Error | null)?.message}</div>}
-          {preview.data && <div className="builder-preview-steps">{preview.data.steps.map((step) => <article key={step.id} className={`preview-step ${step.status}`}><strong>{step.id}</strong><span>{step.type}</span><StatusBadge status={step.status === 'success' ? 'ok' : 'failed'} label={step.status} compact />{step.error && <small>{String(step.error.message ?? step.error.code)}</small>}</article>)}</div>}
+          {preview.data && <div className="builder-preview-steps">{preview.data.steps.map((step) => <article key={step.id} className={`preview-step ${step.status}`}><strong>{step.id}</strong><span>{step.type}</span><StatusBadge status={step.status === 'success' ? 'ok' : step.status === 'skipped' ? 'unknown' : 'failed'} label={step.status} compact />{step.error && <small>{String(step.error.message ?? step.error.code)}</small>}</article>)}</div>}
           {preview.data && <JsonBlock title="Final JSON preview" value={preview.data.final_payload_preview ?? {}} searchable={false} />}
           {preview.data && <JsonBlock title="Target request" value={preview.data.target_request_preview ?? {}} searchable={false} />}
           {compile.data && <JsonBlock title="Compiled workflow" value={compile.data} searchable={false} />}
@@ -437,5 +454,194 @@ export function VisualFlowBuilderPage() {
         {['{{target_payload}}', '{{response.body}}', '{{service_a.id}}', '{{service_b.status}}'].map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)} title="Click to copy">{hint}</button>)}
       </div>
     </div>;
+  }
+
+  function RunIfEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {
+    const value = (step.run_if as Record<string, unknown> | undefined) ?? { mode: 'all', rules: [] };
+    const hasRules = Array.isArray(value.rules) && value.rules.length > 0;
+    return (
+      <details className="technical-details" open={hasRules || undefined}>
+        <summary>Запускать только если… (необязательно)</summary>
+        <div className="builder-help-card">
+          <strong>Условие запуска шага</strong>
+          <span>Если условие не совпало, шаг будет пропущен (skipped), а цепочка продолжится. Например: отправлять в сервис только когда <code>request.body.pool_type</code> равно DNP. Пустое условие = шаг выполняется всегда.</span>
+        </div>
+        <ConditionBuilder
+          value={value}
+          onChange={(group) => update(step.id, { run_if: Array.isArray(group.rules) && group.rules.length ? group : undefined })}
+          fieldPresets={[
+            { label: 'operation', path: 'request.body.operation' },
+            { label: 'pool_type', path: 'request.body.pool_type' },
+            { label: 'Номер заказа', path: 'request.body.order_number' },
+          ]}
+        />
+        {hasRules && <button type="button" className="ghost-button" onClick={() => update(step.id, { run_if: undefined })}>Убрать условие</button>}
+      </details>
+    );
+  }
+
+  function ConditionStepEditor({ step, update, steps }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; steps: BuilderStep[] }) {
+    const elseAction = String(step.else ?? 'continue');
+    const skipSteps = Array.isArray(step.skip_steps) ? step.skip_steps.map(String) : [];
+    const otherSteps = steps.filter((item) => item.id !== step.id);
+    return (
+      <div className="stack-form">
+        <div className="builder-help-card">
+          <strong>Условие ветвления</strong>
+          <span>Проверяет данные запроса или результаты предыдущих шагов. Если не совпало: продолжить, завершить с ошибкой или пропустить выбранные шаги — так строятся цепочки «по ключу».</span>
+        </div>
+        <ConditionBuilder
+          value={(step.matcher_group as Record<string, unknown> | undefined) ?? { mode: 'all', rules: [] }}
+          onChange={(group) => update(step.id, { matcher_group: group })}
+          fieldPresets={[
+            { label: 'operation', path: 'request.body.operation' },
+            { label: 'pool_type', path: 'request.body.pool_type' },
+            { label: 'Номер заказа', path: 'request.body.order_number' },
+          ]}
+        />
+        <div className="metadata-grid compact-grid no-margin">
+          <label className="field-label">Если не совпало
+            <select value={elseAction} onChange={(event) => update(step.id, { else: event.target.value })}>
+              <option value="continue">Продолжить выполнение</option>
+              <option value="fail">Завершить с ошибкой</option>
+              <option value="skip">Пропустить выбранные шаги</option>
+            </select>
+          </label>
+          {elseAction === 'fail' && <label className="field-label">Текст ошибки<input value={String(step.error_message ?? '')} onChange={(event) => update(step.id, { error_message: event.target.value })} /></label>}
+        </div>
+        {elseAction === 'skip' && (
+          <div className="metadata-grid compact-grid no-margin">
+            {otherSteps.map((item) => (
+              <label className="check-row" key={item.id}>
+                <input
+                  type="checkbox"
+                  checked={skipSteps.includes(item.id)}
+                  onChange={(event) => update(step.id, { skip_steps: event.target.checked ? [...skipSteps, item.id] : skipSteps.filter((id) => id !== item.id) })}
+                />
+                {item.name ?? item.id}
+              </label>
+            ))}
+            {!otherSteps.length && <span className="microcopy">Других шагов пока нет.</span>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function ForeachStepEditor({ step, update, connectorNames }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; connectorNames: string[] }) {
+    const nested = (step.step as Record<string, unknown> | undefined) ?? {};
+    const nestedType = String(nested.type ?? 'call_endpoint');
+    const setNested = (patch: Record<string, unknown>) => update(step.id, { step: { ...nested, ...patch } });
+    return (
+      <div className="stack-form">
+        <div className="builder-help-card">
+          <strong>Повторить вложенный шаг для каждого элемента</strong>
+          <span>Items указывает на массив. Внутри вложенного шага текущий элемент доступен как <code>{`{{${String(step.item_as ?? 'item')}}}`}</code> — например <code>{`{{${String(step.item_as ?? 'item')}}.code}`}</code>.</span>
+        </div>
+        <div className="metadata-grid compact-grid no-margin">
+          <label className="field-label">Items (путь к массиву)<input value={String(step.items ?? '')} onChange={(event) => update(step.id, { items: event.target.value })} placeholder="request.body.items" /></label>
+          <label className="field-label">Элемент доступен как<input value={String(step.item_as ?? 'item')} onChange={(event) => update(step.id, { item_as: event.target.value })} /></label>
+          <label className="field-label">Сохранить результаты как<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} placeholder="results" /></label>
+          <label className="field-label">Вложенный шаг
+            <select value={nestedType} onChange={(event) => setNested({ type: event.target.value })}>
+              <option value="call_endpoint">Отправить в endpoint</option>
+              <option value="build_json">Собрать JSON</option>
+              <option value="extract">Извлечь поля</option>
+              <option value="odata_query">OData запрос</option>
+            </select>
+          </label>
+        </div>
+        {nestedType === 'call_endpoint' && (
+          <div className="metadata-grid compact-grid no-margin">
+            <label className="field-label">Connector<input list="foreach-connector-names" value={String(nested.connector ?? '')} onChange={(event) => setNested({ connector: event.target.value })} /><datalist id="foreach-connector-names">{connectorNames.map((name) => <option key={name} value={name} />)}</datalist></label>
+            <label className="field-label">Direct URL<input value={String(nested.url ?? '')} onChange={(event) => setNested({ url: event.target.value })} /></label>
+            <label className="field-label">Path<input value={String(nested.path ?? '')} onChange={(event) => setNested({ path: event.target.value })} /></label>
+            <label className="field-label">Body template<input value={String(nested.body ?? '{{item}}')} onChange={(event) => setNested({ body: event.target.value })} /></label>
+            <label className="field-label">Save response as<input value={String(nested.save_response_as ?? 'item_result')} onChange={(event) => setNested({ save_response_as: event.target.value })} /></label>
+          </div>
+        )}
+        {nestedType === 'build_json' && (
+          <div className="metadata-grid compact-grid no-margin">
+            <label className="field-label">Save as<input value={String(nested.save_as ?? 'mapped_item')} onChange={(event) => setNested({ save_as: event.target.value })} /></label>
+            <label className="field-label">JSON template<CodeEditor value={asJson(nested.template ?? {})} onChange={(value) => { try { setNested({ template: parseJsonObject(value, 'JSON template') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid JSON template'); } }} language="json" minRows={5} /></label>
+          </div>
+        )}
+        {nestedType === 'extract' && (
+          <label className="field-label">Fields JSON<CodeEditor value={asJson(nested.fields ?? [])} onChange={(value) => { try { const parsed = JSON.parse(value) as unknown; if (!Array.isArray(parsed)) throw new Error('Fields must be an array'); setNested({ fields: parsed, source: String(nested.source ?? 'item') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid fields JSON'); } }} language="json" minRows={5} /></label>
+        )}
+        {nestedType === 'odata_query' && <p className="microcopy">Вложенный OData-запрос настраивается в JSON: connection, resource, filter_builder. Подробности — в рецепте по логическим цепочкам.</p>}
+      </div>
+    );
+  }
+
+  function ExtractStepEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {
+    const fields = Array.isArray(step.fields) ? step.fields as Array<Record<string, unknown>> : [];
+    const setFields = (next: Array<Record<string, unknown>>) => update(step.id, { fields: next });
+    return (
+      <div className="stack-form">
+        <div className="builder-help-card">
+          <strong>Извлечь поля из данных</strong>
+          <span>Берет значения из ответа предыдущего шага или запроса: по пути (<code>response.number</code>) или по regex для текста. Извлеченные значения становятся переменными.</span>
+        </div>
+        <label className="field-label">Источник<input value={String(step.source ?? 'request.body')} onChange={(event) => update(step.id, { source: event.target.value })} title="Например request.body или steps.send_target.response" /></label>
+        {fields.map((field, index) => (
+          <div className="metadata-grid compact-grid no-margin" key={index}>
+            <label className="field-label">Имя<input value={String(field.name ?? '')} onChange={(event) => setFields(fields.map((item, i) => i === index ? { ...item, name: event.target.value } : item))} /></label>
+            <label className="field-label">Путь или regex<input value={String(field.path ?? field.regex ?? '')} onChange={(event) => setFields(fields.map((item, i) => i === index ? ('regex' in item ? { ...item, regex: event.target.value } : { ...item, path: event.target.value }) : item))} /></label>
+            <label className="field-label">Тип
+              <select value={'regex' in field ? 'regex' : 'path'} onChange={(event) => setFields(fields.map((item, i) => {
+                if (i !== index) return item;
+                const raw = String(item.path ?? item.regex ?? '');
+                return event.target.value === 'regex' ? { name: item.name, regex: raw, required: item.required } : { name: item.name, path: raw, required: item.required };
+              }))}>
+                <option value="path">Путь (JSON)</option>
+                <option value="regex">Regex (текст)</option>
+              </select>
+            </label>
+            <label className="check-row"><input type="checkbox" checked={field.required !== false} onChange={(event) => setFields(fields.map((item, i) => i === index ? { ...item, required: event.target.checked } : item))} /> Обязательное</label>
+            <button type="button" className="ghost-button danger" onClick={() => setFields(fields.filter((_, i) => i !== index))}>✕</button>
+          </div>
+        ))}
+        <div className="action-row"><button type="button" className="ghost-button" onClick={() => setFields([...fields, { name: '', path: '', required: false }])}>Добавить поле</button></div>
+      </div>
+    );
+  }
+
+  function FilterArrayStepEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {
+    return (
+      <div className="stack-form">
+        <div className="builder-help-card">
+          <strong>Отфильтровать массив по условию</strong>
+          <span>Оставляет только элементы, подходящие под условия. Поля элемента доступны как <code>item.&lt;поле&gt;</code>, например <code>item.sku</code>.</span>
+        </div>
+        <div className="metadata-grid compact-grid no-margin">
+          <label className="field-label">Items (путь к массиву)<input value={String(step.items ?? '')} onChange={(event) => update(step.id, { items: event.target.value })} placeholder="request.body.rows" /></label>
+          <label className="field-label">Сохранить как<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} placeholder="filtered" /></label>
+        </div>
+        <ConditionBuilder
+          value={(step.where as Record<string, unknown> | undefined) ?? { mode: 'all', rules: [] }}
+          onChange={(group) => update(step.id, { where: group })}
+          fieldPresets={[
+            { label: 'item.sku', path: 'item.sku' },
+            { label: 'item.code', path: 'item.code' },
+            { label: 'item.type', path: 'item.type' },
+          ]}
+        />
+      </div>
+    );
+  }
+
+  function BuildXmlStepEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {
+    const template = String(step.body_template ?? step.template ?? '<Request></Request>');
+    return (
+      <div className="stack-form">
+        <div className="builder-help-card">
+          <strong>Сформировать XML в переменную</strong>
+          <span>Шаблон с <code>{'{{переменными}}'}</code> превращается в XML-строку. Проверяется well-formed. Дальше XML можно отправить через Call endpoint или вернуть в Return response.</span>
+        </div>
+        <label className="field-label">Сохранить как<input value={String(step.save_as ?? 'xml_body')} onChange={(event) => update(step.id, { save_as: event.target.value })} /></label>
+        <XmlResponseBuilder value={template} onChange={(value) => update(step.id, { body_template: value })} variables={{ number: '260666/6938', order: { Ref_Key: 'order-ref-key', Number: '260666/6938' } }} hints={['{{request.body.number}}', '{{order.Number}}', '{{xml_body}}']} />
+      </div>
+    );
   }
 }

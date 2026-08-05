@@ -8,7 +8,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +17,8 @@ from app.core.config import get_settings
 from app.core.errors import BadRequestError, NotFoundError
 from app.environments import repository as environments_repository
 from app.environments.models import EnvironmentProfile, EnvironmentType, EnvironmentVariable
-from app.marking_code_pools.models import MarkingCodePoolExport
+from app.marking_code_pools import routing
+from app.marking_code_pools.models import MarkingCodePoolExport, MarkingCodePoolRoutingRule
 from app.marking_code_pools.schemas import (
     MarkingCodePoolActionOverrides,
     MarkingCodePoolSettingsPatch,
@@ -67,12 +68,109 @@ async def export_onec_pool_to_file(
     config = await _runtime_config(session)
     action_plan = _effective_action_plan(config, request.actions_override)
     codes = _codes_from_request(request)
+    rules = await routing.list_rules(session, enabled_only=True)
+    segments = routing.route_codes(
+        rules,
+        codes,
+        order_number=request.order_number,
+        source_document_id=request.source_document_id,
+        source_system=request.source_system,
+        metadata=request.metadata_json,
+    )
+    if len(segments) == 1 and segments[0]["rule"] is None:
+        return await _export_segment(session, config, action_plan, request, codes, rule=None, pool_group_id=None, used_file_names=set())
+
+    pool_group_id = str(uuid4())
+    used_file_names: set[str] = set()
+    records: list[MarkingCodePoolExport] = []
+    default_forward: dict | None = None
+    for segment in segments:
+        record, dnp_forward = await _export_segment(
+            session, config, action_plan, request, segment["codes"],
+            rule=segment["rule"], pool_group_id=pool_group_id, used_file_names=used_file_names,
+        )
+        records.append(record)
+        if segment["rule"] is None:
+            default_forward = dnp_forward
+    primary = records[0]
+    primary.metadata_json = {
+        **(primary.metadata_json or {}),
+        "segments": [_segment_metadata(record) for record in records],
+        "response": _aggregate_response(records, config),
+    }
+    await session.flush()
+    return primary, default_forward
+
+
+def _segment_metadata(record: MarkingCodePoolExport) -> dict[str, Any]:
+    metadata = record.metadata_json or {}
+    return {
+        "segment": metadata.get("segment", "default"),
+        "export_id": str(record.id),
+        "total_codes": record.total_codes,
+        "file_name": record.file_name,
+        "status": record.status,
+        "error_message": record.error_message,
+    }
+
+
+def _aggregate_response(records: list[MarkingCodePoolExport], config: MarkingCodePoolRuntimeConfig) -> dict[str, Any]:
+    responses = [(record.metadata_json or {}).get("response", {}) for record in records]
+    statuses = [str(response.get("status", "failed")) for response in responses]
+    if all(status in {"saved", "forwarded"} for status in statuses):
+        status = "forwarded" if "forwarded" in statuses else "saved"
+    elif all(status == "failed" for status in statuses):
+        status = "failed"
+    else:
+        status = "partial_success"
+    warnings: list[str] = []
+    for response in responses:
+        warnings.extend(str(item) for item in response.get("warnings") or [])
+    return {
+        "success": all(bool(response.get("success")) for response in responses),
+        "status": status,
+        "success_mode": config.response_success_mode,
+        "warnings": warnings,
+    }
+
+
+async def _export_segment(
+    session: AsyncSession,
+    config: MarkingCodePoolRuntimeConfig,
+    action_plan: EffectiveActionPlan,
+    request: OneCMarkingCodePoolExportRequest,
+    codes: list[str],
+    *,
+    rule: MarkingCodePoolRoutingRule | None,
+    pool_group_id: str | None,
+    used_file_names: set[str],
+) -> tuple[MarkingCodePoolExport, dict | None]:
     file_name = request.file_name or _file_name_from_template(config.file_name_template, request.order_number, len(codes))
+    if rule is not None:
+        template = _rule_file_name_template(rule) or config.file_name_template
+        file_name = _file_name_from_template(template, request.order_number, len(codes))
+        stem, dot, suffix = file_name.partition(".")
+        file_name = f"{stem}_{_safe_file_part(rule.name)}{dot}{suffix}"
     _validate_file_name(file_name)
+    file_name = _dedupe_file_name(file_name, used_file_names)
+    used_file_names.add(file_name)
     payload = _codes_to_file_bytes(codes)
     content_hash = hashlib.sha256(payload).hexdigest()
     file_path = _export_dir(config) / file_name
     request_metadata = dict(request.metadata_json or {})
+    metadata_json: dict[str, Any] = {
+        **request_metadata,
+        "export_root": str(_export_dir(config)),
+        "action_plan": _action_plan_metadata(action_plan),
+    }
+    if rule is not None:
+        metadata_json["segment"] = f"rule:{rule.name}"
+        metadata_json["routing_rule_id"] = str(rule.id)
+        metadata_json["routing_targets"] = list(rule.targets_json or [])
+    elif pool_group_id is not None:
+        metadata_json["segment"] = "default"
+    if pool_group_id is not None:
+        metadata_json["pool_group_id"] = pool_group_id
     record = MarkingCodePoolExport(
         source_system=request.source_system,
         source_document_id=request.source_document_id,
@@ -83,11 +181,7 @@ async def export_onec_pool_to_file(
         total_codes=len(codes),
         content_sha256=content_hash,
         status="saved",
-        metadata_json={
-            **request_metadata,
-            "export_root": str(_export_dir(config)),
-            "action_plan": _action_plan_metadata(action_plan),
-        },
+        metadata_json=metadata_json,
     )
     session.add(record)
     await session.flush()
@@ -95,20 +189,39 @@ async def export_onec_pool_to_file(
     allow_overwrite = config.allow_overwrite_default if request.allow_overwrite is None else request.allow_overwrite
     actions: dict[str, dict[str, Any]] = {}
     actions["local_outbox"] = _save_local_outbox(file_path, payload, allow_overwrite)
-    if actions["local_outbox"].get("status") == "success":
+    if actions["local_outbox"].get("status") != "success":
+        actions["laser_file"] = {"status": "disabled", "reason": "local_outbox failed"}
+        forward_action: dict[str, Any] = {"status": "disabled", "reason": "local_outbox failed"}
+        actions["external_forward"] = forward_action
+        actions["dnp_forward"] = forward_action
+    elif rule is None:
         actions["laser_file"] = _save_laser_file_for_plan(config, action_plan, file_name, payload)
         forward_action = await _forward_to_dnp_for_plan(config, action_plan, record, request, codes)
+        actions["external_forward"] = forward_action
+        actions["dnp_forward"] = forward_action
     else:
-        actions["laser_file"] = {"status": "disabled", "reason": "local_outbox failed"}
-        forward_action = {"status": "disabled", "reason": "local_outbox failed"}
-    actions["external_forward"] = forward_action
-    actions["dnp_forward"] = forward_action
+        rule_actions = await _execute_rule_targets(config, rule, record, request, codes, file_name, payload, request.actions_override)
+        actions.update(rule_actions)
+        forward_action = rule_actions.get("external_forward") or {"status": "disabled", "reason": "no http_forward target in rule"}
+        actions.setdefault("external_forward", forward_action)
+        actions["dnp_forward"] = actions["external_forward"]
 
     dnp_forward = forward_action.get("response") if forward_action.get("status") == "success" else None
     record.status = _overall_status(actions)
     record.error_message = _overall_error_message(actions)
-    warnings = _response_warnings(actions, action_plan)
-    response_success = _response_success(config.response_success_mode, actions, action_plan)
+    segment_plan = action_plan
+    if rule is not None:
+        segment_plan = EffectiveActionPlan(
+            local_outbox=True,
+            laser_file=actions.get("laser_file", {}).get("status") != "disabled",
+            laser_forced=False,
+            laser_disabled_reason=None,
+            external_forward=any(key.startswith("http_forward") for key in actions),
+            external_forward_forced=False,
+            external_forward_disabled_reason=None,
+        )
+    warnings = _response_warnings(actions, segment_plan)
+    response_success = _response_success(config.response_success_mode, actions, segment_plan)
     record.metadata_json = {
         **(record.metadata_json or {}),
         "actions": actions,
@@ -124,6 +237,131 @@ async def export_onec_pool_to_file(
         record.metadata_json = {**record.metadata_json, "dnp_forward": dnp_forward}
     await session.flush()
     return record, dnp_forward
+
+
+def _rule_file_name_template(rule: MarkingCodePoolRoutingRule) -> str | None:
+    for target in rule.targets_json or []:
+        template = target.get("file_name_template")
+        if template:
+            return str(template)
+    return None
+
+
+def _dedupe_file_name(file_name: str, used: set[str]) -> str:
+    if file_name not in used:
+        return file_name
+    stem, dot, suffix = file_name.partition(".")
+    index = 2
+    while f"{stem}_{index}{dot}{suffix}" in used:
+        index += 1
+    return f"{stem}_{index}{dot}{suffix}"
+
+
+async def _execute_rule_targets(
+    config: MarkingCodePoolRuntimeConfig,
+    rule: MarkingCodePoolRoutingRule,
+    record: MarkingCodePoolExport,
+    request: OneCMarkingCodePoolExportRequest,
+    codes: list[str],
+    file_name: str,
+    payload: bytes,
+    overrides: MarkingCodePoolActionOverrides | None,
+) -> dict[str, dict[str, Any]]:
+    actions: dict[str, dict[str, Any]] = {}
+    targets = rule.targets_json or []
+    laser_requested = any(target.get("type") == "laser_file" for target in targets)
+    laser_blocked = overrides is not None and overrides.laser_file is False
+    forward_blocked = overrides is not None and overrides.external_forward is False
+    if laser_requested and laser_blocked:
+        actions["laser_file"] = {"status": "disabled", "reason": "disabled by this test action"}
+    elif laser_requested:
+        actions["laser_file"] = _save_laser_file_if_configured(config, file_name, payload, force=True)
+    else:
+        actions["laser_file"] = {"status": "disabled", "reason": "no laser_file target in rule"}
+    first_forward_key: str | None = None
+    for target in targets:
+        if target.get("type") != "http_forward":
+            continue
+        target_name = str(target.get("name") or target.get("url") or "http")
+        key = f"http_forward:{target_name}"
+        if forward_blocked:
+            actions[key] = {"status": "disabled", "reason": "disabled by this test action", "target": target_name}
+        else:
+            actions[key] = await _forward_to_http_target(target, record, request, codes)
+        if first_forward_key is None:
+            first_forward_key = key
+    if first_forward_key is not None:
+        actions["external_forward"] = actions[first_forward_key]
+    return actions
+
+
+async def _forward_to_http_target(
+    target: dict[str, Any],
+    record: MarkingCodePoolExport,
+    request: OneCMarkingCodePoolExportRequest,
+    codes: list[str],
+) -> dict[str, Any]:
+    url = str(target.get("url") or "").strip()
+    target_name = str(target.get("name") or url or "http_forward")
+    if not url:
+        return {"status": "failed", "target": target_name, "error": "http_forward target has no url"}
+    timeout = float(target.get("timeout_seconds") or 180.0)
+    payload = _forward_payload(record, request, codes, target_name)
+    headers = {"Content-Type": "application/json"}
+    token = str(target.get("token") or "")
+    if token:
+        headers[str(target.get("header_name") or "X-OMH-Token")] = token
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, json=payload, headers=headers)
+    except httpx.HTTPError as exc:
+        return {"status": "failed", "target": target_name, "url": url, "error": f"{target_name} request failed: {exc}"}
+    if response.status_code >= 400:
+        return {
+            "status": "failed",
+            "target": target_name,
+            "url": url,
+            "http_status": response.status_code,
+            "error": f"{target_name} rejected code pool with HTTP {response.status_code}: {response.text[:1000]}",
+        }
+    try:
+        result = response.json()
+    except ValueError as exc:
+        return {"status": "failed", "target": target_name, "url": url, "error": f"{target_name} returned non-JSON response: {exc}"}
+    if not isinstance(result, dict):
+        return {"status": "failed", "target": target_name, "url": url, "error": f"{target_name} returned JSON response that is not an object"}
+    return {"status": "success", "target": target_name, "url": url, "response": result}
+
+
+def _forward_payload(
+    record: MarkingCodePoolExport,
+    request: OneCMarkingCodePoolExportRequest,
+    codes: list[str],
+    target_system: str,
+) -> dict[str, Any]:
+    return {
+        "omh": {
+            "event_id": str(record.id),
+            "correlation_id": f"chz-code-pool:{request.order_number}:{record.id}",
+            "event_type": "ChestniyZnakCodePoolPushedFrom1C",
+            "entity_type": "OneCMarkingCodePool",
+            "entity_id": request.source_document_id or request.order_number,
+            "source_system": "Open Manufacturing Hub",
+            "target_system": target_system,
+            "sent_at": datetime.now(UTC).isoformat(),
+        },
+        "payload": {
+            "source_system": request.source_system,
+            "source_document_id": request.source_document_id,
+            "source_document_name": request.source_document_name,
+            "order_number": request.order_number,
+            "file_name": record.file_name,
+            "total_codes": record.total_codes,
+            "content_sha256": record.content_sha256,
+            "full_codes_base64": _base64_codes_for_dnp(request, codes),
+            "metadata_json": request.metadata_json,
+        },
+    }
 
 
 def _codes_from_request(request: OneCMarkingCodePoolExportRequest) -> list[str]:
@@ -151,6 +389,15 @@ async def preview_onec_pool_export(session: AsyncSession, request: OneCMarkingCo
         warnings.append(str(forward_preview["reason"]))
     if action_plan.local_outbox_override_ignored:
         warnings.append("local_outbox=false ignored: local archive is required.")
+    rules = await routing.list_rules(session, enabled_only=True)
+    segments = routing.route_codes(
+        rules,
+        codes,
+        order_number=request.order_number,
+        source_document_id=request.source_document_id,
+        source_system=request.source_system,
+        metadata=request.metadata_json,
+    )
     return {
         "success": True,
         "file_name": file_name,
@@ -160,6 +407,15 @@ async def preview_onec_pool_export(session: AsyncSession, request: OneCMarkingCo
         "would_laser_copy": laser_preview,
         "would_forward": forward_preview,
         "warnings": warnings,
+        "segments": [
+            {
+                "segment": segment["key"],
+                "rule_name": segment["rule"].name if segment["rule"] is not None else None,
+                "total_codes": len(segment["codes"]),
+                "targets": list(segment["rule"].targets_json) if segment["rule"] is not None else [],
+            }
+            for segment in segments
+        ],
     }
 
 
@@ -362,7 +618,19 @@ async def retry_forward(session: AsyncSession, export_id: UUID) -> dict[str, Any
         full_codes_base64=full_codes_base64,
         metadata_json=_business_metadata(record.metadata_json),
     )
-    action = await _forward_to_dnp_if_configured(config, record, request, codes)
+    routing_targets = [
+        target for target in (record.metadata_json or {}).get("routing_targets") or []
+        if isinstance(target, dict) and target.get("type") == "http_forward"
+    ]
+    if routing_targets:
+        last_action: dict[str, Any] = {"status": "disabled", "reason": "no http_forward target"}
+        for target in routing_targets:
+            last_action = await _forward_to_http_target(target, record, request, codes)
+            if last_action.get("status") != "success":
+                break
+        action = last_action
+    else:
+        action = await _forward_to_dnp_if_configured(config, record, request, codes)
     _store_retry_action(record, "external_forward", action)
     if action.get("status") == "success":
         record.forwarded_at = datetime.now(UTC)
@@ -761,29 +1029,7 @@ async def _forward_to_dnp_if_configured(
     if not url:
         return {"status": "disabled", "reason": "DNP_CHZ_CODE_POOL_IMPORT_URL is not configured"}
 
-    payload = {
-        "omh": {
-            "event_id": str(record.id),
-            "correlation_id": f"chz-code-pool:{request.order_number}:{record.id}",
-            "event_type": "ChestniyZnakCodePoolPushedFrom1C",
-            "entity_type": "OneCMarkingCodePool",
-            "entity_id": request.source_document_id or request.order_number,
-            "source_system": "Open Manufacturing Hub",
-            "target_system": config.dnp_service_name,
-            "sent_at": datetime.now(UTC).isoformat(),
-        },
-        "payload": {
-            "source_system": request.source_system,
-            "source_document_id": request.source_document_id,
-            "source_document_name": request.source_document_name,
-            "order_number": request.order_number,
-            "file_name": record.file_name,
-            "total_codes": record.total_codes,
-            "content_sha256": record.content_sha256,
-            "full_codes_base64": _base64_codes_for_dnp(request, codes),
-            "metadata_json": request.metadata_json,
-        },
-    }
+    payload = _forward_payload(record, request, codes, config.dnp_service_name)
     headers = {"Content-Type": "application/json"}
     if config.dnp_shared_secret:
         headers[config.dnp_header_name] = config.dnp_shared_secret
@@ -871,8 +1117,6 @@ def _overall_error_message(actions: dict[str, dict[str, Any]]) -> str | None:
 
 
 def _base64_codes_for_dnp(request: OneCMarkingCodePoolExportRequest, codes: list[str]) -> list[str]:
-    if request.full_codes_base64 is not None:
-        return [str(value).strip() for value in request.full_codes_base64]
     return [base64.b64encode(code.encode("latin-1")).decode("ascii") for code in codes]
 
 
@@ -917,7 +1161,7 @@ def _codes_from_export_file(path: Path) -> tuple[list[str], list[str]]:
 
 
 def _business_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
-    internal_keys = {"actions", "action_plan", "response", "dnp_forward", "external_forward", "export_root"}
+    internal_keys = {"actions", "action_plan", "response", "dnp_forward", "external_forward", "export_root", "segments", "segment", "pool_group_id", "routing_rule_id", "routing_targets"}
     return {key: value for key, value in (metadata or {}).items() if key not in internal_keys}
 
 

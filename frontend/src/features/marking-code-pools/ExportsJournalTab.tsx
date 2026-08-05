@@ -37,6 +37,7 @@ export function ExportsJournalTab({ exports, settings }: ExportsJournalTabProps)
         columns={[
           { key: 'date', header: 'Дата', render: (row) => <>{formatDate(row.created_at)}<small>{row.id}</small></> },
           { key: 'order', header: 'Заказ', render: (row) => <strong>{row.order_number}</strong> },
+          { key: 'segment', header: 'Сегмент', render: (row) => { const segment = (row.metadata_json as Record<string, unknown> | undefined)?.segment; return segment ? <span className="microcopy">{String(segment).replace('rule:', '')}</span> : <span className="muted">—</span>; } },
           { key: 'document', header: 'Документ 1С', render: (row) => <>{row.source_document_id ?? '—'}<small>{row.source_document_name ?? row.source_system}</small></> },
           { key: 'file', header: 'Файл', render: (row) => <>{row.file_name}<small>{shortHash(row.content_sha256)}</small></> },
           { key: 'codes', header: 'Кодов', render: (row) => row.total_codes.toLocaleString() },

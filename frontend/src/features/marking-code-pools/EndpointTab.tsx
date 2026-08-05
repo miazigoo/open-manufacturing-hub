@@ -5,6 +5,14 @@ import { SectionCard } from '../../components/product/SectionCard';
 
 const endpointPath = '/api/marking-code-pools/onec/export-file';
 const busEndpointPath = '/api/bus/in/onec-chz-pool-delivery';
+const pullFromDnpPath = '/api/chz-aggregations/pull-from-dnp';
+
+const pullFromDnpExample = `{
+  "order_number_1c": "260530/6543",
+  "date_from": "2026-07-13",
+  "date_to": "2026-07-13",
+  "only_new": true
+}`;
 
 const base64Example = `{
   "source_system": "1C ERP",
@@ -44,6 +52,7 @@ const oneCExample = `Соединение = Новый HTTPСоединение(
 export function EndpointTab() {
   const url = `${API_BASE_URL.replace(/\/$/, '')}${endpointPath}`;
   const busUrl = `${API_BASE_URL.replace(/\/$/, '')}${busEndpointPath}`;
+  const pullFromDnpUrl = `${API_BASE_URL.replace(/\/$/, '')}${pullFromDnpPath}`;
   const curl = `curl -X POST '${url}' \\
   -H 'Content-Type: application/json' \\
   -d '${base64Example.replaceAll("'", "'\\''")}'`;
@@ -63,6 +72,15 @@ export function EndpointTab() {
           <code>{url}</code>
           <CopyButton value={url} label="Скопировать URL" copiedLabel="URL скопирован" />
         </div>
+      </SectionCard>
+
+      <SectionCard title="Загрузка кодов из DnP в 1С" description="Обратное направление: 1С запрашивает у OMH упакованные коды для документа «Нанесение и ввод в оборот». OMH забирает их из DnP и возвращает JSON с кодами в Base64 и tsv_text_base64. Коды в DnP не помечаются как выгруженные.">
+        <div className="endpoint-url-box">
+          <span>POST</span>
+          <code>{pullFromDnpUrl}</code>
+          <CopyButton value={pullFromDnpUrl} label="Скопировать URL" copiedLabel="URL скопирован" />
+        </div>
+        <CodeBlock code={pullFromDnpExample} language="json" copyLabel="Скопировать JSON" copiedLabel="JSON скопирован" />
       </SectionCard>
 
       <section className="workbench-grid">

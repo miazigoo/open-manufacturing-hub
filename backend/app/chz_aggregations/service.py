@@ -7,16 +7,29 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
+from uuid import uuid4
 
 import httpx
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.artifacts.models import Artifact
+from app.artifacts.models import content_hash as artifact_content_hash
+from app.artifacts.models import content_size as artifact_content_size
 from app.chz_aggregations.models import ChzAggregationRegistration
-from app.chz_aggregations.schemas import ChzAggregationRegistrationRequest, ChzAggregationSettingsPatch, ChzAggregationSettingsRead
+from app.chz_aggregations.schemas import (
+    ChzAggregationRegistrationRequest,
+    ChzAggregationSettingsPatch,
+    ChzAggregationSettingsRead,
+    ChzDnpPullRequest,
+    ChzDnpPullResponse,
+)
 from app.core.config import get_settings
+from app.core.enums import ArtifactType, EventStatus, RunMode, RunStatus, StepStatus
 from app.core.errors import BadRequestError
 from app.environments import repository as environments_repository
 from app.environments.models import EnvironmentProfile, EnvironmentType, EnvironmentVariable
+from app.events.models import EventRun, EventStep, IntegrationEvent
 
 GS = "\x1d"
 
@@ -27,6 +40,12 @@ class ChzAggregationRuntimeConfig:
     onec_header_name: str
     onec_token: str
     onec_timeout_seconds: float
+
+
+@dataclass(frozen=True)
+class ChzDnpPullRuntimeConfig:
+    export_url: str
+    timeout_seconds: float
 
 
 @dataclass(frozen=True)
@@ -127,6 +146,139 @@ async def register_file(
         source_document_id=source_document_id,
     )
     return await _register_normalized(session, normalized)
+
+
+async def pull_from_dnp(session: AsyncSession, request: ChzDnpPullRequest) -> ChzDnpPullResponse:
+    config = await _dnp_pull_runtime_config(session)
+    if not config.export_url:
+        raise BadRequestError(
+            "DnP packed codes export is not configured: set CHZ_DNP_PACKED_CODES_EXPORT_URL "
+            "in the environment or as a variable of the current OMH environment"
+        )
+    order_number = request.order_number_1c.strip()
+    payload = {
+        "order_number_1c": order_number,
+        "date_from": request.date_from.isoformat() if request.date_from else None,
+        "date_to": request.date_to.isoformat() if request.date_to else None,
+        "only_new": request.only_new,
+        # The DnP side must mark rows as exported only after 1C actually consumed
+        # the data, so OMH never sets mark_exported itself.
+        "mark_exported": False,
+    }
+    event, run, step = await _start_dnp_pull_event(session, order_number, payload)
+    try:
+        data = await _request_dnp_packed_codes(config, payload)
+        result = ChzDnpPullResponse.model_validate(data)
+        if result.ok is not True:
+            raise BadRequestError(f"DnP packed codes export was not successful: {str(data)[:500]}")
+    except (BadRequestError, ValidationError) as exc:
+        await _finish_dnp_pull_event(session, event, run, step, error=str(exc))
+        await session.commit()
+        if isinstance(exc, BadRequestError):
+            raise
+        raise BadRequestError("DnP response does not match the packed codes export contract") from exc
+    await _finish_dnp_pull_event(session, event, run, step, result=result)
+    result.event_id = event.id
+    result.timeline_url = f"/events/{event.id}"
+    return result
+
+
+async def _request_dnp_packed_codes(config: ChzDnpPullRuntimeConfig, payload: dict[str, Any]) -> dict[str, Any]:
+    try:
+        async with httpx.AsyncClient(timeout=config.timeout_seconds) as client:
+            response = await client.post(config.export_url, json=payload)
+    except httpx.HTTPError as exc:
+        raise BadRequestError(f"DnP packed codes export request failed: {exc}") from exc
+    if response.status_code >= 400:
+        raise BadRequestError(f"DnP rejected packed codes export with HTTP {response.status_code}: {response.text[:1000]}")
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise BadRequestError("DnP returned a non-JSON response for packed codes export") from exc
+    if not isinstance(data, dict):
+        raise BadRequestError("DnP returned an unexpected response shape for packed codes export")
+    return data
+
+
+async def _start_dnp_pull_event(session: AsyncSession, order_number: str, payload: dict[str, Any]) -> tuple[IntegrationEvent, EventRun, EventStep]:
+    now = datetime.now(UTC)
+    event = IntegrationEvent(
+        correlation_id=f"chz-dnp-pull:{order_number}:{uuid4()}",
+        source_system="1C ERP",
+        target_system="DnP",
+        event_type="chz.dnp_packed_codes_pull",
+        entity_type="ChzDnpPackedCodesPull",
+        entity_id=order_number,
+        status=EventStatus.PROCESSING,
+    )
+    session.add(event)
+    await session.flush()
+    run = EventRun(event_id=event.id, run_number=1, mode=RunMode.NORMAL, status=RunStatus.RUNNING, started_at=now)
+    session.add(run)
+    await session.flush()
+    step = EventStep(
+        run_id=run.id,
+        step_order=1,
+        step_name="dnp_packed_codes_export",
+        status=StepStatus.RUNNING,
+        started_at=now,
+        step_config_json={"request": payload},
+    )
+    session.add(step)
+    await session.flush()
+    return event, run, step
+
+
+async def _finish_dnp_pull_event(
+    session: AsyncSession,
+    event: IntegrationEvent,
+    run: EventRun,
+    step: EventStep,
+    *,
+    result: ChzDnpPullResponse | None = None,
+    error: str | None = None,
+) -> None:
+    now = datetime.now(UTC)
+    step.finished_at = now
+    run.finished_at = now
+    if step.started_at is not None:
+        step.duration_ms = int((now - step.started_at).total_seconds() * 1000)
+    if error is not None:
+        step.status = StepStatus.FAILED
+        step.error_code = "DNP_PULL_FAILED"
+        step.error_message = error[:1000]
+        run.status = RunStatus.FAILED
+        event.status = EventStatus.FAILED
+        content: dict[str, Any] = {"error": error[:1000]}
+        name = "dnp_packed_codes_export_error"
+    else:
+        step.status = StepStatus.SUCCESS
+        run.status = RunStatus.SUCCESS
+        event.status = EventStatus.SUCCESS
+        tsv_sha256 = hashlib.sha256((result.tsv_text_base64 or "").encode("ascii")).hexdigest() if result else None
+        # Only metadata is stored here; the marking codes themselves stay in the
+        # 1C response and are not persisted as an artifact.
+        content = {
+            "order_number_1c": result.order_number_1c if result else None,
+            "order_name_dnp": result.order_name_dnp if result else None,
+            "codes_count": result.codes_count if result else None,
+            "boxes_count": result.boxes_count if result else None,
+            "tsv_text_base64_sha256": tsv_sha256,
+        }
+        name = "dnp_packed_codes_export_result"
+    session.add(
+        Artifact(
+            event_id=event.id,
+            run_id=run.id,
+            step_id=step.id,
+            artifact_type=ArtifactType.INCOMING_RESPONSE.value if error is None else ArtifactType.ERROR_DETAILS.value,
+            name=name,
+            content_json=content,
+            content_hash=artifact_content_hash(content),
+            size_bytes=artifact_content_size(content),
+        )
+    )
+    await session.flush()
 
 
 async def _register_normalized(
@@ -469,6 +621,15 @@ async def _runtime_config(session: AsyncSession) -> ChzAggregationRuntimeConfig:
         onec_header_name=_config_str(values, "CHZ_AGGREGATION_ONEC_HEADER_NAME", settings.chz_aggregation_onec_header_name) or "X-OMH-Token",
         onec_token=_config_str(values, "CHZ_AGGREGATION_ONEC_TOKEN", settings.chz_aggregation_onec_token),
         onec_timeout_seconds=_config_float(values, "CHZ_AGGREGATION_ONEC_TIMEOUT_SECONDS", settings.chz_aggregation_onec_timeout_seconds),
+    )
+
+
+async def _dnp_pull_runtime_config(session: AsyncSession) -> ChzDnpPullRuntimeConfig:
+    settings = get_settings()
+    values = await _environment_values(session)
+    return ChzDnpPullRuntimeConfig(
+        export_url=_config_str(values, "CHZ_DNP_PACKED_CODES_EXPORT_URL", settings.chz_dnp_packed_codes_export_url),
+        timeout_seconds=_config_float(values, "CHZ_DNP_PACKED_CODES_TIMEOUT_SECONDS", settings.chz_dnp_packed_codes_timeout_seconds),
     )
 
 

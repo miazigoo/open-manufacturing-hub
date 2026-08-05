@@ -6,6 +6,8 @@ import type {
   ChzAggregationRegistrationResponse,
   ChzAggregationSettings,
   ChzAggregationSettingsPatch,
+  ChzDnpPullRequest,
+  ChzDnpPullResponse,
   MarkingCodePoolExport,
   MarkingCodePoolExportResponse,
   MarkingCodePoolPreviewResponse,
@@ -13,6 +15,10 @@ import type {
   MarkingCodePoolSettingsPatch,
   MarkingCodePoolSettingsTestResponse,
   OneCMarkingCodePoolExportRequest,
+  RoutingRule,
+  RoutingRulePayload,
+  RoutingRuleTestRequest,
+  RoutingRuleTestResponse,
 } from './types';
 
 const base = '/api/marking-code-pools';
@@ -36,4 +42,10 @@ export const markingCodePoolsApi = {
   aggregationPreviewFile: (form: FormData) => request<ChzAggregationPreviewResponse>(`${aggregationBase}/register-file/preview`, { method: 'POST', body: form }),
   aggregationRegisterFile: (form: FormData) => request<ChzAggregationRegistrationResponse>(`${aggregationBase}/register-file`, { method: 'POST', body: form }),
   aggregationRegistrations: () => request<ChzAggregationRegistration[]>(`${aggregationBase}/registrations`),
+  pullFromDnp: (payload: ChzDnpPullRequest) => request<ChzDnpPullResponse>(`${aggregationBase}/pull-from-dnp`, { method: 'POST', body: JSON.stringify(payload) }),
+  routingRules: () => request<RoutingRule[]>(`${base}/routing-rules`),
+  createRoutingRule: (payload: RoutingRulePayload) => request<RoutingRule>(`${base}/routing-rules`, { method: 'POST', body: JSON.stringify(payload) }),
+  patchRoutingRule: (id: string, payload: Partial<RoutingRulePayload>) => request<RoutingRule>(`${base}/routing-rules/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteRoutingRule: (id: string) => request<void>(`${base}/routing-rules/${id}`, { method: 'DELETE' }),
+  testRoutingRules: (payload: RoutingRuleTestRequest) => request<RoutingRuleTestResponse>(`${base}/routing-rules/test`, { method: 'POST', body: JSON.stringify(payload) }),
 };

@@ -42,6 +42,7 @@ export interface MarkingCodePoolExportResponse {
   status: string;
   warnings: string[];
   actions: Record<string, ActionDetails>;
+  segments?: Array<Record<string, unknown>>;
   external_forward: Record<string, unknown> | null;
   dnp_forward: Record<string, unknown> | null;
 }
@@ -116,6 +117,7 @@ export interface MarkingCodePoolPreviewResponse {
   would_laser_copy: Record<string, unknown>;
   would_forward: Record<string, unknown>;
   warnings: string[];
+  segments?: Array<Record<string, unknown>>;
 }
 
 export interface MarkingCodePoolSettingsTestResponse {
@@ -186,4 +188,83 @@ export interface ChzAggregationRegistrationResponse {
   registration: ChzAggregationRegistration;
   onec_response: Record<string, unknown> | null;
   warnings: string[];
+}
+
+export interface ChzDnpPullRequest {
+  order_number_1c: string;
+  date_from?: string | null;
+  date_to?: string | null;
+  only_new?: boolean;
+}
+
+export interface ChzDnpPullRow {
+  full_code_base64: string;
+  sscc: string | null;
+}
+
+export interface ChzDnpPullResponse {
+  ok: boolean;
+  order_number_1c: string;
+  order_name_dnp: string | null;
+  codes_count: number;
+  boxes_count: number;
+  tsv_text_base64: string;
+  rows: ChzDnpPullRow[];
+  event_id: string | null;
+  timeline_url: string | null;
+}
+
+export interface RoutingRuleTarget {
+  type: 'laser_file' | 'local_outbox' | 'http_forward';
+  file_name_template?: string | null;
+  name?: string | null;
+  url?: string | null;
+  method?: string;
+  header_name?: string | null;
+  token?: string | null;
+  timeout_seconds?: number | null;
+}
+
+export interface RoutingRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  match_json: Record<string, unknown>;
+  targets_json: RoutingRuleTarget[];
+  created_at: string;
+}
+
+export interface RoutingRulePayload {
+  name: string;
+  enabled?: boolean;
+  priority?: number;
+  match_json: Record<string, unknown>;
+  targets_json: RoutingRuleTarget[];
+}
+
+export interface RoutingRuleTestCodeResult {
+  code_preview: string;
+  gtin: string;
+  serial: string;
+  segment: string;
+  rule_id: string | null;
+  rule_name: string | null;
+  targets: RoutingRuleTarget[];
+}
+
+export interface RoutingRuleTestResponse {
+  total_codes: number;
+  matched_codes: number;
+  default_codes: number;
+  results: RoutingRuleTestCodeResult[];
+}
+
+export interface RoutingRuleTestRequest {
+  codes?: string[];
+  full_codes_base64?: string[];
+  gs_marker?: string;
+  order_number?: string;
+  source_document_id?: string | null;
+  source_system?: string;
 }

@@ -10,6 +10,7 @@ from app.audit.models import AuditEvent  # noqa: F401
 import app.business_objects.models  # noqa: F401
 from app.business_rules.models import BusinessRuleSet  # noqa: F401
 from app.change_sets.models import ChangeSet, ChangeSetItem  # noqa: F401
+from app.chz_aggregations.models import ChzAggregationRegistration  # noqa: F401
 from app.config_versions.models import ConfigVersion  # noqa: F401
 from app.connection_center.models import ConnectorInstance as ConnectionProfile  # noqa: F401
 from app.connectors.models import ConnectorInstance
@@ -37,7 +38,7 @@ from app.integration_master.models import IntegrationMasterDraft  # noqa: F401
 from app.maintenance.models import MaintenanceWindow  # noqa: F401
 from app.mapping_center.models import MappingProfile  # noqa: F401
 from app.mappings.models import MappingDefinition, MappingVersion  # noqa: F401
-from app.marking_code_pools.models import MarkingCodePoolExport  # noqa: F401
+from app.marking_code_pools.models import MarkingCodePoolExport, MarkingCodePoolRoutingRule  # noqa: F401
 from app.notifications.models import NotificationDelivery, NotificationRule  # noqa: F401
 from app.onboarding.models import OnboardingState  # noqa: F401
 from app.onec_workbench.models import IntegrationMessage  # noqa: F401

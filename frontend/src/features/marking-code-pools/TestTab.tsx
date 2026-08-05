@@ -112,10 +112,36 @@ export function TestTab() {
       {formError && <div className="error-state compact">{formError}</div>}
       {preview.error instanceof Error && <div className="error-state compact">{preview.error.message}</div>}
       {exportFile.error instanceof Error && <div className="error-state compact">{exportFile.error.message}</div>}
+      <SegmentsPanel value={preview.data?.segments ?? exportFile.data?.segments} />
       <section className="workbench-grid lower">
         <JsonBlock title="Результат предпросмотра" value={preview.data ?? {}} searchable={false} />
         <JsonBlock title="Результат сохранения" value={exportFile.data ?? {}} searchable={false} />
       </section>
     </form>
+  );
+}
+
+function SegmentsPanel({ value }: { value?: Array<Record<string, unknown>> }) {
+  if (!value || !value.length) return null;
+  return (
+    <section className="info-panel">
+      <span className="eyebrow">Маршрутизация</span>
+      <h2>Разбиение пула на сегменты</h2>
+      <div className="table-wrap">
+        <table className="data-table">
+          <thead><tr><th>Сегмент</th><th>Кодов</th><th>Файл</th><th>Статус</th></tr></thead>
+          <tbody>
+            {value.map((segment, index) => (
+              <tr key={index}>
+                <td>{String(segment.rule_name ?? segment.segment ?? 'default')}</td>
+                <td>{String(segment.total_codes ?? '')}</td>
+                <td>{segment.file_name ? String(segment.file_name) : '—'}</td>
+                <td>{segment.status ? String(segment.status) : 'preview'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

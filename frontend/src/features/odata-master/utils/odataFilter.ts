@@ -9,7 +9,7 @@ export interface ODataFilterCondition {
   mode: ODataFilterValueMode;
 }
 
-export function compileFilterCondition(condition: ODataFilterCondition) {
+function compileFilterCondition(condition: ODataFilterCondition) {
   const field = condition.field.trim();
   const operator = condition.operator || 'eq';
   const value = condition.value.trim();

@@ -82,14 +82,33 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
             if not step.get("save_as"):
                 errors.append(_error(step_id, "FOREACH_SAVE_AS_REQUIRED", "Foreach step needs save_as", "Save combined results as codes, rows or payload_items."))
             if not isinstance(nested, dict):
-                errors.append(_error(step_id, "FOREACH_STEP_REQUIRED", "Foreach step needs one nested step", "Add a nested OData query step."))
-            elif nested.get("type") != "odata_query":
-                errors.append(_error(step_id, "FOREACH_STEP_UNSUPPORTED", "Foreach currently supports nested odata_query", "Use type=odata_query inside step."))
-            else:
+                errors.append(_error(step_id, "FOREACH_STEP_REQUIRED", "Foreach step needs one nested step", "Add a nested step such as odata_query or call_endpoint."))
+            elif nested.get("type") not in {"odata_query", "call_endpoint", "build_json", "extract"}:
+                errors.append(_error(step_id, "FOREACH_STEP_UNSUPPORTED", "Foreach supports nested odata_query, call_endpoint, build_json or extract", "Use one of the supported nested step types."))
+            elif nested.get("type") == "odata_query":
                 for field, code in (("connection", "ODATA_CONNECTION_NOT_SET"), ("resource", "ODATA_RESOURCE_NOT_SET")):
                     if not nested.get(field):
                         errors.append(_error(step_id, code, f"Nested OData step needs {field}", "Select connector/resource for the repeated lookup."))
                 _validate_odata_top(nested, step_id, errors)
+            elif nested.get("type") == "call_endpoint" and not (nested.get("connector") or nested.get("url")):
+                errors.append(_error(step_id, "TARGET_CONNECTOR_NOT_SET", "Nested endpoint step needs connector or URL", "Select a target connector or enter a direct HTTP URL."))
+        if step_type == "extract":
+            fields = step.get("fields")
+            if not isinstance(fields, list) or not fields:
+                errors.append(_error(step_id, "EXTRACT_FIELDS_REQUIRED", "Extract step needs at least one field", "Add fields with name + path or regex."))
+            for field in fields or []:
+                if not isinstance(field, dict) or not field.get("name") or not (field.get("path") or field.get("regex")):
+                    errors.append(_error(step_id, "EXTRACT_FIELD_INVALID", "Each extract field needs name and path or regex", "Example: { name: number, path: response.number }."))
+        if step_type == "filter_array":
+            if not step.get("items"):
+                errors.append(_error(step_id, "FILTER_ITEMS_REQUIRED", "Filter step needs an items path", "Example: request.body.rows or steps.lookup.items."))
+            if not step.get("save_as"):
+                errors.append(_error(step_id, "FILTER_SAVE_AS_REQUIRED", "Filter step needs save_as", "Save filtered items as filtered_rows or similar."))
+        if step_type == "build_xml":
+            if not (step.get("body_template") or step.get("template")):
+                errors.append(_error(step_id, "XML_TEMPLATE_REQUIRED", "Build XML step needs a template", "Add an XML template with variables such as {{order.Number}}."))
+            if not step.get("save_as"):
+                errors.append(_error(step_id, "XML_SAVE_AS_REQUIRED", "Build XML step needs save_as", "Save the rendered XML as xml_body or similar."))
         if step_type == "print_labels":
             printer_selection = step.get("printer_selection") if isinstance(step.get("printer_selection"), dict) else {}
             labels = step.get("labels") if isinstance(step.get("labels"), dict) else {}

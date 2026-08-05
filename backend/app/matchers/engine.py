@@ -12,7 +12,7 @@ def evaluate_matcher_group(group: dict[str, Any] | None, context: dict[str, Any]
         return {"matched": True, "trace": []}
     validate_matcher_group(group)
     mode = group.get("mode", "all")
-    traces = [_evaluate_rule(rule, context) for rule in group.get("rules") or []]
+    traces = [_evaluate_item(item, context) for item in group.get("rules") or []]
     if not traces:
         matched = True
     elif mode == "all":
@@ -22,6 +22,23 @@ def evaluate_matcher_group(group: dict[str, Any] | None, context: dict[str, Any]
     else:
         matched = not any(item["matched"] for item in traces)
     return {"matched": matched, "trace": traces}
+
+
+def _evaluate_item(item: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    if item.get("group") is not None:
+        subgroup = item.get("group") or {}
+        result = evaluate_matcher_group(subgroup, context)
+        return {
+            "rule": "group",
+            "path": None,
+            "actual": None,
+            "expected": None,
+            "matched": result["matched"],
+            "message": None,
+            "mode": subgroup.get("mode", "all"),
+            "trace": result["trace"],
+        }
+    return _evaluate_rule(item, context)
 
 
 def _evaluate_rule(rule: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
@@ -66,11 +83,40 @@ def _match_path_rule(rule_type: str, actual: Any, rule: dict[str, Any]) -> bool:
         return actual is not None
     if rule_type == "body_path_equals":
         return actual == rule.get("value")
+    if rule_type == "body_path_not_equals":
+        return actual != rule.get("value")
     if rule_type == "body_path_contains":
         return str(rule.get("value") or "") in str(actual or "")
+    if rule_type == "body_path_not_contains":
+        return str(rule.get("value") or "") not in str(actual or "")
     if rule_type == "body_path_in":
         return actual in (rule.get("values") or [])
+    if rule_type == "body_path_not_in":
+        return actual not in (rule.get("values") or [])
+    if rule_type == "body_path_starts_with":
+        return str(actual or "").startswith(str(rule.get("value") or ""))
+    if rule_type == "body_path_ends_with":
+        return str(actual or "").endswith(str(rule.get("value") or ""))
+    if rule_type == "body_path_regex":
+        return re.search(str(rule.get("pattern") or rule.get("value") or ""), str(actual or "")) is not None
+    if rule_type in {"body_path_gt", "body_path_lt", "body_path_ge", "body_path_le"}:
+        return _numeric_compare(rule_type, actual, rule.get("value"))
     return False
+
+
+def _numeric_compare(rule_type: str, actual: Any, expected: Any) -> bool:
+    try:
+        left = float(actual)
+        right = float(expected)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"numeric comparison requires numbers, got {actual!r} and {expected!r}") from exc
+    if rule_type == "body_path_gt":
+        return left > right
+    if rule_type == "body_path_lt":
+        return left < right
+    if rule_type == "body_path_ge":
+        return left >= right
+    return left <= right
 
 
 def _get_path(payload: Any, path: str) -> Any:
