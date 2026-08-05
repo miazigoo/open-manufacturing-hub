@@ -23,7 +23,7 @@ from app.resolvers.models import ResolverDefinitionV2
 from app.secrets.models import Secret
 from app.secrets.redaction import collect_secret_references, raw_secret_warnings
 
-MIGRATION_HEAD = "0034_chz_agg_reg"
+MIGRATION_HEAD = "0035_pool_routing_rules"
 
 
 async def database_revision(session: AsyncSession) -> str | None:
