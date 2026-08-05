@@ -17,18 +17,28 @@ async def get_site_by_name(session: AsyncSession, name: str) -> Site | None:
 
 async def latest_checks(session: AsyncSession) -> list[HealthCheck]:
     # health_checks grows fast (several rows per heartbeat); dedupe in SQL via a
-    # window function instead of loading the whole table into Python.
-    ranked = select(
-        HealthCheck.id,
-        func.row_number()
-        .over(
-            partition_by=(HealthCheck.component_type, HealthCheck.component_name, HealthCheck.site_id),
-            order_by=HealthCheck.checked_at.desc(),
+    # group-by-max subquery instead of loading the whole table into Python.
+    latest_timestamps = (
+        select(
+            HealthCheck.component_type.label("component_type"),
+            HealthCheck.component_name.label("component_name"),
+            HealthCheck.site_id.label("site_id"),
+            func.max(HealthCheck.checked_at).label("max_checked_at"),
         )
-        .label("rn"),
-    ).subquery()
+        .group_by(HealthCheck.component_type, HealthCheck.component_name, HealthCheck.site_id)
+        .subquery()
+    )
     result = await session.execute(
-        select(HealthCheck).join(ranked, HealthCheck.id == ranked.c.id).where(ranked.c.rn == 1)
+        select(HealthCheck).join(
+            latest_timestamps,
+            (HealthCheck.component_type == latest_timestamps.c.component_type)
+            & (HealthCheck.component_name == latest_timestamps.c.component_name)
+            & (HealthCheck.checked_at == latest_timestamps.c.max_checked_at)
+            & (
+                (HealthCheck.site_id == latest_timestamps.c.site_id)
+                | (HealthCheck.site_id.is_(None) & latest_timestamps.c.site_id.is_(None))
+            ),
+        )
     )
     return list(result.scalars().all())
 
