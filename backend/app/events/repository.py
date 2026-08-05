@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import lazyload, selectinload
 
 from app.events.models import EventRun, EventStep, IntegrationEvent
 
@@ -23,8 +23,15 @@ async def get_event_with_timeline(session: AsyncSession, event_id: UUID) -> Inte
     return result.scalar_one_or_none()
 
 
-async def list_events(session: AsyncSession) -> list[IntegrationEvent]:
-    result = await session.execute(select(IntegrationEvent).order_by(IntegrationEvent.created_at.desc()))
+async def list_events(session: AsyncSession, limit: int = 200) -> list[IntegrationEvent]:
+    # runs/artifacts are selectin-eager on the model and artifact JSONB payloads are
+    # heavy, so list views explicitly skip them and cap the page size.
+    result = await session.execute(
+        select(IntegrationEvent)
+        .options(lazyload(IntegrationEvent.runs), lazyload(IntegrationEvent.artifacts))
+        .order_by(IntegrationEvent.created_at.desc())
+        .limit(limit)
+    )
     return list(result.scalars().all())
 
 
