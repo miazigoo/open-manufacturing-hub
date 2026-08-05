@@ -3,6 +3,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import lazyload
 
 from app.artifacts.models import Artifact
 from app.artifacts.service import get_artifact_or_404
@@ -74,6 +75,7 @@ async def get_event_journal(session: AsyncSession) -> list[EventJournalItem]:
         select(EventRun, EventStep)
         .join(EventStep, EventStep.run_id == EventRun.id)
         .where(EventRun.event_id.in_(ids))
+        .options(lazyload(EventRun.artifacts), lazyload(EventStep.artifacts))
         .order_by(EventRun.run_number.desc(), EventStep.step_order.desc())
     )
     latest_steps: dict[Any, EventStep] = {}

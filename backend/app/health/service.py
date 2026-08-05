@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import lazyload
 
 from app.core.enums import HealthComponentType, HealthStatus
 from app.events.models import IntegrationEvent
@@ -145,7 +146,7 @@ async def agent_history(session: AsyncSession, limit: int = 100, site_code: str 
 
 
 async def dashboard(session: AsyncSession) -> dict:
-    result = await session.execute(select(Site))
+    result = await session.execute(select(Site).options(lazyload(Site.checks)))
     sites = list(result.scalars().all())
     checks = await latest_checks(session)
     latest_event_at = (await session.execute(select(func.max(IntegrationEvent.created_at)))).scalar_one_or_none()
