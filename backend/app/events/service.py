@@ -1,9 +1,9 @@
+from types import SimpleNamespace
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import lazyload
 
 from app.artifacts.models import Artifact
 from app.artifacts.service import get_artifact_or_404
@@ -72,15 +72,14 @@ async def get_event_journal(session: AsyncSession) -> list[EventJournalItem]:
         latest_errors.setdefault(record.event_id, record)
 
     run_result = await session.execute(
-        select(EventRun, EventStep)
+        select(EventRun.event_id, EventStep.step_name, EventStep.error_code, EventStep.error_message)
         .join(EventStep, EventStep.run_id == EventRun.id)
         .where(EventRun.event_id.in_(ids))
-        .options(lazyload(EventRun.artifacts), lazyload(EventStep.artifacts))
         .order_by(EventRun.run_number.desc(), EventStep.step_order.desc())
     )
-    latest_steps: dict[Any, EventStep] = {}
-    for run, step in run_result.all():
-        latest_steps.setdefault(run.event_id, step)
+    latest_steps: dict[Any, Any] = {}
+    for event_id, step_name, error_code, error_message in run_result.all():
+        latest_steps.setdefault(event_id, SimpleNamespace(step_name=step_name, error_code=error_code, error_message=error_message))
     queue_result = await session.execute(select(IntegrationQueueMessage).where(IntegrationQueueMessage.event_id.in_(ids)).order_by(IntegrationQueueMessage.created_at.desc()))
     latest_queue: dict[Any, IntegrationQueueMessage] = {}
     for item in queue_result.scalars().all():
