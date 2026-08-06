@@ -76,6 +76,7 @@ export const navModel: NavModelItem[] = [
   nav('change-sets', 'Settings', 'Change Sets', '/change-sets', 'nav.changeSets', advanced, 60),
   nav('notifications', 'Settings', 'Notifications', '/notifications', 'nav.notifications', advanced, 70),
   nav('retention', 'Settings', 'Retention', '/retention', 'nav.retention', advanced, 80),
+  nav('federation', 'Settings', 'Federation', '/federation', 'nav.federation', advanced, 90),
   nav('audit', 'Settings', 'Audit Log', '/audit', 'nav.auditLog', advanced, 90),
 
   nav('runtime-queue', 'Advanced', 'Integration Queue', '/runtime/queue', 'nav.integrationQueue', advanced, 10),

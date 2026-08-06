@@ -39,6 +39,7 @@ export const helpTopics: Record<string, HelpTopic> = {
   'business-rules': { id: 'business-rules', title: 'Business Rules', description: 'Наборы правил без кода: условие (поле — оператор — значение) и действия (переменная, маршрут, пропуск шага, ошибка, retry). Редактор визуальный, проверка на примере до сохранения.', actions: ['Создайте набор правил', 'Добавьте условие и действие', 'Проверьте через Test на примере', 'Сохраните draft'], example: 'pool_type равно DNP -> Направить в систему DnP Service', docId: 'integration-flows' },
   'data-inbox': { id: 'data-inbox', title: 'Приемник данных (ТСД)', description: 'Шаблоны приема данных без кода: обязательные поля и политика их отсутствия, хранение по сроку или всегда, записи с просмотром/правкой/повторной отправкой.', actions: ['Создайте шаблон', 'Укажите обязательные поля', 'Проверьте на примере', 'Отправьте данные с ТСД на endpoint'], example: 'POST /api/inbox/tsd-priemka с order_number и qty', docId: 'tsd-data-inbox' },
   'sql-console': { id: 'sql-console', title: 'SQL-консоль', description: 'SELECT-запросы к базе OMH только на чтение. Запрещенные слова и мультистейтменты блокируются с понятной ошибкой. Результат можно выгрузить в CSV.', actions: ['Выберите пример запроса', 'Выполните SELECT', 'Экспортируйте результат в CSV'], example: 'select status, count(*) from inbox_records group by status', docId: 'tsd-data-inbox' },
+  'federation': { id: 'federation', title: 'Федерация (холдинг)', description: 'Центр раздает конфиг интеграций филиалам без секретов. Филиал забирает его по расписанию или кнопкой — обновление в центре раскатывается на все филиалы одним кликом.', actions: ['Центр: задайте FEDERATION_TOKEN', 'Филиал: укажите URL центра и токен', 'Нажмите «Синхронизировать сейчас»', 'Проверьте историю синхронизаций'], example: 'GET /api/federation/config-bundle с X-OMH-Token', docId: 'federation-holding' },
 };
 
 export function helpForPath(pathname: string): HelpTopic | null {
@@ -69,6 +70,7 @@ export function helpForPath(pathname: string): HelpTopic | null {
   if (pathname.startsWith('/business-rules') || pathname.startsWith('/runtime/business-rules')) return helpTopics['business-rules'];
   if (pathname.startsWith('/data-inbox')) return helpTopics['data-inbox'];
   if (pathname.startsWith('/sql-console')) return helpTopics['sql-console'];
+  if (pathname.startsWith('/federation')) return helpTopics['federation'];
   return null;
 }
 

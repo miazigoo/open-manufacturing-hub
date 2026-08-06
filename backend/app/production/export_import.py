@@ -140,7 +140,8 @@ async def apply_import(session: AsyncSession, export: dict[str, Any], mode: str)
             identity = str(row.get(key) or row.get("id") or "")
             existing_row = None
             if identity:
-                existing_row = (await session.execute(select(model).where(getattr(model, key) == row.get(key)))).scalar_one_or_none()
+                identity_value = _coerce_identity(model, key, row.get(key))
+                existing_row = (await session.execute(select(model).where(getattr(model, key) == identity_value))).scalar_one_or_none()
             if existing_row is not None and mode == "create_only":
                 continue
             values = _coerce_for_model(model, _drop_runtime_columns(row))
@@ -252,6 +253,17 @@ def _coerce_value(python_type: Any, value: Any) -> Any:
     except Exception:
         return value
     return value
+
+
+def _coerce_identity(model: type, key: str, value: Any) -> Any:
+    """Coerce an exported identity value back to the model column type so the
+    lookup works on both postgres and sqlite (string UUIDs vs UUID columns)."""
+    if key not in model.__table__.columns:
+        return value
+    try:
+        return _coerce_value(_python_type(model.__table__.columns[key]), value)
+    except Exception:
+        return value
 
 
 def _import_warnings(export: dict[str, Any]) -> list[str]:

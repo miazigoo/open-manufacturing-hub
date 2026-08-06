@@ -34,6 +34,13 @@ async def install_marking_pool_preset(session: AsyncSession = Depends(get_sessio
     return await service._read_flow(flow, session)
 
 
+@router.post("/presets/b2b-portal-order/install", response_model=IntegrationFlowRead)
+async def install_b2b_portal_order_preset(session: AsyncSession = Depends(get_session)):
+    flow = await service.install_b2b_portal_order_preset(session)
+    await session.commit()
+    return await service._read_flow(flow, session)
+
+
 @router.post("/presets/onec-chz-pool-delivery/install", response_model=IntegrationFlowRead)
 async def install_onec_chz_pool_delivery_preset(session: AsyncSession = Depends(get_session)):
     flow = await service.install_onec_chz_pool_delivery_preset(session)

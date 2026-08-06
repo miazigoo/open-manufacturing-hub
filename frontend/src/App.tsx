@@ -69,6 +69,7 @@ const MaintenancePage = lazy(() => import('./pages/MaintenancePage').then((m) =>
 const RetentionPage = lazy(() => import('./pages/RetentionPage').then((m) => ({ default: m.RetentionPage })));
 const DataInboxPage = lazy(() => import('./features/data-inbox/DataInboxPage').then((m) => ({ default: m.DataInboxPage })));
 const SqlConsolePage = lazy(() => import('./features/data-inbox/SqlConsolePage').then((m) => ({ default: m.SqlConsolePage })));
+const FederationPage = lazy(() => import('./features/federation/FederationPage').then((m) => ({ default: m.FederationPage })));
 const OneCCockpitPage = lazy(() => import('./features/cockpit/OneCCockpitPage').then((m) => ({ default: m.OneCCockpitPage })));
 const OneCCockpitWizardPage = lazy(() => import('./features/cockpit/OneCCockpitWizardPage').then((m) => ({ default: m.OneCCockpitWizardPage })));
 const UsersPage = lazy(() => import('./features/auth/UsersPage').then((m) => ({ default: m.UsersPage })));
@@ -173,6 +174,7 @@ export function App() {
           <Route path="retention" element={<RetentionPage />} />
           <Route path="data-inbox" element={<DataInboxPage />} />
           <Route path="sql-console" element={<SqlConsolePage />} />
+          <Route path="federation" element={<FederationPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="change-password" element={<ChangePasswordPage />} />
           <Route path="auth-settings" element={<AuthSettingsPage />} />

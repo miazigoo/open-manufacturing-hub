@@ -210,3 +210,77 @@ OPERATION_KEY_ODATA_CHAIN_PRESET = {
 }
 
 DNP_PULL_CODES_PRESET = OPERATION_KEY_ODATA_CHAIN_PRESET
+
+B2B_PORTAL_ORDER_BUILDER = {
+    "version": 1,
+    "input": {"endpoint_slug": "b2b-portal-order", "input_mode": "json", "response_mode": "proxy_response", "processing_mode": "sync_inline"},
+    "steps": [
+        {
+            "id": "extract_order",
+            "type": "extract",
+            "name": "Validate portal order fields",
+            "source": "request.body",
+            "fields": [
+                {"name": "order_number", "path": "order.number", "required": True},
+                {"name": "customer_name", "path": "order.customer.name", "required": True},
+                {"name": "customer_inn", "path": "order.customer.inn", "required": False},
+                {"name": "items", "path": "order.items", "required": True},
+                {"name": "portal", "path": "portal", "required": False},
+            ],
+        },
+        {
+            "id": "build_canonical",
+            "type": "build_json",
+            "name": "Build canonical order",
+            "template": {
+                "doc_type": "SalesOrderFromPortal",
+                "number": "{{order_number}}",
+                "customer": {"name": "{{customer_name}}", "inn": "{{customer_inn}}"},
+                "source_portal": "{{portal}}",
+                "rows": "{{items}}",
+                "received_via": "b2b-portal-order",
+            },
+            "save_as": "canonical_order",
+        },
+        {
+            "id": "send_to_onec",
+            "type": "call_endpoint",
+            "name": "Send canonical order to 1C",
+            "connector": "1C ERP",
+            "method": "POST",
+            "path": "/hs/omh/orders",
+            "headers": {"Content-Type": "application/json"},
+            "body": "{{canonical_order}}",
+            "save_response_as": "onec_response",
+            "mock_response_json": {"ok": True, "order_guid": "preview-order-guid"},
+        },
+        {
+            "id": "return_result",
+            "type": "return_response",
+            "name": "Return result to portal",
+            "body": {"accepted": True, "order_number": "{{order_number}}", "onec": "{{onec_response}}"},
+            "status_code": 200,
+        },
+    ],
+}
+
+B2B_PORTAL_ORDER_PRESET = {
+    "name": "B2B Portal Order to 1C (canonical)",
+    "slug": "b2b-portal-order",
+    "description": "Webhook for a client B2B portal: validate the order JSON with readable errors, map it to the canonical OMH order format and forward it to the 1C HTTP service. Duplicate the flow and change the slug for each new portal.",
+    "source_type": "webhook",
+    "target_type": "onec",
+    "endpoint": {"input_mode": "json", "response_mode": "proxy_response", "processing_mode": "sync_inline", "auth_mode": "none", "auth_config_json": {}},
+    "matcher_group_json": {"mode": "all", "rules": [{"type": "body_path_exists", "path": "order.number"}]},
+    "action_json": {"type": "create_event_only", "operation": "b2b_portal_order", "business_object": "PortalOrder"},
+    "response_config_json": {"response_mode": "proxy_response"},
+    "builder_json": B2B_PORTAL_ORDER_BUILDER,
+    "test_payload_json": {
+        "portal": "portal-a",
+        "order": {
+            "number": "PO-1001",
+            "customer": {"name": "ООО Тест", "inn": "1234567890"},
+            "items": [{"sku": "ABC-1", "qty": 2, "price": 150.0}],
+        },
+    },
+}

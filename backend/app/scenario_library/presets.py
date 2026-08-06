@@ -4,6 +4,27 @@ from typing import Any
 
 SCENARIOS: list[dict[str, Any]] = [
     {
+        "code": "b2b_portal_order",
+        "title": "B2B portal order to 1C (canonical)",
+        "description": "Webhook for a client B2B portal: validate the order JSON, map to the canonical order format and forward to the 1C HTTP service. Duplicate the flow for each new portal.",
+        "source": "B2B Portal",
+        "target": "1C HTTP service",
+        "input_modes": ["json"],
+        "default_slug": "b2b-portal-order",
+        "event_type": "Flow.b2b-portal-order",
+        "entity_type": "PortalOrder",
+        "workflow_steps": ["extract_order", "build_canonical", "send_to_onec", "return_result"],
+        "operation_code": "flow.b2b_portal_order",
+        "sample_payload": {
+            "portal": "portal-a",
+            "order": {
+                "number": "PO-1001",
+                "customer": {"name": "ООО Тест", "inn": "1234567890"},
+                "items": [{"sku": "ABC-1", "qty": 2, "price": 150.0}],
+            },
+        },
+    },
+    {
         "code": "onec_chz_pool_delivery",
         "title": "1C CHZ code pool delivery",
         "description": "Visible endpoint for 1C: OMH receives a CHZ marking code pool, saves the laser file through CHZ delivery settings and forwards the same pool to DnP.",

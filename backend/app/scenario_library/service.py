@@ -38,6 +38,22 @@ def preview_scenario(code: str) -> dict[str, Any]:
 
 
 async def install_scenario(session: AsyncSession, code: str, request: ScenarioInstallRequest) -> dict[str, Any]:
+    if code == "b2b_portal_order":
+        flow = await flow_service.install_b2b_portal_order_preset(session)
+        test_case_result = await session.execute(select(SavedTestCase).where(SavedTestCase.name == f"Flow {flow.name} Test"))
+        test_case = test_case_result.scalar_one_or_none()
+        return {
+            "scenario": code,
+            "endpoint_id": flow.endpoint_id,
+            "route_id": flow.route_id,
+            "workflow_id": flow.workflow_id,
+            "operation_template_id": flow.operation_template_id,
+            "test_case_id": test_case.id if test_case else None,
+            "endpoint_url": flow_service.endpoint_url(flow.slug),
+            "curl_example": flow_service.curl_example(flow.slug, "json", flow.test_payload_json),
+            "onec_http_example": flow_service.onec_http_example(flow.slug, "json"),
+            "next_steps": ["Copy the endpoint URL to the B2B portal", "Send the sample order and inspect the timeline", "Duplicate the flow and change the slug for the next portal"],
+        }
     if code == "onec_chz_pool_delivery":
         flow = await flow_service.install_onec_chz_pool_delivery_preset(session)
         test_case_result = await session.execute(select(SavedTestCase).where(SavedTestCase.name == f"Flow {flow.name} Test"))

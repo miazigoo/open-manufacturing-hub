@@ -2598,6 +2598,47 @@ const chzDnpPullForOneCRecipe = page('recipes', 'chz-dnp-pull-for-1c', 'Полу
   'На вкладке `Получение кодов из DnP` укажите заказ и даты, нажмите `Получить коды из DnP`, проверьте счетчики кодов и коробок, скачайте TSV. Ошибки (не настроен URL, DnP недоступен, заказ не найден) показываются человекочитаемым текстом.',
 ));
 
+const b2bPortalRecipe = page('recipes', 'b2b-portal-order', 'B2B-портал → 1С за один день', 'Webhook для клиентского портала: валидация заказа с понятными ошибками, маппинг в канонический формат, отправка в 1С. Новый портал — копия flow с другим адресом.', 4.1, md(
+  '# B2B-портал → 1С за один день',
+  '',
+  'Каждый новый клиентский B2B-портал шлет заказы в своем JSON. Вместо обработки в 1С на 1-2 недели оператор ставит готовый сценарий: endpoint принимает заказ, проверяет обязательные поля с понятными ошибками, приводит заказ к каноническому виду и отправляет в HTTP-сервис 1С.',
+  '',
+  '## Установка',
+  '1. Откройте `Scenario Router` или `Интеграции` и установите сценарий `B2B portal order to 1C (canonical)`.',
+  '2. Скопируйте endpoint `POST /api/bus/in/b2b-portal-order` в настройки портала.',
+  '3. Отправьте пример заказа — в Timeline видно каждый шаг: валидация полей, канонический заказ, ответ 1С.',
+  '4. Ошибки валидации (нет номера, клиента или строк) видны порталу сразу, а не после попадания в 1С.',
+  '',
+  '## Новый портал клиента',
+  '1. На странице `Интеграции` нажмите `Duplicate` у flow портала.',
+  '2. Поменяйте slug endpoint (например `b2b-portal-b-order`) и при необходимости маппинг полей.',
+  '3. Проверьте через Preview на примере заказа и передавайте адрес клиенту.',
+  '',
+  'Все заказы всех порталов видны в едином журнале событий: какой портал сколько прислал и где упало.',
+));
+
+const federationRecipe = page('recipes', 'federation-holding', 'Федерация: раздача конфига на филиалы', 'Центр раздает конфигурацию интеграций, филиалы обновляются автоматически — обновление одним кликом вместо ручного копирования на каждый сервер.', 4.0, md(
+  '# Федерация: раздача конфига на филиалы',
+  '',
+  'Для холдинга: центральный OMH и OMH в филиалах. Центр раздает весь конфиг интеграций (без секретов), филиалы забирают его автоматически — оператор обновляет интеграцию один раз в центре, а не копирует на каждый сервер.',
+  '',
+  '::open-page{route="/federation" label="Открыть страницу федерации"}',
+  '',
+  '## Центр',
+  '1. В `Settings -> Environments` задайте переменную `FEDERATION_TOKEN` (общий секрет федерации).',
+  '2. Сообщите филиалам адрес `GET /api/federation/config-bundle` и токен.',
+  '3. Бандл включает flows, endpoints, маршруты, маппинги, коннекторы, правила, шаблоны OData, принтеры. Секреты маскируются — на филиале их вводят один раз.',
+  '',
+  '## Филиал',
+  '1. На странице `Федерация` укажите URL центра и тот же токен.',
+  '2. Включите автосинхронизацию (интервал по умолчанию 300 секунд) или жмите `Синхронизировать сейчас`.',
+  '3. Если версия на филиале совпадает с центром — синхронизация пропускается как «уже актуально».',
+  '4. Ошибки (центр недоступен, неверный токен, бандл не применился) видны в истории синхронизаций с понятным текстом.',
+  '',
+  '## Версия филиала на dashboard',
+  'Филиал может сообщать примененную версию через heartbeat-агента в `details_json.config_version` — тогда страница Здоровье показывает, какой филиал на какой версии конфига.',
+));
+
 const tsdDataInboxRecipe = page('recipes', 'tsd-data-inbox', 'Приемник данных для ТСД и устройств', 'Шаблоны приема без кода: обязательные поля, хранение по сроку или всегда, управление записями, SQL-консоль и бэкапы по пути.', 3.9, md(
   '# Приемник данных для ТСД и устройств',
   '',
@@ -2763,7 +2804,7 @@ export const onecPackageSeed: PackageSeed = {
     { id: 'overview', title: 'Обзор 1C', description: 'Что дает 1C package и где он заканчивается.', order: 10, pages: [overview] },
     { id: 'academy', title: 'Академия интеграции 1C', description: 'Пошаговое обучение: от OData profile до production checklist.', order: 15, pages: [whichMasterToUse, ...academyPackAPages, ...academyPackBPages, ...academyPages] },
     { id: 'exercises', title: 'Упражнения и проверка навыков', description: 'Практические задания, Test Console links и критерии готовности пользователя.', order: 16, pages: exercisePages },
-    { id: 'recipes', title: 'Practical Recipes', description: 'Практические рецепты с endpoints, payload, UI-настройкой и диагностикой.', order: 17, pages: [externalServiceLookupContractorRecipe, requestODataXmlResponseRecipe, requestODataSendEndpointRecipe, pollODataSendTargetRecipe, wmsShipmentFactToOnecRecipe, onecSiteWritebackRecipe, dnpChzCodePoolSyncRecipe, chzCodePoolRecipe, chzAggregationToOneCRecipe, chzDnpPullForOneCRecipe, chzCodeRoutingRecipe, flowLogicChainsRecipe, tsdDataInboxRecipe, ...supplementalRecipePages] },
+    { id: 'recipes', title: 'Practical Recipes', description: 'Практические рецепты с endpoints, payload, UI-настройкой и диагностикой.', order: 17, pages: [externalServiceLookupContractorRecipe, requestODataXmlResponseRecipe, requestODataSendEndpointRecipe, pollODataSendTargetRecipe, wmsShipmentFactToOnecRecipe, onecSiteWritebackRecipe, dnpChzCodePoolSyncRecipe, chzCodePoolRecipe, chzAggregationToOneCRecipe, chzDnpPullForOneCRecipe, chzCodeRoutingRecipe, flowLogicChainsRecipe, tsdDataInboxRecipe, federationRecipe, b2bPortalRecipe, ...supplementalRecipePages] },
     { id: 'case-studies', title: 'Production Case Studies', description: 'Разборы реальных промышленных сценариев: цель, actors, flow, OData, Timeline и риски.', order: 18, pages: caseStudyPages },
     { id: 'request-examples', title: 'Request Examples', description: 'Готовые HTTP/1C/OData примеры для Test Console и разработчика 1C.', order: 19, pages: requestExamplePages },
     { id: 'error-playbooks', title: 'Error Playbooks', description: 'Диагностика по симптомам: где смотреть, как исправить и как предотвратить.', order: 20, pages: errorPlaybookPages },

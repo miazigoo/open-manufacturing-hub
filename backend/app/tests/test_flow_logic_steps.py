@@ -511,3 +511,35 @@ async def test_call_flow_nested_failure_surfaces_sub_step(client):
     assert sub_step["status"] == "failed"
     assert sub_step["error_code"] == "SUBFLOW_STEP_FAILED"
     assert "parse" in (sub_step["error_message"] or "")
+
+
+async def test_b2b_portal_preset_install_and_dispatch(client):
+    await _create_mock_connector(client, "1C ERP", {"ok": True, "order_guid": "onec-guid-1"})
+    installed = await client.post("/api/scenario-library/b2b_portal_order/install", json={})
+    assert installed.status_code == 200, installed.text
+    assert installed.json()["endpoint_url"] == "/api/bus/in/b2b-portal-order"
+
+    sent = await client.post(
+        "/api/bus/in/b2b-portal-order",
+        json={"portal": "portal-a", "order": {"number": "PO-1001", "customer": {"name": "ООО Тест", "inn": "123"}, "items": [{"sku": "ABC-1", "qty": 2}]}},
+    )
+    assert sent.status_code == 200, sent.text
+    body = sent.json()["body"]
+    assert body["ok"] is True
+    assert body["order_guid"] == "onec-guid-1"
+
+    event = sent.json()
+    timeline = await client.get(f"/api/events/{event['event_id']}/timeline")
+    send_step = next(step for step in timeline.json()["runs"][0]["steps"] if step["step_name"] == "send_to_onec")
+    outgoing = next(artifact for artifact in send_step["artifacts"] if artifact["name"] == "outgoing_request.json")
+    canonical = outgoing["content_json"]["body"]
+    assert canonical["doc_type"] == "SalesOrderFromPortal"
+    assert canonical["source_portal"] == "portal-a"
+    assert canonical["rows"] == [{"sku": "ABC-1", "qty": 2}]
+
+    invalid = await client.post("/api/bus/in/b2b-portal-order", json={"portal": "portal-a", "order": {"number": "PO-1002"}})
+    event = invalid.json()
+    timeline = await client.get(f"/api/events/{event['event_id']}/timeline")
+    extract_step = next(step for step in timeline.json()["runs"][0]["steps"] if step["step_name"] == "extract_order")
+    assert extract_step["status"] == "failed"
+    assert "customer.name" in (extract_step["error_message"] or "") or "items" in (extract_step["error_message"] or "")

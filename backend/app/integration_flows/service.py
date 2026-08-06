@@ -21,7 +21,7 @@ from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
 from app.core.enums import EndpointProcessingMode
 from app.integration_flows import repository
 from app.integration_flows.models import IntegrationFlow
-from app.integration_flows.presets import MARKING_POOL_PRESET, ONEC_CHZ_POOL_DELIVERY_PRESET, OPERATION_KEY_ODATA_CHAIN_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
+from app.integration_flows.presets import B2B_PORTAL_ORDER_PRESET, MARKING_POOL_PRESET, ONEC_CHZ_POOL_DELIVERY_PRESET, OPERATION_KEY_ODATA_CHAIN_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
 from app.integration_flows.schemas import FlowTestRequest, IntegrationFlowCreate, IntegrationFlowPatch
 from app.matchers.engine import evaluate_matcher_group
 from app.matchers.validators import validate_matcher_group
@@ -614,3 +614,21 @@ def _safe_auth_token_preview(auth_config: dict[str, Any]) -> str:
     if is_secret_ref(token):
         return f"<secret:{token['$secret']}>"
     return "..."
+
+
+async def install_b2b_portal_order_preset(session: AsyncSession) -> IntegrationFlow:
+    existing = await repository.get_by_slug(session, B2B_PORTAL_ORDER_PRESET["slug"])
+    if existing:
+        await patch_flow(
+            session,
+            existing.id,
+            IntegrationFlowPatch(
+                description=B2B_PORTAL_ORDER_PRESET["description"],
+                matcher_group_json=B2B_PORTAL_ORDER_PRESET["matcher_group_json"],
+                builder_json=B2B_PORTAL_ORDER_PRESET["builder_json"],
+                test_payload_json=B2B_PORTAL_ORDER_PRESET["test_payload_json"],
+            ),
+        )
+        await compile_flow(session, existing.id)
+        return await get_flow_or_404(session, existing.id)
+    return await create_flow(session, IntegrationFlowCreate(**B2B_PORTAL_ORDER_PRESET))

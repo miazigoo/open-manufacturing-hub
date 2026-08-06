@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+import asyncio
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,6 +51,7 @@ from app.onec_templates.router import router as onec_templates_router
 from app.onboarding.router import router as onboarding_router
 from app.data_inbox.router import router as data_inbox_router
 from app.sql_console.router import router as sql_console_router
+from app.federation.router import router as federation_router
 from app.operation_templates.router import router as operation_templates_router
 from app.operation_catalog.router import router as operation_catalog_router
 from app.odata_connections.router import router as odata_connections_router
@@ -87,7 +89,17 @@ async def lifespan(_: FastAPI):
         await log_startup_banner(session)
         await startup_package_check(session)
         await session.commit()
-    yield
+    stop_event = asyncio.Event()
+    from app.federation.service import federation_sync_loop
+
+    sync_task = asyncio.create_task(federation_sync_loop(stop_event))
+    try:
+        yield
+    finally:
+        stop_event.set()
+        sync_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await sync_task
 
 
 app = FastAPI(title="Open Manufacturing Hub", lifespan=lifespan)
@@ -191,4 +203,5 @@ app.include_router(operation_catalog_router)
 app.include_router(onboarding_router)
 app.include_router(data_inbox_router)
 app.include_router(sql_console_router)
+app.include_router(federation_router)
 app.include_router(mock_onec_router)
