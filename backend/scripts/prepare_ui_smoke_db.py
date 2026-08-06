@@ -15,6 +15,7 @@ from app.config_versions.models import ConfigVersion  # noqa: F401
 from app.connection_center.models import ConnectorInstance as ConnectionProfile  # noqa: F401
 from app.connectors.models import ConnectorInstance
 from app.data_contracts.models import DataContract  # noqa: F401
+from app.data_inbox.models import InboxRecord, InboxTemplate  # noqa: F401
 from app.core.database import Base, async_session, engine
 from app.core.enums import ConnectorDirection, ConnectorInstanceStatus
 from app.environments.models import EnvironmentProfile, EnvironmentVariable  # noqa: F401

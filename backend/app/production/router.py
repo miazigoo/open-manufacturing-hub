@@ -49,13 +49,21 @@ async def exports(session: AsyncSession = Depends(get_session)):
     return await backups.list_records(session)
 
 
+@router.post("/backups/db", response_model=BackupRecordRead)
+async def create_db_backup(session: AsyncSession = Depends(get_session)):
+    record = await backups.create_db_backup(session)
+    await session.commit()
+    return record
+
+
 @router.get("/exports/{export_id}/download")
 async def download_export(export_id: UUID, session: AsyncSession = Depends(get_session)):
     record = await backups.get_record(session, export_id)
     path = service.export_path(record)
     if not path.exists():
         raise NotFoundError("Export file not found")
-    return FileResponse(path, media_type="application/json", filename=path.name)
+    media_type = "application/octet-stream" if path.suffix == ".dump" else "application/json"
+    return FileResponse(path, media_type=media_type, filename=path.name)
 
 
 @router.post("/import-config/preview", response_model=ImportPreview)

@@ -56,7 +56,10 @@ export const navModel: NavModelItem[] = [
   nav('production', 'Packages', 'Production', '/production', 'nav.production', advanced, 20),
   nav('plugin-store', 'Packages', 'Plugin Store', '/plugin-store', 'nav.pluginStore', advanced, 30),
 
+  nav('data-inbox', 'Operate', 'Data Inbox', '/data-inbox', 'nav.dataInbox', simple, 45),
+
   nav('business-objects', 'Data Tools', 'Business Objects', '/business-objects', 'nav.businessObjects', advanced, 10),
+  nav('sql-console', 'Data Tools', 'SQL Console', '/sql-console', 'nav.sqlConsole', advanced, 90),
   nav('resolvers', 'Data Tools', 'Resolvers', '/resolvers', 'nav.resolvers', advanced, 20),
   nav('resolver-cache', 'Data Tools', 'Resolver Cache', '/resolvers/cache', 'nav.resolvers', advanced, 30),
   nav('transforms', 'Data Tools', 'Transforms', '/transforms', 'nav.transforms', advanced, 40),

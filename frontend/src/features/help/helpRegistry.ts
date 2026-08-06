@@ -37,6 +37,8 @@ export const helpTopics: Record<string, HelpTopic> = {
   'marking-code-pools': { id: 'marking-code-pools', title: 'Пулы кодов ЧЗ', description: 'Рабочее место оператора ЧЗ: приём пулов из 1С, архив и отправка в DnP/лазер, маршрутизация кодов по правилам, регистрация агрегаций и получение упакованных кодов из DnP для документа «Нанесение и ввод в оборот».', actions: ['Проверьте настройки', 'Настройте правила на вкладке Маршрутизация', 'Сделайте preview на вкладке Тест', 'Проверьте журнал экспортов'], example: 'Правило: GTIN начинается с 04646 -> лазер линии 1 + HTTP-сервис', docId: 'chz.marking-code-pools' },
   'scenario-library': { id: 'scenario-library', title: 'Scenario Library', description: 'Каталог готовых сценариев. Используйте preview перед установкой, чтобы увидеть создаваемые endpoints, flows and operations.', actions: ['Preview scenario', 'Install scenario', 'Open created flow'], docId: 'scenario-library' },
   'business-rules': { id: 'business-rules', title: 'Business Rules', description: 'Наборы правил без кода: условие (поле — оператор — значение) и действия (переменная, маршрут, пропуск шага, ошибка, retry). Редактор визуальный, проверка на примере до сохранения.', actions: ['Создайте набор правил', 'Добавьте условие и действие', 'Проверьте через Test на примере', 'Сохраните draft'], example: 'pool_type равно DNP -> Направить в систему DnP Service', docId: 'integration-flows' },
+  'data-inbox': { id: 'data-inbox', title: 'Приемник данных (ТСД)', description: 'Шаблоны приема данных без кода: обязательные поля и политика их отсутствия, хранение по сроку или всегда, записи с просмотром/правкой/повторной отправкой.', actions: ['Создайте шаблон', 'Укажите обязательные поля', 'Проверьте на примере', 'Отправьте данные с ТСД на endpoint'], example: 'POST /api/inbox/tsd-priemka с order_number и qty', docId: 'tsd-data-inbox' },
+  'sql-console': { id: 'sql-console', title: 'SQL-консоль', description: 'SELECT-запросы к базе OMH только на чтение. Запрещенные слова и мультистейтменты блокируются с понятной ошибкой. Результат можно выгрузить в CSV.', actions: ['Выберите пример запроса', 'Выполните SELECT', 'Экспортируйте результат в CSV'], example: 'select status, count(*) from inbox_records group by status', docId: 'tsd-data-inbox' },
 };
 
 export function helpForPath(pathname: string): HelpTopic | null {
@@ -65,6 +67,8 @@ export function helpForPath(pathname: string): HelpTopic | null {
   if (pathname.startsWith('/marking-code-pools')) return helpTopics['marking-code-pools'];
   if (pathname.startsWith('/scenario-library')) return helpTopics['scenario-library'];
   if (pathname.startsWith('/business-rules') || pathname.startsWith('/runtime/business-rules')) return helpTopics['business-rules'];
+  if (pathname.startsWith('/data-inbox')) return helpTopics['data-inbox'];
+  if (pathname.startsWith('/sql-console')) return helpTopics['sql-console'];
   return null;
 }
 

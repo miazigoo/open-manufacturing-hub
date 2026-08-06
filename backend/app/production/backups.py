@@ -80,3 +80,103 @@ def ensure_export_dir() -> Path:
         except OSError:
             continue
     raise PermissionError("No writable export directory available")
+
+
+async def resolve_backup_dir(session: AsyncSession) -> Path:
+    from app.core.config import get_settings
+    from app.core.errors import BadRequestError
+    from app.environments import repository as environments_repository
+
+    override = None
+    environment = await environments_repository.current_environment(session)
+    if environment is not None:
+        override = next(
+            (item.value_json for item in environment.variables if item.key == "BACKUP_DIR" and item.value_json),
+            None,
+        )
+    configured = str(override or get_settings().backup_dir or "").strip()
+    if not configured:
+        return ensure_export_dir()
+    candidate = Path(configured)
+    try:
+        candidate.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise BadRequestError(f"Не удалось создать папку для бэкапов {candidate}: {exc}") from exc
+    if not os.access(candidate, os.W_OK):
+        raise BadRequestError(f"Папка для бэкапов недоступна для записи: {candidate}")
+    return candidate
+
+
+async def create_db_backup(session: AsyncSession, *, created_by: str | None = None) -> BackupRecord:
+    import asyncio
+    import shutil
+
+    from sqlalchemy.engine.url import make_url
+
+    from app.core.config import get_settings
+    from app.core.errors import BadRequestError
+
+    record = await create_record(session, BackupType.DATABASE_DUMP, created_by=created_by)
+    try:
+        backup_dir = await resolve_backup_dir(session)
+    except BadRequestError as exc:
+        await mark_failed(session, record, str(exc))
+        raise
+    file_path = backup_dir / f"omh-db-{utcnow():%Y%m%d-%H%M%S}.dump"
+    database_url = make_url(get_settings().database_url)
+    try:
+        if database_url.get_backend_name() == "sqlite":
+            source = Path(str(database_url.database))
+            if source.exists():
+                shutil.copyfile(source, file_path)
+            else:
+                await _sqlite_iterdump(session, file_path)
+        else:
+            if shutil.which("pg_dump") is None:
+                raise BadRequestError("pg_dump не найден на сервере OMH.")
+            cmd = [
+                "pg_dump",
+                "--format=custom",
+                "--file", str(file_path),
+                "--host", database_url.host or "localhost",
+                "--port", str(database_url.port or 5432),
+                "--username", database_url.username or "postgres",
+                str(database_url.database),
+            ]
+            env = {**os.environ, "PGPASSWORD": database_url.password or ""}
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=env,
+            )
+            try:
+                _, stderr = await asyncio.wait_for(process.communicate(), timeout=300)
+            except TimeoutError:
+                process.kill()
+                await process.wait()
+                raise BadRequestError("pg_dump превысил таймаут 300 секунд.")
+            if process.returncode != 0:
+                raise BadRequestError(f"pg_dump завершился с ошибкой: {stderr.decode(errors='replace')[:1000]}")
+        size = file_path.stat().st_size
+    except BadRequestError as exc:
+        if file_path.exists():
+            file_path.unlink(missing_ok=True)
+        await mark_failed(session, record, str(exc))
+        raise
+    except Exception as exc:
+        if file_path.exists():
+            file_path.unlink(missing_ok=True)
+        await mark_failed(session, record, str(exc))
+        raise
+    return await mark_success(session, record, file_path=str(file_path), size_bytes=size, metadata={"backup_dir": str(backup_dir)})
+
+
+async def _sqlite_iterdump(session: AsyncSession, file_path: Path) -> None:
+    """Dump an in-memory or otherwise file-less sqlite database as SQL text."""
+    connection = await session.connection()
+    raw = await connection.get_raw_connection()
+    lines = []
+    async for line in raw.driver_connection.iterdump():
+        lines.append(line)
+    file_path.write_text("\n".join(lines), encoding="utf-8")

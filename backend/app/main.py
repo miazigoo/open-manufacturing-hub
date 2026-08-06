@@ -48,6 +48,8 @@ from app.onec_workbench.router import router as onec_workbench_router
 from app.onec_scenarios.router import router as onec_scenarios_router
 from app.onec_templates.router import router as onec_templates_router
 from app.onboarding.router import router as onboarding_router
+from app.data_inbox.router import router as data_inbox_router
+from app.sql_console.router import router as sql_console_router
 from app.operation_templates.router import router as operation_templates_router
 from app.operation_catalog.router import router as operation_catalog_router
 from app.odata_connections.router import router as odata_connections_router
@@ -187,4 +189,6 @@ app.include_router(onec_templates_router, dependencies=[Depends(require_package_
 app.include_router(operation_templates_router)
 app.include_router(operation_catalog_router)
 app.include_router(onboarding_router)
+app.include_router(data_inbox_router)
+app.include_router(sql_console_router)
 app.include_router(mock_onec_router)

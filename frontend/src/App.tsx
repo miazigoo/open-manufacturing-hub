@@ -67,6 +67,8 @@ const MarkingCodePoolsPage = lazy(() => import('./features/marking-code-pools/Ma
 const NotificationRulesPage = lazy(() => import('./pages/NotificationRulesPage').then((m) => ({ default: m.NotificationRulesPage })));
 const MaintenancePage = lazy(() => import('./pages/MaintenancePage').then((m) => ({ default: m.MaintenancePage })));
 const RetentionPage = lazy(() => import('./pages/RetentionPage').then((m) => ({ default: m.RetentionPage })));
+const DataInboxPage = lazy(() => import('./features/data-inbox/DataInboxPage').then((m) => ({ default: m.DataInboxPage })));
+const SqlConsolePage = lazy(() => import('./features/data-inbox/SqlConsolePage').then((m) => ({ default: m.SqlConsolePage })));
 const OneCCockpitPage = lazy(() => import('./features/cockpit/OneCCockpitPage').then((m) => ({ default: m.OneCCockpitPage })));
 const OneCCockpitWizardPage = lazy(() => import('./features/cockpit/OneCCockpitWizardPage').then((m) => ({ default: m.OneCCockpitWizardPage })));
 const UsersPage = lazy(() => import('./features/auth/UsersPage').then((m) => ({ default: m.UsersPage })));
@@ -169,6 +171,8 @@ export function App() {
           <Route path="notifications" element={<NotificationRulesPage />} />
           <Route path="maintenance" element={<MaintenancePage />} />
           <Route path="retention" element={<RetentionPage />} />
+          <Route path="data-inbox" element={<DataInboxPage />} />
+          <Route path="sql-console" element={<SqlConsolePage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="change-password" element={<ChangePasswordPage />} />
           <Route path="auth-settings" element={<AuthSettingsPage />} />
