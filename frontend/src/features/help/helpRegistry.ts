@@ -36,6 +36,7 @@ export const helpTopics: Record<string, HelpTopic> = {
   'mapping-center': { id: 'mapping-center', title: 'Data Contract & Mapping Center', description: 'Контракт описывает целевые поля, mapping объясняет откуда взять значения: request, OData result, foreach array or constant.', actions: ['Choose target contract', 'Map source variables', 'Preview payload', 'Validate before save'], example: 'codes -> payload.rows', docId: 'data-contracts-and-mappings' },
   'marking-code-pools': { id: 'marking-code-pools', title: 'Пулы кодов ЧЗ', description: 'Рабочее место оператора ЧЗ: приём пулов из 1С, архив и отправка в DnP/лазер, маршрутизация кодов по правилам, регистрация агрегаций и получение упакованных кодов из DnP для документа «Нанесение и ввод в оборот».', actions: ['Проверьте настройки', 'Настройте правила на вкладке Маршрутизация', 'Сделайте preview на вкладке Тест', 'Проверьте журнал экспортов'], example: 'Правило: GTIN начинается с 04646 -> лазер линии 1 + HTTP-сервис', docId: 'chz.marking-code-pools' },
   'scenario-library': { id: 'scenario-library', title: 'Scenario Library', description: 'Каталог готовых сценариев. Используйте preview перед установкой, чтобы увидеть создаваемые endpoints, flows and operations.', actions: ['Preview scenario', 'Install scenario', 'Open created flow'], docId: 'scenario-library' },
+  'business-rules': { id: 'business-rules', title: 'Business Rules', description: 'Наборы правил без кода: условие (поле — оператор — значение) и действия (переменная, маршрут, пропуск шага, ошибка, retry). Редактор визуальный, проверка на примере до сохранения.', actions: ['Создайте набор правил', 'Добавьте условие и действие', 'Проверьте через Test на примере', 'Сохраните draft'], example: 'pool_type равно DNP -> Направить в систему DnP Service', docId: 'integration-flows' },
 };
 
 export function helpForPath(pathname: string): HelpTopic | null {
@@ -63,6 +64,7 @@ export function helpForPath(pathname: string): HelpTopic | null {
   if (pathname.startsWith('/mapping-center')) return helpTopics['mapping-center'];
   if (pathname.startsWith('/marking-code-pools')) return helpTopics['marking-code-pools'];
   if (pathname.startsWith('/scenario-library')) return helpTopics['scenario-library'];
+  if (pathname.startsWith('/business-rules') || pathname.startsWith('/runtime/business-rules')) return helpTopics['business-rules'];
   return null;
 }
 

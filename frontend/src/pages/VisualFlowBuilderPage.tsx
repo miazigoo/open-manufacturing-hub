@@ -16,6 +16,7 @@ import { XmlPathPicker } from '../components/xml/XmlPathPicker';
 import { XmlResponseBuilder } from '../components/xml/XmlResponseBuilder';
 import { VersionHistoryPanel } from '../features/configVersions';
 import { ConditionBuilder } from '../components/integration/ConditionBuilder';
+import { RuleSetEditor } from '../components/integration/RuleSetEditor';
 
 type BuilderStep = Record<string, unknown> & { id: string; type: string; name?: string; save_as?: string };
 type BuilderJson = { version: number; input: Record<string, unknown>; variables: Array<Record<string, unknown>>; steps: BuilderStep[] };
@@ -361,7 +362,23 @@ export function VisualFlowBuilderPage() {
   }
 
   function BusinessRuleStepEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {
-    return <div className="stack-form"><div className="metadata-grid compact-grid no-margin"><label className="field-label">Saved rule set<input value={String(step.rule_set ?? '')} onChange={(event) => update(step.id, { rule_set: event.target.value })} /></label><label className="field-label">Mode<select value={String(step.mode ?? 'first_match')} onChange={(event) => update(step.id, { mode: event.target.value })}><option value="first_match">first match</option><option value="all_matches">all matches</option></select></label></div><label className="field-label">Inline rules JSON<CodeEditor value={asJson(step.rules ?? [])} onChange={(value) => { try { const parsed = JSON.parse(value) as unknown; if (!Array.isArray(parsed)) throw new Error('Rules must be an array'); update(step.id, { rules: parsed }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid rules JSON'); } }} language="json" minRows={9} /></label><div className="success-note">Action examples<span>set_variable, set_target_system, fail, stop, mark_retry</span></div></div>;
+    const inlineValue = { mode: String(step.mode ?? 'first_match'), rules: Array.isArray(step.rules) ? step.rules : [] };
+    return (
+      <div className="stack-form">
+        <div className="metadata-grid compact-grid no-margin">
+          <label className="field-label">Saved rule set<input value={String(step.rule_set ?? '')} onChange={(event) => update(step.id, { rule_set: event.target.value })} title="Имя сохраненного набора из Business Rules. Если задан — используется он вместо inline-правил." /></label>
+        </div>
+        <div className="builder-help-card">
+          <strong>Inline-правила без кода</strong>
+          <span>Условие — поле/оператор/значение; действия — записать переменную, направить в систему, пропустить шаг, ошибка, retry. Inline-правила применяются, если Saved rule set пуст.</span>
+        </div>
+        <RuleSetEditor value={inlineValue} onChange={(next) => update(step.id, { mode: next.mode, rules: next.rules })} />
+        <details className="technical-details">
+          <summary>JSON для продвинутых</summary>
+          <CodeEditor value={asJson(step.rules ?? [])} onChange={(value) => { try { const parsed = JSON.parse(value) as unknown; if (!Array.isArray(parsed)) throw new Error('Rules must be an array'); update(step.id, { rules: parsed }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid rules JSON'); } }} language="json" minRows={7} />
+        </details>
+      </div>
+    );
   }
 
   function ResolveObjectEditor({ step, update, resolverOptions }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; resolverOptions: Array<{ resolver_code: string; name: string; object_type: string }> }) {

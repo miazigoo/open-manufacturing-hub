@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     chz_aggregation_onec_token: str = Field(default="", validation_alias=AliasChoices("CHZ_AGGREGATION_ONEC_TOKEN", "OMH_CHZ_AGGREGATION_ONEC_TOKEN"))
     chz_aggregation_onec_header_name: str = Field(default="X-OMH-Token", validation_alias=AliasChoices("CHZ_AGGREGATION_ONEC_HEADER_NAME", "OMH_CHZ_AGGREGATION_ONEC_HEADER_NAME"))
     chz_aggregation_onec_timeout_seconds: float = Field(default=180.0, validation_alias=AliasChoices("CHZ_AGGREGATION_ONEC_TIMEOUT_SECONDS", "OMH_CHZ_AGGREGATION_ONEC_TIMEOUT_SECONDS"))
+    health_checks_retention_days: float = Field(default=7.0, validation_alias=AliasChoices("HEALTH_CHECKS_RETENTION_DAYS", "OMH_HEALTH_CHECKS_RETENTION_DAYS"))
     chz_dnp_packed_codes_export_url: str = Field(default="", validation_alias=AliasChoices("CHZ_DNP_PACKED_CODES_EXPORT_URL", "OMH_CHZ_DNP_PACKED_CODES_EXPORT_URL"))
     chz_dnp_packed_codes_timeout_seconds: float = Field(default=180.0, validation_alias=AliasChoices("CHZ_DNP_PACKED_CODES_TIMEOUT_SECONDS", "OMH_CHZ_DNP_PACKED_CODES_TIMEOUT_SECONDS"))
     require_worker_heartbeat: bool = Field(default=False, validation_alias=AliasChoices("OMH_REQUIRE_WORKER_HEARTBEAT", "REQUIRE_WORKER_HEARTBEAT"))
