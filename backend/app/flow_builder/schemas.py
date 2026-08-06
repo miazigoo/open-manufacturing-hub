@@ -10,6 +10,8 @@ class FlowValidationError(BaseModel):
     code: str
     message: str
     hint: str | None = None
+    field: str | None = None
+    path: str | None = None
 
 
 class FlowValidationResponse(BaseModel):
@@ -32,6 +34,7 @@ class FlowBuilderPreviewStep(BaseModel):
     request_preview: Any | None = None
     result_preview: Any | None = None
     error: dict[str, Any] | None = None
+    variables_snapshot: dict[str, Any] | None = None
 
 
 class FlowBuilderPreviewResponse(BaseModel):
@@ -41,6 +44,7 @@ class FlowBuilderPreviewResponse(BaseModel):
     final_payload_preview: Any | None = None
     target_request_preview: Any | None = None
     errors: list[FlowValidationError] = Field(default_factory=list)
+    warnings: list[FlowValidationError] = Field(default_factory=list)
 
 
 class FlowCompileResponse(BaseModel):

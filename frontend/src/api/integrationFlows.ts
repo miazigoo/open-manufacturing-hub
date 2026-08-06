@@ -44,13 +44,34 @@ export interface FlowCreatePayload {
 
 export interface MatcherTestResponse { matched: boolean; trace: Array<Record<string, unknown>> }
 
+export interface FlowPathWarning {
+  step_id: string | null;
+  code: string;
+  message: string;
+  hint?: string | null;
+  field?: string | null;
+  path?: string | null;
+}
+
+export interface FlowBuilderPreviewStep {
+  id: string;
+  type: string;
+  name?: string | null;
+  status: string;
+  request_preview?: unknown;
+  result_preview?: unknown;
+  error?: Record<string, unknown> | null;
+  variables_snapshot?: Record<string, unknown> | null;
+}
+
 export interface FlowBuilderPreviewResponse {
   valid: boolean;
   variables: Record<string, unknown>;
-  steps: Array<{ id: string; type: string; name?: string | null; status: string; request_preview?: unknown; result_preview?: unknown; error?: Record<string, unknown> | null }>;
+  steps: FlowBuilderPreviewStep[];
   final_payload_preview: unknown;
   target_request_preview: unknown;
   errors: Array<Record<string, unknown>>;
+  warnings?: FlowPathWarning[];
 }
 
 export interface FlowCompileResponse {
@@ -77,5 +98,7 @@ export const integrationFlowsApi = {
     request<IntegrationFlow>(`/api/flow-builder/flows/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   previewBuilder: (payload: { builder_json: Record<string, unknown>; sample_request: Record<string, unknown>; run_real_queries?: boolean }) =>
     request<FlowBuilderPreviewResponse>('/api/flow-builder/preview', { method: 'POST', body: JSON.stringify(payload) }),
+  validatePaths: (payload: { builder_json: Record<string, unknown>; sample_request: Record<string, unknown> }) =>
+    request<FlowBuilderPreviewResponse>('/api/flow-builder/validate-paths', { method: 'POST', body: JSON.stringify(payload) }),
   compileBuilder: (id: string) => request<FlowCompileResponse>(`/api/flow-builder/flows/${id}/compile`, { method: 'POST' }),
 };

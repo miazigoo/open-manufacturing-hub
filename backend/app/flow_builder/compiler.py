@@ -18,6 +18,8 @@ HANDLERS = {
     "extract": "flow_extract",
     "filter_array": "flow_filter_array",
     "build_xml": "flow_build_xml",
+    "call_operation": "flow_call_operation",
+    "call_flow": "flow_call_flow",
     "print_labels": "flow_print_labels",
     "marking_code_pool_export": "flow_marking_code_pool_export",
     "build_xml_response": "flow_return_response",

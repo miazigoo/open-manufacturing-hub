@@ -20,6 +20,11 @@ async def validate(request: FlowBuilderPreviewRequest):
     return validate_builder(request.builder_json)
 
 
+@router.post("/validate-paths", response_model=FlowBuilderPreviewResponse)
+async def validate_paths(request: FlowBuilderPreviewRequest, session: AsyncSession = Depends(get_session)):
+    return await preview_builder(session, request.builder_json, request.sample_request, run_real_queries=request.run_real_queries, collect_warnings=True)
+
+
 @router.post("/preview", response_model=FlowBuilderPreviewResponse)
 async def preview(request: FlowBuilderPreviewRequest, session: AsyncSession = Depends(get_session)):
     return await preview_builder(session, request.builder_json, request.sample_request, run_real_queries=request.run_real_queries)

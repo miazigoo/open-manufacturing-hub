@@ -21,6 +21,9 @@ export function RetentionPage() {
         <div className="metric-card"><span>{t('retention.expiredArtifacts')}</span><strong>{preview?.expired_artifacts ?? 0}</strong></div>
         <div className="metric-card warn"><span>{t('retention.expiredEvents')}</span><strong>{preview?.expired_events ?? 0}</strong></div>
         <div className="metric-card info"><span>{t('retention.pinnedSkipped')}</span><strong>{preview?.pinned_skipped ?? 0}</strong></div>
+        <div className="metric-card"><span>{t('retention.expiredHealthChecks')}</span><strong>{preview?.expired_health_checks ?? 0}</strong></div>
+        <div className="metric-card"><span>{t('retention.agedArtifacts')}</span><strong>{preview?.aged_artifacts ?? 0}</strong></div>
+        <div className="metric-card warn"><span>{t('retention.agedEvents')}</span><strong>{preview?.aged_events ?? 0}</strong></div>
       </section>
       <section className="panel retention-panel"><h2>{t('retention.cleanupAction')}</h2><p>{t('retention.cleanupDetail')}</p><button className="primary-button" onClick={() => cleanup.mutate()} disabled={cleanup.isPending}>{t('retention.runCleanup')}</button>{cleanup.isSuccess && <div className="success-note">{t('retention.completed')}</div>}</section>
     </div>

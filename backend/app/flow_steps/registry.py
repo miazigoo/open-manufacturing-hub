@@ -12,6 +12,8 @@ BUILDER_STEP_TYPES = {
     "extract": "Extract fields from any previous result or request via path or regex",
     "filter_array": "Filter an array by key conditions and save the matching items",
     "build_xml": "Render an XML template into a variable",
+    "call_operation": "Call an Operation Profile from Operation Catalog",
+    "call_flow": "Execute another integration flow as a reusable sub-flow",
     "print_labels": "Render ZPL labels, create a print job and send it to a printer",
     "marking_code_pool_export": "Save a 1C CHZ marking-code pool to configured outbox/laser targets and forward it to an external service",
     "build_xml_response": "Render XML response template from request/OData variables",

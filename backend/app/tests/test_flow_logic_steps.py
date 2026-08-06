@@ -258,3 +258,256 @@ async def test_preview_simulates_logic_steps(client):
     assert by_id["filter"]["result_preview"]["passed"] == 1
     assert by_id["parse"]["result_preview"]["total"] == "42"
     assert by_id["xml"]["result_preview"]["xml"] == "<R><N>N1</N></R>"
+
+
+async def test_preview_includes_variables_snapshots(client):
+    builder = {
+        "version": 1,
+        "input": {"endpoint_slug": "snap-demo", "input_mode": "json", "response_mode": "sync_response"},
+        "steps": [
+            {"id": "read", "type": "read_variable", "path": "request.body.value", "save_as": "value"},
+            {"id": "build", "type": "build_json", "template": {"echo": "{{value}}"}, "save_as": "payload"},
+        ],
+    }
+    response = await client.post("/api/flow-builder/preview", json={"builder_json": builder, "sample_request": {"value": "A"}})
+    assert response.status_code == 200, response.text
+    steps = response.json()["steps"]
+    assert steps[0]["variables_snapshot"]["value"] == "A"
+    assert "payload" not in steps[0]["variables_snapshot"]
+    assert steps[1]["variables_snapshot"]["payload"] == {"echo": "A"}
+
+
+async def test_validate_paths_reports_typo_and_accepts_valid_paths(client):
+    builder = {
+        "version": 1,
+        "input": {"endpoint_slug": "validate-demo", "input_mode": "json", "response_mode": "sync_response"},
+        "steps": [
+            {"id": "read", "type": "read_variable", "path": "request.body.value", "save_as": "value"},
+            {"id": "bad", "type": "build_json", "template": {"echo": "{{request.body.vaule}}"}, "save_as": "payload"},
+            {"id": "good", "type": "build_json", "template": {"echo2": "{{value}}"}, "save_as": "payload2"},
+        ],
+    }
+    response = await client.post("/api/flow-builder/validate-paths", json={"builder_json": builder, "sample_request": {"value": "A"}})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True
+    warnings = body["warnings"]
+    assert len(warnings) == 1
+    assert warnings[0]["step_id"] == "bad"
+    assert warnings[0]["path"] == "request.body.vaule"
+    assert warnings[0]["code"] == "PATH_NOT_FOUND"
+
+
+async def test_validate_paths_ignores_foreach_item_placeholders(client):
+    builder = {
+        "version": 1,
+        "input": {"endpoint_slug": "validate-foreach", "input_mode": "json", "response_mode": "sync_response"},
+        "steps": [
+            {
+                "id": "each",
+                "type": "foreach",
+                "items": "request.body.rows",
+                "item_as": "row",
+                "save_as": "mapped",
+                "step": {"type": "build_json", "template": {"sku": "{{row.sku}}"}, "save_as": "mapped_row"},
+            },
+            {"id": "respond", "type": "return_response", "body": {"ok": True}},
+        ],
+    }
+    response = await client.post("/api/flow-builder/validate-paths", json={"builder_json": builder, "sample_request": {"rows": [{"sku": "A"}]}})
+    assert response.status_code == 200, response.text
+    assert response.json()["warnings"] == []
+
+
+async def _create_operation(client, code: str, **overrides) -> dict:
+    payload = {
+        "name": code,
+        "code": code,
+        "kind": "rest_api_operation",
+        "method": "POST",
+        "full_url": "http://operation.local/codes",
+        "body_type": "json",
+        "request_template_json": {"order": "{{request.body.order_number}}", "codes": "{{request.body.codes}}"},
+        "success_condition_json": {"mode": "all", "conditions": [{"type": "http_status_2xx"}, {"type": "json_path_equals", "path": "ok", "value": True}]},
+        "response_extractors_json": [{"name": "external_id", "path": "external_id", "required": True}],
+        **overrides,
+    }
+    response = await client.post("/api/operation-catalog/operations", json=payload)
+    assert response.status_code in (200, 201), response.text
+    return response.json()
+
+
+async def test_call_operation_success_with_extractors(client, monkeypatch):
+    from app.execution.steps import flow_builder_steps
+
+    calls = []
+
+    class FakeResponse:
+        status_code = 201
+        text = '{"ok": true, "external_id": "EXT-1"}'
+
+        @staticmethod
+        def json():
+            return {"ok": True, "external_id": "EXT-1"}
+
+    class FakeAsyncClient:
+        def __init__(self, *, timeout):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def request(self, method, url, *, json=None, content=None, headers=None):
+            calls.append({"method": method, "url": url, "json": json, "headers": headers})
+            return FakeResponse()
+
+    monkeypatch.setattr(flow_builder_steps.httpx, "AsyncClient", FakeAsyncClient)
+
+    await _create_operation(client, "send_codes_op")
+    slug = "call-operation-demo"
+    await _create_flow(client, slug, [
+        {"id": "call", "type": "call_operation", "operation": "send_codes_op", "save_response_as": "op_response"},
+        {"id": "respond", "type": "return_response", "body": {"external_id": "{{external_id}}"}},
+    ])
+    result = await _dispatch(client, slug, {"order_number": "260530/6543", "codes": ["c1"]})
+    assert result["body"]["external_id"] == "EXT-1"
+    assert calls[0]["url"] == "http://operation.local/codes"
+    assert calls[0]["json"]["order"] == "260530/6543"
+
+
+async def test_call_operation_success_condition_failure(client, monkeypatch):
+    from app.execution.steps import flow_builder_steps
+
+    class FakeResponse:
+        status_code = 200
+        text = '{"ok": false, "error": "duplicate"}'
+
+        @staticmethod
+        def json():
+            return {"ok": False, "error": "duplicate"}
+
+    class FakeAsyncClient:
+        def __init__(self, *, timeout):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def request(self, method, url, **kwargs):
+            return FakeResponse()
+
+    monkeypatch.setattr(flow_builder_steps.httpx, "AsyncClient", FakeAsyncClient)
+
+    await _create_operation(client, "send_codes_fail_op")
+    slug = "call-operation-fail-demo"
+    await _create_flow(client, slug, [
+        {"id": "call", "type": "call_operation", "operation": "send_codes_fail_op"},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+    result = await _dispatch(client, slug, {"order_number": "260530/6543", "codes": ["c1"]})
+    steps = await _timeline_steps(client, result["event_id"])
+    call_step = next(step for step in steps if step["step_name"] == "call")
+    assert call_step["status"] == "failed"
+    assert call_step["error_code"] == "OPERATION_SUCCESS_CONDITION_FAILED"
+
+
+async def test_call_operation_missing_operation_fails_clearly(client):
+    slug = "call-operation-missing-demo"
+    await _create_flow(client, slug, [
+        {"id": "call", "type": "call_operation", "operation": "no_such_op"},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+    result = await _dispatch(client, slug, {})
+    steps = await _timeline_steps(client, result["event_id"])
+    call_step = next(step for step in steps if step["step_name"] == "call")
+    assert call_step["status"] == "failed"
+    assert call_step["error_code"] == "OPERATION_NOT_FOUND"
+
+
+async def test_preview_call_operation_uses_sample_response(client):
+    await _create_operation(client, "preview_op", sample_response_json={"ok": True, "external_id": "SAMPLE-1"})
+    builder = {
+        "version": 1,
+        "input": {"endpoint_slug": "preview-op", "input_mode": "json", "response_mode": "sync_response"},
+        "steps": [
+            {"id": "call", "type": "call_operation", "operation": "preview_op", "save_response_as": "op_response"},
+            {"id": "respond", "type": "return_response", "body": {"ok": True}},
+        ],
+    }
+    response = await client.post("/api/flow-builder/preview", json={"builder_json": builder, "sample_request": {"order_number": "260530/6543", "codes": ["c1"]}})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True, body.get("errors")
+    assert body["variables"]["external_id"] == "SAMPLE-1"
+    assert body["variables"]["op_response"]["external_id"] == "SAMPLE-1"
+
+
+async def test_call_flow_executes_nested_flow_and_returns_output(client):
+    await _create_flow(client, "sub-echo-flow", [
+        {"id": "double", "type": "build_json", "template": {"echo": "{{request.body.value}}", "from_sub": True}, "save_as": "sub_result"},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+    slug = "outer-flow"
+    await _create_flow(client, slug, [
+        {"id": "call_sub", "type": "call_flow", "flow": "sub-echo-flow", "input": {"value": "{{request.body.value}}"}, "save_as": "sub_output"},
+        {"id": "respond", "type": "return_response", "body": {"sub": "{{sub_output}}"}},
+    ])
+    result = await _dispatch(client, slug, {"value": "hello"})
+    assert result["body"]["sub"]["sub_result"]["echo"] == "hello"
+    assert result["body"]["sub"]["sub_result"]["from_sub"] is True
+
+    steps = await _timeline_steps(client, result["event_id"])
+    sub_step = next(step for step in steps if step["step_name"] == "call_sub")
+    assert sub_step["status"] == "success"
+    artifact_names = {artifact["name"] for artifact in sub_step["artifacts"]}
+    assert any(name.startswith("subflow_sub-echo-flow/") for name in artifact_names)
+
+
+async def test_call_flow_missing_flow_fails_clearly(client):
+    slug = "outer-missing-flow"
+    await _create_flow(client, slug, [
+        {"id": "call_sub", "type": "call_flow", "flow": "no-such-flow"},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+    result = await _dispatch(client, slug, {})
+    steps = await _timeline_steps(client, result["event_id"])
+    sub_step = next(step for step in steps if step["step_name"] == "call_sub")
+    assert sub_step["status"] == "failed"
+    assert sub_step["error_code"] == "SUBFLOW_NOT_FOUND"
+
+
+async def test_call_flow_self_call_is_rejected(client):
+    slug = "self-calling-flow"
+    await _create_flow(client, slug, [
+        {"id": "call_sub", "type": "call_flow", "flow": slug},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+    result = await _dispatch(client, slug, {})
+    steps = await _timeline_steps(client, result["event_id"])
+    sub_step = next(step for step in steps if step["step_name"] == "call_sub")
+    assert sub_step["status"] == "failed"
+    assert sub_step["error_code"] == "SUBFLOW_SELF_CALL"
+
+
+async def test_call_flow_nested_failure_surfaces_sub_step(client):
+    await _create_flow(client, "sub-failing-flow", [
+        {"id": "parse", "type": "extract", "source": "request.body", "fields": [{"name": "needed", "path": "missing.path", "required": True}]},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+    slug = "outer-failing-flow"
+    await _create_flow(client, slug, [
+        {"id": "call_sub", "type": "call_flow", "flow": "sub-failing-flow", "input": {"value": "x"}},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+    result = await _dispatch(client, slug, {})
+    steps = await _timeline_steps(client, result["event_id"])
+    sub_step = next(step for step in steps if step["step_name"] == "call_sub")
+    assert sub_step["status"] == "failed"
+    assert sub_step["error_code"] == "SUBFLOW_STEP_FAILED"
+    assert "parse" in (sub_step["error_message"] or "")

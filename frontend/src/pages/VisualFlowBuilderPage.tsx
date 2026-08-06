@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { asJson } from '../api/client';
 import { connectorsApi } from '../api/connectors';
 import { configVersionsApi } from '../api/configVersions';
-import { integrationFlowsApi } from '../api/integrationFlows';
+import { integrationFlowsApi, FlowBuilderPreviewStep } from '../api/integrationFlows';
+import { operationCatalogApi } from '../api/operationCatalog';
 import { resolversApi } from '../api/resolvers';
 import { uiApi } from '../api/ui';
 import { ErrorState } from '../components/ErrorState';
@@ -75,15 +76,19 @@ export function VisualFlowBuilderPage() {
   const queryClient = useQueryClient();
   const flow = useQuery({ queryKey: ['integration-flow', flowId], queryFn: async () => (await integrationFlowsApi.list()).find((item) => item.id === flowId) ?? null, enabled: Boolean(flowId) });
   const connectors = useQuery({ queryKey: ['connectors'], queryFn: connectorsApi.list });
+  const operations = useQuery({ queryKey: ['operation-catalog-operations'], queryFn: () => operationCatalogApi.list() });
+  const flowsList = useQuery({ queryKey: ['integration-flows'], queryFn: integrationFlowsApi.list });
   const builderOptions = useQuery({ queryKey: ['ui-flow-builder-options'], queryFn: uiApi.flowBuilderOptions });
   const resolvers = useQuery({ queryKey: ['resolvers-v2'], queryFn: () => resolversApi.list() });
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [inspectedStepId, setInspectedStepId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [builderText, setBuilderText] = useState<string | null>(null);
   const [sampleText, setSampleText] = useState(asJson(sampleRequest));
   const builder = useMemo(() => safeBuilder(builderText ? JSON.parse(builderText) : flow.data?.builder_json, flow.data?.slug ?? 'flow'), [builderText, flow.data]);
   const selectedStep = builder.steps.find((step) => step.id === selectedStepId) ?? builder.steps[0];
-  const preview = useMutation({ mutationFn: (payload: { builder_json: Record<string, unknown>; sample_request: Record<string, unknown> }) => integrationFlowsApi.previewBuilder(payload) });
+  const preview = useMutation({ mutationFn: (payload: { builder_json: Record<string, unknown>; sample_request: Record<string, unknown> }) => integrationFlowsApi.previewBuilder(payload), onSuccess: (data) => setInspectedStepId(data.steps[0]?.id ?? null) });
+  const validatePaths = useMutation({ mutationFn: (payload: { builder_json: Record<string, unknown>; sample_request: Record<string, unknown> }) => integrationFlowsApi.validatePaths(payload) });
   const save = useMutation({
     mutationFn: (payload: BuilderJson) => configVersionsApi.createDraft('integration_flow', flowId!, {
       config_json: {
@@ -181,6 +186,10 @@ export function VisualFlowBuilderPage() {
           ? { id, type, name: 'Filter array', items: 'request.body.items', where: { mode: 'all', rules: [{ type: 'body_path_exists', path: 'item.sku' }] }, save_as: 'filtered' }
         : type === 'build_xml'
           ? { id, type, name: 'Build XML', body_template: '<Request><Number>{{request.body.number}}</Number></Request>', save_as: 'xml_body' }
+        : type === 'call_operation'
+          ? { id, type, name: 'Call operation', operation: '', save_response_as: 'op_response' }
+        : type === 'call_flow'
+          ? { id, type, name: 'Call sub-flow', flow: '', input: {}, save_as: 'sub_output' }
         : type === 'call_endpoint'
           ? { id, type, name: 'Call endpoint', connector: 'DNP Service', method: 'POST', path: '/', headers: { 'Content-Type': 'application/json' }, body: '{{target_payload}}', save_response_as: 'target_response', mock_response_json: { success: true, id: 'preview-id' } }
           : { id, type, name: 'Read variable', path: 'request.body.value', save_as: 'value' };
@@ -193,6 +202,15 @@ export function VisualFlowBuilderPage() {
     try { preview.mutate({ builder_json: builder as unknown as Record<string, unknown>, sample_request: sampleForBuilder(builder.input.input_mode, sampleText) }); }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid preview input'); }
   }
+
+  function runValidatePaths() {
+    setError(null);
+    try { validatePaths.mutate({ builder_json: builder as unknown as Record<string, unknown>, sample_request: sampleForBuilder(builder.input.input_mode, sampleText) }); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid preview input'); }
+  }
+
+  const pathWarnings = validatePaths.data?.warnings ?? [];
+  const inspectedStep = preview.data?.steps.find((step) => step.id === inspectedStepId) ?? null;
 
   function runSave() {
     setError(null);
@@ -223,7 +241,7 @@ export function VisualFlowBuilderPage() {
           <div className="builder-step-list">
             {builder.steps.map((step, index) => <button key={step.id} className={`builder-step-card ${selectedStep?.id === step.id ? 'active' : ''}`} onClick={() => setSelectedStepId(step.id)}><span className="step-index">{String(index + 1).padStart(2, '0')}</span><strong>{step.name ?? step.id}</strong><small>{step.type} · {String(step.save_as ?? step.id)}</small></button>)}
           </div>
-          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('xml_extract')}>Extract XML</button><button className="ghost-button" onClick={() => addStep('extract')}>Extract</button><button className="ghost-button" onClick={() => addStep('filter_array')}>Filter</button><button className="ghost-button" onClick={() => addStep('condition')}>Condition</button><button className="ghost-button" onClick={() => addStep('foreach')}>Foreach</button><button className="ghost-button" onClick={() => addStep('raw_xml_forward')}>Raw XML</button><button className="ghost-button" onClick={() => addStep('apply_transforms')}>Transform</button><button className="ghost-button" onClick={() => addStep('evaluate_rules')}>Rule</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('resolve_object')}>Resolve</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('build_xml')}>Build XML</button><button className="ghost-button" onClick={() => addStep('marking_code_pool_export')}>CHZ pool</button><button className="ghost-button" onClick={() => addStep('build_xml_response')}>XML response</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
+          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('xml_extract')}>Extract XML</button><button className="ghost-button" onClick={() => addStep('extract')}>Extract</button><button className="ghost-button" onClick={() => addStep('filter_array')}>Filter</button><button className="ghost-button" onClick={() => addStep('condition')}>Condition</button><button className="ghost-button" onClick={() => addStep('foreach')}>Foreach</button><button className="ghost-button" onClick={() => addStep('raw_xml_forward')}>Raw XML</button><button className="ghost-button" onClick={() => addStep('apply_transforms')}>Transform</button><button className="ghost-button" onClick={() => addStep('evaluate_rules')}>Rule</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('resolve_object')}>Resolve</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('build_xml')}>Build XML</button><button className="ghost-button" onClick={() => addStep('call_operation')}>Operation</button><button className="ghost-button" onClick={() => addStep('call_flow')}>Sub-flow</button><button className="ghost-button" onClick={() => addStep('marking_code_pool_export')}>CHZ pool</button><button className="ghost-button" onClick={() => addStep('build_xml_response')}>XML response</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
         </aside>
 
         <main className="builder-main stack-form">
@@ -236,7 +254,7 @@ export function VisualFlowBuilderPage() {
 
           {selectedStep && <section className="panel step-editor-panel">
             <div className="panel-toolbar"><div><span className="eyebrow">Step Editor</span><h2>{selectedStep.name ?? selectedStep.id}</h2></div><div className="toolbar-actions"><button className="ghost-button" onClick={() => moveStep(selectedStep.id, -1)}>Up</button><button className="ghost-button" onClick={() => moveStep(selectedStep.id, 1)}>Down</button><button className="ghost-button" onClick={() => duplicateStep(selectedStep)}>Duplicate</button><button className="ghost-button danger" onClick={() => deleteStep(selectedStep.id)}>Delete</button></div></div>
-            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="xml_extract">Extract XML</option><option value="extract">Extract fields</option><option value="filter_array">Filter array</option><option value="condition">Condition</option><option value="foreach">For each</option><option value="raw_xml_forward">Raw XML forward</option><option value="apply_transforms">Transform Field</option><option value="evaluate_rules">Business Rule</option><option value="odata_query">OData query</option><option value="resolve_object">Resolve Business Object</option><option value="build_json">Build JSON</option><option value="build_xml">Build XML</option><option value="marking_code_pool_export">CHZ pool delivery</option><option value="build_xml_response">Build XML response</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
+            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="xml_extract">Extract XML</option><option value="extract">Extract fields</option><option value="filter_array">Filter array</option><option value="condition">Condition</option><option value="foreach">For each</option><option value="raw_xml_forward">Raw XML forward</option><option value="apply_transforms">Transform Field</option><option value="evaluate_rules">Business Rule</option><option value="odata_query">OData query</option><option value="resolve_object">Resolve Business Object</option><option value="build_json">Build JSON</option><option value="build_xml">Build XML</option><option value="call_operation">Call operation</option><option value="call_flow">Call sub-flow</option><option value="marking_code_pool_export">CHZ pool delivery</option><option value="build_xml_response">Build XML response</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
             <RunIfEditor step={selectedStep} update={updateStep} />
             {selectedStep.type === 'read_variable' && <ReadVariableEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'apply_transforms' && <TransformStepEditor step={selectedStep} update={updateStep} />}
@@ -253,6 +271,8 @@ export function VisualFlowBuilderPage() {
             {selectedStep.type === 'extract' && <ExtractStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'filter_array' && <FilterArrayStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'build_xml' && <BuildXmlStepEditor step={selectedStep} update={updateStep} />}
+            {selectedStep.type === 'call_operation' && <CallOperationStepEditor step={selectedStep} update={updateStep} />}
+            {selectedStep.type === 'call_flow' && <CallFlowStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'call_endpoint' && <CallEndpointEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
             {selectedStep.type === 'return_response' && <label className="field-label">Response body<input value={String(selectedStep.body ?? '{{response}}')} onChange={(event) => updateStep(selectedStep.id, { body: event.target.value })} /></label>}
           </section>}
@@ -260,9 +280,29 @@ export function VisualFlowBuilderPage() {
 
         <aside className="panel builder-preview-panel">
           <div className="panel-toolbar"><div><span className="eyebrow">Preview & Compile</span><h2>Dry-run without code</h2></div></div>
-          <div className="action-row wrap-actions"><button className="primary-button" onClick={runPreview} disabled={preview.isPending}>Preview</button><button className="ghost-button" onClick={runSave} disabled={save.isPending}>Save Draft</button><Link className="ghost-button" to={`/config-history/integration_flow/${flow.data.id}`}>Release control</Link><button className="primary-button" onClick={() => compile.mutate()} disabled={compile.isPending}>Compile workflow</button>{flow.data.workflow_id && <Link className="primary-link" to={`/pipelines/${flow.data.workflow_id}/edit`}>Open workflow</Link>}</div>
-          {(error || preview.error || save.error || compile.error) && <div className="error-state compact">{error ?? (preview.error as Error | null)?.message ?? (save.error as Error | null)?.message ?? (compile.error as Error | null)?.message}</div>}
-          {preview.data && <div className="builder-preview-steps">{preview.data.steps.map((step) => <article key={step.id} className={`preview-step ${step.status}`}><strong>{step.id}</strong><span>{step.type}</span><StatusBadge status={step.status === 'success' ? 'ok' : step.status === 'skipped' ? 'unknown' : 'failed'} label={step.status} compact />{step.error && <small>{String(step.error.message ?? step.error.code)}</small>}</article>)}</div>}
+          <div className="action-row wrap-actions"><button className="primary-button" onClick={runPreview} disabled={preview.isPending}>Preview</button><button className="ghost-button" onClick={runValidatePaths} disabled={validatePaths.isPending}>Проверить пути</button><button className="ghost-button" onClick={runSave} disabled={save.isPending}>Save Draft</button><Link className="ghost-button" to={`/config-history/integration_flow/${flow.data.id}`}>Release control</Link><button className="primary-button" onClick={() => compile.mutate()} disabled={compile.isPending}>Compile workflow</button>{flow.data.workflow_id && <Link className="primary-link" to={`/pipelines/${flow.data.workflow_id}/edit`}>Open workflow</Link>}</div>
+          {(error || preview.error || validatePaths.error || save.error || compile.error) && <div className="error-state compact">{error ?? (preview.error as Error | null)?.message ?? (validatePaths.error as Error | null)?.message ?? (save.error as Error | null)?.message ?? (compile.error as Error | null)?.message}</div>}
+          {pathWarnings.length > 0 && (
+            <section className="info-panel warning-panel">
+              <span className="eyebrow">Пути не найдены</span>
+              {pathWarnings.map((warning, index) => (
+                <button key={index} type="button" className="ghost-button danger compact-warning" onClick={() => warning.step_id && setSelectedStepId(warning.step_id)} title="Перейти к шагу">
+                  {warning.step_id}: {warning.path ?? warning.message}
+                </button>
+              ))}
+            </section>
+          )}
+          {preview.data && <div className="builder-preview-steps">{preview.data.steps.map((step) => <article key={step.id} className={`preview-step ${step.status} ${inspectedStepId === step.id ? 'active' : ''}`} onClick={() => setInspectedStepId(step.id)} role="button"><strong>{step.id}</strong><span>{step.type}</span><StatusBadge status={step.status === 'success' ? 'ok' : step.status === 'skipped' ? 'unknown' : 'failed'} label={step.status} compact />{step.error && <small>{String(step.error.message ?? step.error.code)}</small>}</article>)}</div>}
+          {inspectedStep && (
+            <section className="page-stack">
+              <span className="eyebrow">Инспектор: {inspectedStep.id}</span>
+              <JsonBlock title="Переменные после шага" value={inspectedStep.variables_snapshot ?? {}} searchable={false} />
+              <JsonBlock title="Результат шага" value={inspectedStep.result_preview ?? inspectedStep.error ?? {}} searchable={false} />
+              <div className="hint-chip-row">
+                {placeholderHints(inspectedStep).map((hint) => <button key={hint} type="button" className="hint-chip" onClick={() => navigator.clipboard?.writeText(hint)} title="Click to copy placeholder">{hint}</button>)}
+              </div>
+            </section>
+          )}
           {preview.data && <JsonBlock title="Final JSON preview" value={preview.data.final_payload_preview ?? {}} searchable={false} />}
           {preview.data && <JsonBlock title="Target request" value={preview.data.target_request_preview ?? {}} searchable={false} />}
           {compile.data && <JsonBlock title="Compiled workflow" value={compile.data} searchable={false} />}
@@ -661,4 +701,67 @@ export function VisualFlowBuilderPage() {
       </div>
     );
   }
+
+  function CallFlowStepEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {
+    const flowOptions = flowsList.data ?? [];
+    return (
+      <div className="stack-form">
+        <div className="builder-help-card">
+          <strong>Переиспользовать готовую цепочку</strong>
+          <span>Sub-flow выполняет другую интеграцию как шаг: вход маппится через Input JSON, итог попадает в переменную Save as. Вложенность — до 3 уровней, самовызов запрещен. Артефакты вложенной цепочки видны в Timeline с префиксом subflow_.</span>
+        </div>
+        <div className="metadata-grid compact-grid no-margin">
+          <label className="field-label">Flow
+            <input list="flow-slugs" value={String(step.flow ?? '')} onChange={(event) => update(step.id, { flow: event.target.value })} placeholder="sub-echo-flow" title="Slug интеграции из списка Integrations" />
+            <datalist id="flow-slugs">{flowOptions.map((flow) => <option key={flow.slug} value={flow.slug}>{flow.name}</option>)}</datalist>
+          </label>
+          <label className="field-label">Save as<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} placeholder="sub_output" /></label>
+        </div>
+        <label className="field-label" title="Необязательно. По умолчанию саб-флоу получает текущий request.body.">
+          Input JSON (вход для саб-флоу)
+          <CodeEditor value={asJson(step.input ?? {})} onChange={(value) => { try { update(step.id, { input: parseJsonObject(value, 'Input JSON') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid input JSON'); } }} language="json" minRows={5} />
+        </label>
+      </div>
+    );
+  }
+
+  function CallOperationStepEditor({ step, update }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void }) {
+    const operationOptions = operations.data ?? [];
+    return (
+      <div className="stack-form">
+        <div className="builder-help-card">
+          <strong>Вызвать готовую операцию из каталога</strong>
+          <span>Operation Profile хранит метод, URL, шаблон тела, условие успеха и extractors. Здесь выбирается только операция и, при необходимости, переопределение входа.</span>
+        </div>
+        <div className="metadata-grid compact-grid no-margin">
+          <label className="field-label">Операция
+            <input list="operation-codes" value={String(step.operation ?? '')} onChange={(event) => update(step.id, { operation: event.target.value })} placeholder="send_codes_op" title="Код операции из Operation Catalog" />
+            <datalist id="operation-codes">{operationOptions.map((operation) => <option key={operation.code} value={operation.code}>{operation.name}</option>)}</datalist>
+          </label>
+          <label className="field-label">Save response as<input value={String(step.save_response_as ?? '')} onChange={(event) => update(step.id, { save_response_as: event.target.value })} placeholder="op_response" /></label>
+        </div>
+        <label className="field-label" title="Необязательно. Если пусто — используется шаблон тела из операции.">
+          Input overrides JSON
+          <CodeEditor value={asJson(step.input_overrides ?? {})} onChange={(value) => { try { update(step.id, { input_overrides: parseJsonObject(value, 'Input overrides') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid input overrides'); } }} language="json" minRows={5} />
+        </label>
+        <div className="action-row"><Link className="primary-link" to="/operation-catalog">Открыть Operation Catalog</Link></div>
+      </div>
+    );
+  }
+}
+
+function placeholderHints(step: FlowBuilderPreviewStep | null): string[] {
+  if (!step?.variables_snapshot) return [];
+  const snapshot = step.variables_snapshot;
+  const hints: string[] = [];
+  for (const [key, value] of Object.entries(snapshot)) {
+    if (key === 'steps') continue;
+    hints.push(`{{${key}}}`);
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const sub of Object.keys(value as Record<string, unknown>).slice(0, 3)) hints.push(`{{${key}.${sub}}}`);
+    }
+  }
+  const steps = snapshot.steps as Record<string, unknown> | undefined;
+  if (steps) for (const stepId of Object.keys(steps)) hints.push(`{{steps.${stepId}}}`);
+  return hints.slice(0, 12);
 }

@@ -133,6 +133,10 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
                 errors.append(_error(step_id, "MARKING_POOL_CODES_PATH_AMBIGUOUS", "Use only one code source path", "Choose full_codes_base64_path for production or codes_path for already decoded codes."))
             if not step.get("save_as"):
                 errors.append(_error(step_id, "MARKING_POOL_SAVE_AS_REQUIRED", "Marking code pool export needs save_as", "Save result as marking_pool_export."))
+        if step_type == "call_flow" and not step.get("flow"):
+            errors.append(_error(step_id, "SUBFLOW_NOT_SET", "Call flow step needs a flow slug", "Select an integration flow to reuse."))
+        if step_type == "call_operation" and not step.get("operation"):
+            errors.append(_error(step_id, "OPERATION_NOT_SET", "Call operation step needs an operation code", "Select an operation from Operation Catalog."))
         if step_type == "call_endpoint" and not (step.get("connector") or step.get("url")):
             errors.append(_error(step_id, "TARGET_CONNECTOR_NOT_SET", "Endpoint step needs connector or URL", "Select a REST/1C target connector or enter a direct HTTP URL."))
     has_terminal_response = any(isinstance(step, dict) and step.get("type") in {"call_endpoint", "return_response", "build_xml_response", "raw_xml_forward"} for step in steps)

@@ -20,6 +20,10 @@ from app.execution.result import ArtifactCreate, StepResult, StepResultStatus
 from app.integration_master.payload_renderer import PayloadRenderError, render_payload_step, render_xml_template as render_payload_xml_template
 from app.integration_master.schemas import PayloadStepConfig
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
+from app.operation_catalog.testers import evaluate_success_condition, extract_response
+
+import httpx
+
 from app.marking_code_pools import service as marking_code_pool_service
 from app.marking_code_pools.schemas import MarkingCodePoolActionOverrides, OneCMarkingCodePoolExportRequest
 from app.matchers.engine import evaluate_matcher_group
@@ -489,6 +493,142 @@ class FlowBuildXmlStep:
             artifacts=[ArtifactCreate(ArtifactType.MAPPED_PAYLOAD.value, "built_xml.txt", {"save_as": save_as, "xml": rendered[:4000]})],
             variables_update=variables,
         )
+
+
+class FlowCallOperationStep:
+    name = "flow_call_operation"
+    display_name = "Call Operation"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        scope = _scope(context)
+        operation_ref = str(config.get("operation") or "").strip()
+        if not operation_ref:
+            return _failed("OPERATION_NOT_SET", "Call operation step needs an operation code or id", config, "Select an operation from Operation Catalog.")
+        operation = await _load_operation(context.session, operation_ref)
+        if operation is None:
+            return _failed("OPERATION_NOT_FOUND", f"Operation {operation_ref} not found", config, "Check the operation code in Operation Catalog.")
+        if not operation.enabled:
+            return _failed("OPERATION_DISABLED", f"Operation {operation.name} is disabled", config, "Enable the operation in Operation Catalog.")
+        try:
+            url, headers, body_value, body_type = _operation_request(operation, config, scope)
+        except Exception as exc:
+            return _failed("OPERATION_REQUEST_BUILD_FAILED", str(exc), config, "Check the operation request template and input overrides.")
+        method = str(operation.method or "POST").upper()
+        timeout = float(operation.timeout_seconds or 30)
+        request_artifact = ArtifactCreate(
+            ArtifactType.OUTGOING_REQUEST.value,
+            "operation_request.json",
+            {"operation": operation.code, "method": method, "url": url, "headers": headers, "body_type": body_type, "body": body_value},
+        )
+        if context.dry_run:
+            response_body = operation.sample_response_json if operation.sample_response_json is not None else {"dry_run": True}
+            return _operation_success_result(context, config, operation, request_artifact, 200, response_body, dry_run=True)
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                if body_type in {"raw_text", "xml"}:
+                    response = await client.request(method, url, content=str(body_value or ""), headers=headers)
+                else:
+                    response = await client.request(method, url, json=body_value, headers=headers)
+        except httpx.HTTPError as exc:
+            return _failed("OPERATION_CALL_FAILED", f"{operation.name} request failed: {exc}", config, "Check the connection profile URL and network.", [request_artifact])
+        try:
+            response_body: Any = response.json()
+        except ValueError:
+            response_body = response.text
+        condition = evaluate_success_condition(operation.success_condition_json, response.status_code, response_body)
+        response_artifact = ArtifactCreate(
+            ArtifactType.INCOMING_RESPONSE.value,
+            "operation_response.json",
+            {"status_code": response.status_code, "body": response_body, "success_condition": condition.model_dump()},
+        )
+        if not condition.success:
+            return _failed(
+                "OPERATION_SUCCESS_CONDITION_FAILED",
+                f"{operation.name} returned HTTP {response.status_code} and failed the success condition: {'; '.join(condition.errors) or response.text[:300]}",
+                config,
+                "Open operation_response.json and compare with the success condition in Operation Catalog.",
+                [request_artifact, response_artifact],
+            )
+        return _operation_success_result(context, config, operation, request_artifact, response.status_code, response_body, extra_artifacts=[response_artifact])
+
+
+async def _load_operation(session, ref: str) -> Any:
+    from app.operation_catalog.models import OperationProfile
+
+    try:
+        from uuid import UUID as _UUID
+
+        operation = await session.get(OperationProfile, _UUID(ref))
+        if operation is not None:
+            return operation
+    except (ValueError, TypeError):
+        pass
+    result = await session.execute(select(OperationProfile).where(OperationProfile.code == ref).limit(1))
+    return result.scalar_one_or_none()
+
+
+def _operation_request(operation: Any, config: dict[str, Any], scope: dict[str, Any]) -> tuple[str, dict[str, str], Any, str]:
+    overrides = config.get("input_overrides")
+    if isinstance(overrides, dict) and overrides:
+        body_value = build_json_from_template(overrides, scope)
+        body_type = "json"
+    elif operation.request_template_json is not None:
+        body_value = build_json_from_template(operation.request_template_json, scope)
+        body_type = "json"
+    elif operation.request_template_text is not None:
+        body_value = render_template(operation.request_template_text, scope)
+        body_type = str(operation.body_type or "raw_text")
+    else:
+        body_value = render_template(config.get("body") or "{{target_payload}}", scope)
+        body_type = str(operation.body_type or "json")
+    url = str(render_template(operation.full_url or "", scope)).strip()
+    if not url:
+        path = str(render_template(operation.path or "", scope)).strip()
+        url = path
+    headers = {str(key): str(value) for key, value in (operation.headers_json or {}).items()}
+    if body_type == "xml":
+        headers.setdefault("Content-Type", "application/xml")
+    elif body_type == "json":
+        headers.setdefault("Content-Type", "application/json")
+    return url, headers, body_value, body_type
+
+
+def _operation_success_result(
+    context: PipelineContext,
+    config: dict[str, Any],
+    operation: Any,
+    request_artifact: ArtifactCreate,
+    status_code: int,
+    response_body: Any,
+    *,
+    dry_run: bool = False,
+    extra_artifacts: list[ArtifactCreate] | None = None,
+) -> StepResult:
+    extracted, extractor_errors = extract_response(operation.response_extractors_json or [], response_body)
+    artifacts = [request_artifact, *(extra_artifacts or [])]
+    if dry_run:
+        artifacts.append(ArtifactCreate(ArtifactType.DRY_RUN_REQUEST.value, "operation_dry_run.json", {"status_code": status_code, "body": response_body, "sample": True}))
+    if extractor_errors:
+        artifacts.append(ArtifactCreate(ArtifactType.ERROR_DETAILS.value, "operation_extractor_errors.json", {"errors": extractor_errors}))
+        return _failed(
+            "OPERATION_EXTRACT_FAILED",
+            f"{operation.name} response extractors failed: {'; '.join(extractor_errors)}",
+            config,
+            "Check response extractors paths in Operation Catalog.",
+            artifacts,
+        )
+    variables = _variables_with_step(context, config["step_id"], {"status_code": status_code, "response": response_body, "extracted": extracted, "dry_run": dry_run})
+    save_as = str(config.get("save_response_as") or "").strip()
+    if save_as:
+        variables[save_as] = response_body
+        variables[f"{save_as}_http"] = {"status_code": status_code, "body": response_body}
+    variables.update(extracted)
+    return StepResult.success(
+        f"Operation {operation.name} complete" + (" (dry-run)" if dry_run else ""),
+        artifacts=artifacts,
+        variables_update=variables,
+    )
 
 
 class FlowCallEndpointStep:
@@ -1310,3 +1450,124 @@ async def _run_foreach_nested(
         for artifact in result.artifacts
     ]
     return value, artifacts
+
+
+MAX_CALL_FLOW_DEPTH = 3
+
+
+class FlowCallFlowStep:
+    name = "flow_call_flow"
+    display_name = "Call Flow"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        scope = _scope(context)
+        flow_ref = str(config.get("flow") or "").strip()
+        if not flow_ref:
+            return _failed("SUBFLOW_NOT_SET", "Call flow step needs a flow slug or id", config, "Select a flow to reuse.")
+        depth = int(context.metadata.get("call_flow_depth") or 0)
+        if depth >= MAX_CALL_FLOW_DEPTH:
+            return _failed("SUBFLOW_DEPTH_EXCEEDED", f"call_flow nesting is limited to {MAX_CALL_FLOW_DEPTH}", config, "Flatten the chain or reduce nesting.")
+        flow = await _load_integration_flow(context.session, flow_ref)
+        if flow is None:
+            return _failed("SUBFLOW_NOT_FOUND", f"Flow {flow_ref} not found", config, "Check the flow slug in Integrations.")
+        if not flow.enabled:
+            return _failed("SUBFLOW_DISABLED", f"Flow {flow.slug} is disabled", config, "Enable the flow in Integrations.")
+        if context.workflow is not None and flow.compiled_workflow_id == context.workflow.id:
+            return _failed("SUBFLOW_SELF_CALL", "A flow cannot call itself", config, "Choose another flow.")
+        try:
+            mapped_input = _subflow_input(config, scope)
+        except Exception as exc:
+            return _failed("SUBFLOW_INPUT_BUILD_FAILED", str(exc), config, "Check the input mapping templates.")
+        steps_json = await _subflow_steps(context.session, flow)
+        if not steps_json:
+            return _failed("SUBFLOW_NOT_COMPILED", f"Flow {flow.slug} has no compiled steps", config, "Open the flow and compile its workflow.")
+        return await _execute_subflow(context, config, flow, steps_json, mapped_input, depth)
+
+
+async def _load_integration_flow(session: Any, ref: str) -> Any:
+    from app.integration_flows.models import IntegrationFlow
+
+    try:
+        from uuid import UUID as _UUID
+
+        flow = await session.get(IntegrationFlow, _UUID(ref))
+        if flow is not None:
+            return flow
+    except (ValueError, TypeError):
+        pass
+    result = await session.execute(select(IntegrationFlow).where(IntegrationFlow.slug == ref).limit(1))
+    return result.scalar_one_or_none()
+
+
+async def _subflow_steps(session: Any, flow: Any) -> list[dict[str, Any]]:
+    if flow.builder_json:
+        from app.flow_builder.compiler import FlowCompiler
+
+        compiled = FlowCompiler().compile(flow.builder_json)
+        if compiled["valid"]:
+            return [step for step in compiled["steps_json"] if step.get("handler")]
+    if flow.compiled_workflow_id:
+        from app.workflows.models import Workflow
+
+        workflow = await session.get(Workflow, flow.compiled_workflow_id)
+        if workflow is not None:
+            return [step for step in workflow.steps_json or [] if step.get("handler")]
+    return []
+
+
+def _subflow_input(config: dict[str, Any], scope: dict[str, Any]) -> Any:
+    input_config = config.get("input")
+    if isinstance(input_config, dict) and input_config:
+        return build_json_from_template(input_config, scope)
+    return (scope.get("request") or {}).get("body") or {}
+
+
+async def _execute_subflow(
+    context: PipelineContext,
+    config: dict[str, Any],
+    flow: Any,
+    steps_json: list[dict[str, Any]],
+    mapped_input: Any,
+    depth: int,
+) -> StepResult:
+    from app.execution.registry import registry as step_registry
+
+    sub_variables = dict(context.variables)
+    sub_variables["payload"] = mapped_input
+    sub_context = dataclasses.replace(context, variables=sub_variables, metadata={**context.metadata, "call_flow_depth": depth + 1})
+    artifacts: list[ArtifactCreate] = []
+    executed: list[str] = []
+    for step_config in steps_json:
+        step_name = str(step_config.get("name") or "step")
+        if step_name in set(sub_context.variables.get("skip_steps") or []):
+            continue
+        if str(step_config.get("on") or "always") not in {"always", "on_success", "on_dry_run"}:
+            continue
+        run_if = (step_config.get("config") or {}).get("run_if")
+        if run_if and not evaluate_matcher_group(run_if, _matcher_context_from_scope(_scope(sub_context)))["matched"]:
+            continue
+        handler_name = str(step_config.get("handler") or step_name)
+        try:
+            step_handler = step_registry.get(handler_name)
+        except Exception:
+            return _failed("SUBFLOW_STEP_UNKNOWN", f"Sub-flow {flow.slug} uses unknown step handler {handler_name}", config, "Compile the nested flow with the current OMH version.", artifacts)
+        fake_step = SimpleNamespace(id=None, step_config_json=step_config)
+        iteration_context = dataclasses.replace(sub_context, current_step=fake_step)
+        result = await step_handler.execute(iteration_context)
+        artifacts.extend(
+            ArtifactCreate(artifact.artifact_type, f"subflow_{flow.slug}/{artifact.name}", artifact.content)
+            for artifact in result.artifacts
+        )
+        if result.status != StepResultStatus.SUCCESS:
+            error = result.error_message or result.message or "subflow step failed"
+            artifacts.append(ArtifactCreate(ArtifactType.ERROR_DETAILS.value, f"subflow_{flow.slug}/error.json", {"step": step_name, "error_code": result.error_code, "error": error}))
+            return _failed("SUBFLOW_STEP_FAILED", f"Sub-flow {flow.slug} failed at step {step_name}: {error}", config, "Open subflow artifacts and fix the nested flow first.", artifacts)
+        executed.append(step_name)
+        sub_context.variables.update(result.variables_update)
+    save_as = str(config.get("save_as") or config["step_id"])
+    output = {key: value for key, value in sub_context.variables.items() if key not in {"payload", "steps", "skip_steps"} and not str(key).startswith("_")}
+    variables = _variables_with_step(context, config["step_id"], {"flow": flow.slug, "executed_steps": executed, "output": output})
+    variables[save_as] = output
+    artifacts.append(ArtifactCreate(ArtifactType.CANONICAL_PAYLOAD.value, f"subflow_{flow.slug}/output.json", {"flow": flow.slug, "executed_steps": executed, "output": output}))
+    return StepResult.success(f"Sub-flow {flow.slug} complete", artifacts=artifacts, variables_update=variables)

@@ -9,24 +9,30 @@ from app.connectors.builtin.onec.odata import read_odata
 from app.flow_builder.validator import validate_builder
 from app.json_builder.engine import build_json_from_fields, build_json_from_template
 from app.business_rules.engine import engine as rules_engine
-from app.execution.steps.flow_builder_steps import _evaluate_condition, _extract_field
+from app.execution.steps.flow_builder_steps import _evaluate_condition, _extract_field, _load_integration_flow, _load_operation, _operation_request, _subflow_input
 from app.integration_master.payload_renderer import render_xml_template as render_payload_xml_template
 from app.matchers.engine import evaluate_matcher_group
 from app.transforms.engine import engine as transform_engine
 from app.variables.paths import PathResolutionError, resolve_path
 from app.variables.resolver import build_runtime_scope, render_template
+from app.operation_catalog.testers import extract_response
 from app.secrets.service import SecretResolver
 from app.xml_toolkit.paths import extract_fields
 from app.xml_toolkit.renderer import render_xml_template
 from app.xml_toolkit.service import raw_forward_preview
 
+import copy
+import json
+import re
 
-async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], sample_request: dict[str, Any], *, run_real_queries: bool = False) -> dict[str, Any]:
+
+async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], sample_request: dict[str, Any], *, run_real_queries: bool = False, collect_warnings: bool = False) -> dict[str, Any]:
     validation = validate_builder(builder_json)
     if not validation["valid"]:
-        return {"valid": False, "variables": {}, "steps": [], "final_payload_preview": None, "target_request_preview": None, "errors": validation["errors"]}
+        return {"valid": False, "variables": {}, "steps": [], "final_payload_preview": None, "target_request_preview": None, "errors": validation["errors"], "warnings": []}
     variables: dict[str, Any] = {"steps": {}}
     steps_preview: list[dict[str, Any]] = []
+    path_warnings: list[dict[str, Any]] = []
     final_payload = None
     target_request = None
     skipped_step_ids: set[str] = set()
@@ -35,11 +41,13 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
         step_type = str(step["type"])
         scope = _scope(sample_request, variables)
         if step_id in skipped_step_ids:
-            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "skipped", "request_preview": None, "result_preview": None})
+            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "skipped", "request_preview": None, "result_preview": None, "variables_snapshot": copy.deepcopy(variables)})
             continue
         run_if = step.get("run_if")
+        if collect_warnings:
+            path_warnings.extend(_validate_step_paths(step, scope))
         if run_if and not evaluate_matcher_group(run_if, _preview_matcher_context(scope))["matched"]:
-            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "skipped", "request_preview": {"run_if": run_if}, "result_preview": None})
+            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "skipped", "request_preview": {"run_if": run_if}, "result_preview": None, "variables_snapshot": copy.deepcopy(variables)})
             continue
         try:
             if step_type == "read_variable":
@@ -252,6 +260,31 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 variables[str(step.get("save_as") or "target_payload")] = result
                 final_payload = result
                 request_preview = {"save_as": step.get("save_as") or "target_payload"}
+            elif step_type == "call_flow":
+                flow_ref = str(step.get("flow") or "").strip()
+                flow = await _load_integration_flow(session, flow_ref) if flow_ref else None
+                if flow is None:
+                    raise ValueError(f"Flow {flow_ref or '(not set)'} not found")
+                mapped_input = _subflow_input(step, scope)
+                save_as = str(step.get("save_as") or step_id)
+                result = {"would_call_flow": flow.slug, "input": mapped_input, "note": "Nested steps run at runtime; preview shows the mapped input."}
+                variables[save_as] = {"flow": flow.slug}
+                request_preview = result
+            elif step_type == "call_operation":
+                operation_ref = str(step.get("operation") or "").strip()
+                operation = await _load_operation(session, operation_ref) if operation_ref else None
+                if operation is None:
+                    raise ValueError(f"Operation {operation_ref or '(not set)'} not found")
+                url, headers, body_value, body_type = _operation_request(operation, step, scope)
+                response_body = operation.sample_response_json if operation.sample_response_json is not None else {"preview": True}
+                extracted, extractor_errors = extract_response(operation.response_extractors_json or [], response_body)
+                variables.update(extracted)
+                save_response_as = str(step.get("save_response_as") or "").strip()
+                if save_response_as:
+                    variables[save_response_as] = response_body
+                result = {"would_call": {"operation": operation.code, "method": str(operation.method or "POST").upper(), "url": url, "headers": headers, "body_type": body_type, "body": body_value}, "response": response_body, "extracted": extracted, "extractor_errors": extractor_errors}
+                request_preview = result["would_call"]
+                target_request = result["would_call"]
             elif step_type == "call_endpoint":
                 body = render_template(step.get("body") or "{{target_payload}}", scope)
                 rendered_url = str(render_template(str(step.get("url") or ""), scope) or "").strip()
@@ -286,11 +319,13 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 request_preview = None
             if step_type != "foreach":
                 variables.setdefault("steps", {})[step_id] = result if step_type != "odata_query" else {"items": result if isinstance(result, list) else [result] if result else [], "first": result}
-            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "success", "request_preview": request_preview, "result_preview": result})
+            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "success", "request_preview": request_preview, "result_preview": result, "variables_snapshot": copy.deepcopy(variables)})
         except Exception as exc:
-            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "failed", "error": _preview_error(step_id, exc)})
-            return {"valid": False, "variables": variables, "steps": steps_preview, "final_payload_preview": final_payload, "target_request_preview": target_request, "errors": [_preview_error(step_id, exc)]}
-    return {"valid": True, "variables": variables, "steps": steps_preview, "final_payload_preview": final_payload, "target_request_preview": target_request, "errors": []}
+            steps_preview.append({"id": step_id, "type": step_type, "name": step.get("name"), "status": "failed", "error": _preview_error(step_id, exc), "variables_snapshot": copy.deepcopy(variables)})
+            if collect_warnings:
+                continue
+            return {"valid": False, "variables": variables, "steps": steps_preview, "final_payload_preview": final_payload, "target_request_preview": target_request, "errors": [_preview_error(step_id, exc)], "warnings": path_warnings}
+    return {"valid": True, "variables": variables, "steps": steps_preview, "final_payload_preview": final_payload, "target_request_preview": target_request, "errors": [], "warnings": path_warnings}
 
 
 def _scope(sample_request: dict[str, Any], variables: dict[str, Any]) -> dict[str, Any]:
@@ -568,3 +603,73 @@ def _preview_error(step_id: str, exc: Exception) -> dict[str, Any]:
     if isinstance(exc, PathResolutionError):
         return {"step_id": step_id, "code": "VARIABLE_NOT_FOUND", "message": str(exc), "hint": "Check source path or add a previous Read Field/OData step."}
     return {"step_id": step_id, "code": exc.__class__.__name__.upper(), "message": str(exc), "hint": "Open this step and check its configuration."}
+
+
+_PLACEHOLDER_RE = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
+_MATCHER_PATH_TYPES = {"body_path_equals", "body_path_not_equals", "body_path_contains", "body_path_not_contains", "body_path_in", "body_path_not_in", "body_path_starts_with", "body_path_ends_with", "body_path_gt", "body_path_lt", "body_path_ge", "body_path_le", "body_path_regex", "body_path_exists"}
+
+
+def _validate_step_paths(step: dict[str, Any], scope: dict[str, Any]) -> list[dict[str, Any]]:
+    step_id = str(step.get("id") or "?")
+    item_as = str(step.get("item_as") or "item")
+    index_as = str(step.get("index_as") or "index")
+    skipped_roots = {item_as, index_as, "foreach"} if step.get("type") == "foreach" else {"foreach"}
+    warnings: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def warn(field: str, path: str, message: str) -> None:
+        key = (field, path)
+        if key in seen:
+            return
+        seen.add(key)
+        warnings.append({"step_id": step_id, "code": "PATH_NOT_FOUND", "message": message, "field": field, "path": path})
+
+    def check(field: str, path: str) -> None:
+        clean = path.strip()
+        if not clean or clean.split(".")[0].split("[")[0] in skipped_roots:
+            return
+        try:
+            resolve_path(scope, clean)
+        except Exception:
+            warn(field, clean, f"Path '{clean}' does not exist in the sample request or previous steps")
+
+    config_dump = json.dumps(step, ensure_ascii=False, default=str)
+    for match in _PLACEHOLDER_RE.finditer(config_dump):
+        check("template", match.group(1))
+
+    step_type = str(step.get("type") or "")
+    if step_type == "read_variable":
+        for candidate in [step.get("path"), *(step.get("fallback_paths") or [])]:
+            if candidate:
+                check("path", str(candidate))
+    if step_type == "extract" and step.get("source"):
+        check("source", str(step["source"]))
+    if step_type in {"filter_array", "foreach"} and step.get("items"):
+        check("items", str(step["items"]))
+    for group_key in ("run_if", "matcher_group", "where"):
+        group = step.get(group_key)
+        if isinstance(group, dict):
+            for rule in _iter_matcher_rules(group):
+                path = rule.get("path")
+                if path:
+                    check(group_key, str(path))
+    for rule in step.get("rules") or []:
+        if isinstance(rule, dict):
+            condition = rule.get("if") or {}
+            if condition.get("path"):
+                check("rules.if", str(condition["path"]))
+            if condition.get("value_path"):
+                check("rules.if", str(condition["value_path"]))
+    return warnings
+
+
+def _iter_matcher_rules(group: dict[str, Any]) -> list[dict[str, Any]]:
+    collected: list[dict[str, Any]] = []
+    for rule in group.get("rules") or []:
+        if not isinstance(rule, dict):
+            continue
+        if isinstance(rule.get("group"), dict):
+            collected.extend(_iter_matcher_rules(rule["group"]))
+        elif str(rule.get("type") or "") in _MATCHER_PATH_TYPES:
+            collected.append(rule)
+    return collected
