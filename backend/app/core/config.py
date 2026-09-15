@@ -29,7 +29,9 @@ class Settings(BaseSettings):
     marking_code_pool_export_dir: str = Field(default="/tmp/omh-marking-code-pools", validation_alias=AliasChoices("MARKING_CODE_POOL_EXPORT_DIR", "OMH_MARKING_CODE_POOL_EXPORT_DIR"))
     dnp_chz_code_pool_import_url: str = Field(default="", validation_alias=AliasChoices("DNP_CHZ_CODE_POOL_IMPORT_URL", "OMH_DNP_CHZ_CODE_POOL_IMPORT_URL"))
     dnp_shared_secret: str = Field(default="", validation_alias=AliasChoices("OMH_DNP_SHARED_SECRET", "DNP_SHARED_SECRET"))
-    dnp_request_timeout_seconds: float = Field(default=180.0, validation_alias=AliasChoices("DNP_REQUEST_TIMEOUT_SECONDS", "OMH_DNP_REQUEST_TIMEOUT_SECONDS"))
+    # Large CHZ pools (3k+ codes) regularly need several minutes on DnP.
+    # 180s caused false "forward failed" while DnP had already accepted the pool.
+    dnp_request_timeout_seconds: float = Field(default=600.0, validation_alias=AliasChoices("DNP_REQUEST_TIMEOUT_SECONDS", "OMH_DNP_REQUEST_TIMEOUT_SECONDS"))
     chz_laser_file_enabled: bool = Field(default=True, validation_alias=AliasChoices("CHZ_LASER_FILE_ENABLED", "OMH_CHZ_LASER_FILE_ENABLED"))
     chz_laser_smb_unc: str = Field(default="", validation_alias=AliasChoices("CHZ_LASER_SMB_UNC", "OMH_CHZ_LASER_SMB_UNC"))
     chz_laser_smb_username: str = Field(default="guest", validation_alias=AliasChoices("CHZ_LASER_SMB_USERNAME", "OMH_CHZ_LASER_SMB_USERNAME"))

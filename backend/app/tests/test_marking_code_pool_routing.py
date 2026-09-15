@@ -388,4 +388,4 @@ async def test_actions_override_blocks_rule_targets(client, tmp_path, monkeypatc
     assert calls == []
     rule_action = response.json()["export"]["metadata_json"]["actions"]["http_forward:GuardedTarget"]
     assert rule_action["status"] == "disabled"
-    assert rule_action["reason"] == "disabled by this test action"
+    assert rule_action["reason"] == "disabled by request actions_override"

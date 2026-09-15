@@ -176,7 +176,7 @@ async def test_onec_marking_code_pool_export_forwards_base64_pool_to_dnp(client,
                 "Content-Type": "application/json",
                 "X-OMH-Token": "secret-token",
             },
-            "timeout": 180.0,
+            "timeout": 600.0,
             "json": {
                 "omh": {
                     "event_id": body["export"]["id"],
@@ -632,9 +632,9 @@ async def test_marking_code_pool_action_override_skips_global_laser_and_forward(
     assert body["success"] is True
     assert body["status"] == "saved"
     assert body["actions"]["laser_file"]["status"] == "disabled"
-    assert body["actions"]["laser_file"]["reason"] == "disabled by this test action"
+    assert body["actions"]["laser_file"]["reason"] == "disabled by request actions_override"
     assert body["actions"]["external_forward"]["status"] == "disabled"
-    assert body["actions"]["external_forward"]["reason"] == "disabled by this test action"
+    assert body["actions"]["external_forward"]["reason"] == "disabled by request actions_override"
     assert body["actions"]["dnp_forward"]["status"] == "disabled"
     assert smb_calls == []
     assert forward_calls == []
@@ -662,9 +662,9 @@ async def test_marking_code_pool_preview_reflects_action_override_reasons(client
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["would_laser_copy"]["enabled"] is False
-    assert body["would_laser_copy"]["reason"] == "disabled by this test action"
+    assert body["would_laser_copy"]["reason"] == "disabled by request actions_override"
     assert body["would_forward"]["enabled"] is False
-    assert body["would_forward"]["reason"] == "disabled by this test action"
+    assert body["would_forward"]["reason"] == "disabled by request actions_override"
     assert body["warnings"] == []
     assert os.listdir(tmp_path) == []
     get_settings.cache_clear()
@@ -835,3 +835,13 @@ async def test_marking_code_pool_retry_laser_copy_and_missing_file_response(clie
     assert missing.json()["success"] is False
     assert missing.json()["error_code"] == "EXPORT_FILE_NOT_FOUND"
     get_settings.cache_clear()
+
+
+def test_dnp_forward_timeout_scales_for_large_pools():
+    from app.marking_code_pools import service
+
+    assert service._dnp_forward_timeout_seconds(180.0, 1) == 600.0
+    assert service._dnp_forward_timeout_seconds(600.0, 1) == 600.0
+    # 5000 codes -> 120 + 750 = 870
+    assert service._dnp_forward_timeout_seconds(600.0, 5000) == 870.0
+    assert service._dnp_forward_timeout_seconds(600.0, 50_000) == 1800.0

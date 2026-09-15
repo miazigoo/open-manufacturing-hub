@@ -273,7 +273,7 @@ async def _execute_rule_targets(
     laser_blocked = overrides is not None and overrides.laser_file is False
     forward_blocked = overrides is not None and overrides.external_forward is False
     if laser_requested and laser_blocked:
-        actions["laser_file"] = {"status": "disabled", "reason": "disabled by this test action"}
+        actions["laser_file"] = {"status": "disabled", "reason": "disabled by request actions_override"}
     elif laser_requested:
         actions["laser_file"] = _save_laser_file_if_configured(config, file_name, payload, force=True)
     else:
@@ -285,7 +285,7 @@ async def _execute_rule_targets(
         target_name = str(target.get("name") or target.get("url") or "http")
         key = f"http_forward:{target_name}"
         if forward_blocked:
-            actions[key] = {"status": "disabled", "reason": "disabled by this test action", "target": target_name}
+            actions[key] = {"status": "disabled", "reason": "disabled by request actions_override", "target": target_name}
         else:
             actions[key] = await _forward_to_http_target(target, record, request, codes)
         if first_forward_key is None:
@@ -305,7 +305,7 @@ async def _forward_to_http_target(
     target_name = str(target.get("name") or url or "http_forward")
     if not url:
         return {"status": "failed", "target": target_name, "error": "http_forward target has no url"}
-    timeout = float(target.get("timeout_seconds") or 180.0)
+    timeout = float(target.get("timeout_seconds") or 600.0)
     payload = _forward_payload(record, request, codes, target_name)
     headers = {"Content-Type": "application/json"}
     token = str(target.get("token") or "")
@@ -821,7 +821,7 @@ def _effective_action_plan(
     if laser_override is False:
         laser_file = False
         laser_forced = False
-        laser_reason = "disabled by this test action"
+        laser_reason = "disabled by request actions_override"
     elif laser_override is True:
         laser_file = True
         laser_forced = True
@@ -834,7 +834,7 @@ def _effective_action_plan(
     if forward_override is False:
         external_forward = False
         forward_forced = False
-        forward_reason = "disabled by this test action"
+        forward_reason = "disabled by request actions_override"
     elif forward_override is True:
         external_forward = True
         forward_forced = True
@@ -1034,11 +1034,32 @@ async def _forward_to_dnp_if_configured(
     if config.dnp_shared_secret:
         headers[config.dnp_header_name] = config.dnp_shared_secret
 
+    timeout = _dnp_forward_timeout_seconds(config.dnp_timeout_seconds, len(codes))
     try:
-        async with httpx.AsyncClient(timeout=config.dnp_timeout_seconds) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(url, json=payload, headers=headers)
+    except httpx.TimeoutException as exc:
+        detail = str(exc).strip() or "no details"
+        return {
+            "status": "failed",
+            "url": url,
+            "error": (
+                f"DnP request timed out after {timeout:.0f}s while forwarding {len(codes)} codes "
+                f"({type(exc).__name__}: {detail}). "
+                "DnP may already have accepted the pool — retry-forward is idempotent."
+            ),
+            "timeout_seconds": timeout,
+            "codes_count": len(codes),
+        }
     except httpx.HTTPError as exc:
-        return {"status": "failed", "url": url, "error": f"DnP request failed: {exc}"}
+        detail = str(exc).strip() or "no details"
+        return {
+            "status": "failed",
+            "url": url,
+            "error": f"DnP request failed: {type(exc).__name__}: {detail}",
+            "timeout_seconds": timeout,
+            "codes_count": len(codes),
+        }
 
     if response.status_code >= 400:
         return {
@@ -1057,6 +1078,17 @@ async def _forward_to_dnp_if_configured(
         return {"status": "failed", "url": url, "error": "DnP returned JSON response that is not an object"}
 
     return {"status": "success", "url": url, "response": result}
+
+
+def _dnp_forward_timeout_seconds(configured: float, codes_count: int) -> float:
+    """Ensure large pools get enough time even if env still has a low legacy value.
+
+    Empirically ~3k codes need ~2–3 minutes end-to-end through Apache/Passenger.
+    Floor grows with pool size; hard cap avoids unbounded waits.
+    """
+    base = max(float(configured or 0.0), 600.0)
+    scaled = 120.0 + max(codes_count, 0) * 0.15
+    return min(max(base, scaled), 1800.0)
 
 
 def _write_smb_file(

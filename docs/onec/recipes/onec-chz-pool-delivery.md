@@ -98,6 +98,10 @@ DNP_CHZ_CODE_POOL_IMPORT_URL
 DNP_REQUEST_TIMEOUT_SECONDS
 ```
 
+Для больших пулов (тысячи кодов) OMH ждёт ответ DnP дольше: минимум 600с,
+плюс запас от размера пула (потолок 1800с). Если client/Apache оборвут раньше,
+DnP всё равно может успеть принять пул — `retry-forward` идемпотентен.
+
 ## Что проверять в Timeline
 
 - `marking_code_pool_export_request.json` - что пришло из 1C.

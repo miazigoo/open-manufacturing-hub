@@ -87,7 +87,7 @@ class MarkingCodePoolForwardSettings(BaseModel):
     method: str = "POST"
     header_name: str = "X-OMH-Token"
     token_set: bool = False
-    timeout_seconds: float = 180.0
+    timeout_seconds: float = 600.0
 
 
 class MarkingCodePoolResponseSettings(BaseModel):
