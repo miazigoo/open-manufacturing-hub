@@ -1,27 +1,33 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Artifact, EventRun, EventStep, asJson } from '../api/client';
+import { Artifact, ArtifactSummary, EventRun, EventStep, asJson } from '../api/client';
+import { artifactsApi } from '../api/artifacts';
 import { replayApi } from '../api/replay';
 import { useT } from '../i18n/useI18n';
 import { CodeEditor } from './CodeEditor';
+import { LoadingState } from './LoadingState';
 
 interface ReplayActionsProps {
   eventId: string;
   selectedRun: EventRun | null;
   selectedStep: EventStep | null;
-  selectedArtifact: Artifact | null;
+  selectedArtifact: Artifact | ArtifactSummary | null;
 }
 
 export function ReplayActions({ eventId, selectedRun, selectedStep, selectedArtifact }: ReplayActionsProps) {
   const t = useT();
   const queryClient = useQueryClient();
   const [editorOpen, setEditorOpen] = useState(false);
+  const [isLoadingArtifact, setIsLoadingArtifact] = useState(false);
   const [jsonDraft, setJsonDraft] = useState('');
   const [startStep, setStartStep] = useState('validate');
   const [message, setMessage] = useState<string | null>(null);
 
   function refresh() {
+    queryClient.invalidateQueries({ queryKey: ['event-overview', eventId] });
     queryClient.invalidateQueries({ queryKey: ['timeline', eventId] });
+    queryClient.invalidateQueries({ queryKey: ['events-journal'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
     queryClient.invalidateQueries({ queryKey: ['events'] });
   }
 
@@ -34,15 +40,24 @@ export function ReplayActions({ eventId, selectedRun, selectedStep, selectedArti
   const editReplay = useMutation({
     mutationFn: () => {
       if (!selectedArtifact) throw new Error(t('replay.selectArtifact'));
-      return replayApi.editReplay(selectedArtifact.id, JSON.parse(jsonDraft) as Record<string, unknown>, startStep);
+      const parsed = JSON.parse(jsonDraft) as Record<string, unknown>;
+      return replayApi.editReplay(selectedArtifact.id, parsed, startStep);
     },
     onSuccess: () => { setMessage(t('replay.editedCreated')); setEditorOpen(false); refresh(); },
   });
 
-  function openEditor() {
+  async function openEditor() {
     if (!selectedArtifact) return;
-    setJsonDraft(asJson(selectedArtifact.content_json));
-    setEditorOpen(true);
+    setIsLoadingArtifact(true);
+    try {
+      const fullArtifact = await queryClient.fetchQuery({ queryKey: ['artifact-content', selectedArtifact.id], queryFn: () => artifactsApi.get(selectedArtifact.id), staleTime: 60_000 });
+      setJsonDraft(asJson(fullArtifact.content_json ?? {}));
+      setEditorOpen(true);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsLoadingArtifact(false);
+    }
   }
 
   return (
@@ -54,9 +69,12 @@ export function ReplayActions({ eventId, selectedRun, selectedStep, selectedArti
       <div className="action-row">
         <button className="primary-button" onClick={() => fullReplay.mutate()} disabled={fullReplay.isPending}>{t('replay.replay')}</button>
         <button className="ghost-button" onClick={() => fromStep.mutate()} disabled={!selectedRun || !selectedStep || fromStep.isPending}>{t('replay.fromStep')}</button>
-        <button className="ghost-button" onClick={openEditor} disabled={!selectedArtifact}>{t('replay.edit')}</button>
+        <button className="ghost-button" onClick={openEditor} disabled={!selectedArtifact || isLoadingArtifact}>
+          {isLoadingArtifact ? t('common.loading') : t('replay.edit')}
+        </button>
         <button className="ghost-button" onClick={() => dryRun.mutate()} disabled={dryRun.isPending}>{t('replay.dryRun')}</button>
       </div>
+      {isLoadingArtifact && <LoadingState label={t('common.loading')} />}
       {message && <div className="success-note">{message}</div>}
       {[fullReplay, dryRun, fromStep, editReplay].find((mutation) => mutation.isError)?.error instanceof Error && (
         <div className="error-state compact">{([fullReplay, dryRun, fromStep, editReplay].find((mutation) => mutation.isError)?.error as Error).message}</div>
@@ -69,7 +87,13 @@ export function ReplayActions({ eventId, selectedRun, selectedStep, selectedArti
           </div>
           <label className="field-label">{t('replay.startFromStep')}<input value={startStep} onChange={(event) => setStartStep(event.target.value)} /></label>
           <CodeEditor value={jsonDraft} onChange={setJsonDraft} language="json" minRows={10} />
-          <button className="primary-button" onClick={() => editReplay.mutate()} disabled={editReplay.isPending}>{t('replay.submitEdited')}</button>
+          <button
+            className="primary-button"
+            onClick={() => editReplay.mutate()}
+            disabled={editReplay.isPending || !jsonDraft.trim()}
+          >
+            {editReplay.isPending ? t('common.loading') : t('replay.submitEdited')}
+          </button>
         </div>
       )}
     </section>

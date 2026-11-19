@@ -29,7 +29,7 @@ class InboxTemplate(TimestampMixin, Base):
     response_json: Mapped[dict[str, Any] | None] = mapped_column(JSON_TYPE, nullable=True)
     auth_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    records: Mapped[list["InboxRecord"]] = relationship(back_populates="template", cascade="all, delete-orphan", lazy="selectin")
+    records: Mapped[list["InboxRecord"]] = relationship(back_populates="template", cascade="all, delete-orphan", lazy="noload")
 
 
 class InboxRecord(TimestampMixin, Base):

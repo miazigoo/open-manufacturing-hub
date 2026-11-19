@@ -5,7 +5,7 @@ import asyncio
 import logging
 import socket
 
-from sqlalchemy import text
+from app.health.readiness import worker_heartbeat_check
 
 from app.core.database import async_session
 from app.core.config import get_settings
@@ -44,9 +44,11 @@ async def _heartbeat(worker: str, *, processed: int, status: HealthStatus = Heal
         await session.commit()
 
 
-async def _healthcheck() -> None:
+async def _healthcheck(worker: str) -> None:
     async with async_session() as session:
-        await session.execute(text("SELECT 1"))
+        result = await worker_heartbeat_check(session, worker)
+        if result["status"] != "ok":
+            raise SystemExit(result["message"])
 
 
 async def _loop(worker: str, limit: int, interval: float) -> None:
@@ -68,12 +70,12 @@ async def main() -> None:
     parser.add_argument("--once", action="store_true", help="Process one item and exit")
     parser.add_argument("--batch", action="store_true", help="Process one batch and exit")
     parser.add_argument("--loop", action="store_true", help="Run continuously. This is the default when no mode is provided.")
-    parser.add_argument("--healthcheck", action="store_true", help="Check database connectivity and exit")
+    parser.add_argument("--healthcheck", action="store_true", help="Check the latest processing heartbeat and exit")
     parser.add_argument("--limit", type=int, default=get_settings().queue_worker_batch_size)
     parser.add_argument("--interval", type=float, default=get_settings().queue_worker_loop_interval_seconds)
     args = parser.parse_args()
     if args.healthcheck:
-        await _healthcheck()
+        await _healthcheck(args.worker)
         print("ok")
         return
     if args.once:

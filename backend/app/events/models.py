@@ -20,6 +20,10 @@ JSON_TYPE = JSONB().with_variant(JSON(), "sqlite")
 
 class IntegrationEvent(TimestampMixin, Base):
     __tablename__ = "integration_events"
+    __table_args__ = (
+        Index("ix_integration_events_created_id", "created_at", "id"),
+        Index("ix_integration_events_entity_id", "entity_id"),
+    )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=new_uuid)
     correlation_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)

@@ -21,6 +21,7 @@ class IntegrationQueueMessage(TimestampMixin, Base):
         Index("ix_integration_queue_status_priority", "status", "priority", "next_retry_at"),
         Index("ix_integration_queue_business_key", "business_object", "business_key"),
         Index("ix_integration_queue_lock", "status", "locked_until"),
+        Index("ix_integration_queue_event_created", "event_id", "created_at"),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=new_uuid)

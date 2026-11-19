@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors import repository as connector_repository
@@ -109,16 +109,30 @@ async def navigation(session: AsyncSession) -> list[dict[str, Any]]:
 async def cockpit_summary(session: AsyncSession) -> dict[str, Any]:
     package_state = await _package_state(session, ONEC_PACKAGE)
     flows = await flow_repository.list_flows(session)
-    events = await events_service.get_event_journal(session)
     connectors = await connector_repository.list_instances(session)
-    onec_events = [_event_row(item) for item in events if _is_onec_event(item.source_system, item.target_system, item.event_type, item.entity_type)][:8]
+    
+    # Efficient aggregations for metrics instead of loading all events
+    failed_count = await session.scalar(select(func.count(IntegrationEvent.id)).where(IntegrationEvent.status == EventStatus.FAILED)) or 0
+    attention_count = await session.scalar(
+        select(func.count(IntegrationEvent.id)).where(IntegrationEvent.status.in_([EventStatus.FAILED, EventStatus.RETRY_WAITING]))
+    ) or 0
+    
+    # Fetch recent events limited to 20 for cockpit display
+    recent_events_res = await session.execute(
+        select(IntegrationEvent)
+        .order_by(IntegrationEvent.created_at.desc())
+        .limit(20)
+    )
+    all_recent = list(recent_events_res.scalars().all())
+    hydrated_recent = await events_service._hydrate_journal_items(session, all_recent)
+    onec_events = [_event_row(item) for item in hydrated_recent if _is_onec_event(item.source_system, item.target_system, item.event_type, item.entity_type)][:8]
     onec_flows = [flow for flow in flows if flow.source_type.value == "onec" or flow.target_type.value == "onec" or "onec" in flow.slug]
     return {
         "package_state": package_state,
         "metrics": {
             "enabled_integrations": sum(1 for flow in onec_flows if flow.enabled),
-            "failed_events": sum(1 for event in events if event.status == EventStatus.FAILED),
-            "attention_events": sum(1 for event in events if event.requires_attention),
+            "failed_events": failed_count,
+            "attention_events": attention_count,
             "connectors": len(connectors),
         },
         "quick_actions": QUICK_ACTIONS,

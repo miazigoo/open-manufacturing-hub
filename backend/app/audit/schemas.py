@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.enums import AuditActorType, AuditSeverity
 
 
-class AuditEventRead(BaseModel):
+class AuditEventSummary(BaseModel):
     id: UUID
     timestamp: datetime
     actor_user_id: UUID | None
@@ -25,22 +25,27 @@ class AuditEventRead(BaseModel):
     object_id: str | None
     object_name: str | None
     summary: str
-    details_json: dict[str, Any] | None
-    before_json: dict[str, Any] | None
-    after_json: dict[str, Any] | None
-    diff_json: dict[str, Any] | None
     request_id: str | None
     correlation_id: str | None
     event_id: UUID | None
     queue_item_id: UUID | None
     package_id: str | None
     created_at: datetime
+    diff_json: dict[str, Any] | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AuditEventRead(AuditEventSummary):
+    details_json: dict[str, Any] | None = None
+    before_json: dict[str, Any] | None = None
+    after_json: dict[str, Any] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class AuditListResponse(BaseModel):
-    items: list[AuditEventRead]
+    items: list[AuditEventSummary]
     total: int
     limit: int
     offset: int

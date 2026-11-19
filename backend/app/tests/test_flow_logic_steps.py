@@ -543,3 +543,219 @@ async def test_b2b_portal_preset_install_and_dispatch(client):
     extract_step = next(step for step in timeline.json()["runs"][0]["steps"] if step["step_name"] == "extract_order")
     assert extract_step["status"] == "failed"
     assert "customer.name" in (extract_step["error_message"] or "") or "items" in (extract_step["error_message"] or "")
+
+
+async def _create_ozon_connector(client, name: str = "Ozon Seller") -> None:
+    response = await client.post(
+        "/api/connectors",
+        json={
+            "name": name,
+            "connector_type": "rest",
+            "direction": "target",
+            "enabled": True,
+            "config_json": {"client_id": "test-client-id", "api_key": "test-api-key", "url": "https://api-seller.ozon.test"},
+        },
+    )
+    assert response.status_code in (200, 201), response.text
+
+
+def _patch_ozon_httpx(monkeypatch, responses: list[dict], calls: list[dict]) -> None:
+    from app.ozon import client as ozon_client_module
+
+    queue = list(responses)
+
+    class FakeResponse:
+        def __init__(self, payload: dict, status_code: int = 200):
+            self._payload = payload
+            self.status_code = status_code
+            import json as _json
+
+            self.text = _json.dumps(payload, ensure_ascii=False)
+
+        def json(self):
+            return self._payload
+
+    class FakeAsyncClient:
+        def __init__(self, *, timeout):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, url, *, json=None, headers=None):
+            calls.append({"url": url, "json": json, "headers": headers})
+            payload = queue.pop(0) if queue else {"result": []}
+            return FakeResponse(payload)
+
+    monkeypatch.setattr(ozon_client_module.httpx, "AsyncClient", FakeAsyncClient)
+
+
+async def test_ozon_action_mock_returns_canonical_orders(client):
+    slug = "ozon-mock-orders"
+    await _create_flow(client, slug, [
+        {"id": "pull", "type": "ozon_action", "action": "list_orders", "connector": "Ozon Seller", "since": "2026-08-01T00:00:00Z", "save_as": "ozon_orders", "mock_json": {"result": {"postings": [{"posting_number": "00000001-0001-1", "order_id": 50001, "order_number": "00000001-0001", "status": "awaiting_packaging", "created_at": "2026-08-06T10:00:00Z", "products": [{"sku": 12345678, "offer_id": "ABC-123", "name": "Тестовый товар", "quantity": 1, "price": "100.00"}], "analytics_data": {"city": "Москва"}}], "count": 1}}},
+        {"id": "respond", "type": "return_response", "body": {"count": "{{ozon_orders.count}}", "orders": "{{ozon_orders.orders}}"}},
+    ])
+
+    result = await _dispatch(client, slug, {})
+    body = result["body"]
+    assert body["count"] == 1
+    order = body["orders"][0]
+    assert order["marketplace"] == "ozon"
+    assert order["posting_number"] == "00000001-0001-1"
+    assert order["items"][0]["offer_id"] == "ABC-123"
+
+
+async def test_ozon_update_stocks_sends_correct_payload(client, monkeypatch):
+    calls: list[dict] = []
+    _patch_ozon_httpx(monkeypatch, [{"result": [{"offer_id": "ABC-123", "product_id": 1234567, "updated": True, "errors": []}]}], calls)
+    await _create_ozon_connector(client)
+
+    slug = "ozon-update-stocks"
+    await _create_flow(client, slug, [
+        {"id": "extract", "type": "extract", "source": "request.body", "fields": [{"name": "stocks", "path": "stocks", "required": True}]},
+        {"id": "push", "type": "ozon_action", "action": "update_stocks", "connector": "Ozon Seller", "stocks_path": "stocks", "save_as": "stocks_result"},
+        {"id": "respond", "type": "return_response", "body": {"result": "{{stocks_result}}"}},
+    ])
+
+    result = await _dispatch(client, slug, {"stocks": [{"offer_id": "ABC-123", "qty": 15}]})
+    assert calls[0]["url"] == "https://api-seller.ozon.test/v2/products/stocks"
+    assert calls[0]["json"] == {"stocks": [{"offer_id": "ABC-123", "stock": 15}]}
+    assert calls[0]["headers"]["Client-Id"] == "test-client-id"
+    assert calls[0]["headers"]["Api-Key"] == "test-api-key"
+    assert result["body"]["result"]["updated"][0]["offer_id"] == "ABC-123"
+
+
+async def test_ozon_update_stocks_item_errors_fail_step(client, monkeypatch):
+    calls: list[dict] = []
+    _patch_ozon_httpx(
+        monkeypatch,
+        [{"result": [{"offer_id": "BAD-1", "updated": False, "errors": [{"code": "PRODUCT_NOT_FOUND", "description": "Товар не найден"}]}]}],
+        calls,
+    )
+    await _create_ozon_connector(client)
+
+    slug = "ozon-update-stocks-errors"
+    await _create_flow(client, slug, [
+        {"id": "push", "type": "ozon_action", "action": "update_stocks", "connector": "Ozon Seller", "stocks_path": "request.body.stocks", "save_as": "stocks_result"},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+
+    result = await _dispatch(client, slug, {"stocks": [{"offer_id": "BAD-1", "qty": 5}]})
+    steps = await _timeline_steps(client, result["event_id"])
+    push_step = next(step for step in steps if step["step_name"] == "push")
+    assert push_step["status"] == "failed"
+    assert push_step["error_code"] == "OZON_ITEMS_FAILED"
+    assert "BAD-1" in (push_step["error_message"] or "")
+
+
+async def test_ozon_list_orders_requires_since(client, monkeypatch):
+    calls: list[dict] = []
+    _patch_ozon_httpx(monkeypatch, [], calls)
+    await _create_ozon_connector(client)
+
+    slug = "ozon-orders-no-since"
+    await _create_flow(client, slug, [
+        {"id": "pull", "type": "ozon_action", "action": "list_orders", "connector": "Ozon Seller", "since": "{{request.body.ozon_since}}", "save_as": "ozon_orders"},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+
+    result = await _dispatch(client, slug, {})
+    steps = await _timeline_steps(client, result["event_id"])
+    pull_step = next(step for step in steps if step["step_name"] == "pull")
+    assert pull_step["status"] == "failed"
+    assert "since" in (pull_step["error_message"] or "")
+    assert calls == []
+
+
+async def test_ozon_action_invalid_action_fails_clearly(client):
+    slug = "ozon-invalid-action"
+    await _create_flow(client, slug, [
+        {"id": "pull", "type": "ozon_action", "action": "delete_everything", "connector": "Ozon Seller"},
+        {"id": "respond", "type": "return_response", "body": {"ok": True}},
+    ])
+
+    result = await _dispatch(client, slug, {})
+    steps = await _timeline_steps(client, result["event_id"])
+    pull_step = next(step for step in steps if step["step_name"] == "pull")
+    assert pull_step["status"] == "failed"
+    assert pull_step["error_code"] == "OZON_ACTION_INVALID"
+
+
+async def test_ozon_action_preview_uses_default_mock(client):
+    builder = {
+        "version": 1,
+        "input": {"endpoint_slug": "preview-ozon", "input_mode": "json", "response_mode": "sync_response"},
+        "steps": [
+            {"id": "pull", "type": "ozon_action", "action": "list_orders", "connector": "Ozon Seller", "since": "2026-08-01T00:00:00Z", "save_as": "ozon_orders"},
+            {"id": "respond", "type": "return_response", "body": {"count": "{{ozon_orders.count}}"}},
+        ],
+    }
+    response = await client.post("/api/flow-builder/preview", json={"builder_json": builder, "sample_request": {}})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["valid"] is True, body.get("errors")
+    pull = next(step for step in body["steps"] if step["id"] == "pull")
+    assert pull["status"] in ("success", "ok"), pull
+    assert pull["variables_snapshot"]["ozon_orders"]["orders"][0]["marketplace"] == "ozon"
+
+
+async def test_ozon_stocks_prices_preset_install_and_dispatch(client, monkeypatch):
+    calls: list[dict] = []
+    _patch_ozon_httpx(
+        monkeypatch,
+        [
+            {"result": [{"offer_id": "ABC-123", "product_id": 1234567, "updated": True, "errors": []}]},
+            {"result": [{"offer_id": "ABC-123", "product_id": 1234567, "updated": True, "errors": []}]},
+        ],
+        calls,
+    )
+    await _create_ozon_connector(client)
+
+    installed = await client.post("/api/scenario-library/ozon_stocks_prices_from_onec/install", json={})
+    assert installed.status_code == 200, installed.text
+    assert installed.json()["endpoint_url"] == "/api/bus/in/ozon-stocks-prices-from-onec"
+
+    sent = await client.post(
+        "/api/bus/in/ozon-stocks-prices-from-onec",
+        json={
+            "stocks": [{"offer_id": "ABC-123", "qty": 15}],
+            "prices": [{"offer_id": "ABC-123", "price": "100.00", "old_price": "120.00", "min_price": "80.00"}],
+        },
+    )
+    assert sent.status_code == 200, sent.text
+    assert calls[0]["url"] == "https://api-seller.ozon.test/v2/products/stocks"
+    assert calls[0]["json"] == {"stocks": [{"offer_id": "ABC-123", "stock": 15}]}
+    assert calls[1]["url"] == "https://api-seller.ozon.test/v1/product/import/prices"
+    assert calls[1]["json"]["prices"][0]["offer_id"] == "ABC-123"
+    assert calls[1]["json"]["prices"][0]["price"] == "100.00"
+    assert calls[1]["json"]["prices"][0]["currency"] == "RUB"
+
+    body = sent.json()["body"]
+    assert body["stocks"]["updated"][0]["offer_id"] == "ABC-123"
+    assert body["prices"]["updated"][0]["offer_id"] == "ABC-123"
+
+
+async def test_ozon_orders_preset_install_and_dispatch(client, monkeypatch):
+    from app.execution.steps.flow_builder_steps import OZON_MOCK_RESPONSES
+
+    calls: list[dict] = []
+    _patch_ozon_httpx(monkeypatch, [OZON_MOCK_RESPONSES["list_orders"]], calls)
+    await _create_ozon_connector(client)
+    await _create_mock_connector(client, "1C ERP", {"ok": True, "received": True})
+
+    installed = await client.post("/api/scenario-library/ozon_orders_to_onec/install", json={})
+    assert installed.status_code == 200, installed.text
+    assert installed.json()["endpoint_url"] == "/api/bus/in/ozon-orders-to-onec"
+
+    sent = await client.post("/api/bus/in/ozon-orders-to-onec", json={"ozon_since": "2026-08-01T00:00:00Z"})
+    assert sent.status_code == 200, sent.text
+    assert calls[0]["url"] == "https://api-seller.ozon.test/v3/posting/fbs/list"
+    assert calls[0]["json"]["filter"]["since"] == "2026-08-01T00:00:00Z"
+
+    body = sent.json()["body"]
+    assert body["ok"] is True
+    assert body["orders"] == 1

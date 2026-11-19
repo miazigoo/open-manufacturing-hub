@@ -57,7 +57,7 @@ class QueueEditRetryRequest(BaseModel):
     payload_json: dict[str, Any] = Field(default_factory=dict)
 
 
-class QueueMessageRead(BaseModel):
+class QueueMessageSummary(BaseModel):
     id: UUID
     event_id: UUID | None
     message_id: UUID | None
@@ -65,57 +65,77 @@ class QueueMessageRead(BaseModel):
     flow_id: UUID | None = None
     endpoint_id: UUID | None = None
     route_id: UUID | None = None
-    connector_id: UUID | None
-    workflow_id: UUID | None
+    connector_id: UUID | None = None
+    workflow_id: UUID | None = None
     business_object: str
     business_key: str | None = None
     operation: str
     source_system: str | None = None
     target_system: str | None = None
     connector_name: str | None = None
-    current_step: str | None
+    current_step: str | None = None
     status: EnterpriseQueueStatus
     attempts: int
     max_attempts: int
     next_retry_at: datetime | None
     priority: int
-    worker: str | None
+    worker: str | None = None
     locked_by: str | None = None
-    timeline_link: str | None
-    payload_json: dict[str, Any]
-    original_payload_json: dict[str, Any] = {}
-    last_error: str | None
+    timeline_link: str | None = None
+    last_error: str | None = None
     last_error_code: str | None = None
     last_error_message: str | None = None
     last_external_error_message: str | None = None
-    locked_at: datetime | None
+    locked_at: datetime | None = None
     locked_until: datetime | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
-    completed_at: datetime | None
+    completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
-class DLQItemRead(BaseModel):
+class QueueMessageRead(QueueMessageSummary):
+    payload_json: dict[str, Any] = Field(default_factory=dict)
+    original_payload_json: dict[str, Any] = Field(default_factory=dict)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class QueuePageResponse(BaseModel):
+    items: list[QueueMessageSummary]
+    next_cursor: str | None = None
+    has_more: bool = False
+
+
+class DLQItemSummary(BaseModel):
     id: UUID
-    queue_message_id: UUID | None
-    event_id: UUID | None
-    message_id: UUID | None
+    queue_message_id: UUID | None = None
+    event_id: UUID | None = None
+    message_id: UUID | None = None
     business_object: str
     operation: str
     reason: str
-    payload_json: dict[str, Any]
-    current_payload_json: dict[str, Any] = {}
     last_error: str | None = None
     attempts: int = 0
     archived: bool
-    restored_at: datetime | None
-    archived_at: datetime | None
-    timeline_link: str | None
+    restored_at: datetime | None = None
+    archived_at: datetime | None = None
+    timeline_link: str | None = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class DLQItemRead(DLQItemSummary):
+    payload_json: dict[str, Any] = Field(default_factory=dict)
+    current_payload_json: dict[str, Any] = Field(default_factory=dict)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DLQPageResponse(BaseModel):
+    items: list[DLQItemSummary]
+    next_cursor: str | None = None
+    has_more: bool = False
 
 
 class QueueAttemptRead(BaseModel):

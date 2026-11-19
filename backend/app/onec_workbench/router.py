@@ -9,7 +9,7 @@ from app.core.database import get_session
 from app.core.errors import BadRequestError
 from app.events.schemas import EventRunRead
 from app.onec_workbench import repository, service
-from app.onec_workbench.schemas import IntegrationMessageRead, ODataLookupTestRequest, ODataLookupTestResponse, WorkbenchInstallResponse, XmlInboundJsonRequest, XmlInboundResponse
+from app.onec_workbench.schemas import IntegrationMessageRead, IntegrationMessageSummary, ODataLookupTestRequest, ODataLookupTestResponse, WorkbenchInstallResponse, XmlInboundJsonRequest, XmlInboundResponse
 
 router = APIRouter(tags=["1c-workbench"])
 
@@ -22,9 +22,13 @@ async def receive_xml(request: Request, session: AsyncSession = Depends(get_sess
     return {"message_id": message.id, "event_id": event.id, "status": message.status, "timeline_url": f"/events/{event.id}"}
 
 
-@router.get("/api/onec/xml/messages", response_model=list[IntegrationMessageRead])
-async def list_messages(session: AsyncSession = Depends(get_session)):
-    return await repository.list_messages(session)
+@router.get("/api/onec/xml/messages", response_model=list[IntegrationMessageSummary])
+async def list_messages(
+    limit: int = 100,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+):
+    return await repository.list_messages(session, limit=limit, offset=offset)
 
 
 @router.get("/api/onec/xml/messages/{message_id}", response_model=IntegrationMessageRead)

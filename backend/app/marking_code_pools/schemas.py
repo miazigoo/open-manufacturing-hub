@@ -33,6 +33,13 @@ class OneCMarkingCodePoolExportRequest(BaseModel):
         return self
 
 
+class MarkingCodePoolOverview(BaseModel):
+    settings: MarkingCodePoolSettingsRead
+    latest_export: MarkingCodePoolExportRead | None = None
+    recent_errors: list[MarkingCodePoolExportRead] = []
+    total_exports: int = 0
+
+
 class MarkingCodePoolExportRead(BaseModel):
     id: UUID
     source_system: str

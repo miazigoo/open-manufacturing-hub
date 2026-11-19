@@ -84,7 +84,13 @@ export const productionApi = {
   snapshot: () => request<SystemSnapshot>('/api/production/snapshot'),
   doctor: () => request<ProductionDoctor>('/api/production/doctor'),
   checklist: () => request<FirstRunChecklist>('/api/production/checklist'),
-  exports: () => request<BackupRecord[]>('/api/production/exports'),
+  exports: (backup_type?: string, limit?: number) => {
+    const params = new URLSearchParams();
+    if (backup_type) params.set('backup_type', backup_type);
+    if (limit) params.set('limit', String(limit));
+    const qs = params.toString();
+    return request<BackupRecord[]>(`/api/production/exports${qs ? `?${qs}` : ''}`);
+  },
   exportConfig: () => request<{ export_id: string; file_name: string; size_bytes: number; warnings: string[]; download_url: string }>('/api/production/export-config', { method: 'POST', body: JSON.stringify({ secrets_policy: 'masked' }) }),
   previewImport: (payload: Record<string, unknown>, mode: string) => request<ImportPreview>('/api/production/import-config/preview', { method: 'POST', body: JSON.stringify({ export: payload, mode }) }),
   applyImport: (payload: Record<string, unknown>, mode: string) => request<ImportPreview>('/api/production/import-config/apply', { method: 'POST', body: JSON.stringify({ export: payload, mode }) }),

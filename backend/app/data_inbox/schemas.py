@@ -81,15 +81,20 @@ class InboxTemplateRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class InboxRecordRead(BaseModel):
+class InboxRecordSummary(BaseModel):
     id: UUID
     template_id: UUID
     status: str
-    payload_json: dict[str, Any]
     fields_json: dict[str, Any]
     warnings_json: list[dict[str, Any]]
     source_ip: str | None
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InboxRecordRead(InboxRecordSummary):
+    payload_json: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(from_attributes=True)
 

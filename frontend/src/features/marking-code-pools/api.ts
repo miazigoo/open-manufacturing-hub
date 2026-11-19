@@ -10,6 +10,7 @@ import type {
   ChzDnpPullResponse,
   MarkingCodePoolExport,
   MarkingCodePoolExportResponse,
+  MarkingCodePoolOverview,
   MarkingCodePoolPreviewResponse,
   MarkingCodePoolSettings,
   MarkingCodePoolSettingsPatch,
@@ -25,6 +26,7 @@ const base = '/api/marking-code-pools';
 const aggregationBase = '/api/chz-aggregations';
 
 export const markingCodePoolsApi = {
+  overview: () => request<MarkingCodePoolOverview>(`${base}/overview`),
   settings: () => request<MarkingCodePoolSettings>(`${base}/settings`),
   patchSettings: (payload: MarkingCodePoolSettingsPatch) => request<MarkingCodePoolSettings>(`${base}/settings`, { method: 'PATCH', body: JSON.stringify(payload) }),
   testLocalDir: () => request<MarkingCodePoolSettingsTestResponse>(`${base}/settings/test-local-dir`, { method: 'POST' }),

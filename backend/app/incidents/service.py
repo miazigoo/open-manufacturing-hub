@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import IncidentSeverity, IncidentStatus, NotificationTriggerType
@@ -122,6 +122,28 @@ async def attach_external_error_samples(session: AsyncSession, incident: Inciden
 
 
 async def attach_external_error_samples_many(session: AsyncSession, incidents: list[Incident]) -> list[Incident]:
+    if not incidents:
+        return []
+    incident_ids = [incident.id for incident in incidents]
+    from app.external_errors.models import ExternalErrorRecord
+
+    # Efficient batch query using window function to fetch up to 5 samples per incident
+    row_num = func.row_number().over(
+        partition_by=ExternalErrorRecord.incident_id,
+        order_by=ExternalErrorRecord.created_at.desc(),
+    ).label("rn")
+    stmt = (
+        select(ExternalErrorRecord, row_num)
+        .where(ExternalErrorRecord.incident_id.in_(incident_ids))
+        .subquery()
+    )
+    samples_stmt = select(ExternalErrorRecord).join(stmt, ExternalErrorRecord.id == stmt.c.id).where(stmt.c.rn <= 5)
+    samples_res = await session.execute(samples_stmt)
+    samples_by_incident: dict[UUID, list[ExternalErrorRecord]] = {}
+    for sample in samples_res.scalars().all():
+        if sample.incident_id:
+            samples_by_incident.setdefault(sample.incident_id, []).append(sample)
+
     for incident in incidents:
-        await attach_external_error_samples(session, incident)
+        setattr(incident, "sample_external_errors", samples_by_incident.get(incident.id, []))
     return incidents

@@ -61,6 +61,7 @@ def register_builtin_steps() -> None:
         FlowForEachStep,
         FlowMarkingCodePoolExportStep,
         FlowODataQueryStep,
+        FlowOzonActionStep,
         FlowPrintLabelsStep,
         FlowReadVariableStep,
         FlowReturnResponseStep,
@@ -97,6 +98,7 @@ def register_builtin_steps() -> None:
     registry.register(FlowCallFlowStep())
     registry.register(FlowPrintLabelsStep())
     registry.register(FlowMarkingCodePoolExportStep())
+    registry.register(FlowOzonActionStep())
     registry.register(FlowReturnResponseStep())
     registry.register(XmlExtractStep())
     registry.register(RawXmlForwardStep())

@@ -27,6 +27,32 @@ class XmlInboundResponse(BaseModel):
     timeline_url: str
 
 
+class IntegrationMessageSummary(BaseModel):
+    id: UUID
+    direction: IntegrationMessageDirection
+    source_system: str
+    target_system: str | None
+    message_type: str
+    document_type: str | None
+    document_number: str | None
+    document_date: datetime | None
+    correlation_id: str | None
+    external_id: str | None
+    status: IntegrationMessageStatus
+    route_key: str | None
+    content_type: str
+    payload_sha256: str
+    payload_size_bytes: int
+    event_id: UUID | None
+    last_error: str | None
+    expires_at: datetime | None
+    pinned: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class IntegrationMessageRead(BaseModel):
     id: UUID
     direction: IntegrationMessageDirection

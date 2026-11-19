@@ -42,10 +42,13 @@ async def ready(session: AsyncSession) -> dict[str, Any]:
         return _payload(checks)
 
     revision = await database_revision(session)
+    production_mode = settings.app_env.lower() in {"production", "prod"}
+    migration_ok = (revision == MIGRATION_HEAD)
+    migration_status = "ok" if migration_ok else ("error" if production_mode else "warning")
     checks.append(
         {
             "name": "migrations",
-            "status": "ok" if revision == MIGRATION_HEAD else "warning",
+            "status": migration_status,
             "message": f"current={revision or 'unknown'} head={MIGRATION_HEAD}",
         }
     )
@@ -60,26 +63,26 @@ async def ready(session: AsyncSession) -> dict[str, Any]:
         checks.append({"name": "secret_key", "status": "warning", "message": "development fallback key is active"})
 
     if settings.require_worker_heartbeat:
-        checks.append(await _worker_heartbeat_check(session))
+        checks.append(await worker_heartbeat_check(session))
 
     return _payload(checks)
 
 
-async def _worker_heartbeat_check(session: AsyncSession) -> dict[str, Any]:
-    result = await session.execute(
-        select(HealthCheck)
-        .where(HealthCheck.component_type == HealthComponentType.AGENT, HealthCheck.component_name == WORKER_HEALTH_NAME)
-        .order_by(HealthCheck.checked_at.desc())
-        .limit(1)
+async def worker_heartbeat_check(session: AsyncSession, worker: str | None = None) -> dict[str, Any]:
+    stmt = select(HealthCheck).where(
+        HealthCheck.component_type == HealthComponentType.AGENT, HealthCheck.component_name == WORKER_HEALTH_NAME
     )
+    if worker:
+        stmt = stmt.where(HealthCheck.details_json["worker"].as_string() == worker)
+    result = await session.execute(stmt.order_by(HealthCheck.checked_at.desc(), HealthCheck.id.desc()).limit(1))
     item = result.scalar_one_or_none()
     if item is None:
         return {"name": "worker_heartbeat", "status": "error", "message": "No queue worker heartbeat found"}
     age = max(0, int((utcnow() - _aware(item.checked_at)).total_seconds()))
     return {
         "name": "worker_heartbeat",
-        "status": "ok" if age <= 180 else "warning",
-        "message": f"last heartbeat {age}s ago",
+        "status": "ok" if age <= 180 and item.status.value == "ok" else "error",
+        "message": f"last heartbeat {age}s ago, status={item.status.value}",
         "details": item.details_json or {},
     }
 

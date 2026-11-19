@@ -1,4 +1,5 @@
 import { request } from './client';
+import { productionApi } from './production';
 
 export interface InboxField {
   path: string;
@@ -25,20 +26,25 @@ export interface InboxTemplate {
 
 export type InboxTemplatePayload = Omit<InboxTemplate, 'id' | 'created_at' | 'auth_token_set'> & { auth_token?: string | null };
 
-export interface InboxRecord {
+export interface InboxRecordSummary {
   id: string;
   template_id: string;
   status: string;
-  payload_json: Record<string, unknown>;
   fields_json: Record<string, unknown>;
   warnings_json: Array<{ path: string; message: string }>;
   source_ip: string | null;
   created_at: string;
 }
 
+export interface InboxRecord extends InboxRecordSummary {
+  payload_json: Record<string, unknown>;
+}
+
 export interface InboxRecordList {
   total: number;
-  items: InboxRecord[];
+  items: InboxRecordSummary[];
+  limit?: number;
+  offset?: number;
 }
 
 export interface InboxTemplateTestResult {
@@ -80,12 +86,13 @@ export const dataInboxApi = {
   deleteTemplate: (id: string) => request<void>(`/api/inbox-templates/${id}`, { method: 'DELETE' }),
   testTemplate: (id: string, payload: unknown) => request<InboxTemplateTestResult>(`/api/inbox-templates/${id}/test`, { method: 'POST', body: JSON.stringify({ payload }) }),
   records: (params: Record<string, string>) => request<InboxRecordList>(`/api/inbox-records?${new URLSearchParams(params).toString()}`),
+  record: (id: string) => request<InboxRecord>(`/api/inbox-records/${id}`),
   patchRecord: (id: string, payload: { payload_json?: Record<string, unknown>; fields_json?: Record<string, unknown> }) => request<InboxRecord>(`/api/inbox-records/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteRecord: (id: string) => request<void>(`/api/inbox-records/${id}`, { method: 'DELETE' }),
   resendRecord: (id: string, url: string) => request<{ success: boolean; status: string; message: string }>(`/api/inbox-records/${id}/resend`, { method: 'POST', body: JSON.stringify({ url }) }),
   exportUrl: (params: Record<string, string>) => `/api/inbox-records/export.csv${params ? `?${new URLSearchParams(params).toString()}` : ''}`,
   runSql: (query: string, limit = 200) => request<SqlQueryResult>('/api/sql-console/query', { method: 'POST', body: JSON.stringify({ query, limit }) }),
-  backups: () => request<BackupRecord[]>('/api/production/exports'),
+  backups: (backup_type?: string, limit?: number) => productionApi.exports(backup_type ?? 'database_dump', limit),
   createDbBackup: () => request<BackupRecord>('/api/production/backups/db', { method: 'POST' }),
   backupDownloadUrl: (id: string) => `/api/production/exports/${id}/download`,
   currentEnvironment: () => request<EnvironmentProfile | null>('/api/environments/current'),

@@ -44,7 +44,7 @@ class PollingJob(TimestampMixin, Base):
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
-    runs: Mapped[list["PollingJobRun"]] = relationship(back_populates="job", cascade="all, delete-orphan", lazy="selectin")
+    runs: Mapped[list["PollingJobRun"]] = relationship(back_populates="job", cascade="all, delete-orphan", lazy="noload")
 
 
 class SourceEventCursor(TimestampMixin, Base):

@@ -228,6 +228,7 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                     "full_codes_base64_count": len(full_codes_base64 or []),
                     "codes_count": len(codes or []),
                     "allow_overwrite": step.get("allow_overwrite"),
+                    "destination_path": step.get("destination_path"),
                     "actions_override": step.get("actions_override") if isinstance(step.get("actions_override"), dict) else None,
                 }
                 save_as = str(step.get("save_as") or "marking_pool_export")
@@ -260,6 +261,19 @@ async def preview_builder(session: AsyncSession, builder_json: dict[str, Any], s
                 variables[str(step.get("save_as") or "target_payload")] = result
                 final_payload = result
                 request_preview = {"save_as": step.get("save_as") or "target_payload"}
+            elif step_type == "ozon_action":
+                action = str(step.get("action") or "")
+                from app.execution.steps.flow_builder_steps import OZON_MOCK_RESPONSES, _ozon_canonical
+
+                response = step.get("mock_json") if isinstance(step.get("mock_json"), (dict, list)) else OZON_MOCK_RESPONSES.get(action)
+                if response is None:
+                    raise ValueError(f"Unsupported ozon action for preview: {action or '(not set)'}")
+                result = _ozon_canonical(action, response)
+                if isinstance(result, dict):
+                    result = {**result, "mock": True}
+                save_as = str(step.get("save_as") or step_id)
+                variables[save_as] = result
+                request_preview = {"action": action, "save_as": save_as}
             elif step_type == "call_flow":
                 flow_ref = str(step.get("flow") or "").strip()
                 flow = await _load_integration_flow(session, flow_ref) if flow_ref else None

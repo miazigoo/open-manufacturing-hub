@@ -173,6 +173,16 @@ async function assertHealthy(page, route) {
 
 async function gotoRoute(page, uiBase, route) {
   log(`route ${route}`);
+  const current = page.url();
+  if (current.startsWith(uiBase)) {
+    await page.evaluate((target) => {
+      window.history.pushState({}, '', target);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }, route);
+    await stable(page);
+    await assertHealthy(page, route);
+    return;
+  }
   await page.goto(`${uiBase}${route}`, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
   await stable(page);
   await assertHealthy(page, route);
@@ -210,6 +220,46 @@ async function ensurePackageWorkspace(page, uiBase, route) {
   if (/Activation required|This page needs the package/i.test(body)) fail('PACKAGE_GATE_STILL_ACTIVE', route);
 }
 
+async function checkReplayOnHistory(page, apiBase, uiBase) {
+  const created = await requestJson(`${apiBase}/api/events`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source_system: 'Mock ERP', target_system: 'Mock WMS', event_type: 'SalesOrderCreated',
+      payload: { warehouse_id: 'MAIN', order_id: 'REPLAY-SMOKE', items: [{ sku: 'ABC123', qty: 1 }] } }),
+  });
+  const base = `${apiBase}/api/events/${created.id}`;
+  const first = (await requestJson(`${base}/timeline`)).runs[0];
+  const raw = first.steps[0].artifacts[0];
+  for (let n = 1; n < 25; n++) await requestJson(`${base}/dry-run`, { method: 'POST' });
+
+  const bodies = [];
+  const trackBody = (req) => {
+    if (req.method() === 'GET' && /\/api\/artifacts\/[^/?]+$/.test(req.url())) bodies.push(req.url());
+  };
+  page.on('request', trackBody);
+  try {
+    await page.goto(`${uiBase}/events/${created.id}`);
+    await page.getByRole('button', { name: 'Показать более ранние запуски' }).click();
+    await page.locator('.run-card').nth(24).click();
+    const edit = page.locator('.action-panel').getByRole('button', { name: 'Edit & Replay' });
+    await edit.waitFor();
+    if (bodies.length) throw Error('Timeline downloaded artifact content before opening the editor');
+    await edit.click();
+    const editor = page.locator('.editor-drawer textarea');
+    const draft = JSON.parse(await editor.inputValue());
+    if (draft.order_id !== raw.content_json.order_id || bodies.length !== 1) throw Error('Incorrect original artifact');
+    await editor.fill(JSON.stringify({ ...draft, order_id: 'REPLAY-EDITED' }));
+    const saved = page.waitForResponse(r => r.url().endsWith(`/artifacts/${raw.id}/edit-replay`) && r.ok());
+    await page.locator('.editor-drawer button.primary-button').click();
+    await saved;
+    await page.locator('.run-card').first().filter({ hasText: '26' }).waitFor();
+    const original = await requestJson(`${apiBase}/api/artifacts/${raw.id}`);
+    if (original.content_hash !== raw.content_hash || original.content_json.order_id !== draft.order_id)
+      throw Error('Edited replay changed the source artifact');
+  } finally {
+    page.off('request', trackBody);
+  }
+}
+
 async function runBrowserSmoke(apiBase, uiBase) {
   const flows = await requestJson(`${apiBase}/api/integration-flows`);
   const flowId = flows?.[0]?.id;
@@ -224,9 +274,10 @@ async function runBrowserSmoke(apiBase, uiBase) {
   const rules = await requestJson(`${apiBase}/api/business-rules`);
   const ruleId = rules?.[0]?.id;
 
-  browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+  browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
   const page = await context.newPage();
+  if (tempDir) await checkReplayOnHistory(page, apiBase, uiBase);
 
   page.on('console', (msg) => { if (msg.type() === 'error') fail('CONSOLE_ERROR', msg.text()); });
   page.on('pageerror', (err) => fail('PAGE_ERROR', err.stack || err.message));

@@ -53,13 +53,18 @@ async def list_agent_heartbeats(session: AsyncSession, limit: int = 100, site_co
 
 
 async def latest_agent_heartbeats(session: AsyncSession) -> list[tuple[AgentHeartbeat, Site]]:
-    rows = await list_agent_heartbeats(session, limit=500)
-    seen: set[tuple[str, str]] = set()
-    latest: list[tuple[AgentHeartbeat, Site]] = []
-    for heartbeat, site in rows:
-        key = (str(site.id), heartbeat.agent_name)
-        if key in seen:
-            continue
-        seen.add(key)
-        latest.append((heartbeat, site))
-    return latest
+    # Deduplicate in SQL across (site_id, agent_name) using window function
+    row_num = func.row_number().over(
+        partition_by=(AgentHeartbeat.site_id, AgentHeartbeat.agent_name),
+        order_by=AgentHeartbeat.received_at.desc(),
+    ).label("rn")
+    subq = select(AgentHeartbeat.id, row_num).subquery()
+    stmt = (
+        select(AgentHeartbeat, Site)
+        .join(Site, AgentHeartbeat.site_id == Site.id)
+        .join(subq, AgentHeartbeat.id == subq.c.id)
+        .where(subq.c.rn == 1)
+        .order_by(AgentHeartbeat.received_at.desc())
+    )
+    result = await session.execute(stmt)
+    return [(heartbeat, site) for heartbeat, site in result.all()]

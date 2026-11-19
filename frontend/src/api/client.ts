@@ -1,4 +1,5 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
+const defaultBaseUrl = import.meta.env.PROD ? '' : 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? defaultBaseUrl;
 
 export class ApiError extends Error {
   status: number;
@@ -28,7 +29,7 @@ function errorMessage(status: number, detail: unknown): string {
   return `API request failed with ${status}`;
 }
 
-export type { Artifact, ArtifactDiff, EventRun, EventStatus, EventStep, EventSummary, EventTimeline, ExternalErrorSummary, RunMode, RunStatus, StepStatus } from './types';
+export type { Artifact, ArtifactDiff, ArtifactSummary, DashboardSummary, EventOverview, EventRun, EventStatus, EventStep, EventSummary, EventTimeline, ExternalErrorSummary, RunMode, RunStatus, StepStatus } from './types';
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);

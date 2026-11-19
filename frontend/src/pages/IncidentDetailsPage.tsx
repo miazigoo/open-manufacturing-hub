@@ -13,18 +13,15 @@ export function IncidentDetailsPage() {
   const queryClient = useQueryClient();
   const incident = useQuery({ queryKey: ['incident', incidentId], queryFn: () => incidentsApi.get(incidentId), enabled: Boolean(incidentId) });
   const links = useQuery({ queryKey: ['incident-events', incidentId], queryFn: () => incidentsApi.events(incidentId), enabled: Boolean(incidentId) });
-  const events = useQuery({ queryKey: ['events'], queryFn: eventsApi.list });
   const action = useMutation({
     mutationFn: (type: 'acknowledge' | 'resolve' | 'ignore') => incidentsApi[type](incidentId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['incident', incidentId] }),
   });
 
-  if (incident.isLoading || links.isLoading || events.isLoading) return <LoadingState label={t('incidents.loadingOne')} />;
-  const error = incident.error ?? links.error ?? events.error;
+  if (incident.isLoading || links.isLoading) return <LoadingState label={t('incidents.loadingOne')} />;
+  const error = incident.error ?? links.error;
   if (error) return <ErrorState error={error} />;
   if (!incident.data) return null;
-
-  const eventById = new Map((events.data ?? []).map((event) => [event.id, event]));
 
   return (
     <div className="page-stack">
@@ -66,9 +63,16 @@ export function IncidentDetailsPage() {
         <div className="panel-toolbar"><h2>{t('incidents.linkedEvents')}</h2></div>
         <table>
           <thead><tr><th>{t('events.eventType')}</th><th>{t('common.status')}</th><th>{t('common.entity')}</th><th>{t('timeline.runs')}</th><th>{t('common.actions')}</th></tr></thead>
-          <tbody>{(links.data ?? []).map((link) => {
-            const event = eventById.get(link.event_id);
-            return <tr key={link.id}><td>{event?.event_type ?? link.event_id.slice(0, 8)}</td><td>{event ? <StatusBadge status={event.status} /> : '—'}</td><td>{event?.entity_type} #{event?.entity_id}</td><td className="mono">{link.run_id?.slice(0, 8) ?? '—'}</td><td><Link className="primary-link" to={`/events/${link.event_id}`}>{t('timeline.eyebrow')}</Link></td></tr>;
+          <tbody>{(links.data ?? []).map((link: any) => {
+            return (
+              <tr key={link.id}>
+                <td>{link.event_type ?? link.event_id.slice(0, 8)}</td>
+                <td>{link.event_status ? <StatusBadge status={link.event_status} /> : '—'}</td>
+                <td>{link.entity_type} #{link.entity_id}</td>
+                <td className="mono">{link.run_id?.slice(0, 8) ?? '—'}</td>
+                <td><Link className="primary-link" to={`/events/${link.event_id}`}>{t('timeline.eyebrow')}</Link></td>
+              </tr>
+            );
           })}</tbody>
         </table>
       </section>

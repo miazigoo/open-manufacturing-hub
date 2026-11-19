@@ -1,58 +1,7 @@
-# Factory Restore Runbook
+# Factory database recovery
 
-Use this when a production update, host incident or operator mistake requires restoring a database dump.
+Run `make prod-restore-drill FILE=backups/db/example.dump` to validate a trusted OMH backup. SQL and PostgreSQL custom dumps are supported. The recovery profile uses a separate PostgreSQL instance, Docker network and volume. The client verifies an adjacent checksum metadata file when present, restores into a newly created database, checks the OMH schema and reports its revision and table counts. The drill removes its temporary database after verification.
 
-## Inputs Required
+Run `make prod-restore FILE=backups/db/example.dump` to retain the restored database. Record the target name from the JSON report. On a separate recovery stack with external deliveries disabled, restore the matching export files and secret key, check the release revision, representative event IDs, artifact hashes and queue links, and test login and reads. Record the elapsed time.
 
-| Input | Example |
-| --- | --- |
-| Database dump | `backups/db/omh-db-20260706-142500.sql` |
-| Matching config export | `backups/config/omh-config-20260706-142500.json` |
-| Snapshot evidence | `backups/snapshots/omh-snapshot-20260706-142500.json` |
-| Known good code/image | Git commit or image tag used when the backup was created. |
-
-## Restore Database
-
-```bash
-make prod-restore FILE=backups/db/omh-db-YYYYMMDD-HHMMSS.sql
-```
-
-The command stops `worker`, `backend`, `frontend` and `nginx`, restores the dump through PostgreSQL, starts services again and runs `prod-doctor`.
-
-## Manual Restore Equivalent
-
-```bash
-docker compose --env-file .env.production -f docker-compose.production.yml stop worker backend frontend nginx
-docker compose --env-file .env.production -f docker-compose.production.yml exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < backups/db/omh-db-YYYYMMDD-HHMMSS.sql
-docker compose --env-file .env.production -f docker-compose.production.yml up -d backend worker frontend nginx
-make prod-doctor
-```
-
-## Restore Configuration Only
-
-Use the `/production` import tool when you need to restore configuration without replacing the whole database.
-
-1. Open `/production`.
-2. Upload `backups/config/omh-config-YYYYMMDD-HHMMSS.json`.
-3. Run preview first.
-4. Use `create_only` for an empty instance.
-5. Use `upsert` only when you intentionally update existing objects.
-6. Re-enter masked secrets after import.
-
-## Post-Restore Checks
-
-```bash
-make prod-release-check
-curl -fsS http://localhost/api/production/snapshot
-```
-
-Then click through the key UI pages:
-
-- `/production`
-- `/connectors`
-- `/integration-bus`
-- `/runtime/queue`
-- `/plugin-store`
-- `/docs`
-
-Only disable update mode after queue state and connector health look correct.
+For cutover, pause incoming traffic and workers, reconcile accepted messages and completed external deliveries against the backup boundary, then switch the application connection and files to the verified target. Start consumers after reconciliation. Keep the previous database and files available until the operator accepts the recovery.

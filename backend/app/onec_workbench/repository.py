@@ -4,12 +4,24 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from app.onec_workbench.models import IntegrationMessage
 
 
-async def list_messages(session: AsyncSession) -> list[IntegrationMessage]:
-    result = await session.execute(select(IntegrationMessage).order_by(IntegrationMessage.created_at.desc()))
+async def list_messages(
+    session: AsyncSession,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[IntegrationMessage]:
+    stmt = (
+        select(IntegrationMessage)
+        .options(defer(IntegrationMessage.payload_text), defer(IntegrationMessage.payload_json))
+        .order_by(IntegrationMessage.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 

@@ -4,12 +4,14 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from app.core.config import get_settings
 from app.core.enums import EnterpriseQueueStatus, EventStatus, NotificationTriggerType, ODataCacheStatus, ResolverType, RunMode, RunStatus
 from app.core.errors import BadRequestError, NotFoundError
+from app.core.pagination import decode_sort_cursor, encode_sort_cursor
 from app.enterprise_runtime.models import (
     BusinessRuleDefinition,
     CanonicalBusinessObject,
@@ -98,8 +100,15 @@ async def list_queue(
     business_key: str | None = None,
     has_error: bool | None = None,
     sort: str = "priority",
+    limit: int | None = None,
+    include_payload: bool = False,
 ) -> list[IntegrationQueueMessage]:
-    query = select(IntegrationQueueMessage).order_by(IntegrationQueueMessage.priority.asc(), IntegrationQueueMessage.created_at.desc())
+    query = select(IntegrationQueueMessage)
+    if not include_payload:
+        query = query.options(
+            defer(IntegrationQueueMessage.payload_json),
+            defer(IntegrationQueueMessage.original_payload_json),
+        )
     if status:
         query = query.where(IntegrationQueueMessage.status == status)
     if business_object:
@@ -123,7 +132,132 @@ async def list_queue(
         "attempts": (IntegrationQueueMessage.attempts.desc(), IntegrationQueueMessage.created_at.desc()),
     }
     query = query.order_by(*sort_columns.get(sort, sort_columns["priority"]))
+    if limit is not None and limit > 0:
+        query = query.limit(limit)
     return list((await session.execute(query)).scalars().all())
+
+
+async def list_queue_page(
+    session: AsyncSession,
+    *,
+    status: EnterpriseQueueStatus | None = None,
+    business_object: str | None = None,
+    operation: str | None = None,
+    source_system: str | None = None,
+    target_system: str | None = None,
+    business_key: str | None = None,
+    has_error: bool | None = None,
+    sort: str = "priority",
+    limit: int = 50,
+    cursor: str | None = None,
+) -> tuple[list[IntegrationQueueMessage], str | None, bool]:
+    limit = max(1, min(limit, 100))
+    query = (
+        select(IntegrationQueueMessage)
+        .options(
+            defer(IntegrationQueueMessage.payload_json),
+            defer(IntegrationQueueMessage.original_payload_json),
+        )
+    )
+    conditions = []
+    if status:
+        conditions.append(IntegrationQueueMessage.status == status)
+    if business_object:
+        conditions.append(IntegrationQueueMessage.business_object == business_object)
+    if operation:
+        conditions.append(IntegrationQueueMessage.operation == operation)
+    if source_system:
+        conditions.append(IntegrationQueueMessage.source_system == source_system)
+    if target_system:
+        conditions.append(IntegrationQueueMessage.target_system == target_system)
+    if business_key:
+        conditions.append(IntegrationQueueMessage.business_key == business_key)
+    if has_error is True:
+        conditions.append(IntegrationQueueMessage.last_error.is_not(None))
+    if has_error is False:
+        conditions.append(IntegrationQueueMessage.last_error.is_(None))
+
+    scope = ["queue", status, business_object, operation, source_system, target_system, business_key, has_error]
+    if sort not in {"created_at", "priority", "attempts", "next_retry_at"}:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="Unknown queue sort")
+    if cursor:
+        cur_val, cur_id = decode_sort_cursor(cursor, sort, scope)
+        if sort == "created_at":
+            conditions.append(
+                or_(
+                    IntegrationQueueMessage.created_at < cur_val,
+                    and_(
+                        IntegrationQueueMessage.created_at == cur_val,
+                        IntegrationQueueMessage.id < cur_id,
+                    ),
+                )
+            )
+        elif sort == "priority":
+            conditions.append(
+                or_(
+                    IntegrationQueueMessage.priority > cur_val,
+                    and_(
+                        IntegrationQueueMessage.priority == cur_val,
+                        IntegrationQueueMessage.id < cur_id,
+                    ),
+                )
+            )
+        elif sort == "attempts":
+            conditions.append(
+                or_(
+                    IntegrationQueueMessage.attempts < cur_val,
+                    and_(
+                        IntegrationQueueMessage.attempts == cur_val,
+                        IntegrationQueueMessage.id < cur_id,
+                    ),
+                )
+            )
+        elif sort == "next_retry_at":
+            if cur_val is None:
+                conditions.append(
+                    and_(
+                        IntegrationQueueMessage.next_retry_at.is_(None),
+                        IntegrationQueueMessage.id < cur_id,
+                    )
+                )
+            else:
+                conditions.append(
+                    or_(
+                        IntegrationQueueMessage.next_retry_at > cur_val,
+                        IntegrationQueueMessage.next_retry_at.is_(None),
+                        and_(
+                            IntegrationQueueMessage.next_retry_at == cur_val,
+                            IntegrationQueueMessage.id < cur_id,
+                        ),
+                    )
+                )
+
+    if conditions:
+        query = query.where(and_(*conditions))
+
+    sort_columns = {
+        "priority": (IntegrationQueueMessage.priority.asc(), IntegrationQueueMessage.id.desc()),
+        "created_at": (IntegrationQueueMessage.created_at.desc(), IntegrationQueueMessage.id.desc()),
+        "next_retry_at": (IntegrationQueueMessage.next_retry_at.asc().nulls_last(), IntegrationQueueMessage.id.desc()),
+        "attempts": (IntegrationQueueMessage.attempts.desc(), IntegrationQueueMessage.id.desc()),
+    }
+    query = query.order_by(*sort_columns.get(sort, sort_columns["priority"]))
+    query = query.limit(limit + 1)
+
+    rows = list((await session.execute(query)).scalars().all())
+    if len(rows) > limit:
+        has_more = True
+        items = rows[:limit]
+        last_item = items[-1]
+        val = getattr(last_item, sort if sort in ("priority", "created_at", "next_retry_at", "attempts") else "priority")
+        next_cursor = encode_sort_cursor(sort, val, last_item.id, scope)
+    else:
+        has_more = False
+        items = rows
+        next_cursor = None
+
+    return items, next_cursor, has_more
 
 
 async def get_queue_or_404(session: AsyncSession, queue_id: UUID) -> IntegrationQueueMessage:
@@ -181,11 +315,66 @@ async def _move_item_to_dlq(session: AsyncSession, item: IntegrationQueueMessage
     return dlq
 
 
-async def list_dlq(session: AsyncSession, include_archived: bool = False) -> list[DeadLetterQueueItem]:
+async def list_dlq(session: AsyncSession, include_archived: bool = False, limit: int | None = None, include_payload: bool = False) -> list[DeadLetterQueueItem]:
     query = select(DeadLetterQueueItem).order_by(DeadLetterQueueItem.created_at.desc())
+    if not include_payload:
+        query = query.options(
+            defer(DeadLetterQueueItem.payload_json),
+            defer(DeadLetterQueueItem.current_payload_json),
+        )
     if not include_archived:
         query = query.where(DeadLetterQueueItem.archived.is_(False))
+    if limit is not None and limit > 0:
+        query = query.limit(limit)
     return list((await session.execute(query)).scalars().all())
+
+
+async def list_dlq_page(
+    session: AsyncSession,
+    *,
+    include_archived: bool = False,
+    limit: int = 50,
+    cursor: str | None = None,
+) -> tuple[list[DeadLetterQueueItem], str | None, bool]:
+    limit = max(1, min(limit, 100))
+    query = (
+        select(DeadLetterQueueItem)
+        .options(
+            defer(DeadLetterQueueItem.payload_json),
+            defer(DeadLetterQueueItem.current_payload_json),
+        )
+    )
+    conditions = []
+    if not include_archived:
+        conditions.append(DeadLetterQueueItem.archived.is_(False))
+    if cursor:
+        cur_ts, cur_id = decode_sort_cursor(cursor, "created_at", ["dlq", include_archived])
+        conditions.append(
+            or_(
+                DeadLetterQueueItem.created_at < cur_ts,
+                and_(
+                    DeadLetterQueueItem.created_at == cur_ts,
+                    DeadLetterQueueItem.id < cur_id,
+                ),
+            )
+        )
+    if conditions:
+        query = query.where(and_(*conditions))
+
+    query = query.order_by(DeadLetterQueueItem.created_at.desc(), DeadLetterQueueItem.id.desc())
+    query = query.limit(limit + 1)
+
+    rows = list((await session.execute(query)).scalars().all())
+    if len(rows) > limit:
+        has_more = True
+        items = rows[:limit]
+        next_cursor = encode_sort_cursor("created_at", items[-1].created_at, items[-1].id, ["dlq", include_archived])
+    else:
+        has_more = False
+        items = rows
+        next_cursor = None
+
+    return items, next_cursor, has_more
 
 
 async def get_dlq_or_404(session: AsyncSession, item_id: UUID) -> DeadLetterQueueItem:
@@ -276,7 +465,20 @@ async def eligible_queue_item(session: AsyncSession, worker: str = "worker") -> 
     if await update_mode_enabled(session):
         return None
     now = utcnow()
-    result = await session.execute(
+
+    # Recover abandoned processing items whose lease has expired
+    expired_processing = await session.execute(
+        select(IntegrationQueueMessage)
+        .where(IntegrationQueueMessage.status == EnterpriseQueueStatus.PROCESSING)
+        .where(IntegrationQueueMessage.locked_until < now)
+    )
+    for stale_item in expired_processing.scalars().all():
+        stale_item.status = EnterpriseQueueStatus.RETRY_WAITING
+        stale_item.last_error_code = "LEASE_EXPIRED"
+        stale_item.last_error_message = f"Worker lease expired ({stale_item.locked_by})"
+        _clear_lock(stale_item)
+
+    stmt = (
         select(IntegrationQueueMessage)
         .where(IntegrationQueueMessage.status.in_([EnterpriseQueueStatus.WAITING, EnterpriseQueueStatus.RETRY_WAITING]))
         .where(or_(IntegrationQueueMessage.next_retry_at.is_(None), IntegrationQueueMessage.next_retry_at <= now))
@@ -284,6 +486,14 @@ async def eligible_queue_item(session: AsyncSession, worker: str = "worker") -> 
         .order_by(IntegrationQueueMessage.priority.asc(), IntegrationQueueMessage.created_at.asc())
         .limit(1)
     )
+    try:
+        bind = session.bind or session.get_bind()
+        if bind and getattr(bind.dialect, "name", None) == "postgresql":
+            stmt = stmt.with_for_update(skip_locked=True)
+    except Exception:
+        pass
+
+    result = await session.execute(stmt)
     item = result.scalar_one_or_none()
     if item is None:
         return None
@@ -361,6 +571,15 @@ async def process_locked_item(session: AsyncSession, item: IntegrationQueueMessa
     return item
 
 
+def _is_infinite_retry(item: IntegrationQueueMessage) -> bool:
+    payload = item.payload_json if isinstance(item.payload_json, dict) else {}
+    if payload.get("retry_policy") == "infinite" or payload.get("infinite_retry") is True:
+        return True
+    if item.operation in {"laser_file", "chz_laser", "laser_copy"}:
+        return True
+    return False
+
+
 async def schedule_retry_or_dlq(session: AsyncSession, item: IntegrationQueueMessage, error_code: str, error_message: str) -> None:
     item.last_error_code = error_code
     item.last_error_message = error_message
@@ -371,12 +590,38 @@ async def schedule_retry_or_dlq(session: AsyncSession, item: IntegrationQueueMes
         item.status = EnterpriseQueueStatus.FAILED
         await _move_item_to_dlq(session, item, error_message)
         return
-    if item.attempts >= item.max_attempts:
-        await trigger_notifications(session, NotificationTriggerType.RETRY_EXHAUSTED, {"queue_item_id": str(item.id), "attempts": item.attempts, "error": error_message})
+
+    infinite_retry = _is_infinite_retry(item)
+
+    if not infinite_retry and item.attempts >= item.max_attempts:
+        await trigger_notifications(
+            session,
+            NotificationTriggerType.RETRY_EXHAUSTED,
+            {"queue_item_id": str(item.id), "attempts": item.attempts, "error": error_message},
+        )
         await _move_item_to_dlq(session, item, error_message)
         return
+
+    # Предотвращаем лавину уведомлений: оповещаем на 2-й и 10-й попытках для долгих повторов
+    if infinite_retry and item.attempts in {2, 10}:
+        await trigger_notifications(
+            session,
+            NotificationTriggerType.INCIDENT_CREATED,
+            {
+                "queue_item_id": str(item.id),
+                "attempts": item.attempts,
+                "warning": f"Внимание: отправка файла в процессе повторов (попытка {item.attempts}). Устройство недоступно: {error_message}",
+                "business_object": item.business_object,
+                "operation": item.operation,
+            },
+        )
+
+    # Бесконечный цикл ретраев каждые 4 часа после 10 попыток (для файлов лазера/спецполитики)
     item.status = EnterpriseQueueStatus.RETRY_WAITING
-    item.next_retry_at = utcnow() + timedelta(seconds=retry_delay_seconds(item.attempts))
+    if item.attempts > len(RETRY_DELAYS_SECONDS):
+        item.next_retry_at = utcnow() + timedelta(seconds=14400) # каждые 4 часа
+    else:
+        item.next_retry_at = utcnow() + timedelta(seconds=retry_delay_seconds(item.attempts))
 
 
 def retry_delay_seconds(attempts: int) -> int:
@@ -384,8 +629,19 @@ def retry_delay_seconds(attempts: int) -> int:
     return RETRY_DELAYS_SECONDS[index]
 
 
-async def list_attempts(session: AsyncSession, queue_id: UUID) -> list[QueueAttempt]:
-    return list((await session.execute(select(QueueAttempt).where(QueueAttempt.queue_message_id == queue_id).order_by(QueueAttempt.attempt_no.asc()))).scalars().all())
+async def list_attempts(session: AsyncSession, queue_id: UUID, limit: int = 50) -> list[QueueAttempt]:
+    return list(
+        (
+            await session.execute(
+                select(QueueAttempt)
+                .where(QueueAttempt.queue_message_id == queue_id)
+                .order_by(QueueAttempt.attempt_no.desc())
+                .limit(limit)
+            )
+        )
+        .scalars()
+        .all()
+    )
 
 
 async def monitor_summary(session: AsyncSession) -> dict[str, int]:

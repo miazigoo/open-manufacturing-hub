@@ -47,8 +47,16 @@ async def mark_failed(session: AsyncSession, record: BackupRecord, error: str) -
     return record
 
 
-async def list_records(session: AsyncSession) -> list[BackupRecord]:
-    return list((await session.execute(select(BackupRecord).order_by(BackupRecord.created_at.desc()))).scalars().all())
+async def list_records(
+    session: AsyncSession,
+    backup_type: BackupType | str | None = None,
+    limit: int = 50,
+) -> list[BackupRecord]:
+    stmt = select(BackupRecord)
+    if backup_type:
+        stmt = stmt.where(BackupRecord.backup_type == backup_type)
+    stmt = stmt.order_by(BackupRecord.created_at.desc()).limit(limit)
+    return list((await session.execute(stmt)).scalars().all())
 
 
 async def get_record(session: AsyncSession, record_id: UUID) -> BackupRecord:
@@ -122,7 +130,7 @@ async def create_db_backup(session: AsyncSession, *, created_by: str | None = No
     except BadRequestError as exc:
         await mark_failed(session, record, str(exc))
         raise
-    file_path = backup_dir / f"omh-db-{utcnow():%Y%m%d-%H%M%S}.dump"
+    file_path = backup_dir / f"omh-db-{utcnow():%Y%m%d-%H%M%S}-{record.id}.dump"
     database_url = make_url(get_settings().database_url)
     try:
         if database_url.get_backend_name() == "sqlite":
@@ -159,6 +167,16 @@ async def create_db_backup(session: AsyncSession, *, created_by: str | None = No
             if process.returncode != 0:
                 raise BadRequestError(f"pg_dump завершился с ошибкой: {stderr.decode(errors='replace')[:1000]}")
         size = file_path.stat().st_size
+        import json
+        import hashlib
+        sha256 = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                sha256.update(chunk)
+        checksum = sha256.hexdigest()
+        if database_url.get_backend_name() == "postgresql":
+            file_path.with_suffix(".meta.json").write_text(json.dumps({"sha256": checksum}), encoding="utf-8")
+        format_type = "custom_dump" if file_path.suffix == ".dump" else "sql"
     except BadRequestError as exc:
         if file_path.exists():
             file_path.unlink(missing_ok=True)
@@ -169,7 +187,17 @@ async def create_db_backup(session: AsyncSession, *, created_by: str | None = No
             file_path.unlink(missing_ok=True)
         await mark_failed(session, record, str(exc))
         raise
-    return await mark_success(session, record, file_path=str(file_path), size_bytes=size, metadata={"backup_dir": str(backup_dir)})
+    return await mark_success(
+        session,
+        record,
+        file_path=str(file_path),
+        size_bytes=size,
+        metadata={
+            "backup_dir": str(backup_dir),
+            "format": format_type,
+            "sha256": checksum,
+        },
+    )
 
 
 async def _sqlite_iterdump(session: AsyncSession, file_path: Path) -> None:

@@ -34,6 +34,20 @@ async def install_marking_pool_preset(session: AsyncSession = Depends(get_sessio
     return await service._read_flow(flow, session)
 
 
+@router.post("/presets/ozon-orders-to-onec/install", response_model=IntegrationFlowRead)
+async def install_ozon_orders_to_onec_preset(session: AsyncSession = Depends(get_session)):
+    flow = await service.install_ozon_orders_to_onec_preset(session)
+    await session.commit()
+    return await service._read_flow(flow, session)
+
+
+@router.post("/presets/ozon-stocks-prices-from-onec/install", response_model=IntegrationFlowRead)
+async def install_ozon_stocks_prices_from_onec_preset(session: AsyncSession = Depends(get_session)):
+    flow = await service.install_ozon_stocks_prices_from_onec_preset(session)
+    await session.commit()
+    return await service._read_flow(flow, session)
+
+
 @router.post("/presets/b2b-portal-order/install", response_model=IntegrationFlowRead)
 async def install_b2b_portal_order_preset(session: AsyncSession = Depends(get_session)):
     flow = await service.install_b2b_portal_order_preset(session)

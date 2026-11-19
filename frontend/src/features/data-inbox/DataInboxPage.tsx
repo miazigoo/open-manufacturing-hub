@@ -297,16 +297,32 @@ function TemplateEditor({ draft, setDraft, editingId, onSave, saving, onCancel }
 
 function RecordsBrowser({ templates }: { templates: InboxTemplate[] }) {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState({ template_id: '', status: '', search: '' });
+  const [filters, setFilters] = useState({ template_id: '', status: '', search: '', limit: '50', offset: '0' });
   const params = useMemo(() => Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), [filters]);
   const records = useQuery({ queryKey: ['inbox-records', params], queryFn: () => dataInboxApi.records(params) });
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [resendUrl, setResendUrl] = useState('');
   const [message, setMessage] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Lazy load full record payload on demand
+  const recordDetails = useQuery({
+    queryKey: ['inbox-record-detail', selectedId],
+    queryFn: () => dataInboxApi.record(selectedId!),
+    enabled: Boolean(selectedId),
+  });
 
   const refresh = async () => queryClient.invalidateQueries({ queryKey: ['inbox-records'] });
-  const remove = useMutation({ mutationFn: (id: string) => dataInboxApi.deleteRecord(id), onSuccess: refresh });
+  const remove = useMutation({
+    mutationFn: (id: string) => dataInboxApi.deleteRecord(id),
+    onSuccess: async () => {
+      setMessage('Запись удалена.');
+      setDeleteConfirmId(null);
+      if (selectedId === deleteConfirmId) setSelectedId(null);
+      await refresh();
+    },
+  });
   const saveEdit = useMutation({
     mutationFn: (id: string) => dataInboxApi.patchRecord(id, { payload_json: JSON.parse(editText), fields_json: JSON.parse(editText) }),
     onSuccess: async () => { setMessage('Запись обновлена.'); await refresh(); },
@@ -320,7 +336,21 @@ function RecordsBrowser({ templates }: { templates: InboxTemplate[] }) {
   if (records.isLoading) return <LoadingState label="Загрузка записей" />;
   if (records.error) return <ErrorState error={records.error} />;
   const data = records.data ?? { total: 0, items: [] };
-  const selectedRecord = data.items.find((record) => record.id === selected) ?? null;
+
+  const limitNum = Number(filters.limit) || 50;
+  const offsetNum = Number(filters.offset) || 0;
+  const currentPage = Math.floor(offsetNum / limitNum) + 1;
+  const totalPages = Math.max(1, Math.ceil(data.total / limitNum));
+
+  function goToPage(page: number) {
+    const nextOffset = Math.max(0, (page - 1) * limitNum);
+    setFilters((prev) => ({ ...prev, offset: String(nextOffset) }));
+    setSelectedId(null);
+  }
+
+  function openRecord(id: string) {
+    setSelectedId(id);
+  }
 
   return (
     <section className="page-stack">
@@ -330,15 +360,15 @@ function RecordsBrowser({ templates }: { templates: InboxTemplate[] }) {
           <a className="ghost-button" href={dataInboxApi.exportUrl(params)}>Экспорт CSV</a>
         </div>
         <div className="action-row wrap-actions">
-          <select value={filters.template_id} onChange={(event) => setFilters({ ...filters, template_id: event.target.value })}>
+          <select value={filters.template_id} onChange={(event) => setFilters({ ...filters, template_id: event.target.value, offset: '0' })}>
             <option value="">Все шаблоны</option>
             {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
           </select>
-          <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
+          <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value, offset: '0' })}>
             <option value="">Все статусы</option>
             {Object.entries(STATUS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
           </select>
-          <input value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Поиск по данным" />
+          <input value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value, offset: '0' })} placeholder="Поиск по данным" />
         </div>
         {message && <p className="microcopy">{message}</p>}
         <div className="table-wrap">
@@ -346,15 +376,15 @@ function RecordsBrowser({ templates }: { templates: InboxTemplate[] }) {
             <thead><tr><th>Дата</th><th>Статус</th><th>Данные</th><th>Предупреждения</th><th></th></tr></thead>
             <tbody>
               {data.items.map((record) => (
-                <tr key={record.id}>
+                <tr key={record.id} className={selectedId === record.id ? 'selected-row' : ''}>
                   <td>{new Date(record.created_at).toLocaleString()}</td>
                   <td><StatusBadge status={record.status === 'rejected' ? 'error' : record.status === 'stored' ? 'enabled' : 'unknown'} label={STATUS_LABELS[record.status] ?? record.status} /></td>
                   <td><code>{asJson(record.fields_json).slice(0, 120)}</code></td>
                   <td className="microcopy">{record.warnings_json.length ? record.warnings_json.map((warning) => warning.message).join('; ') : '—'}</td>
                   <td>
                     <div className="action-row">
-                      <button className="ghost-button" onClick={() => { setSelected(record.id); setEditText(asJson(record.payload_json)); }}>Открыть</button>
-                      <button className="ghost-button danger" onClick={() => remove.mutate(record.id)}>Удалить</button>
+                      <button className="ghost-button" onClick={() => openRecord(record.id)}>Открыть</button>
+                      <button className="ghost-button danger" onClick={() => setDeleteConfirmId(record.id)}>Удалить</button>
                     </div>
                   </td>
                 </tr>
@@ -363,24 +393,76 @@ function RecordsBrowser({ templates }: { templates: InboxTemplate[] }) {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="pagination-bar" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem', justifyContent: 'flex-end' }}>
+            <button className="ghost-button" disabled={currentPage <= 1} onClick={() => goToPage(1)}>« Первая</button>
+            <button className="ghost-button" disabled={currentPage <= 1} onClick={() => goToPage(currentPage - 1)}>‹ Назад</button>
+            <span>{currentPage} / {totalPages}</span>
+            <button className="ghost-button" disabled={currentPage >= totalPages} onClick={() => goToPage(currentPage + 1)}>Далее ›</button>
+            <button className="ghost-button" disabled={currentPage >= totalPages} onClick={() => goToPage(totalPages)}>Последняя »</button>
+          </div>
+        )}
       </section>
 
-      {selectedRecord && (
+      {deleteConfirmId && (
+        <section className="panel warning-panel" style={{ marginTop: '1rem' }}>
+          <strong>Подтверждение удаления</strong>
+          <p>Вы собираетесь безвозвратно удалить запись <code>{deleteConfirmId}</code>. Данные записи будут стёрты из базы OMH.</p>
+          <div className="action-row wrap-actions" style={{ marginTop: '0.5rem' }}>
+            <button className="primary-button danger" onClick={() => remove.mutate(deleteConfirmId)} disabled={remove.isPending}>Удалить окончательно</button>
+            <button className="ghost-button" onClick={() => setDeleteConfirmId(null)}>Отмена</button>
+          </div>
+        </section>
+      )}
+
+      {selectedId && (
         <section className="info-panel">
           <div className="section-title-row">
-            <div><span className="eyebrow">Запись</span><h2>{selectedRecord.id}</h2></div>
-            <button className="ghost-button" onClick={() => setSelected(null)}>Закрыть</button>
+            <div><span className="eyebrow">Запись</span><h2>{selectedId}</h2></div>
+            <button className="ghost-button" onClick={() => setSelectedId(null)}>Закрыть</button>
           </div>
-          <label className="field-label">Данные (можно отредактировать и сохранить)</label>
-          <CodeEditor value={editText} onChange={setEditText} language="json" minRows={8} />
-          <div className="action-row wrap-actions">
-            <button className="primary-button" onClick={() => saveEdit.mutate(selectedRecord.id)} disabled={saveEdit.isPending}>Сохранить изменения</button>
-          </div>
-          <label className="field-label">Повторная отправка на URL</label>
-          <div className="action-row wrap-actions">
-            <input value={resendUrl} onChange={(event) => setResendUrl(event.target.value)} placeholder="http://service.local/receive" style={{ minWidth: 320 }} />
-            <button className="ghost-button" onClick={() => resend.mutate(selectedRecord.id)} disabled={!resendUrl.trim() || resend.isPending}>Отправить</button>
-          </div>
+
+          {recordDetails.isLoading ? (
+            <LoadingState label="Загрузка полного payload записи..." />
+          ) : recordDetails.error ? (
+            <ErrorState error={recordDetails.error} />
+          ) : recordDetails.data ? (
+            <>
+              <label className="field-label">Данные (можно отредактировать и сохранить)</label>
+              <CodeEditor
+                value={editText || asJson(recordDetails.data.payload_json)}
+                onChange={setEditText}
+                language="json"
+                minRows={8}
+              />
+              <div className="action-row wrap-actions" style={{ marginTop: '0.5rem' }}>
+                <button
+                  className="primary-button"
+                  onClick={() => saveEdit.mutate(selectedId)}
+                  disabled={saveEdit.isPending}
+                >
+                  Сохранить изменения
+                </button>
+              </div>
+              <label className="field-label" style={{ marginTop: '1rem' }}>Повторная отправка на URL</label>
+              <div className="action-row wrap-actions">
+                <input
+                  value={resendUrl}
+                  onChange={(event) => setResendUrl(event.target.value)}
+                  placeholder="http://service.local/receive"
+                  style={{ minWidth: 320 }}
+                />
+                <button
+                  className="ghost-button"
+                  onClick={() => resend.mutate(selectedId)}
+                  disabled={!resendUrl.trim() || resend.isPending}
+                >
+                  Отправить
+                </button>
+              </div>
+            </>
+          ) : null}
         </section>
       )}
     </section>

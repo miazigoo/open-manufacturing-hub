@@ -222,7 +222,7 @@ export function DocumentationPage() {
       <div className="docs-layout-grid">
         <DocsSidebar bundle={bundle} />
         <main className="docs-main-panel">
-          <DocsSearch bundle={bundle} compact={!isSearch} />
+          {!isSearch && <DocsSearch bundle={bundle} compact />}
           {isSearch ? (
             <DocsSearch bundle={bundle} />
           ) : (

@@ -23,7 +23,7 @@ from app.resolvers.models import ResolverDefinitionV2
 from app.secrets.models import Secret
 from app.secrets.redaction import collect_secret_references, raw_secret_warnings
 
-MIGRATION_HEAD = "0038_federation"
+MIGRATION_HEAD = "0039_event_journal_indexes"
 
 
 async def database_revision(session: AsyncSession) -> str | None:
@@ -122,22 +122,15 @@ async def deployment_checks(session: AsyncSession) -> list[ProductionCheck]:
 
 
 async def _worker_deployment_check(session: AsyncSession) -> ProductionCheck:
-    result = await session.execute(
-        select(HealthCheck)
-        .where(HealthCheck.component_type == HealthComponentType.AGENT, HealthCheck.component_name == "queue-worker")
-        .order_by(HealthCheck.checked_at.desc())
-        .limit(1)
-    )
-    heartbeat = result.scalar_one_or_none()
-    processing = int(await session.scalar(select(func.count()).select_from(IntegrationQueueMessage).where(IntegrationQueueMessage.status == EnterpriseQueueStatus.PROCESSING)) or 0)
-    if heartbeat:
-        return ProductionCheck(name="Worker heartbeat OK", status="ok", message=f"Last queue-worker heartbeat: {heartbeat.checked_at.isoformat()}", details=heartbeat.details_json or {})
-    return ProductionCheck(
-        name="Worker heartbeat OK",
-        status="warning",
-        message="No queue-worker heartbeat yet. Start worker service or set OMH_REQUIRE_WORKER_HEARTBEAT=false only for single-process installs.",
-        details={"processing": processing},
-    )
+    from app.health.readiness import worker_heartbeat_check
+
+    heartbeat = await worker_heartbeat_check(session)
+    status = heartbeat["status"]
+    if status == "error" and not get_settings().require_worker_heartbeat:
+        status = "warning"
+    return ProductionCheck(name="Worker heartbeat OK", status=status, message=heartbeat["message"],
+                           details=heartbeat.get("details", {}))
+
 
 
 async def _promotion_checks(session: AsyncSession) -> list[ProductionCheck]:

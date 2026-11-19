@@ -21,7 +21,7 @@ def utcnow() -> datetime:
 
 def snapshot_model(obj: Any) -> dict[str, Any]:
     mapper = sa_inspect(obj).mapper
-    return redact_secrets({column.key: getattr(obj, column.key) for column in mapper.column_attrs})
+    return {column.key: getattr(obj, column.key) for column in mapper.column_attrs}
 
 
 async def actor_from_request(session: AsyncSession, request: Request | None) -> dict[str, Any]:
@@ -125,7 +125,7 @@ async def record_change(
     )
     event.before_json = before_clean
     event.after_json = after_clean
-    event.diff_json = json_diff(before_clean, after_clean)
+    event.diff_json = json_diff(before, after)
     await session.flush()
     return event
 

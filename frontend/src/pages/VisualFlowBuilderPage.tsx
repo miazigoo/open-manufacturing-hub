@@ -190,6 +190,8 @@ export function VisualFlowBuilderPage() {
           ? { id, type, name: 'Call operation', operation: '', save_response_as: 'op_response' }
         : type === 'call_flow'
           ? { id, type, name: 'Call sub-flow', flow: '', input: {}, save_as: 'sub_output' }
+        : type === 'ozon_action'
+          ? { id, type, name: 'Ozon action', action: 'list_orders', connector: 'Ozon Seller', since: '{{request.body.ozon_since}}', limit: 100, save_as: 'ozon_result' }
         : type === 'call_endpoint'
           ? { id, type, name: 'Call endpoint', connector: 'DNP Service', method: 'POST', path: '/', headers: { 'Content-Type': 'application/json' }, body: '{{target_payload}}', save_response_as: 'target_response', mock_response_json: { success: true, id: 'preview-id' } }
           : { id, type, name: 'Read variable', path: 'request.body.value', save_as: 'value' };
@@ -241,7 +243,7 @@ export function VisualFlowBuilderPage() {
           <div className="builder-step-list">
             {builder.steps.map((step, index) => <button key={step.id} className={`builder-step-card ${selectedStep?.id === step.id ? 'active' : ''}`} onClick={() => setSelectedStepId(step.id)}><span className="step-index">{String(index + 1).padStart(2, '0')}</span><strong>{step.name ?? step.id}</strong><small>{step.type} · {String(step.save_as ?? step.id)}</small></button>)}
           </div>
-          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('xml_extract')}>Extract XML</button><button className="ghost-button" onClick={() => addStep('extract')}>Extract</button><button className="ghost-button" onClick={() => addStep('filter_array')}>Filter</button><button className="ghost-button" onClick={() => addStep('condition')}>Condition</button><button className="ghost-button" onClick={() => addStep('foreach')}>Foreach</button><button className="ghost-button" onClick={() => addStep('raw_xml_forward')}>Raw XML</button><button className="ghost-button" onClick={() => addStep('apply_transforms')}>Transform</button><button className="ghost-button" onClick={() => addStep('evaluate_rules')}>Rule</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('resolve_object')}>Resolve</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('build_xml')}>Build XML</button><button className="ghost-button" onClick={() => addStep('call_operation')}>Operation</button><button className="ghost-button" onClick={() => addStep('call_flow')}>Sub-flow</button><button className="ghost-button" onClick={() => addStep('marking_code_pool_export')}>CHZ pool</button><button className="ghost-button" onClick={() => addStep('build_xml_response')}>XML response</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
+          <div className="builder-add-grid"><button className="ghost-button" onClick={() => addStep('read_variable')}>Read field</button><button className="ghost-button" onClick={() => addStep('xml_extract')}>Extract XML</button><button className="ghost-button" onClick={() => addStep('extract')}>Extract</button><button className="ghost-button" onClick={() => addStep('filter_array')}>Filter</button><button className="ghost-button" onClick={() => addStep('condition')}>Condition</button><button className="ghost-button" onClick={() => addStep('foreach')}>Foreach</button><button className="ghost-button" onClick={() => addStep('raw_xml_forward')}>Raw XML</button><button className="ghost-button" onClick={() => addStep('apply_transforms')}>Transform</button><button className="ghost-button" onClick={() => addStep('evaluate_rules')}>Rule</button><button className="ghost-button" onClick={() => addStep('odata_query')}>OData</button><button className="ghost-button" onClick={() => addStep('resolve_object')}>Resolve</button><button className="ghost-button" onClick={() => addStep('build_json')}>JSON</button><button className="ghost-button" onClick={() => addStep('build_xml')}>Build XML</button><button className="ghost-button" onClick={() => addStep('call_operation')}>Operation</button><button className="ghost-button" onClick={() => addStep('call_flow')}>Sub-flow</button><button className="ghost-button" onClick={() => addStep('ozon_action')}>Ozon</button><button className="ghost-button" onClick={() => addStep('marking_code_pool_export')}>CHZ pool</button><button className="ghost-button" onClick={() => addStep('build_xml_response')}>XML response</button><button className="ghost-button" onClick={() => addStep('call_endpoint')}>Endpoint</button></div>
         </aside>
 
         <main className="builder-main stack-form">
@@ -254,7 +256,7 @@ export function VisualFlowBuilderPage() {
 
           {selectedStep && <section className="panel step-editor-panel">
             <div className="panel-toolbar"><div><span className="eyebrow">Step Editor</span><h2>{selectedStep.name ?? selectedStep.id}</h2></div><div className="toolbar-actions"><button className="ghost-button" onClick={() => moveStep(selectedStep.id, -1)}>Up</button><button className="ghost-button" onClick={() => moveStep(selectedStep.id, 1)}>Down</button><button className="ghost-button" onClick={() => duplicateStep(selectedStep)}>Duplicate</button><button className="ghost-button danger" onClick={() => deleteStep(selectedStep.id)}>Delete</button></div></div>
-            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="xml_extract">Extract XML</option><option value="extract">Extract fields</option><option value="filter_array">Filter array</option><option value="condition">Condition</option><option value="foreach">For each</option><option value="raw_xml_forward">Raw XML forward</option><option value="apply_transforms">Transform Field</option><option value="evaluate_rules">Business Rule</option><option value="odata_query">OData query</option><option value="resolve_object">Resolve Business Object</option><option value="build_json">Build JSON</option><option value="build_xml">Build XML</option><option value="call_operation">Call operation</option><option value="call_flow">Call sub-flow</option><option value="marking_code_pool_export">CHZ pool delivery</option><option value="build_xml_response">Build XML response</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
+            <div className="metadata-grid compact-grid no-margin"><label className="field-label">Step id<input value={selectedStep.id} onChange={(event) => updateStep(selectedStep.id, { id: event.target.value })} /></label><label className="field-label">Display name<input value={String(selectedStep.name ?? '')} onChange={(event) => updateStep(selectedStep.id, { name: event.target.value })} /></label><label className="field-label">Type<select value={selectedStep.type} onChange={(event) => updateStep(selectedStep.id, { type: event.target.value })}><option value="read_variable">Read variable</option><option value="xml_extract">Extract XML</option><option value="extract">Extract fields</option><option value="filter_array">Filter array</option><option value="condition">Condition</option><option value="foreach">For each</option><option value="raw_xml_forward">Raw XML forward</option><option value="apply_transforms">Transform Field</option><option value="evaluate_rules">Business Rule</option><option value="odata_query">OData query</option><option value="resolve_object">Resolve Business Object</option><option value="build_json">Build JSON</option><option value="build_xml">Build XML</option><option value="call_operation">Call operation</option><option value="call_flow">Call sub-flow</option><option value="ozon_action">Ozon action</option><option value="marking_code_pool_export">CHZ pool delivery</option><option value="build_xml_response">Build XML response</option><option value="call_endpoint">Call endpoint</option><option value="return_response">Return response</option></select></label></div>
             <RunIfEditor step={selectedStep} update={updateStep} />
             {selectedStep.type === 'read_variable' && <ReadVariableEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'apply_transforms' && <TransformStepEditor step={selectedStep} update={updateStep} />}
@@ -273,6 +275,7 @@ export function VisualFlowBuilderPage() {
             {selectedStep.type === 'build_xml' && <BuildXmlStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'call_operation' && <CallOperationStepEditor step={selectedStep} update={updateStep} />}
             {selectedStep.type === 'call_flow' && <CallFlowStepEditor step={selectedStep} update={updateStep} />}
+            {selectedStep.type === 'ozon_action' && <OzonActionStepEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
             {selectedStep.type === 'call_endpoint' && <CallEndpointEditor step={selectedStep} update={updateStep} connectorNames={connectorNames} />}
             {selectedStep.type === 'return_response' && <label className="field-label">Response body<input value={String(selectedStep.body ?? '{{response}}')} onChange={(event) => updateStep(selectedStep.id, { body: event.target.value })} /></label>}
           </section>}
@@ -745,6 +748,58 @@ export function VisualFlowBuilderPage() {
           <CodeEditor value={asJson(step.input_overrides ?? {})} onChange={(value) => { try { update(step.id, { input_overrides: parseJsonObject(value, 'Input overrides') }); setError(null); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Invalid input overrides'); } }} language="json" minRows={5} />
         </label>
         <div className="action-row"><Link className="primary-link" to="/operation-catalog">Открыть Operation Catalog</Link></div>
+      </div>
+    );
+  }
+
+  function OzonActionStepEditor({ step, update, connectorNames: names }: { step: BuilderStep; update: (id: string, patch: Partial<BuilderStep>) => void; connectorNames: string[] }) {
+    const action = String(step.action ?? 'list_orders');
+    const needsItems = action === 'product_info' || action === 'get_stocks' || action === 'get_prices';
+    return (
+      <div className="stack-form">
+        <div className="builder-help-card">
+          <strong>Ozon Seller API без кода</strong>
+          <span>Шаг вызывает Ozon через коннектор с <code>client_id</code>/<code>api_key</code> (Connection Center, тип REST, url <code>https://api-seller.ozon.ru</code>). В Preview шаг работает на встроенных моках — реальный ключ не нужен. Ошибки по позициям (offer_id) становятся инцидентом с подсказкой.</span>
+        </div>
+        <div className="metadata-grid compact-grid no-margin">
+          <label className="field-label">Действие
+            <select value={action} onChange={(event) => update(step.id, { action: event.target.value })}>
+              <option value="list_orders">Заказы FBS (list_orders)</option>
+              <option value="list_products">Список товаров (list_products)</option>
+              <option value="product_info">Карточки товаров (product_info)</option>
+              <option value="get_stocks">Остатки из Ozon (get_stocks)</option>
+              <option value="update_stocks">Обновить остатки (update_stocks)</option>
+              <option value="get_prices">Цены из Ozon (get_prices)</option>
+              <option value="update_prices">Обновить цены (update_prices)</option>
+              <option value="list_warehouses">Склады (list_warehouses)</option>
+            </select>
+          </label>
+          <label className="field-label">Connector
+            <input list="connector-names" value={String(step.connector ?? '')} onChange={(event) => update(step.id, { connector: event.target.value })} placeholder="Ozon Seller" title="Connection Profile с client_id/api_key" />
+            <datalist id="connector-names">{names.map((name) => <option key={name} value={name} />)}</datalist>
+          </label>
+          <label className="field-label">Save as<input value={String(step.save_as ?? '')} onChange={(event) => update(step.id, { save_as: event.target.value })} placeholder="ozon_result" /></label>
+        </div>
+        {action === 'list_orders' && (
+          <div className="metadata-grid compact-grid no-margin">
+            <label className="field-label" title="ISO-дата или шаблон: {{request.body.ozon_since}}">Since (с какой даты заказы)<input value={String(step.since ?? '')} onChange={(event) => update(step.id, { since: event.target.value })} placeholder="{{request.body.ozon_since}}" /></label>
+            <label className="field-label" title="Необязательно: awaiting_packaging, awaiting_deliver и т.д.">Status filter<input value={String(step.status ?? '')} onChange={(event) => update(step.id, { status: event.target.value })} placeholder="awaiting_packaging" /></label>
+            <label className="field-label">Limit<input value={String(step.limit ?? 100)} onChange={(event) => update(step.id, { limit: Number(event.target.value) || 100 })} /></label>
+          </div>
+        )}
+        {needsItems && (
+          <label className="field-label" title="Путь к массиву offer_id, например request.body.offer_ids или variables.offers">Offer IDs path<input value={String(step.offer_ids_path ?? '')} onChange={(event) => update(step.id, { offer_ids_path: event.target.value })} placeholder="request.body.offer_ids" /></label>
+        )}
+        {action === 'update_stocks' && (
+          <label className="field-label" title="Путь к массиву [{offer_id, qty}], например request.body.stocks">Stocks path<input value={String(step.stocks_path ?? '')} onChange={(event) => update(step.id, { stocks_path: event.target.value })} placeholder="request.body.stocks" /></label>
+        )}
+        {action === 'update_prices' && (
+          <label className="field-label" title="Путь к массиву [{offer_id, price, old_price?, min_price?}]">Prices path<input value={String(step.prices_path ?? '')} onChange={(event) => update(step.id, { prices_path: event.target.value })} placeholder="request.body.prices" /></label>
+        )}
+        {(action === 'list_products' || action === 'get_stocks' || action === 'get_prices') && (
+          <label className="field-label">Limit<input value={String(step.limit ?? 1000)} onChange={(event) => update(step.id, { limit: Number(event.target.value) || 1000 })} /></label>
+        )}
+        <div className="action-row"><Link className="primary-link" to="/docs/onec/recipes/ozon-onec-sync">Рецепт Ozon ↔ 1C</Link></div>
       </div>
     );
   }

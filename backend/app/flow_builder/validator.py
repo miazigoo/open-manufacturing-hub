@@ -133,6 +133,15 @@ def validate_builder(builder_json: dict[str, Any]) -> dict[str, Any]:
                 errors.append(_error(step_id, "MARKING_POOL_CODES_PATH_AMBIGUOUS", "Use only one code source path", "Choose full_codes_base64_path for production or codes_path for already decoded codes."))
             if not step.get("save_as"):
                 errors.append(_error(step_id, "MARKING_POOL_SAVE_AS_REQUIRED", "Marking code pool export needs save_as", "Save result as marking_pool_export."))
+        if step_type == "ozon_action":
+            if not step.get("action"):
+                errors.append(_error(step_id, "OZON_ACTION_NOT_SET", "Ozon step needs an action", "Choose list_products, get_stocks, update_stocks, get_prices, update_prices, list_orders or list_warehouses."))
+            elif step.get("action") == "update_stocks" and not (step.get("stocks") or step.get("stocks_path")):
+                errors.append(_error(step_id, "OZON_STOCKS_REQUIRED", "update_stocks needs stocks or stocks_path", "Example path: variables.stock_rows or request.body.stocks."))
+            elif step.get("action") == "update_prices" and not (step.get("prices") or step.get("prices_path")):
+                errors.append(_error(step_id, "OZON_PRICES_REQUIRED", "update_prices needs prices or prices_path", "Example path: variables.price_rows or request.body.prices."))
+            elif step.get("action") == "list_orders" and not step.get("since"):
+                errors.append(_error(step_id, "OZON_SINCE_REQUIRED", "list_orders needs since (ISO date or variable)", "Example: {{variables.last_sync}} or 2026-08-01T00:00:00Z."))
         if step_type == "call_flow" and not step.get("flow"):
             errors.append(_error(step_id, "SUBFLOW_NOT_SET", "Call flow step needs a flow slug", "Select an integration flow to reuse."))
         if step_type == "call_operation" and not step.get("operation"):

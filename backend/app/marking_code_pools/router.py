@@ -13,6 +13,7 @@ from app.marking_code_pools.schemas import (
     MarkingCodePoolExportRead,
     MarkingCodePoolExportResponse,
     MarkingCodePoolForwardTestRequest,
+    MarkingCodePoolOverview,
     MarkingCodePoolPreviewResponse,
     MarkingCodePoolRoutingRuleCreate,
     MarkingCodePoolRoutingRulePatch,
@@ -60,6 +61,35 @@ async def export_onec_pool_to_file(request: OneCMarkingCodePoolExportRequest, se
 @router.post("/onec/export-file/preview", response_model=MarkingCodePoolPreviewResponse)
 async def preview_onec_pool_to_file(request: OneCMarkingCodePoolExportRequest, session: AsyncSession = Depends(get_session)):
     return await service.preview_onec_pool_export(session, request)
+
+
+@router.get("/overview", response_model=MarkingCodePoolOverview)
+async def get_overview(session: AsyncSession = Depends(get_session)):
+    settings = await service.read_settings(session)
+    # Latest export
+    latest_res = await session.execute(
+        select(MarkingCodePoolExport).order_by(MarkingCodePoolExport.created_at.desc()).limit(1)
+    )
+    latest = latest_res.scalar_one_or_none()
+    
+    # 3 latest errors
+    errors_res = await session.execute(
+        select(MarkingCodePoolExport)
+        .where(MarkingCodePoolExport.error_message.is_not(None))
+        .order_by(MarkingCodePoolExport.created_at.desc())
+        .limit(3)
+    )
+    errors = list(errors_res.scalars().all())
+
+    from sqlalchemy import func
+    total = await session.scalar(select(func.count(MarkingCodePoolExport.id))) or 0
+
+    return MarkingCodePoolOverview(
+        settings=settings,
+        latest_export=latest,
+        recent_errors=errors,
+        total_exports=total,
+    )
 
 
 @router.get("/settings", response_model=MarkingCodePoolSettingsRead)
@@ -127,8 +157,18 @@ async def delete_routing_rule(rule_id: UUID, session: AsyncSession = Depends(get
 
 
 @router.get("/exports", response_model=list[MarkingCodePoolExportRead])
-async def list_exports(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(MarkingCodePoolExport).order_by(MarkingCodePoolExport.created_at.desc()).limit(100))
+async def list_exports(
+    limit: int = 50,
+    cursor: UUID | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    query = select(MarkingCodePoolExport)
+    if cursor is not None:
+        cursor_item = await session.get(MarkingCodePoolExport, cursor)
+        if cursor_item:
+            query = query.where(MarkingCodePoolExport.created_at < cursor_item.created_at)
+    query = query.order_by(MarkingCodePoolExport.created_at.desc()).limit(min(limit, 200))
+    result = await session.execute(query)
     return list(result.scalars().all())
 
 

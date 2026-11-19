@@ -34,5 +34,10 @@ class IncidentEventRead(BaseModel):
     event_id: UUID
     run_id: UUID | None
     step_id: UUID | None
+    event_type: str | None = None
+    event_status: str | None = None
+    entity_type: str | None = None
+    entity_id: str | None = None
+    created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -101,35 +101,69 @@ async def list_records(
         limit=limit,
         offset=offset,
     )
-    return {"total": total, "items": [InboxRecordRead.model_validate(record) for record in records]}
+    from app.data_inbox.schemas import InboxRecordSummary
+    return {"total": total, "items": [InboxRecordSummary.model_validate(record) for record in records], "limit": limit, "offset": offset}
 
 
 @router.get("/api/inbox-records/export.csv")
 async def export_records_csv(
     template_id: UUID | None = Query(default=None),
     status: str | None = Query(default=None),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    search: str | None = Query(default=None),
     session: AsyncSession = Depends(get_session),
 ):
     import csv
     import io
-
-    records, _ = await service.list_records(session, template_id=template_id, status=status, limit=500)
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(["id", "template_id", "status", "created_at", "fields", "warnings"])
     import json as _json
+    from fastapi.responses import StreamingResponse
 
-    for record in records:
-        writer.writerow([
-            str(record.id),
-            str(record.template_id),
-            record.status,
-            record.created_at.isoformat(),
-            _json.dumps(record.fields_json, ensure_ascii=False),
-            _json.dumps(record.warnings_json, ensure_ascii=False),
-        ])
-    return JSONResponse(
-        content=buffer.getvalue(),
+    # Snapshot max records or stream in batches
+    BATCH_SIZE = 250
+    # Capture cutoff timestamp or total count at start
+    cutoff_time = datetime.now(timezone.utc)
+
+    async def csv_stream():
+        # Header
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["id", "template_id", "status", "created_at", "fields", "warnings"])
+        yield output.getvalue().encode("utf-8")
+
+        offset = 0
+        effective_date_to = date_to if date_to and date_to < cutoff_time else cutoff_time
+        while True:
+            records, total = await service.list_records(
+                session,
+                template_id=template_id,
+                status=status,
+                date_from=date_from,
+                date_to=effective_date_to,
+                search=search,
+                limit=BATCH_SIZE,
+                offset=offset,
+            )
+            if not records:
+                break
+            output = io.StringIO()
+            writer = csv.writer(output)
+            for record in records:
+                writer.writerow([
+                    str(record.id),
+                    str(record.template_id),
+                    record.status,
+                    record.created_at.isoformat(),
+                    _json.dumps(record.fields_json, ensure_ascii=False),
+                    _json.dumps(record.warnings_json, ensure_ascii=False),
+                ])
+            yield output.getvalue().encode("utf-8")
+            offset += len(records)
+            if offset >= total:
+                break
+
+    return StreamingResponse(
+        csv_stream(),
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="inbox-records.csv"'},
     )

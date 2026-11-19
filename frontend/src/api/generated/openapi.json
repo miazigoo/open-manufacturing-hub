@@ -452,6 +452,7 @@
           },
           "content_json": {
             "additionalProperties": true,
+            "default": {},
             "title": "Content Json",
             "type": "object"
           },
@@ -500,15 +501,77 @@
           "id",
           "event_id",
           "run_id",
-          "step_id",
           "artifact_type",
           "name",
-          "content_json",
           "content_hash",
           "size_bytes",
           "created_at"
         ],
         "title": "ArtifactRead",
+        "type": "object"
+      },
+      "ArtifactSummary": {
+        "properties": {
+          "artifact_type": {
+            "title": "Artifact Type",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id"
+          }
+        },
+        "required": [
+          "id",
+          "event_id",
+          "run_id",
+          "artifact_type",
+          "name",
+          "content_hash",
+          "size_bytes",
+          "created_at"
+        ],
+        "title": "ArtifactSummary",
         "type": "object"
       },
       "AuditActorType": {
@@ -822,10 +885,6 @@
           "object_id",
           "object_name",
           "summary",
-          "details_json",
-          "before_json",
-          "after_json",
-          "diff_json",
           "request_id",
           "correlation_id",
           "event_id",
@@ -836,11 +895,231 @@
         "title": "AuditEventRead",
         "type": "object"
       },
+      "AuditEventSummary": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Display Name"
+          },
+          "actor_type": {
+            "$ref": "#/components/schemas/AuditActorType"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "actor_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Username"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "diff_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff Json"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "object_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Id"
+          },
+          "object_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Name"
+          },
+          "object_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Type"
+          },
+          "package_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Id"
+          },
+          "queue_item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Item Id"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/AuditSeverity"
+          },
+          "source_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ip"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          }
+        },
+        "required": [
+          "id",
+          "timestamp",
+          "actor_user_id",
+          "actor_username",
+          "actor_display_name",
+          "actor_type",
+          "source_ip",
+          "user_agent",
+          "action",
+          "category",
+          "severity",
+          "object_type",
+          "object_id",
+          "object_name",
+          "summary",
+          "request_id",
+          "correlation_id",
+          "event_id",
+          "queue_item_id",
+          "package_id",
+          "created_at"
+        ],
+        "title": "AuditEventSummary",
+        "type": "object"
+      },
       "AuditListResponse": {
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/AuditEventRead"
+              "$ref": "#/components/schemas/AuditEventSummary"
             },
             "title": "Items",
             "type": "array"
@@ -1309,6 +1588,97 @@
           "created_at"
         ],
         "title": "BackupRecordRead",
+        "type": "object"
+      },
+      "BackupType": {
+        "enum": [
+          "config_export",
+          "database_dump",
+          "system_snapshot"
+        ],
+        "title": "BackupType",
+        "type": "string"
+      },
+      "Body_preview_aggregation_file_api_chz_aggregations_register_file_preview_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "order_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "source_system": {
+            "default": "External aggregation service",
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_aggregation_file_api_chz_aggregations_register_file_preview_post",
+        "type": "object"
+      },
+      "Body_register_aggregation_file_api_chz_aggregations_register_file_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "order_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "source_system": {
+            "default": "External aggregation service",
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_register_aggregation_file_api_chz_aggregations_register_file_post",
         "type": "object"
       },
       "BusinessKeySuggestion": {
@@ -2596,6 +2966,668 @@
         ],
         "title": "ChangeSetStatus",
         "type": "string"
+      },
+      "ChzAggregationCodeRow": {
+        "properties": {
+          "aggregate_code": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Aggregate Code",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "full_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Code"
+          },
+          "full_code_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Code Base64"
+          }
+        },
+        "required": [
+          "aggregate_code"
+        ],
+        "title": "ChzAggregationCodeRow",
+        "type": "object"
+      },
+      "ChzAggregationGroupInput": {
+        "properties": {
+          "aggregate_code": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Aggregate Code",
+            "type": "string"
+          },
+          "codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codes"
+          },
+          "full_codes_base64": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Codes Base64"
+          }
+        },
+        "required": [
+          "aggregate_code"
+        ],
+        "title": "ChzAggregationGroupInput",
+        "type": "object"
+      },
+      "ChzAggregationPreviewResponse": {
+        "properties": {
+          "content_sha256": {
+            "title": "Content Sha256",
+            "type": "string"
+          },
+          "duplicate_codes": {
+            "title": "Duplicate Codes",
+            "type": "integer"
+          },
+          "order_number_1c": {
+            "title": "Order Number 1C",
+            "type": "string"
+          },
+          "order_number_external": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number External"
+          },
+          "sample": {
+            "additionalProperties": true,
+            "title": "Sample",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "total_aggregates": {
+            "title": "Total Aggregates",
+            "type": "integer"
+          },
+          "total_codes": {
+            "title": "Total Codes",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "success",
+          "status",
+          "order_number_1c",
+          "order_number_external",
+          "total_codes",
+          "total_aggregates",
+          "content_sha256",
+          "duplicate_codes"
+        ],
+        "title": "ChzAggregationPreviewResponse",
+        "type": "object"
+      },
+      "ChzAggregationRegistrationRead": {
+        "properties": {
+          "content_sha256": {
+            "title": "Content Sha256",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "forwarded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forwarded At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "metadata_json": {
+            "additionalProperties": true,
+            "title": "Metadata Json",
+            "type": "object"
+          },
+          "order_number_1c": {
+            "title": "Order Number 1C",
+            "type": "string"
+          },
+          "order_number_external": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number External"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "source_file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source File Name"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_aggregates": {
+            "title": "Total Aggregates",
+            "type": "integer"
+          },
+          "total_codes": {
+            "title": "Total Codes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "source_system",
+          "source_document_id",
+          "source_file_name",
+          "order_number_1c",
+          "order_number_external",
+          "total_codes",
+          "total_aggregates",
+          "content_sha256",
+          "status",
+          "error_message",
+          "metadata_json",
+          "forwarded_at",
+          "created_at"
+        ],
+        "title": "ChzAggregationRegistrationRead",
+        "type": "object"
+      },
+      "ChzAggregationRegistrationRequest": {
+        "properties": {
+          "aggregates": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChzAggregationGroupInput"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregates"
+          },
+          "metadata_json": {
+            "additionalProperties": true,
+            "title": "Metadata Json",
+            "type": "object"
+          },
+          "order_number": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number"
+          },
+          "order_number_1c": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number 1C"
+          },
+          "order_number_external": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Number External"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChzAggregationCodeRow"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "source_file_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source File Name"
+          },
+          "source_system": {
+            "default": "External aggregation service",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "title": "ChzAggregationRegistrationRequest",
+        "type": "object"
+      },
+      "ChzAggregationRegistrationResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "onec_response": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onec Response"
+          },
+          "registration": {
+            "$ref": "#/components/schemas/ChzAggregationRegistrationRead"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "success",
+          "status",
+          "message",
+          "registration"
+        ],
+        "title": "ChzAggregationRegistrationResponse",
+        "type": "object"
+      },
+      "ChzAggregationSettingsPatch": {
+        "properties": {
+          "onec_header_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onec Header Name"
+          },
+          "onec_timeout_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onec Timeout Seconds"
+          },
+          "onec_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onec Token"
+          },
+          "onec_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onec Url"
+          }
+        },
+        "title": "ChzAggregationSettingsPatch",
+        "type": "object"
+      },
+      "ChzAggregationSettingsRead": {
+        "properties": {
+          "header_name": {
+            "default": "X-OMH-Token",
+            "title": "Header Name",
+            "type": "string"
+          },
+          "method": {
+            "default": "POST",
+            "title": "Method",
+            "type": "string"
+          },
+          "onec_url": {
+            "title": "Onec Url",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "title": "Timeout Seconds",
+            "type": "number"
+          },
+          "token_set": {
+            "default": false,
+            "title": "Token Set",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "onec_url",
+          "timeout_seconds",
+          "source"
+        ],
+        "title": "ChzAggregationSettingsRead",
+        "type": "object"
+      },
+      "ChzDnpPullRequest": {
+        "properties": {
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          },
+          "only_new": {
+            "default": true,
+            "title": "Only New",
+            "type": "boolean"
+          },
+          "order_number_1c": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Order Number 1C",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_number_1c"
+        ],
+        "title": "ChzDnpPullRequest",
+        "type": "object"
+      },
+      "ChzDnpPullResponse": {
+        "properties": {
+          "boxes_count": {
+            "title": "Boxes Count",
+            "type": "integer"
+          },
+          "codes_count": {
+            "title": "Codes Count",
+            "type": "integer"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "order_name_dnp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Name Dnp"
+          },
+          "order_number_1c": {
+            "title": "Order Number 1C",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ChzDnpPullRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "timeline_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline Url"
+          },
+          "tsv_text_base64": {
+            "title": "Tsv Text Base64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "order_number_1c",
+          "codes_count",
+          "boxes_count",
+          "tsv_text_base64"
+        ],
+        "title": "ChzDnpPullResponse",
+        "type": "object"
+      },
+      "ChzDnpPullRow": {
+        "properties": {
+          "full_code_base64": {
+            "title": "Full Code Base64",
+            "type": "string"
+          },
+          "sscc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sscc"
+          }
+        },
+        "required": [
+          "full_code_base64"
+        ],
+        "title": "ChzDnpPullRow",
+        "type": "object"
       },
       "CompileDraftRequest": {
         "properties": {
@@ -4517,7 +5549,6 @@
           },
           "current_payload_json": {
             "additionalProperties": true,
-            "default": {},
             "title": "Current Payload Json",
             "type": "object"
           },
@@ -4612,20 +5643,172 @@
         },
         "required": [
           "id",
-          "queue_message_id",
-          "event_id",
-          "message_id",
           "business_object",
           "operation",
           "reason",
-          "payload_json",
           "archived",
-          "restored_at",
-          "archived_at",
-          "timeline_link",
           "created_at"
         ],
         "title": "DLQItemRead",
+        "type": "object"
+      },
+      "DLQItemSummary": {
+        "properties": {
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "attempts": {
+            "default": 0,
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "business_object": {
+            "title": "Business Object",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "operation": {
+            "title": "Operation",
+            "type": "string"
+          },
+          "queue_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Message Id"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "restored_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restored At"
+          },
+          "timeline_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline Link"
+          }
+        },
+        "required": [
+          "id",
+          "business_object",
+          "operation",
+          "reason",
+          "archived",
+          "created_at"
+        ],
+        "title": "DLQItemSummary",
+        "type": "object"
+      },
+      "DLQPageResponse": {
+        "properties": {
+          "has_more": {
+            "default": false,
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DLQItemSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DLQPageResponse",
         "type": "object"
       },
       "DataContractCreate": {
@@ -6106,6 +7289,69 @@
         "title": "EventCreate",
         "type": "object"
       },
+      "EventDashboardSummary": {
+        "properties": {
+          "events_today": {
+            "default": 0,
+            "title": "Events Today",
+            "type": "integer"
+          },
+          "failed_today": {
+            "default": 0,
+            "title": "Failed Today",
+            "type": "integer"
+          },
+          "latest_failures": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EventSummary"
+            },
+            "title": "Latest Failures",
+            "type": "array"
+          },
+          "open_incidents": {
+            "default": 0,
+            "title": "Open Incidents",
+            "type": "integer"
+          },
+          "period_end": {
+            "format": "date-time",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date-time",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "queue_backlog": {
+            "default": 0,
+            "title": "Queue Backlog",
+            "type": "integer"
+          },
+          "queue_processing": {
+            "default": 0,
+            "title": "Queue Processing",
+            "type": "integer"
+          },
+          "retry_waiting": {
+            "default": 0,
+            "title": "Retry Waiting",
+            "type": "integer"
+          },
+          "timezone": {
+            "default": "UTC",
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end"
+        ],
+        "title": "EventDashboardSummary",
+        "type": "object"
+      },
       "EventJournalItem": {
         "properties": {
           "business_key": {
@@ -6374,6 +7620,84 @@
         "title": "EventJournalItem",
         "type": "object"
       },
+      "EventJournalPageResponse": {
+        "properties": {
+          "has_more": {
+            "default": false,
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EventJournalItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "EventJournalPageResponse",
+        "type": "object"
+      },
+      "EventOverview": {
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/EventSummary"
+          },
+          "has_more_runs": {
+            "default": false,
+            "title": "Has More Runs",
+            "type": "boolean"
+          },
+          "next_runs_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Runs Cursor"
+          },
+          "queue_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventQueueInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EventRunSummary"
+            },
+            "title": "Runs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "event"
+        ],
+        "title": "EventOverview",
+        "type": "object"
+      },
       "EventQueueInfo": {
         "properties": {
           "attempts": {
@@ -6591,6 +7915,131 @@
         "title": "EventRunRead",
         "type": "object"
       },
+      "EventRunSummary": {
+        "properties": {
+          "artifacts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ArtifactSummary"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mapping_versions_json": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Mapping Versions Json",
+            "type": "object"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/RunMode"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "run_number": {
+            "title": "Run Number",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "steps": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EventStepSummary"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "workflow_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Id"
+          },
+          "workflow_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Name"
+          },
+          "workflow_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Version"
+          }
+        },
+        "required": [
+          "id",
+          "event_id",
+          "run_number",
+          "mode",
+          "status"
+        ],
+        "title": "EventRunSummary",
+        "type": "object"
+      },
       "EventStatus": {
         "enum": [
           "new",
@@ -6746,6 +8195,141 @@
           "condition"
         ],
         "title": "EventStepRead",
+        "type": "object"
+      },
+      "EventStepSummary": {
+        "properties": {
+          "artifacts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ArtifactSummary"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "developer_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer Message"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "external_error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExternalErrorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "external_error_record_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Error Record Id"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "human_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Summary"
+          },
+          "human_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Title"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StepStatus"
+          },
+          "step_name": {
+            "title": "Step Name",
+            "type": "string"
+          },
+          "step_order": {
+            "title": "Step Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "step_order",
+          "step_name",
+          "status"
+        ],
+        "title": "EventStepSummary",
         "type": "object"
       },
       "EventSummary": {
@@ -8126,6 +9710,13 @@
             "additionalProperties": true,
             "title": "Variables",
             "type": "object"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/FlowValidationError"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -8188,6 +9779,18 @@
           "type": {
             "title": "Type",
             "type": "string"
+          },
+          "variables_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variables Snapshot"
           }
         },
         "required": [
@@ -8346,6 +9949,17 @@
             "title": "Code",
             "type": "string"
           },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
           "hint": {
             "anyOf": [
               {
@@ -8360,6 +9974,17 @@
           "message": {
             "title": "Message",
             "type": "string"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
           },
           "step_id": {
             "anyOf": [
@@ -9233,12 +10858,598 @@
         "title": "ImportPreview",
         "type": "object"
       },
+      "InboxRecordPatch": {
+        "properties": {
+          "fields_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields Json"
+          },
+          "payload_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload Json"
+          }
+        },
+        "title": "InboxRecordPatch",
+        "type": "object"
+      },
+      "InboxRecordRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "fields_json": {
+            "additionalProperties": true,
+            "title": "Fields Json",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "payload_json": {
+            "additionalProperties": true,
+            "title": "Payload Json",
+            "type": "object"
+          },
+          "source_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ip"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "template_id": {
+            "format": "uuid",
+            "title": "Template Id",
+            "type": "string"
+          },
+          "warnings_json": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Warnings Json",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "template_id",
+          "status",
+          "fields_json",
+          "warnings_json",
+          "source_ip",
+          "created_at"
+        ],
+        "title": "InboxRecordRead",
+        "type": "object"
+      },
+      "InboxResendRequest": {
+        "properties": {
+          "flow_slug": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Slug"
+          },
+          "timeout_seconds": {
+            "default": 30.0,
+            "exclusiveMinimum": 0.0,
+            "maximum": 300.0,
+            "title": "Timeout Seconds",
+            "type": "number"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "InboxResendRequest",
+        "type": "object"
+      },
+      "InboxResendResponse": {
+        "properties": {
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "status",
+          "message"
+        ],
+        "title": "InboxResendResponse",
+        "type": "object"
+      },
+      "InboxTemplateCreate": {
+        "properties": {
+          "auth_token": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Token"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "input_mode": {
+            "default": "json",
+            "title": "Input Mode",
+            "type": "string"
+          },
+          "missing_policy": {
+            "default": "reject",
+            "title": "Missing Policy",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "response_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Json"
+          },
+          "schema_json": {
+            "additionalProperties": true,
+            "title": "Schema Json",
+            "type": "object"
+          },
+          "slug": {
+            "maxLength": 160,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "storage_days": {
+            "default": 30,
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Storage Days",
+            "type": "integer"
+          },
+          "storage_mode": {
+            "default": "days",
+            "title": "Storage Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "InboxTemplateCreate",
+        "type": "object"
+      },
+      "InboxTemplatePatch": {
+        "properties": {
+          "auth_token": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Token"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "input_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Mode"
+          },
+          "missing_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing Policy"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "response_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Json"
+          },
+          "schema_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Json"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "pattern": "^[a-z0-9][a-z0-9_-]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "storage_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage Days"
+          },
+          "storage_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage Mode"
+          }
+        },
+        "title": "InboxTemplatePatch",
+        "type": "object"
+      },
+      "InboxTemplateRead": {
+        "properties": {
+          "auth_token_set": {
+            "title": "Auth Token Set",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_mode": {
+            "title": "Input Mode",
+            "type": "string"
+          },
+          "missing_policy": {
+            "title": "Missing Policy",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "response_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Json"
+          },
+          "schema_json": {
+            "additionalProperties": true,
+            "title": "Schema Json",
+            "type": "object"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "storage_days": {
+            "title": "Storage Days",
+            "type": "integer"
+          },
+          "storage_mode": {
+            "title": "Storage Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "description",
+          "enabled",
+          "input_mode",
+          "schema_json",
+          "missing_policy",
+          "storage_mode",
+          "storage_days",
+          "response_json",
+          "auth_token_set",
+          "created_at"
+        ],
+        "title": "InboxTemplateRead",
+        "type": "object"
+      },
+      "InboxTemplateTestRequest": {
+        "properties": {
+          "payload": {
+            "title": "Payload"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "InboxTemplateTestRequest",
+        "type": "object"
+      },
+      "InboxTemplateTestResponse": {
+        "properties": {
+          "fields": {
+            "additionalProperties": true,
+            "title": "Fields",
+            "type": "object"
+          },
+          "response": {
+            "additionalProperties": true,
+            "title": "Response",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "fields",
+          "warnings",
+          "response"
+        ],
+        "title": "InboxTemplateTestResponse",
+        "type": "object"
+      },
       "IncidentEventRead": {
         "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "entity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Type"
+          },
           "event_id": {
             "format": "uuid",
             "title": "Event Id",
             "type": "string"
+          },
+          "event_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Status"
+          },
+          "event_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Type"
           },
           "id": {
             "format": "uuid",
@@ -11642,6 +13853,193 @@
         "title": "IntegrationMessageStatus",
         "type": "string"
       },
+      "IntegrationMessageSummary": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/IntegrationMessageDirection"
+          },
+          "document_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Date"
+          },
+          "document_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Number"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "external_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "message_type": {
+            "title": "Message Type",
+            "type": "string"
+          },
+          "payload_sha256": {
+            "title": "Payload Sha256",
+            "type": "string"
+          },
+          "payload_size_bytes": {
+            "title": "Payload Size Bytes",
+            "type": "integer"
+          },
+          "pinned": {
+            "title": "Pinned",
+            "type": "boolean"
+          },
+          "route_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Key"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IntegrationMessageStatus"
+          },
+          "target_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target System"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "direction",
+          "source_system",
+          "target_system",
+          "message_type",
+          "document_type",
+          "document_number",
+          "document_date",
+          "correlation_id",
+          "external_id",
+          "status",
+          "route_key",
+          "content_type",
+          "payload_sha256",
+          "payload_size_bytes",
+          "event_id",
+          "last_error",
+          "expires_at",
+          "pinned",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "IntegrationMessageSummary",
+        "type": "object"
+      },
       "IntegrationPattern": {
         "properties": {
           "category": {
@@ -14002,6 +16400,14 @@
             "title": "Message",
             "type": "string"
           },
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
           "status": {
             "default": "saved",
             "title": "Status",
@@ -14050,7 +16456,7 @@
             "type": "string"
           },
           "timeout_seconds": {
-            "default": 180.0,
+            "default": 600.0,
             "title": "Timeout Seconds",
             "type": "number"
           },
@@ -14143,6 +16549,41 @@
         "title": "MarkingCodePoolLocalOutboxSettings",
         "type": "object"
       },
+      "MarkingCodePoolOverview": {
+        "properties": {
+          "latest_export": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MarkingCodePoolExportRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recent_errors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MarkingCodePoolExportRead"
+            },
+            "title": "Recent Errors",
+            "type": "array"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/MarkingCodePoolSettingsRead"
+          },
+          "total_exports": {
+            "default": 0,
+            "title": "Total Exports",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "settings"
+        ],
+        "title": "MarkingCodePoolOverview",
+        "type": "object"
+      },
       "MarkingCodePoolPreviewResponse": {
         "properties": {
           "content_sha256": {
@@ -14152,6 +16593,14 @@
           "file_name": {
             "title": "File Name",
             "type": "string"
+          },
+          "segments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Segments",
+            "type": "array"
           },
           "success": {
             "title": "Success",
@@ -14204,6 +16653,160 @@
           }
         },
         "title": "MarkingCodePoolResponseSettings",
+        "type": "object"
+      },
+      "MarkingCodePoolRoutingRuleCreate": {
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "match_json": {
+            "additionalProperties": true,
+            "title": "Match Json",
+            "type": "object"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "default": 100,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "targets_json": {
+            "items": {
+              "$ref": "#/components/schemas/RoutingRuleTarget"
+            },
+            "title": "Targets Json",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "MarkingCodePoolRoutingRuleCreate",
+        "type": "object"
+      },
+      "MarkingCodePoolRoutingRulePatch": {
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "match_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Json"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "targets_json": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RoutingRuleTarget"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targets Json"
+          }
+        },
+        "title": "MarkingCodePoolRoutingRulePatch",
+        "type": "object"
+      },
+      "MarkingCodePoolRoutingRuleRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "match_json": {
+            "additionalProperties": true,
+            "title": "Match Json",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
+          "targets_json": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Targets Json",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "enabled",
+          "priority",
+          "match_json",
+          "targets_json",
+          "created_at"
+        ],
+        "title": "MarkingCodePoolRoutingRuleRead",
         "type": "object"
       },
       "MarkingCodePoolSettingsPatch": {
@@ -14480,6 +17083,16 @@
       },
       "MatcherRule": {
         "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatcherGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "path": {
             "anyOf": [
               {
@@ -14503,8 +17116,15 @@
             "title": "Pattern"
           },
           "type": {
-            "title": "Type",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
           },
           "value": {
             "title": "Value"
@@ -14522,9 +17142,6 @@
             "title": "Values"
           }
         },
-        "required": [
-          "type"
-        ],
         "title": "MatcherRule",
         "type": "object"
       },
@@ -14626,6 +17243,17 @@
             ],
             "title": "Message"
           },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
           "path": {
             "anyOf": [
               {
@@ -14640,6 +17268,20 @@
           "rule": {
             "title": "Rule",
             "type": "string"
+          },
+          "trace": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MatcherTraceItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace"
           }
         },
         "required": [
@@ -24739,6 +27381,130 @@
         "title": "ProductionStatus",
         "type": "object"
       },
+      "QueueAttemptRead": {
+        "properties": {
+          "attempt_no": {
+            "title": "Attempt No",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "external_error_record_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Error Record Id"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "queue_message_id": {
+            "format": "uuid",
+            "title": "Queue Message Id",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "queue_message_id",
+          "run_id",
+          "attempt_no",
+          "status",
+          "started_at",
+          "finished_at",
+          "error_code",
+          "error_message",
+          "external_error_record_id",
+          "duration_ms",
+          "created_at"
+        ],
+        "title": "QueueAttemptRead",
+        "type": "object"
+      },
       "QueueEditRetryRequest": {
         "properties": {
           "payload_json": {
@@ -25295,7 +28061,6 @@
           },
           "original_payload_json": {
             "additionalProperties": true,
-            "default": {},
             "title": "Original Payload Json",
             "type": "object"
           },
@@ -25413,26 +28178,407 @@
           "id",
           "event_id",
           "message_id",
-          "connector_id",
-          "workflow_id",
           "business_object",
           "operation",
-          "current_step",
           "status",
           "attempts",
           "max_attempts",
           "next_retry_at",
           "priority",
-          "worker",
-          "timeline_link",
-          "payload_json",
-          "last_error",
-          "locked_at",
-          "completed_at",
           "created_at",
           "updated_at"
         ],
         "title": "QueueMessageRead",
+        "type": "object"
+      },
+      "QueueMessageSummary": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "business_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Key"
+          },
+          "business_object": {
+            "title": "Business Object",
+            "type": "string"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "connector_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connector Id"
+          },
+          "connector_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connector Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Step"
+          },
+          "endpoint_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint Id"
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "flow_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "last_error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Message"
+          },
+          "last_external_error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last External Error Message"
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
+          "locked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked By"
+          },
+          "locked_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked Until"
+          },
+          "max_attempts": {
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "next_retry_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Retry At"
+          },
+          "operation": {
+            "title": "Operation",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
+          "route_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Id"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnterpriseQueueStatus"
+          },
+          "target_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target System"
+          },
+          "timeline_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeline Link"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "worker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker"
+          },
+          "workflow_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Id"
+          }
+        },
+        "required": [
+          "id",
+          "event_id",
+          "message_id",
+          "business_object",
+          "operation",
+          "status",
+          "attempts",
+          "max_attempts",
+          "next_retry_at",
+          "priority",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "QueueMessageSummary",
+        "type": "object"
+      },
+      "QueuePageResponse": {
+        "properties": {
+          "has_more": {
+            "default": false,
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/QueueMessageSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "QueuePageResponse",
         "type": "object"
       },
       "QueueProcessResponse": {
@@ -27775,6 +30921,256 @@
         "title": "ReturnToPrintRequest",
         "type": "object"
       },
+      "RoutingRuleTarget": {
+        "properties": {
+          "file_name_template": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name Template"
+          },
+          "header_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header Name"
+          },
+          "method": {
+            "default": "POST",
+            "maxLength": 10,
+            "title": "Method",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Seconds"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "RoutingRuleTarget",
+        "type": "object"
+      },
+      "RoutingRuleTestCodeResult": {
+        "properties": {
+          "code_preview": {
+            "title": "Code Preview",
+            "type": "string"
+          },
+          "gtin": {
+            "title": "Gtin",
+            "type": "string"
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Id"
+          },
+          "rule_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Name"
+          },
+          "segment": {
+            "title": "Segment",
+            "type": "string"
+          },
+          "serial": {
+            "title": "Serial",
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Targets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code_preview",
+          "gtin",
+          "serial",
+          "segment",
+          "rule_id",
+          "rule_name"
+        ],
+        "title": "RoutingRuleTestCodeResult",
+        "type": "object"
+      },
+      "RoutingRuleTestRequest": {
+        "properties": {
+          "codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codes"
+          },
+          "full_codes_base64": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Codes Base64"
+          },
+          "gs_marker": {
+            "default": "{GS}",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Gs Marker",
+            "type": "string"
+          },
+          "order_number": {
+            "default": "",
+            "maxLength": 255,
+            "title": "Order Number",
+            "type": "string"
+          },
+          "source_document_id": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Document Id"
+          },
+          "source_system": {
+            "default": "1C ERP",
+            "maxLength": 255,
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "title": "RoutingRuleTestRequest",
+        "type": "object"
+      },
+      "RoutingRuleTestResponse": {
+        "properties": {
+          "default_codes": {
+            "title": "Default Codes",
+            "type": "integer"
+          },
+          "matched_codes": {
+            "title": "Matched Codes",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/RoutingRuleTestCodeResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_codes": {
+            "title": "Total Codes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_codes",
+          "matched_codes",
+          "default_codes",
+          "results"
+        ],
+        "title": "RoutingRuleTestResponse",
+        "type": "object"
+      },
       "RuleEvaluationResult": {
         "properties": {
           "actions_applied": {
@@ -29574,6 +32970,68 @@
           }
         },
         "title": "SourceWebApiWritebackSuccessCondition",
+        "type": "object"
+      },
+      "SqlQueryRequest": {
+        "properties": {
+          "limit": {
+            "default": 200,
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SqlQueryRequest",
+        "type": "object"
+      },
+      "SqlQueryResponse": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "elapsed_ms": {
+            "title": "Elapsed Ms",
+            "type": "integer"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "columns",
+          "rows",
+          "row_count",
+          "truncated",
+          "elapsed_ms"
+        ],
+        "title": "SqlQueryResponse",
         "type": "object"
       },
       "StepMetadataRead": {
@@ -34952,6 +38410,296 @@
         ]
       }
     },
+    "/api/chz-aggregations/pull-from-dnp": {
+      "post": {
+        "operationId": "pull_packed_codes_from_dnp_api_chz_aggregations_pull_from_dnp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChzDnpPullRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChzDnpPullResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pull Packed Codes From Dnp",
+        "tags": [
+          "chz-aggregations"
+        ]
+      }
+    },
+    "/api/chz-aggregations/register": {
+      "post": {
+        "operationId": "register_aggregation_json_api_chz_aggregations_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChzAggregationRegistrationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChzAggregationRegistrationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Aggregation Json",
+        "tags": [
+          "chz-aggregations"
+        ]
+      }
+    },
+    "/api/chz-aggregations/register-file": {
+      "post": {
+        "operationId": "register_aggregation_file_api_chz_aggregations_register_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_register_aggregation_file_api_chz_aggregations_register_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChzAggregationRegistrationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Aggregation File",
+        "tags": [
+          "chz-aggregations"
+        ]
+      }
+    },
+    "/api/chz-aggregations/register-file/preview": {
+      "post": {
+        "operationId": "preview_aggregation_file_api_chz_aggregations_register_file_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_aggregation_file_api_chz_aggregations_register_file_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChzAggregationPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Aggregation File",
+        "tags": [
+          "chz-aggregations"
+        ]
+      }
+    },
+    "/api/chz-aggregations/register/preview": {
+      "post": {
+        "operationId": "preview_aggregation_json_api_chz_aggregations_register_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChzAggregationRegistrationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChzAggregationPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Aggregation Json",
+        "tags": [
+          "chz-aggregations"
+        ]
+      }
+    },
+    "/api/chz-aggregations/registrations": {
+      "get": {
+        "operationId": "list_registrations_api_chz_aggregations_registrations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ChzAggregationRegistrationRead"
+                  },
+                  "title": "Response List Registrations Api Chz Aggregations Registrations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Registrations",
+        "tags": [
+          "chz-aggregations"
+        ]
+      }
+    },
+    "/api/chz-aggregations/settings": {
+      "get": {
+        "operationId": "get_settings_api_chz_aggregations_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChzAggregationSettingsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Settings",
+        "tags": [
+          "chz-aggregations"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_settings_api_chz_aggregations_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChzAggregationSettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChzAggregationSettingsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Settings",
+        "tags": [
+          "chz-aggregations"
+        ]
+      }
+    },
     "/api/config/{object_type}/{object_id}/diff": {
       "get": {
         "operationId": "diff_versions_api_config__object_type___object_id__diff_get",
@@ -36815,6 +40563,34 @@
               "title": "Include Archived",
               "type": "boolean"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_payload",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Include Payload",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -36822,11 +40598,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/DLQItemRead"
-                  },
-                  "title": "Response Dlq List Alias Api Dlq Get",
-                  "type": "array"
+                  "anyOf": [
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/DLQItemSummary"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/DLQItemRead"
+                      },
+                      "type": "array"
+                    }
+                  ],
+                  "title": "Response Dlq List Alias Api Dlq Get"
                 }
               }
             },
@@ -36844,6 +40630,77 @@
           }
         },
         "summary": "Dlq List Alias",
+        "tags": [
+          "dlq"
+        ]
+      }
+    },
+    "/api/dlq/page": {
+      "get": {
+        "operationId": "dlq_list_page_alias_api_dlq_page_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DLQPageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dlq List Page Alias",
         "tags": [
           "dlq"
         ]
@@ -37629,6 +41486,34 @@
               "title": "Include Archived",
               "type": "boolean"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_payload",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Include Payload",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -37636,11 +41521,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/DLQItemRead"
-                  },
-                  "title": "Response List Dlq Api Enterprise Runtime Dlq Get",
-                  "type": "array"
+                  "anyOf": [
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/DLQItemSummary"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/DLQItemRead"
+                      },
+                      "type": "array"
+                    }
+                  ],
+                  "title": "Response List Dlq Api Enterprise Runtime Dlq Get"
                 }
               }
             },
@@ -37658,6 +41553,77 @@
           }
         },
         "summary": "List Dlq",
+        "tags": [
+          "enterprise-runtime"
+        ]
+      }
+    },
+    "/api/enterprise-runtime/dlq/page": {
+      "get": {
+        "operationId": "list_dlq_page_api_enterprise_runtime_dlq_page_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DLQPageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Dlq Page",
         "tags": [
           "enterprise-runtime"
         ]
@@ -38289,6 +42255,34 @@
               "title": "Sort",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_payload",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Include Payload",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -38296,11 +42290,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/QueueMessageRead"
-                  },
-                  "title": "Response List Queue Api Enterprise Runtime Queue Get",
-                  "type": "array"
+                  "anyOf": [
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/QueueMessageSummary"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/QueueMessageRead"
+                      },
+                      "type": "array"
+                    }
+                  ],
+                  "title": "Response List Queue Api Enterprise Runtime Queue Get"
                 }
               }
             },
@@ -38357,6 +42361,189 @@
           }
         },
         "summary": "Create Queue",
+        "tags": [
+          "enterprise-runtime"
+        ]
+      }
+    },
+    "/api/enterprise-runtime/queue/page": {
+      "get": {
+        "operationId": "list_queue_page_api_enterprise_runtime_queue_page_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EnterpriseQueueStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "business_object",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Object"
+            }
+          },
+          {
+            "in": "query",
+            "name": "operation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Operation"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source System"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target System"
+            }
+          },
+          {
+            "in": "query",
+            "name": "business_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Error"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "priority",
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuePageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Queue Page",
         "tags": [
           "enterprise-runtime"
         ]
@@ -38549,6 +42736,65 @@
           }
         },
         "summary": "Patch Queue",
+        "tags": [
+          "enterprise-runtime"
+        ]
+      }
+    },
+    "/api/enterprise-runtime/queue/{queue_id}/attempts": {
+      "get": {
+        "operationId": "list_attempts_api_enterprise_runtime_queue__queue_id__attempts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "queue_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Queue Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QueueAttemptRead"
+                  },
+                  "title": "Response List Attempts Api Enterprise Runtime Queue  Queue Id  Attempts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Attempts",
         "tags": [
           "enterprise-runtime"
         ]
@@ -39514,6 +43760,27 @@
         ]
       }
     },
+    "/api/events/dashboard-summary": {
+      "get": {
+        "operationId": "get_dashboard_summary_api_events_dashboard_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDashboardSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Dashboard Summary",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/api/events/journal": {
       "get": {
         "operationId": "list_event_journal_api_events_journal_get",
@@ -39534,6 +43801,181 @@
           }
         },
         "summary": "List Event Journal",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/events/journal/page": {
+      "get": {
+        "operationId": "list_event_journal_page_api_events_journal_page_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EventStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventJournalPageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Event Journal Page",
         "tags": [
           "events"
         ]
@@ -39625,6 +44067,99 @@
         ]
       }
     },
+    "/api/events/{event_id}/overview": {
+      "get": {
+        "operationId": "get_overview_api_events__event_id__overview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Event Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "brief",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Brief",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_run",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Run"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Overview",
+        "tags": [
+          "events"
+        ]
+      }
+    },
     "/api/events/{event_id}/pin": {
       "post": {
         "operationId": "pin_event_api_events__event_id__pin_post",
@@ -39708,6 +44243,59 @@
         "summary": "Replay Event",
         "tags": [
           "replay"
+        ]
+      }
+    },
+    "/api/events/{event_id}/runs/{run_id}/metadata": {
+      "get": {
+        "operationId": "run_metadata_api_events__event_id__runs__run_id__metadata_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Event Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventRunSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Metadata",
+        "tags": [
+          "events"
         ]
       }
     },
@@ -39934,6 +44522,106 @@
         "summary": "Get External Error",
         "tags": [
           "external-errors"
+        ]
+      }
+    },
+    "/api/federation/config-bundle": {
+      "get": {
+        "operationId": "config_bundle_api_federation_config_bundle_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Config Bundle",
+        "tags": [
+          "federation"
+        ]
+      }
+    },
+    "/api/federation/runs": {
+      "get": {
+        "operationId": "runs_api_federation_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Runs",
+        "tags": [
+          "federation"
+        ]
+      }
+    },
+    "/api/federation/status": {
+      "get": {
+        "operationId": "status_api_federation_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "federation"
+        ]
+      }
+    },
+    "/api/federation/sync-now": {
+      "post": {
+        "operationId": "sync_now_api_federation_sync_now_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sync Now",
+        "tags": [
+          "federation"
         ]
       }
     },
@@ -40246,6 +44934,47 @@
         ]
       }
     },
+    "/api/flow-builder/validate-paths": {
+      "post": {
+        "operationId": "validate_paths_api_flow_builder_validate_paths_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowBuilderPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowBuilderPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Paths",
+        "tags": [
+          "flow-builder"
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "health_check_api_health_get",
@@ -40514,6 +45243,727 @@
         "summary": "Health Ready",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/inbox-records": {
+      "get": {
+        "operationId": "list_records_api_inbox_records_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Records Api Inbox Records Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Records",
+        "tags": [
+          "data-inbox"
+        ]
+      }
+    },
+    "/api/inbox-records/export.csv": {
+      "get": {
+        "operationId": "export_records_csv_api_inbox_records_export_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Records Csv",
+        "tags": [
+          "data-inbox"
+        ]
+      }
+    },
+    "/api/inbox-records/{record_id}": {
+      "delete": {
+        "operationId": "delete_record_api_inbox_records__record_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Record",
+        "tags": [
+          "data-inbox"
+        ]
+      },
+      "get": {
+        "operationId": "get_record_api_inbox_records__record_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxRecordRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Record",
+        "tags": [
+          "data-inbox"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_record_api_inbox_records__record_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InboxRecordPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxRecordRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Record",
+        "tags": [
+          "data-inbox"
+        ]
+      }
+    },
+    "/api/inbox-records/{record_id}/resend": {
+      "post": {
+        "operationId": "resend_record_api_inbox_records__record_id__resend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InboxResendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxResendResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resend Record",
+        "tags": [
+          "data-inbox"
+        ]
+      }
+    },
+    "/api/inbox-templates": {
+      "get": {
+        "operationId": "list_templates_api_inbox_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InboxTemplateRead"
+                  },
+                  "title": "Response List Templates Api Inbox Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Templates",
+        "tags": [
+          "data-inbox"
+        ]
+      },
+      "post": {
+        "operationId": "create_template_api_inbox_templates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InboxTemplateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxTemplateRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Template",
+        "tags": [
+          "data-inbox"
+        ]
+      }
+    },
+    "/api/inbox-templates/{template_id}": {
+      "delete": {
+        "operationId": "delete_template_api_inbox_templates__template_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Template",
+        "tags": [
+          "data-inbox"
+        ]
+      },
+      "get": {
+        "operationId": "get_template_api_inbox_templates__template_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxTemplateRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Template",
+        "tags": [
+          "data-inbox"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_template_api_inbox_templates__template_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InboxTemplatePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxTemplateRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Template",
+        "tags": [
+          "data-inbox"
+        ]
+      }
+    },
+    "/api/inbox-templates/{template_id}/test": {
+      "post": {
+        "operationId": "test_template_api_inbox_templates__template_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InboxTemplateTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxTemplateTestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Template",
+        "tags": [
+          "data-inbox"
+        ]
+      }
+    },
+    "/api/inbox/{slug}": {
+      "post": {
+        "operationId": "receive_inbox_api_inbox__slug__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Receive Inbox",
+        "tags": [
+          "data-inbox"
         ]
       }
     },
@@ -41336,6 +46786,27 @@
         ]
       }
     },
+    "/api/integration-flows/presets/b2b-portal-order/install": {
+      "post": {
+        "operationId": "install_b2b_portal_order_preset_api_integration_flows_presets_b2b_portal_order_install_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationFlowRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Install B2B Portal Order Preset",
+        "tags": [
+          "integration-flows"
+        ]
+      }
+    },
     "/api/integration-flows/presets/dnp-pull-codes/install": {
       "post": {
         "operationId": "install_dnp_pull_codes_preset_api_integration_flows_presets_dnp_pull_codes_install_post",
@@ -41436,6 +46907,48 @@
           }
         },
         "summary": "Install Operation Key Odata Chain Preset",
+        "tags": [
+          "integration-flows"
+        ]
+      }
+    },
+    "/api/integration-flows/presets/ozon-orders-to-onec/install": {
+      "post": {
+        "operationId": "install_ozon_orders_to_onec_preset_api_integration_flows_presets_ozon_orders_to_onec_install_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationFlowRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Install Ozon Orders To Onec Preset",
+        "tags": [
+          "integration-flows"
+        ]
+      }
+    },
+    "/api/integration-flows/presets/ozon-stocks-prices-from-onec/install": {
+      "post": {
+        "operationId": "install_ozon_stocks_prices_from_onec_preset_api_integration_flows_presets_ozon_stocks_prices_from_onec_install_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationFlowRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Install Ozon Stocks Prices From Onec Preset",
         "tags": [
           "integration-flows"
         ]
@@ -45570,6 +51083,35 @@
     "/api/marking-code-pools/exports": {
       "get": {
         "operationId": "list_exports_api_marking_code_pools_exports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -45584,6 +51126,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "List Exports",
@@ -45839,6 +51391,260 @@
           }
         },
         "summary": "Preview Onec Pool To File",
+        "tags": [
+          "marking-code-pools"
+        ]
+      }
+    },
+    "/api/marking-code-pools/overview": {
+      "get": {
+        "operationId": "get_overview_api_marking_code_pools_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkingCodePoolOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Overview",
+        "tags": [
+          "marking-code-pools"
+        ]
+      }
+    },
+    "/api/marking-code-pools/routing-rules": {
+      "get": {
+        "operationId": "list_routing_rules_api_marking_code_pools_routing_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MarkingCodePoolRoutingRuleRead"
+                  },
+                  "title": "Response List Routing Rules Api Marking Code Pools Routing Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Routing Rules",
+        "tags": [
+          "marking-code-pools"
+        ]
+      },
+      "post": {
+        "operationId": "create_routing_rule_api_marking_code_pools_routing_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkingCodePoolRoutingRuleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkingCodePoolRoutingRuleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Routing Rule",
+        "tags": [
+          "marking-code-pools"
+        ]
+      }
+    },
+    "/api/marking-code-pools/routing-rules/test": {
+      "post": {
+        "operationId": "test_routing_rules_api_marking_code_pools_routing_rules_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutingRuleTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingRuleTestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Test Routing Rules",
+        "tags": [
+          "marking-code-pools"
+        ]
+      }
+    },
+    "/api/marking-code-pools/routing-rules/{rule_id}": {
+      "delete": {
+        "operationId": "delete_routing_rule_api_marking_code_pools_routing_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Routing Rule",
+        "tags": [
+          "marking-code-pools"
+        ]
+      },
+      "get": {
+        "operationId": "get_routing_rule_api_marking_code_pools_routing_rules__rule_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkingCodePoolRoutingRuleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Routing Rule",
+        "tags": [
+          "marking-code-pools"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_routing_rule_api_marking_code_pools_routing_rules__rule_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkingCodePoolRoutingRulePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkingCodePoolRoutingRuleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Routing Rule",
         "tags": [
           "marking-code-pools"
         ]
@@ -47850,13 +53656,35 @@
     "/api/onec/xml/messages": {
       "get": {
         "operationId": "list_messages_api_onec_xml_messages_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/IntegrationMessageRead"
+                    "$ref": "#/components/schemas/IntegrationMessageSummary"
                   },
                   "title": "Response List Messages Api Onec Xml Messages Get",
                   "type": "array"
@@ -47864,6 +53692,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "List Messages",
@@ -50292,6 +56130,32 @@
               "title": "Job Id",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -50671,6 +56535,27 @@
         ]
       }
     },
+    "/api/production/backups/db": {
+      "post": {
+        "operationId": "create_db_backup_api_production_backups_db_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupRecordRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Create Db Backup",
+        "tags": [
+          "production"
+        ]
+      }
+    },
     "/api/production/checklist": {
       "get": {
         "operationId": "production_checklist_api_production_checklist_get",
@@ -50764,6 +56649,34 @@
     "/api/production/exports": {
       "get": {
         "operationId": "exports_api_production_exports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "backup_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BackupType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Backup Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -50778,6 +56691,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Exports",
@@ -51296,6 +57219,34 @@
               "title": "Sort",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_payload",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Include Payload",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -51303,11 +57254,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/QueueMessageRead"
-                  },
-                  "title": "Response Queue List Alias Api Queue Get",
-                  "type": "array"
+                  "anyOf": [
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/QueueMessageSummary"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/QueueMessageRead"
+                      },
+                      "type": "array"
+                    }
+                  ],
+                  "title": "Response Queue List Alias Api Queue Get"
                 }
               }
             },
@@ -51364,6 +57325,189 @@
           }
         },
         "summary": "Queue Create Alias",
+        "tags": [
+          "queue"
+        ]
+      }
+    },
+    "/api/queue/page": {
+      "get": {
+        "operationId": "queue_list_page_alias_api_queue_page_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EnterpriseQueueStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "business_object",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Object"
+            }
+          },
+          {
+            "in": "query",
+            "name": "operation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Operation"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source System"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target System"
+            }
+          },
+          {
+            "in": "query",
+            "name": "business_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Business Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Error"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "priority",
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuePageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Queue List Page Alias",
         "tags": [
           "queue"
         ]
@@ -51505,6 +57649,65 @@
           }
         },
         "summary": "Queue Get Alias",
+        "tags": [
+          "queue"
+        ]
+      }
+    },
+    "/api/queue/{queue_id}/attempts": {
+      "get": {
+        "operationId": "queue_attempts_alias_api_queue__queue_id__attempts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "queue_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Queue Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QueueAttemptRead"
+                  },
+                  "title": "Response Queue Attempts Alias Api Queue  Queue Id  Attempts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Queue Attempts Alias",
         "tags": [
           "queue"
         ]
@@ -52934,6 +59137,47 @@
         "summary": "Rotate Secret",
         "tags": [
           "secrets"
+        ]
+      }
+    },
+    "/api/sql-console/query": {
+      "post": {
+        "operationId": "run_query_api_sql_console_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SqlQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SqlQueryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Query",
+        "tags": [
+          "sql-console"
         ]
       }
     },

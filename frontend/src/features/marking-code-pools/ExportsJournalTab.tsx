@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { JsonBlock } from '../../components/JsonBlock';
 import { StatusBadge } from '../../components/StatusBadge';
 import { CopyButton } from '../../components/product/CopyButton';
@@ -10,12 +10,17 @@ import type { MarkingCodePoolActionRetryResponse, MarkingCodePoolExport, Marking
 import { actionDetails, actionStatus, formatDate, shortHash } from './utils';
 
 interface ExportsJournalTabProps {
-  exports: MarkingCodePoolExport[];
+  exports?: MarkingCodePoolExport[];
   settings: MarkingCodePoolSettings | undefined;
 }
 
-export function ExportsJournalTab({ exports, settings }: ExportsJournalTabProps) {
+export function ExportsJournalTab({ exports: initialExports, settings }: ExportsJournalTabProps) {
   const queryClient = useQueryClient();
+  const exportsQuery = useQuery<MarkingCodePoolExport[]>({
+    queryKey: ['marking-code-pools-exports'],
+    queryFn: () => markingCodePoolsApi.exports(),
+  });
+  const exports: MarkingCodePoolExport[] = exportsQuery.data ?? initialExports ?? [];
   const [selected, setSelected] = useState<MarkingCodePoolExport | null>(null);
   const [retryResult, setRetryResult] = useState<MarkingCodePoolActionRetryResponse | null>(null);
   const onRetrySuccess = (data: MarkingCodePoolActionRetryResponse) => {

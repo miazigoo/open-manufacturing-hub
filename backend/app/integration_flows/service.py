@@ -21,7 +21,7 @@ from app.integration_bus.models import IntegrationEndpoint, IntegrationRoute
 from app.core.enums import EndpointProcessingMode
 from app.integration_flows import repository
 from app.integration_flows.models import IntegrationFlow
-from app.integration_flows.presets import B2B_PORTAL_ORDER_PRESET, MARKING_POOL_PRESET, ONEC_CHZ_POOL_DELIVERY_PRESET, OPERATION_KEY_ODATA_CHAIN_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
+from app.integration_flows.presets import B2B_PORTAL_ORDER_PRESET, MARKING_POOL_PRESET, ONEC_CHZ_POOL_DELIVERY_PRESET, OPERATION_KEY_ODATA_CHAIN_PRESET, OZON_ORDERS_TO_ONEC_PRESET, OZON_STOCKS_PRICES_FROM_ONEC_PRESET, TWO_ODATA_TO_ENDPOINT_PRESET
 from app.integration_flows.schemas import FlowTestRequest, IntegrationFlowCreate, IntegrationFlowPatch
 from app.matchers.engine import evaluate_matcher_group
 from app.matchers.validators import validate_matcher_group
@@ -632,3 +632,38 @@ async def install_b2b_portal_order_preset(session: AsyncSession) -> IntegrationF
         await compile_flow(session, existing.id)
         return await get_flow_or_404(session, existing.id)
     return await create_flow(session, IntegrationFlowCreate(**B2B_PORTAL_ORDER_PRESET))
+
+
+async def install_ozon_orders_to_onec_preset(session: AsyncSession) -> IntegrationFlow:
+    existing = await repository.get_by_slug(session, OZON_ORDERS_TO_ONEC_PRESET["slug"])
+    if existing:
+        await patch_flow(
+            session,
+            existing.id,
+            IntegrationFlowPatch(
+                description=OZON_ORDERS_TO_ONEC_PRESET["description"],
+                builder_json=OZON_ORDERS_TO_ONEC_PRESET["builder_json"],
+                test_payload_json=OZON_ORDERS_TO_ONEC_PRESET["test_payload_json"],
+            ),
+        )
+        await compile_flow(session, existing.id)
+        return await get_flow_or_404(session, existing.id)
+    return await create_flow(session, IntegrationFlowCreate(**OZON_ORDERS_TO_ONEC_PRESET))
+
+
+async def install_ozon_stocks_prices_from_onec_preset(session: AsyncSession) -> IntegrationFlow:
+    existing = await repository.get_by_slug(session, OZON_STOCKS_PRICES_FROM_ONEC_PRESET["slug"])
+    if existing:
+        await patch_flow(
+            session,
+            existing.id,
+            IntegrationFlowPatch(
+                description=OZON_STOCKS_PRICES_FROM_ONEC_PRESET["description"],
+                matcher_group_json=OZON_STOCKS_PRICES_FROM_ONEC_PRESET["matcher_group_json"],
+                builder_json=OZON_STOCKS_PRICES_FROM_ONEC_PRESET["builder_json"],
+                test_payload_json=OZON_STOCKS_PRICES_FROM_ONEC_PRESET["test_payload_json"],
+            ),
+        )
+        await compile_flow(session, existing.id)
+        return await get_flow_or_404(session, existing.id)
+    return await create_flow(session, IntegrationFlowCreate(**OZON_STOCKS_PRICES_FROM_ONEC_PRESET))

@@ -17,13 +17,18 @@ from app.enterprise_runtime.schemas import (
     CanonicalObjectCreate,
     CanonicalObjectRead,
     DLQItemRead,
+    DLQItemSummary,
+    DLQPageResponse,
     MonitorSummary,
     ODataCachePreloadRequest,
     ODataCacheRead,
+    QueueAttemptRead,
     QueueMessageCreate,
     QueueEditRetryRequest,
     QueueMessagePatch,
     QueueMessageRead,
+    QueueMessageSummary,
+    QueuePageResponse,
     QueueProcessResponse,
     ResolveRequest,
     ResolveResponse,
@@ -44,7 +49,7 @@ async def install_presets(session: AsyncSession = Depends(get_session)):
     return result
 
 
-@router.get("/queue", response_model=list[QueueMessageRead])
+@router.get("/queue", response_model=list[QueueMessageSummary] | list[QueueMessageRead])
 async def list_queue(
     status: EnterpriseQueueStatus | None = None,
     business_object: str | None = None,
@@ -54,14 +59,54 @@ async def list_queue(
     business_key: str | None = None,
     has_error: bool | None = None,
     sort: str = "priority",
+    limit: int | None = Query(default=None, ge=1, le=1000),
+    include_payload: bool = True,
     session: AsyncSession = Depends(get_session),
 ):
-    return await service.list_queue(session, status, business_object, operation, source_system, target_system, business_key, has_error, sort)
+    items = await service.list_queue(session, status, business_object, operation, source_system, target_system, business_key, has_error, sort, limit=limit, include_payload=include_payload)
+    if include_payload:
+        return [QueueMessageRead.model_validate(item) for item in items]
+    return [QueueMessageSummary.model_validate(item) for item in items]
+
+
+@router.get("/queue/page", response_model=QueuePageResponse)
+async def list_queue_page(
+    status: EnterpriseQueueStatus | None = None,
+    business_object: str | None = None,
+    operation: str | None = None,
+    source_system: str | None = None,
+    target_system: str | None = None,
+    business_key: str | None = None,
+    has_error: bool | None = None,
+    sort: str = "priority",
+    limit: int = Query(default=50, ge=1, le=100),
+    cursor: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    items, next_cursor, has_more = await service.list_queue_page(
+        session,
+        status=status,
+        business_object=business_object,
+        operation=operation,
+        source_system=source_system,
+        target_system=target_system,
+        business_key=business_key,
+        has_error=has_error,
+        sort=sort,
+        limit=limit,
+        cursor=cursor,
+    )
+    return QueuePageResponse(items=items, next_cursor=next_cursor, has_more=has_more)
 
 
 @router.get("/queue/{queue_id}", response_model=QueueMessageRead)
 async def get_queue(queue_id: UUID, session: AsyncSession = Depends(get_session)):
     return await service.get_queue_or_404(session, queue_id)
+
+
+@router.get("/queue/{queue_id}/attempts", response_model=list[QueueAttemptRead])
+async def list_attempts(queue_id: UUID, limit: int = Query(default=50, ge=1, le=500), session: AsyncSession = Depends(get_session)):
+    return await service.list_attempts(session, queue_id, limit=limit)
 
 
 @router.post("/queue", response_model=QueueMessageRead)
@@ -145,9 +190,33 @@ async def process_batch(limit: int = Query(default=10, ge=1, le=100), worker: st
     return _process_response(items)
 
 
-@router.get("/dlq", response_model=list[DLQItemRead])
-async def list_dlq(include_archived: bool = False, session: AsyncSession = Depends(get_session)):
-    return await service.list_dlq(session, include_archived)
+@router.get("/dlq", response_model=list[DLQItemSummary] | list[DLQItemRead])
+async def list_dlq(
+    include_archived: bool = False,
+    limit: int | None = Query(default=None, ge=1, le=1000),
+    include_payload: bool = True,
+    session: AsyncSession = Depends(get_session),
+):
+    items = await service.list_dlq(session, include_archived, limit=limit, include_payload=include_payload)
+    if include_payload:
+        return [DLQItemRead.model_validate(item) for item in items]
+    return [DLQItemSummary.model_validate(item) for item in items]
+
+
+@router.get("/dlq/page", response_model=DLQPageResponse)
+async def list_dlq_page(
+    include_archived: bool = False,
+    limit: int = Query(default=50, ge=1, le=100),
+    cursor: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    items, next_cursor, has_more = await service.list_dlq_page(
+        session,
+        include_archived=include_archived,
+        limit=limit,
+        cursor=cursor,
+    )
+    return DLQPageResponse(items=items, next_cursor=next_cursor, has_more=has_more)
 
 
 @router.get("/dlq/{item_id}", response_model=DLQItemRead)
@@ -332,14 +401,64 @@ queue_router = APIRouter(prefix="/api/queue", tags=["queue"])
 dlq_router = APIRouter(prefix="/api/dlq", tags=["dlq"])
 
 
-@queue_router.get("", response_model=list[QueueMessageRead])
-async def queue_list_alias(status: EnterpriseQueueStatus | None = None, business_object: str | None = None, operation: str | None = None, source_system: str | None = None, target_system: str | None = None, business_key: str | None = None, has_error: bool | None = None, sort: str = "priority", session: AsyncSession = Depends(get_session)):
-    return await service.list_queue(session, status, business_object, operation, source_system, target_system, business_key, has_error, sort)
+@queue_router.get("", response_model=list[QueueMessageSummary] | list[QueueMessageRead])
+async def queue_list_alias(
+    status: EnterpriseQueueStatus | None = None,
+    business_object: str | None = None,
+    operation: str | None = None,
+    source_system: str | None = None,
+    target_system: str | None = None,
+    business_key: str | None = None,
+    has_error: bool | None = None,
+    sort: str = "priority",
+    limit: int | None = Query(default=None, ge=1, le=1000),
+    include_payload: bool = True,
+    session: AsyncSession = Depends(get_session),
+):
+    items = await service.list_queue(session, status, business_object, operation, source_system, target_system, business_key, has_error, sort, limit=limit, include_payload=include_payload)
+    if include_payload:
+        return [QueueMessageRead.model_validate(item) for item in items]
+    return [QueueMessageSummary.model_validate(item) for item in items]
+
+
+@queue_router.get("/page", response_model=QueuePageResponse)
+async def queue_list_page_alias(
+    status: EnterpriseQueueStatus | None = None,
+    business_object: str | None = None,
+    operation: str | None = None,
+    source_system: str | None = None,
+    target_system: str | None = None,
+    business_key: str | None = None,
+    has_error: bool | None = None,
+    sort: str = "priority",
+    limit: int = Query(default=50, ge=1, le=100),
+    cursor: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    items, next_cursor, has_more = await service.list_queue_page(
+        session,
+        status=status,
+        business_object=business_object,
+        operation=operation,
+        source_system=source_system,
+        target_system=target_system,
+        business_key=business_key,
+        has_error=has_error,
+        sort=sort,
+        limit=limit,
+        cursor=cursor,
+    )
+    return QueuePageResponse(items=items, next_cursor=next_cursor, has_more=has_more)
 
 
 @queue_router.get("/{queue_id}", response_model=QueueMessageRead)
 async def queue_get_alias(queue_id: UUID, session: AsyncSession = Depends(get_session)):
     return await service.get_queue_or_404(session, queue_id)
+
+
+@queue_router.get("/{queue_id}/attempts", response_model=list[QueueAttemptRead])
+async def queue_attempts_alias(queue_id: UUID, limit: int = Query(default=50, ge=1, le=500), session: AsyncSession = Depends(get_session)):
+    return await service.list_attempts(session, queue_id, limit=limit)
 
 
 @queue_router.post("", response_model=QueueMessageRead)
@@ -408,9 +527,33 @@ async def queue_unlock_alias(queue_id: UUID, http_request: Request, session: Asy
     return item
 
 
-@dlq_router.get("", response_model=list[DLQItemRead])
-async def dlq_list_alias(include_archived: bool = False, session: AsyncSession = Depends(get_session)):
-    return await service.list_dlq(session, include_archived)
+@dlq_router.get("", response_model=list[DLQItemSummary] | list[DLQItemRead])
+async def dlq_list_alias(
+    include_archived: bool = False,
+    limit: int | None = Query(default=None, ge=1, le=1000),
+    include_payload: bool = True,
+    session: AsyncSession = Depends(get_session),
+):
+    items = await service.list_dlq(session, include_archived, limit=limit, include_payload=include_payload)
+    if include_payload:
+        return [DLQItemRead.model_validate(item) for item in items]
+    return [DLQItemSummary.model_validate(item) for item in items]
+
+
+@dlq_router.get("/page", response_model=DLQPageResponse)
+async def dlq_list_page_alias(
+    include_archived: bool = False,
+    limit: int = Query(default=50, ge=1, le=100),
+    cursor: str | None = None,
+    session: AsyncSession = Depends(get_session),
+):
+    items, next_cursor, has_more = await service.list_dlq_page(
+        session,
+        include_archived=include_archived,
+        limit=limit,
+        cursor=cursor,
+    )
+    return DLQPageResponse(items=items, next_cursor=next_cursor, has_more=has_more)
 
 
 @dlq_router.get("/{item_id}", response_model=DLQItemRead)

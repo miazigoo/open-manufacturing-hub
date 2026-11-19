@@ -1032,8 +1032,25 @@ def _marking_code_pool_request(
     source_document_id = _optional_text_from_path(scope, config.get("source_document_id_path"))
     source_document_name = _optional_text_from_path(scope, config.get("source_document_name_path"))
 
-    action_overrides_config = config.get("actions_override") if isinstance(config.get("actions_override"), dict) else None
-    action_overrides = MarkingCodePoolActionOverrides(**action_overrides_config) if action_overrides_config else None
+    # --- actions_override: supports {{template}} variables for dynamic control ---
+    # Option 1: explicit actions_override dict (keys can use {{var}} templates)
+    action_overrides_raw = config.get("actions_override")
+    if isinstance(action_overrides_raw, dict):
+        # Render each value so operators can write {"laser_file": "{{is_laser}}"}
+        rendered = render_template(action_overrides_raw, scope)
+        rendered_clean = {
+            k: (None if v in (None, "") else _coerce_bool(v))
+            for k, v in (rendered if isinstance(rendered, dict) else {}).items()
+        }
+        action_overrides = MarkingCodePoolActionOverrides(**rendered_clean)
+    # Option 2: destination_path — operator points to request field with "laser"/"print"/"not_specified"
+    # This auto-translates: laser/not_specified → laser_file=True; print → laser_file=False
+    elif config.get("destination_path"):
+        destination_raw = _optional_text_from_path(scope, config.get("destination_path")) or ""
+        action_overrides = _destination_to_action_overrides(destination_raw)
+    else:
+        action_overrides = None
+
     metadata_json = config.get("metadata_json") if isinstance(config.get("metadata_json"), dict) else {}
     metadata_json = {
         **metadata_json,
@@ -1055,6 +1072,32 @@ def _marking_code_pool_request(
         actions_override=action_overrides,
         metadata_json=metadata_json,
     )
+
+
+def _destination_to_action_overrides(destination: str) -> MarkingCodePoolActionOverrides:
+    """Translate 1C/OMH destination string to laser_file on/off.
+
+    Values:
+      - "laser" or "not_specified" (or empty) → save laser file (laser_file=None → use global setting)
+      - "print" → skip laser file (laser_file=False), still forward to DnP
+    """
+    value = destination.strip().lower()
+    if value == "print":
+        return MarkingCodePoolActionOverrides(laser_file=False)
+    # "laser" and "not_specified" (and unknown/empty) → don't override, use global CHZ delivery settings
+    return MarkingCodePoolActionOverrides()
+
+
+def _coerce_bool(value: Any) -> bool | None:
+    """Coerce a rendered template value to bool | None for actions_override fields."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        if value.lower() in {"true", "1", "yes"}:
+            return True
+        if value.lower() in {"false", "0", "no"}:
+            return False
+    return None
 
 
 def _required_text_from_path(scope: dict[str, Any], path: Any, label: str) -> str:
@@ -1086,10 +1129,14 @@ def _optional_value_from_path(scope: dict[str, Any], path: Any) -> Any:
     expression = str(path).strip()
     if not expression:
         return None
-    return render_template(expression, scope) if "{{" in expression else resolve_path(scope, expression)
+    try:
+        return render_template(expression, scope) if "{{" in expression else resolve_path(scope, expression)
+    except Exception:
+        return None
 
 
 def _marking_pool_request_summary(request: OneCMarkingCodePoolExportRequest) -> dict[str, Any]:
+    override = request.actions_override.model_dump(mode="json") if request.actions_override else None
     return {
         "source_system": request.source_system,
         "source_document_id": request.source_document_id,
@@ -1099,7 +1146,10 @@ def _marking_pool_request_summary(request: OneCMarkingCodePoolExportRequest) -> 
         "codes_count": len(request.codes or []),
         "full_codes_base64_count": len(request.full_codes_base64 or []),
         "allow_overwrite": request.allow_overwrite,
-        "actions_override": request.actions_override.model_dump(mode="json") if request.actions_override else None,
+        "actions_override": override,
+        # Convenience: show resolved laser/forward flags so operator sees what will happen
+        "effective_laser_file": override.get("laser_file") if override else None,
+        "effective_external_forward": override.get("external_forward") if override else None,
     }
 
 
@@ -1571,3 +1621,242 @@ async def _execute_subflow(
     variables[save_as] = output
     artifacts.append(ArtifactCreate(ArtifactType.CANONICAL_PAYLOAD.value, f"subflow_{flow.slug}/output.json", {"flow": flow.slug, "executed_steps": executed, "output": output}))
     return StepResult.success(f"Sub-flow {flow.slug} complete", artifacts=artifacts, variables_update=variables)
+
+
+OZON_ACTIONS = {"list_products", "product_info", "get_stocks", "update_stocks", "get_prices", "update_prices", "list_orders", "list_warehouses"}
+
+OZON_MOCK_RESPONSES: dict[str, Any] = {
+    "list_products": {"result": {"items": [{"product_id": 1234567, "offer_id": "ABC-123", "has_fbo_stocks": False, "has_fbs_stocks": True, "archived": False, "is_discounted": False}], "last_id": "WzE=", "total": 1}},
+    "product_info": {"result": {"items": [{"id": 1234567, "name": "Тестовый товар", "offer_id": "ABC-123", "barcode": "4600000000001", "sku": 12345678}]}},
+    "get_stocks": {"cursor": "", "total": 1, "items": [{"offer_id": "ABC-123", "product_id": 1234567, "stocks": [{"present": 15, "reserved": 2, "sku": 12345678}]}]},
+    "update_stocks": {"result": [{"offer_id": "ABC-123", "product_id": 1234567, "updated": True, "errors": []}]},
+    "get_prices": {"items": [{"id": 1234567, "price": {"price": "100.00", "old_price": "120.00", "premium_price": "90.00", "min_price": "80.00", "currency": "RUB"}}], "cursor": "", "total": 1},
+    "update_prices": {"result": [{"product_id": 1234567, "offer_id": "ABC-123", "updated": True, "errors": []}]},
+    "list_orders": {"result": {"postings": [{"posting_number": "00000001-0001-1", "order_id": 50001, "order_number": "00000001-0001", "status": "awaiting_packaging", "created_at": "2026-08-06T10:00:00Z", "products": [{"sku": 12345678, "offer_id": "ABC-123", "name": "Тестовый товар", "quantity": 1, "price": "100.00"}], "analytics_data": {"city": "Москва", "region": "Московская область"}}], "count": 1}},
+    "list_warehouses": {"result": [{"warehouse_id": 1001, "name": "Основной склад"}]},
+}
+
+
+class FlowOzonActionStep:
+    name = "flow_ozon_action"
+    display_name = "Ozon Action"
+
+    async def execute(self, context: PipelineContext) -> StepResult:
+        config = _config(context)
+        scope = _scope(context)
+        action = str(config.get("action") or "").strip()
+        if action not in OZON_ACTIONS:
+            return _failed("OZON_ACTION_INVALID", f"Unsupported ozon action: {action or '(not set)'}", config, f"Choose one of: {', '.join(sorted(OZON_ACTIONS))}.")
+        save_as = str(config.get("save_as") or config["step_id"])
+        summary_config = {
+            "action": action,
+            "connector": config.get("connector"),
+            "offer_ids": _ozon_list_param(config, scope, "offer_ids", "offer_ids_path"),
+            "product_ids": _ozon_list_param(config, scope, "product_ids", "product_ids_path"),
+            "stocks": _ozon_list_param(config, scope, "stocks", "stocks_path"),
+            "prices": _ozon_list_param(config, scope, "prices", "prices_path"),
+            "since": _ozon_text_param(config, scope, "since"),
+            "status": _ozon_text_param(config, scope, "status"),
+            "limit": config.get("limit"),
+        }
+        request_artifact = ArtifactCreate(ArtifactType.OUTGOING_REQUEST.value, "ozon_request.json", summary_config)
+        mock = config.get("mock_json") if isinstance(config.get("mock_json"), (dict, list)) else None
+        if mock is None and isinstance(config.get("mock_response_json"), (dict, list)):
+            mock = config["mock_response_json"]
+        if context.dry_run or mock is not None:
+            response = mock if mock is not None else OZON_MOCK_RESPONSES[action]
+            return _ozon_success(context, config, action, save_as, response, [request_artifact], mock=True)
+
+        try:
+            client = await _ozon_client_from_config(context, config)
+        except Exception as exc:
+            return _failed("OZON_CONFIG_INVALID", str(exc), config, "Fill client_id/api_key in the Ozon connector (secret reference supported).", [request_artifact])
+        try:
+            response = await _ozon_execute(client, action, summary_config)
+        except Exception as exc:
+            return _failed("OZON_API_FAILED", str(exc), config, "Check Ozon key role, rate limits and Ozon availability.", [request_artifact])
+
+        errors = _ozon_item_errors(action, response)
+        response_artifact = ArtifactCreate(ArtifactType.INCOMING_RESPONSE.value, "ozon_response.json", _ozon_response_summary(action, response))
+        if errors:
+            return _failed(
+                "OZON_ITEMS_FAILED",
+                f"Ozon обновил не все позиции: {len(errors)} ошибок. Первая: {errors[0]}",
+                config,
+                "Откройте ozon_response.json: в errors указано, какие offer_id не принял Ozon и почему.",
+                [request_artifact, response_artifact],
+            )
+        return _ozon_success(context, config, action, save_as, response, [request_artifact, response_artifact])
+
+
+def _ozon_success(context: PipelineContext, config: dict[str, Any], action: str, save_as: str, response: Any, artifacts: list[ArtifactCreate], *, mock: bool = False) -> StepResult:
+    result = _ozon_canonical(action, response)
+    if mock:
+        result = {**result, "mock": True} if isinstance(result, dict) else result
+    variables = _variables_with_step(context, config["step_id"], {"action": action, "result": result})
+    variables[save_as] = result
+    return StepResult.success(f"Ozon {action} complete" + (" (mock)" if mock else ""), artifacts=artifacts, variables_update=variables)
+
+
+def _ozon_canonical(action: str, response: Any) -> Any:
+    if action in {"update_stocks", "update_prices"}:
+        result = (response or {}).get("result") or []
+        return {
+            "updated": [item for item in result if item.get("updated")],
+            "errors": [{"offer_id": item.get("offer_id") or item.get("product_id"), "errors": item.get("errors") or []} for item in result if item.get("errors")],
+        }
+    if action == "list_orders":
+        result = (response or {}).get("result") or {}
+        postings = result.get("postings") or []
+        return {
+            "count": result.get("count", len(postings)),
+            "orders": [_ozon_canonical_order(posting) for posting in postings],
+        }
+    if action == "list_products":
+        result = (response or {}).get("result") or {}
+        return {"items": result.get("items") or [], "last_id": result.get("last_id") or "", "total": result.get("total", 0)}
+    if action == "get_stocks":
+        return {"items": (response or {}).get("items") or [], "cursor": (response or {}).get("cursor") or "", "total": (response or {}).get("total", 0)}
+    if action == "get_prices":
+        return {"items": (response or {}).get("items") or [], "cursor": (response or {}).get("cursor") or "", "total": (response or {}).get("total", 0)}
+    return response
+
+
+def _ozon_canonical_order(posting: dict[str, Any]) -> dict[str, Any]:
+    analytics = posting.get("analytics_data") or {}
+    return {
+        "marketplace": "ozon",
+        "posting_number": posting.get("posting_number"),
+        "order_number": posting.get("order_number"),
+        "status": posting.get("status"),
+        "created_at": posting.get("created_at"),
+        "customer_region": analytics.get("region") or analytics.get("city"),
+        "items": [
+            {
+                "offer_id": product.get("offer_id"),
+                "sku": product.get("sku"),
+                "name": product.get("name"),
+                "qty": product.get("quantity"),
+                "price": product.get("price"),
+            }
+            for product in posting.get("products") or []
+        ],
+    }
+
+
+def _ozon_item_errors(action: str, response: Any) -> list[str]:
+    if action not in {"update_stocks", "update_prices"}:
+        return []
+    errors: list[str] = []
+    for item in (response or {}).get("result") or []:
+        for error in item.get("errors") or []:
+            errors.append(f"{item.get('offer_id') or item.get('product_id')}: {error.get('description') or error.get('code')}")
+    return errors
+
+
+def _ozon_response_summary(action: str, response: Any) -> Any:
+    canonical = _ozon_canonical(action, response)
+    if isinstance(canonical, dict):
+        summary = dict(canonical)
+        for key in ("items", "orders"):
+            value = summary.get(key)
+            if isinstance(value, list) and len(value) > 50:
+                summary[key] = value[:50]
+                summary[f"{key}_truncated"] = True
+        return summary
+    return {"response": canonical}
+
+
+def _ozon_list_param(config: dict[str, Any], scope: dict[str, Any], key: str, path_key: str) -> list[Any] | None:
+    value = config.get(key)
+    if isinstance(value, list) and value:
+        return value
+    path = str(config.get(path_key) or "").strip()
+    if not path:
+        return None
+    resolved = resolve_path(scope, path)
+    if isinstance(resolved, list):
+        return resolved
+    return None
+
+
+def _ozon_text_param(config: dict[str, Any], scope: dict[str, Any], key: str) -> str | None:
+    value = config.get(key)
+    if value is None:
+        return None
+    try:
+        text = str(render_template(str(value), scope) or "").strip()
+    except Exception:
+        return None
+    return text or None
+
+
+async def _ozon_client_from_config(context: PipelineContext, config: dict[str, Any]) -> Any:
+    from app.ozon.client import OzonClient
+
+    connector_name = str(config.get("connector") or "").strip()
+    if not connector_name:
+        raise ValueError("Укажите Ozon connector в шаге (Connection Profile с client_id/api_key).")
+    connector = await connector_repository.get_by_name(context.session, connector_name)
+    if connector is None:
+        raise ValueError(f"Ozon connector {connector_name} не найден. Создайте его в Connection Center.")
+    connector_config = await SecretResolver(context.session).resolve_config(connector.config_json)
+    return OzonClient(
+        client_id=str(connector_config.get("client_id") or ""),
+        api_key=str(connector_config.get("api_key") or ""),
+        base_url=str(connector_config.get("base_url") or connector_config.get("url") or "") or "https://api-seller.ozon.ru",
+        timeout_seconds=float(connector_config.get("timeout_seconds") or 30),
+    )
+
+
+async def _ozon_execute(client: Any, action: str, params: dict[str, Any]) -> Any:
+    limit = int(params.get("limit") or 1000)
+    if action == "list_products":
+        return await client.list_products(limit=limit)
+    if action == "product_info":
+        return await client.product_info_list(offer_ids=params.get("offer_ids"), product_ids=params.get("product_ids"))
+    if action == "get_stocks":
+        return await client.get_stocks(offer_ids=params.get("offer_ids"), product_ids=params.get("product_ids"), limit=limit)
+    if action == "update_stocks":
+        stocks = params.get("stocks") or []
+        return await client.update_stocks([_ozon_stock_row(row) for row in stocks])
+    if action == "get_prices":
+        return await client.get_prices(offer_ids=params.get("offer_ids"), product_ids=params.get("product_ids"), limit=limit)
+    if action == "update_prices":
+        prices = params.get("prices") or []
+        return await client.update_prices([_ozon_price_row(row) for row in prices])
+    if action == "list_orders":
+        since = params.get("since")
+        if not since:
+            raise ValueError("Для list_orders укажите since (дата ISO, например {{variables.last_sync}} или 2026-08-01T00:00:00Z).")
+        return await client.list_fbs_orders(since=since, status=params.get("status"), limit=min(limit, 100))
+    if action == "list_warehouses":
+        return await client.list_warehouses()
+    raise ValueError(f"Unsupported ozon action: {action}")
+
+
+def _ozon_stock_row(row: Any) -> dict[str, Any]:
+    if not isinstance(row, dict):
+        return {"offer_id": str(row), "stock": 0}
+    result: dict[str, Any] = {}
+    if row.get("offer_id"):
+        result["offer_id"] = row["offer_id"]
+    if row.get("product_id"):
+        result["product_id"] = row["product_id"]
+    result["stock"] = int(row.get("stock", row.get("qty", row.get("quantity", 0))))
+    return result
+
+
+def _ozon_price_row(row: Any) -> dict[str, Any]:
+    if not isinstance(row, dict):
+        return {"offer_id": str(row), "price": "0"}
+    result: dict[str, Any] = {}
+    if row.get("offer_id"):
+        result["offer_id"] = row["offer_id"]
+    if row.get("product_id"):
+        result["product_id"] = row["product_id"]
+    for source, target in (("price", "price"), ("old_price", "old_price"), ("premium_price", "premium_price"), ("min_price", "min_price")):
+        if row.get(source) is not None:
+            result[target] = str(row[source])
+    result["currency"] = str(row.get("currency") or "RUB")
+    return result

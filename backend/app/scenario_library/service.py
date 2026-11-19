@@ -38,6 +38,34 @@ def preview_scenario(code: str) -> dict[str, Any]:
 
 
 async def install_scenario(session: AsyncSession, code: str, request: ScenarioInstallRequest) -> dict[str, Any]:
+    if code == "ozon_orders_to_onec":
+        flow = await flow_service.install_ozon_orders_to_onec_preset(session)
+        return {
+            "scenario": code,
+            "endpoint_id": flow.endpoint_id,
+            "route_id": flow.route_id,
+            "workflow_id": flow.workflow_id,
+            "operation_template_id": flow.operation_template_id,
+            "test_case_id": None,
+            "endpoint_url": flow_service.endpoint_url(flow.slug),
+            "curl_example": flow_service.curl_example(flow.slug, "json", flow.test_payload_json),
+            "onec_http_example": flow_service.onec_http_example(flow.slug, "json"),
+            "next_steps": ["Create the Ozon Seller connector with client_id/api_key", "Preview the flow with mock Ozon responses", "Trigger the endpoint and inspect the orders batch in 1C"],
+        }
+    if code == "ozon_stocks_prices_from_onec":
+        flow = await flow_service.install_ozon_stocks_prices_from_onec_preset(session)
+        return {
+            "scenario": code,
+            "endpoint_id": flow.endpoint_id,
+            "route_id": flow.route_id,
+            "workflow_id": flow.workflow_id,
+            "operation_template_id": flow.operation_template_id,
+            "test_case_id": None,
+            "endpoint_url": flow_service.endpoint_url(flow.slug),
+            "curl_example": flow_service.curl_example(flow.slug, "json", flow.test_payload_json),
+            "onec_http_example": flow_service.onec_http_example(flow.slug, "json"),
+            "next_steps": ["Create the Ozon Seller connector with client_id/api_key", "Send stocks/prices sample payload from 1C", "Inspect updated/errors per offer_id in the timeline"],
+        }
     if code == "b2b_portal_order":
         flow = await flow_service.install_b2b_portal_order_preset(session)
         test_case_result = await session.execute(select(SavedTestCase).where(SavedTestCase.name == f"Flow {flow.name} Test"))

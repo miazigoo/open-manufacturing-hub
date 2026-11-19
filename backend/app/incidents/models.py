@@ -40,7 +40,7 @@ class Incident(TimestampMixin, Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False
     )
 
-    events: Mapped[list[IncidentEvent]] = relationship(back_populates="incident", cascade="all, delete-orphan", lazy="selectin")
+    events: Mapped[list[IncidentEvent]] = relationship(back_populates="incident", cascade="all, delete-orphan", lazy="noload")
 
 
 class IncidentEvent(TimestampMixin, Base):

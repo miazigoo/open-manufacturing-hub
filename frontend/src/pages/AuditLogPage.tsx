@@ -14,20 +14,41 @@ const severities = ['info', 'warning', 'error', 'critical'];
 export function AuditLogPage() {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<AuditFilters>({ limit: 50, offset: 0 });
-  const [selected, setSelected] = useState<AuditEvent | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const audit = useQuery({ queryKey: ['audit-log', filters], queryFn: () => auditApi.list(filters) });
   const stats = useQuery({ queryKey: ['audit-stats'], queryFn: auditApi.stats });
   const cleanup = useMutation({ mutationFn: () => auditApi.cleanup(undefined, true), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['audit-stats'] }) });
 
-  const current = selected ?? audit.data?.items[0] ?? null;
+  // Load detailed event on demand only when selected
+  const eventDetails = useQuery({
+    queryKey: ['audit-event-detail', selectedId],
+    queryFn: () => auditApi.get(selectedId!),
+    enabled: Boolean(selectedId),
+  });
+
+  const total = audit.data?.total ?? 0;
+  const limit = filters.limit ?? 50;
+  const offset = filters.offset ?? 0;
+  const currentPage = Math.floor(offset / limit) + 1;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
   const topCategories = useMemo(() => Object.entries(stats.data?.by_category ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 5), [stats.data]);
 
   function update(key: keyof AuditFilters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value || undefined, offset: 0 }));
+    setSelectedId(null);
+  }
+
+  function goToPage(page: number) {
+    const nextOffset = Math.max(0, (page - 1) * limit);
+    setFilters((prev) => ({ ...prev, offset: nextOffset }));
+    setSelectedId(null);
   }
 
   if (audit.isLoading && !audit.data) return <LoadingState label="Loading audit log" />;
   if (audit.error) return <ErrorState error={audit.error} />;
+
+  const currentDetailedEvent = eventDetails.data ?? null;
 
   return (
     <div className="page-stack audit-page">
@@ -69,13 +90,27 @@ export function AuditLogPage() {
 
       <section className="audit-workbench">
         <article className="panel audit-table-panel">
-          <div className="panel-toolbar"><h2>Events</h2>{audit.isFetching && <span className="microcopy">refreshing</span>}</div>
+          <div className="panel-toolbar">
+            <h2>Events</h2>
+            <div className="toolbar-actions">
+              <span className="microcopy">Страница {currentPage} из {totalPages} ({total} всего)</span>
+              {audit.isFetching && <span className="microcopy">refreshing</span>}
+            </div>
+          </div>
           <div className="table-scroll">
             <table className="data-table audit-table">
               <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Object</th><th>Summary</th><th>Severity</th></tr></thead>
               <tbody>
                 {audit.data?.items.map((event) => (
-                  <tr key={event.id} className={current?.id === event.id ? 'selected-row' : ''} onClick={() => setSelected(event)}>
+                  <tr
+                    key={event.id}
+                    className={selectedId === event.id ? 'selected-row' : ''}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(event.id); } }}
+                    onClick={() => setSelectedId(event.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td>{new Date(event.timestamp).toLocaleString()}</td>
                     <td>{event.actor_username ?? event.actor_type}</td>
                     <td><code>{event.action}</code></td>
@@ -88,10 +123,59 @@ export function AuditLogPage() {
             </table>
           </div>
           {!audit.data?.items.length && <div className="empty-state compact"><strong>No audit events</strong><span>Run a configuration or runtime action to populate the log.</span></div>}
+          
+          {totalPages > 1 && (
+            <div className="pagination-bar" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                className="ghost-button"
+                disabled={currentPage <= 1}
+                onClick={() => goToPage(1)}
+              >
+                « Первая
+              </button>
+              <button
+                className="ghost-button"
+                disabled={currentPage <= 1}
+                onClick={() => goToPage(currentPage - 1)}
+              >
+                ‹ Назад
+              </button>
+              <span>{currentPage} / {totalPages}</span>
+              <button
+                className="ghost-button"
+                disabled={currentPage >= totalPages}
+                onClick={() => goToPage(currentPage + 1)}
+              >
+                Далее ›
+              </button>
+              <button
+                className="ghost-button"
+                disabled={currentPage >= totalPages}
+                onClick={() => goToPage(totalPages)}
+              >
+                Последняя »
+              </button>
+            </div>
+          )}
         </article>
+
         <div className="audit-side-panel">
-          <AuditEventDetails event={current} />
-          <ObjectHistoryPanel objectType={current?.object_type ?? null} objectId={current?.object_id ?? null} />
+          {selectedId ? (
+            eventDetails.isLoading ? (
+              <LoadingState label="Loading event details..." />
+            ) : eventDetails.error ? (
+              <ErrorState error={eventDetails.error} />
+            ) : currentDetailedEvent ? (
+              <>
+                <AuditEventDetails event={currentDetailedEvent} />
+                <ObjectHistoryPanel objectType={currentDetailedEvent.object_type ?? null} objectId={currentDetailedEvent.object_id ?? null} />
+              </>
+            ) : null
+          ) : (
+            <div className="panel" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Выберите событие аудита в таблице для просмотра деталей и истории изменений
+            </div>
+          )}
         </div>
       </section>
     </div>

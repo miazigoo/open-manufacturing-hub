@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -28,17 +28,33 @@ const tabs = [
 type TabId = typeof tabs[number][0];
 
 export function MarkingCodePoolsPage() {
-  const initialTab = useMemo<TabId>(() => {
-    const value = new URLSearchParams(window.location.search).get('tab');
-    return tabs.some(([id]) => id === value) ? value as TabId : 'overview';
-  }, []);
-  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
-  const settings = useQuery({ queryKey: ['marking-code-pools-settings'], queryFn: markingCodePoolsApi.settings });
-  const exportsQuery = useQuery({ queryKey: ['marking-code-pools-exports'], queryFn: markingCodePoolsApi.exports });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab') as TabId | null;
+  const activeTab: TabId = tabs.some(([id]) => id === urlTab) ? (urlTab as TabId) : 'overview';
 
-  if (settings.isLoading || exportsQuery.isLoading) return <LoadingState label="Загрузка пулов кодов ЧЗ" />;
-  const error = settings.error ?? exportsQuery.error;
-  if (error) return <ErrorState error={error} />;
+  const setTab = (tab: TabId) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'overview') {
+        next.delete('tab');
+      } else {
+        next.set('tab', tab);
+      }
+      return next;
+    });
+  };
+
+  const settings = useQuery({ queryKey: ['marking-code-pools-settings'], queryFn: markingCodePoolsApi.settings });
+
+  // Only load exports list when Journal tab is active!
+  const exportsQuery = useQuery({
+    queryKey: ['marking-code-pools-exports'],
+    queryFn: markingCodePoolsApi.exports,
+    enabled: activeTab === 'journal',
+  });
+
+  if (settings.isLoading) return <LoadingState label="Загрузка настроек пулов кодов ЧЗ" />;
+  if (settings.error) return <ErrorState error={settings.error} />;
 
   const exports = exportsQuery.data ?? [];
   return (
@@ -52,7 +68,6 @@ export function MarkingCodePoolsPage() {
           <StatusBadge status={settings.data?.laser.enabled ? 'enabled' : 'disabled'} label="лазер / SMB" />
           <StatusBadge status={settings.data?.forward.enabled ? 'enabled' : 'disabled'} label={settings.data?.forward.service_name ?? 'внешняя отправка'} />
           <Link className="primary-link" to="/docs/onec/recipes/onec-sends-chz-code-pool-file">Инструкция</Link>
-          <span className="microcopy">{exports.length} экспортов</span>
         </div>
       </section>
 
@@ -78,10 +93,19 @@ export function MarkingCodePoolsPage() {
       </section>
 
       <div className="segmented-control chz-tabs" role="tablist" aria-label="Пулы кодов ЧЗ">
-        {tabs.map(([id, label]) => <button key={id} type="button" className={activeTab === id ? 'active' : ''} onClick={() => setActiveTab(id)}>{label}</button>)}
+        {tabs.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={activeTab === id ? 'active' : ''}
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {activeTab === 'overview' && <OverviewTab settings={settings.data} exports={exports} />}
+      {activeTab === 'overview' && <OverviewTab settings={settings.data} />}
       {activeTab === 'settings' && <SettingsTab settings={settings.data} />}
       {activeTab === 'endpoint' && <EndpointTab />}
       {activeTab === 'test' && <TestTab />}

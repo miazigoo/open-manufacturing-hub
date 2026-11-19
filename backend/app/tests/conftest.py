@@ -66,6 +66,12 @@ async def database():
 
 
 @pytest.fixture
+async def session():
+    async with async_session() as s:
+        yield s
+
+
+@pytest.fixture
 async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

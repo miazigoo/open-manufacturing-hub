@@ -1692,14 +1692,20 @@ function translateSeeds(language: 'en' | 'zh'): PackageSeed[] {
   }));
 }
 
-export const docsBundles: Record<Language, DocsLanguageBundle> = {
-  ru: buildBundle('ru', ruSeeds),
-  en: buildBundle('en', translateSeeds('en')),
-  zh: buildBundle('zh', translateSeeds('zh')),
-};
+const bundleCache = new Map<Language, DocsLanguageBundle>();
 
-export function getDocsBundle(language: Language) {
-  return docsBundles[language] ?? docsBundles.ru;
+export function getDocsBundle(language: Language): DocsLanguageBundle {
+  const cached = bundleCache.get(language);
+  if (cached) return cached;
+
+  let bundle: DocsLanguageBundle;
+  if (language === 'ru') {
+    bundle = buildBundle('ru', ruSeeds);
+  } else {
+    bundle = buildBundle(language, translateSeeds(language));
+  }
+  bundleCache.set(language, bundle);
+  return bundle;
 }
 
 export function flattenDocs(bundle: DocsLanguageBundle): DocsPageRecord[] {

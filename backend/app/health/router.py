@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import get_session
 from app.health import readiness, repository, service
 from app.health.schemas import AgentHeartbeatCreate, AgentHeartbeatHistoryItem, AgentHeartbeatRead, AgentHeartbeatSummary, HealthCheckCreate, HealthCheckRead
@@ -20,7 +22,11 @@ async def health_live():
 
 @router.get("/ready")
 async def health_ready(session: AsyncSession = Depends(get_session)):
-    return await readiness.ready(session)
+    result = await readiness.ready(session)
+    status = result["status"]
+    if get_settings().app_env.lower() in {"production", "prod"}:
+        result = {"status": status}
+    return JSONResponse(status_code=503 if status == "error" else 200, content=result)
 
 
 @router.get("/dashboard")

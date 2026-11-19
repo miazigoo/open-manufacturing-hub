@@ -2,7 +2,7 @@ import { request } from './client';
 
 export type AuditSeverity = 'info' | 'warning' | 'error' | 'critical';
 
-export interface AuditEvent {
+export interface AuditEventSummary {
   id: string;
   timestamp: string;
   actor_user_id: string | null;
@@ -18,16 +18,19 @@ export interface AuditEvent {
   object_id: string | null;
   object_name: string | null;
   summary: string;
-  details_json: Record<string, unknown> | null;
-  before_json: Record<string, unknown> | null;
-  after_json: Record<string, unknown> | null;
-  diff_json: AuditDiff | null;
   request_id: string | null;
   correlation_id: string | null;
   event_id: string | null;
   queue_item_id: string | null;
   package_id: string | null;
   created_at: string;
+}
+
+export interface AuditEvent extends AuditEventSummary {
+  details_json: Record<string, unknown> | null;
+  before_json: Record<string, unknown> | null;
+  after_json: Record<string, unknown> | null;
+  diff_json: AuditDiff | null;
 }
 
 export interface AuditDiffEntry {
@@ -43,7 +46,7 @@ export interface AuditDiff {
 }
 
 export interface AuditListResponse {
-  items: AuditEvent[];
+  items: AuditEventSummary[];
   total: number;
   limit: number;
   offset: number;

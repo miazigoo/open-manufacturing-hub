@@ -235,7 +235,7 @@ async def dispatch_parsed(session: AsyncSession, endpoint: IntegrationEndpoint, 
         }
     await _update_message_after_run(session, message, "success" if queue_item.status.value == "completed" else "failed")
     run = await session.get(EventRun, queue_item.run_id) if queue_item.run_id else None
-    response, external_error = await _response_context_from_run(session, run) if run else (None, None)
+    response, external_error = await _response_context_from_run(session, run, prefer_return_response=endpoint.response_mode == SYNC_RESPONSE) if run else (None, None)
     return _format_response(endpoint, event, message, route, queue_item, response, external_error)
 
 
@@ -435,7 +435,7 @@ async def _update_message_after_run(session: AsyncSession, message: IntegrationM
     await session.flush()
 
 
-async def _response_context_from_run(session: AsyncSession, run: EventRun) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+async def _response_context_from_run(session: AsyncSession, run: EventRun, *, prefer_return_response: bool = False) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     result = await session.execute(
         select(Artifact)
         .where(Artifact.run_id == run.id)
@@ -443,8 +443,12 @@ async def _response_context_from_run(session: AsyncSession, run: EventRun) -> tu
         .order_by(Artifact.created_at.desc())
     )
     artifacts = list(result.scalars().all())
-    artifact = next((item for item in artifacts if item.name == "incoming_response.json"), None)
-    artifact = artifact or next((item for item in artifacts if item.name == "return_response.json"), None)
+    # sync_response: an explicit Return Response step is the operator-configured caller
+    # answer and wins over intermediate connector responses. proxy_response keeps the
+    # legacy behavior of returning the target connector response.
+    names = ("return_response.json", "incoming_response.json") if prefer_return_response else ("incoming_response.json", "return_response.json")
+    artifact = next((item for item in artifacts if item.name == names[0]), None)
+    artifact = artifact or next((item for item in artifacts if item.name == names[1]), None)
     artifact = artifact or (artifacts[0] if artifacts else None)
     from app.external_errors.models import ExternalErrorRecord
 

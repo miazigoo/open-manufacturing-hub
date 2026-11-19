@@ -51,26 +51,6 @@ docker compose exec -T postgres pg_dump -U omh omh > backups/db/omh-db-$(date +%
 
 Use `/production` import preview first. Use `create_only` when restoring into an empty or new instance. Use `upsert` when updating existing objects. The importer never deletes existing objects in MVP.
 
-## Database Restore
+## PostgreSQL recovery
 
-Stop workers/backend before restoring. For Compose deployments:
-
-```bash
-docker compose stop backend frontend
-docker compose exec -T postgres psql -U omh -d omh < backups/db/omh-db-YYYYMMDD-HHMMSS.sql
-docker compose start backend frontend
-```
-
-Or:
-
-```bash
-make prod-restore FILE=backups/db/omh-db-YYYYMMDD-HHMMSS.sql
-```
-
-## Verify Restore
-
-1. `curl http://localhost:8000/api/health`
-2. `curl http://localhost:8000/api/production/snapshot`
-3. Run `make post-update-check`.
-4. Open `/production`, `/integration-bus`, `/runtime/queue`, `/plugin-store`.
-5. Re-enter masked secrets if the restore used config import.
+Use the [factory recovery procedure](factory-restore.md) to rehearse both backup formats and prepare a separate database for cutover.

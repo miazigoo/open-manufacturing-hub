@@ -5,17 +5,22 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
-class ArtifactRead(BaseModel):
+class ArtifactSummary(BaseModel):
     id: UUID
     event_id: UUID
     run_id: UUID
-    step_id: UUID | None
+    step_id: UUID | None = None
     artifact_type: str
     name: str
-    content_json: dict[str, Any]
     content_hash: str
     size_bytes: int
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ArtifactRead(ArtifactSummary):
+    content_json: dict[str, Any] = {}
 
     model_config = ConfigDict(from_attributes=True)
 

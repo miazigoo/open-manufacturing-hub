@@ -46,17 +46,41 @@ export interface ExternalErrorSummary {
   created_at: string;
 }
 
-export interface Artifact {
+export interface ArtifactSummary {
   id: string;
   event_id: string;
   run_id: string;
   step_id: string | null;
   artifact_type: string;
   name: string;
-  content_json: Record<string, unknown>;
   content_hash: string;
   size_bytes: number;
   created_at: string;
+}
+
+export interface Artifact extends ArtifactSummary {
+  content_json?: Record<string, unknown>;
+}
+
+export interface EventOverview {
+  event: EventSummary;
+  queue_item: EventQueueInfo | null;
+  runs: EventRun[];
+  has_more_runs: boolean;
+  next_runs_cursor?: string | null;
+}
+
+export interface DashboardSummary {
+  timezone: string;
+  period_start: string;
+  period_end: string;
+  events_today: number;
+  failed_today: number;
+  retry_waiting: number;
+  open_incidents: number;
+  queue_backlog: number;
+  queue_processing: number;
+  latest_failures: EventSummary[];
 }
 
 export interface EventStep {

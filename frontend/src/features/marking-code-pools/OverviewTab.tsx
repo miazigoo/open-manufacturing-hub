@@ -1,17 +1,28 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SectionCard } from '../../components/product/SectionCard';
+import { LoadingState } from '../../components/LoadingState';
+import { markingCodePoolsApi } from './api';
 import type { MarkingCodePoolExport, MarkingCodePoolSettings } from './types';
 import { actionStatus, formatDate } from './utils';
 
 interface OverviewTabProps {
   settings: MarkingCodePoolSettings | undefined;
-  exports: MarkingCodePoolExport[];
+  exports?: MarkingCodePoolExport[];
 }
 
-export function OverviewTab({ settings, exports }: OverviewTabProps) {
-  const latest = exports[0] ?? null;
-  const errors = exports.filter((item) => item.error_message).slice(0, 3);
+export function OverviewTab({ settings }: OverviewTabProps) {
+  const overviewQuery = useQuery({
+    queryKey: ['marking-code-pools-overview'],
+    queryFn: markingCodePoolsApi.overview,
+  });
+
+  if (overviewQuery.isLoading) return <LoadingState label="Загрузка сводки пулов..." />;
+  const data = overviewQuery.data;
+  const latest = data?.latest_export ?? null;
+  const errors = data?.recent_errors ?? [];
+
   return (
     <div className="page-stack">
       <SectionCard title="Что делает инструмент" description="Этот инструмент принимает от 1С пул кодов Честного знака и сохраняет его в файл. Дополнительно OMH может сохранить копию в сетевую директорию для лазера и/или отправить пул во внешний сервис, например DnP.">

@@ -2,63 +2,81 @@ import { request } from './client';
 
 export type QueueStatus = 'waiting' | 'processing' | 'retry_waiting' | 'completed' | 'failed' | 'dlq' | 'cancelled' | 'archived';
 
-export interface QueueMessage {
+export interface QueueMessageSummary {
   id: string;
   event_id: string | null;
   message_id: string | null;
-  run_id: string | null;
-  flow_id: string | null;
-  endpoint_id: string | null;
-  route_id: string | null;
-  connector_id: string | null;
-  workflow_id: string | null;
+  run_id?: string | null;
+  flow_id?: string | null;
+  endpoint_id?: string | null;
+  route_id?: string | null;
+  connector_id?: string | null;
+  workflow_id?: string | null;
   business_object: string;
-  business_key: string | null;
+  business_key?: string | null;
   operation: string;
-  source_system: string | null;
-  target_system: string | null;
-  connector_name: string | null;
-  current_step: string | null;
+  source_system?: string | null;
+  target_system?: string | null;
+  connector_name?: string | null;
+  current_step?: string | null;
   status: QueueStatus;
   attempts: number;
   max_attempts: number;
   next_retry_at: string | null;
   priority: number;
-  worker: string | null;
-  locked_by: string | null;
-  locked_at: string | null;
-  locked_until: string | null;
-  started_at: string | null;
-  finished_at: string | null;
-  completed_at: string | null;
-  timeline_link: string | null;
-  payload_json: Record<string, unknown>;
-  original_payload_json: Record<string, unknown>;
-  last_error: string | null;
-  last_error_code: string | null;
-  last_error_message: string | null;
-  last_external_error_message: string | null;
+  worker?: string | null;
+  locked_by?: string | null;
+  locked_at?: string | null;
+  locked_until?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+  completed_at?: string | null;
+  timeline_link?: string | null;
+  last_error?: string | null;
+  last_error_code?: string | null;
+  last_error_message?: string | null;
+  last_external_error_message?: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface DlqItem {
+export interface QueueMessage extends QueueMessageSummary {
+  payload_json: Record<string, unknown>;
+  original_payload_json: Record<string, unknown>;
+}
+
+export interface DlqItemSummary {
   id: string;
-  queue_message_id: string | null;
-  event_id: string | null;
-  message_id: string | null;
+  queue_message_id?: string | null;
+  event_id?: string | null;
+  message_id?: string | null;
   business_object: string;
   operation: string;
   reason: string;
-  payload_json: Record<string, unknown>;
-  current_payload_json: Record<string, unknown>;
-  last_error: string | null;
+  last_error?: string | null;
   attempts: number;
   archived: boolean;
-  restored_at: string | null;
-  archived_at: string | null;
-  timeline_link: string | null;
+  restored_at?: string | null;
+  archived_at?: string | null;
+  timeline_link?: string | null;
   created_at: string;
+}
+
+export interface DlqItem extends DlqItemSummary {
+  payload_json: Record<string, unknown>;
+  current_payload_json: Record<string, unknown>;
+}
+
+export interface QueuePageResponse {
+  items: QueueMessageSummary[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
+export interface DlqPageResponse {
+  items: DlqItemSummary[];
+  next_cursor: string | null;
+  has_more: boolean;
 }
 
 export interface QueueProcessResponse { processed: number; completed: number; retry_waiting: number; dlq: number; failed: number; items: QueueMessage[] }
@@ -69,19 +87,31 @@ export interface TransformDefinition { name: string; description: string }
 export interface BusinessRule { id: string; name: string; business_object: string | null; operation: string | null; status: string; rules_json: Array<Record<string, unknown>> }
 export interface ODataCacheEntry { id: string; resolver_name: string; lookup_key: string; status: string; value_json: Record<string, unknown> | null; hit_count: number; expires_at: string | null }
 
-const queueFilters = (filters?: { status?: QueueStatus | ''; business_object?: string; operation?: string; sort?: string }) => {
+const queueFilters = (filters?: { status?: QueueStatus | ''; business_object?: string; operation?: string; sort?: string; limit?: number }) => {
   const params = new URLSearchParams();
   if (filters?.status) params.set('status', filters.status);
   if (filters?.business_object) params.set('business_object', filters.business_object);
   if (filters?.operation) params.set('operation', filters.operation);
   if (filters?.sort) params.set('sort', filters.sort);
+  if (filters?.limit) params.set('limit', String(filters.limit));
   const query = params.toString();
   return query ? `?${query}` : '';
 };
 
 export const enterpriseRuntimeApi = {
   installPresets: () => request<Record<string, unknown>>('/api/enterprise-runtime/install-presets', { method: 'POST' }),
-  queue: (filters?: { status?: QueueStatus | ''; business_object?: string; operation?: string; sort?: string }) => request<QueueMessage[]>(`/api/queue${queueFilters(filters)}`),
+  queue: (filters?: { status?: QueueStatus | ''; business_object?: string; operation?: string; sort?: string; limit?: number }) => request<QueueMessage[]>(`/api/queue${queueFilters(filters)}`),
+  queuePage: (filters?: { status?: QueueStatus | ''; business_object?: string; operation?: string; sort?: string; limit?: number; cursor?: string | null }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.business_object) params.set('business_object', filters.business_object);
+    if (filters?.operation) params.set('operation', filters.operation);
+    if (filters?.sort) params.set('sort', filters.sort);
+    if (filters?.limit) params.set('limit', String(filters.limit));
+    if (filters?.cursor) params.set('cursor', filters.cursor);
+    const query = params.toString();
+    return request<QueuePageResponse>(`/api/queue/page${query ? `?${query}` : ''}`);
+  },
   queueItem: (id: string) => request<QueueMessage>(`/api/queue/${id}`),
   createQueue: (payload: Partial<QueueMessage> & { business_object: string; operation: string }) => request<QueueMessage>('/api/queue', { method: 'POST', body: JSON.stringify(payload) }),
   markProcessing: (id: string) => request<QueueMessage>(`/api/enterprise-runtime/queue/${id}/processing`, { method: 'POST' }),
@@ -92,7 +122,16 @@ export const enterpriseRuntimeApi = {
   unlockQueue: (id: string) => request<QueueMessage>(`/api/queue/${id}/unlock`, { method: 'POST' }),
   forceCompleteQueue: (id: string) => request<QueueMessage>(`/api/queue/${id}/force-complete`, { method: 'POST' }),
   moveToDlq: (id: string, reason: string) => request<DlqItem>(`/api/queue/${id}/move-to-dlq?reason=${encodeURIComponent(reason)}`, { method: 'POST' }),
-  dlq: () => request<DlqItem[]>('/api/dlq'),
+  dlq: (limit?: number) => request<DlqItem[]>(`/api/dlq${limit ? `?limit=${limit}` : ''}`),
+  dlqPage: (options?: { include_archived?: boolean; limit?: number; cursor?: string | null }) => {
+    const params = new URLSearchParams();
+    if (options?.include_archived !== undefined) params.set('include_archived', String(options.include_archived));
+    if (options?.limit) params.set('limit', String(options.limit));
+    if (options?.cursor) params.set('cursor', options.cursor);
+    const query = params.toString();
+    return request<DlqPageResponse>(`/api/dlq/page${query ? `?${query}` : ''}`);
+  },
+  dlqItem: (id: string) => request<DlqItem>(`/api/dlq/${id}`),
   retryDlq: (id: string) => request<QueueMessage>(`/api/dlq/${id}/retry`, { method: 'POST' }),
   editRetryDlq: (id: string, payload_json: Record<string, unknown>) => request<QueueMessage>(`/api/dlq/${id}/edit-and-retry`, { method: 'POST', body: JSON.stringify({ payload_json }) }),
   archiveDlq: (id: string) => request<DlqItem>(`/api/dlq/${id}/archive`, { method: 'POST' }),

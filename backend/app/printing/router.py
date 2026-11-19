@@ -80,9 +80,14 @@ async def get_job(job_id: UUID, session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/api/printing/jobs/{job_id}/lines", response_model=list[PrintJobLineRead])
-async def list_job_lines(job_id: UUID, session: AsyncSession = Depends(get_session)):
+async def list_job_lines(
+    job_id: UUID,
+    limit: int | None = None,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+):
     job = await service.get_job_or_404(session, job_id)
-    return await repository.list_job_lines(session, job.id)
+    return await repository.list_job_lines(session, job.id, limit=limit, offset=offset)
 
 
 @router.get("/api/printing/jobs/{job_id}/logs", response_model=list[PrintJobLogRead])

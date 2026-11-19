@@ -18,6 +18,13 @@ export interface MarkingCodePoolActionOverrides {
   external_forward?: boolean | null;
 }
 
+export interface MarkingCodePoolOverview {
+  settings: MarkingCodePoolSettings;
+  latest_export: MarkingCodePoolExport | null;
+  recent_errors: MarkingCodePoolExport[];
+  total_exports: number;
+}
+
 export interface MarkingCodePoolExport {
   id: string;
   source_system: string;

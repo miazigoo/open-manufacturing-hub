@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { integrationPatternsApi, localized, type IntegrationPattern } from '../../api/integrationPatterns';
@@ -22,16 +22,18 @@ import { ParsedFieldsTable } from './ParsedFieldsTable';
 import { SampleInputEditor } from './SampleInputEditor';
 import { ScenarioChooser } from './ScenarioChooser';
 import type { BusinessKeySuggestion, InputBusinessKey, InputContract, InputContractField, InputDraftRead, InputMode, InputOperationKey, InputParseResponse, IntegrationScenario, OperationKeySuggestion } from './types';
-import { RequestODataResponseWizard } from '../pattern-wizards/request-odata-response/RequestODataResponseWizard';
-import { RequestODataSendEndpointWizard } from '../pattern-wizards/request-odata-send-endpoint/RequestODataSendEndpointWizard';
-import { DnpChzCodePoolWizard } from '../pattern-wizards/request-odata-object-foreach-send-endpoint/DnpChzCodePoolWizard';
-import { SourceWebApiWritebackOnecWizard } from '../pattern-wizards/source-web-api-writeback-onec/SourceWebApiWritebackOnecWizard';
-import { RequestMultipleODataResponseWizard } from '../pattern-wizards/request-multiple-odata-response/RequestMultipleODataResponseWizard';
-import { RequestPrintWizard } from '../pattern-wizards/request-print/RequestPrintWizard';
-import { WmsFactToOnecWizard } from '../pattern-wizards/wms-fact-to-onec/WmsFactToOnecWizard';
-import { XmlODataXmlResponseWizard } from '../pattern-wizards/xml-odata-xml-response/XmlODataXmlResponseWizard';
-import { XmlRawBridgeWizard } from '../pattern-wizards/xml-raw-bridge/XmlRawBridgeWizard';
-import { PollODataSendTargetWizard } from '../pattern-wizards/poll-odata-send-target/PollODataSendTargetWizard';
+
+// Dynamically split pattern wizards so they aren't bundled into the initial IntegrationMaster chunk!
+const RequestODataResponseWizard = lazy(() => import('../pattern-wizards/request-odata-response/RequestODataResponseWizard').then((m) => ({ default: m.RequestODataResponseWizard })));
+const RequestODataSendEndpointWizard = lazy(() => import('../pattern-wizards/request-odata-send-endpoint/RequestODataSendEndpointWizard').then((m) => ({ default: m.RequestODataSendEndpointWizard })));
+const DnpChzCodePoolWizard = lazy(() => import('../pattern-wizards/request-odata-object-foreach-send-endpoint/DnpChzCodePoolWizard').then((m) => ({ default: m.DnpChzCodePoolWizard })));
+const SourceWebApiWritebackOnecWizard = lazy(() => import('../pattern-wizards/source-web-api-writeback-onec/SourceWebApiWritebackOnecWizard').then((m) => ({ default: m.SourceWebApiWritebackOnecWizard })));
+const RequestMultipleODataResponseWizard = lazy(() => import('../pattern-wizards/request-multiple-odata-response/RequestMultipleODataResponseWizard').then((m) => ({ default: m.RequestMultipleODataResponseWizard })));
+const RequestPrintWizard = lazy(() => import('../pattern-wizards/request-print/RequestPrintWizard').then((m) => ({ default: m.RequestPrintWizard })));
+const WmsFactToOnecWizard = lazy(() => import('../pattern-wizards/wms-fact-to-onec/WmsFactToOnecWizard').then((m) => ({ default: m.WmsFactToOnecWizard })));
+const XmlODataXmlResponseWizard = lazy(() => import('../pattern-wizards/xml-odata-xml-response/XmlODataXmlResponseWizard').then((m) => ({ default: m.XmlODataXmlResponseWizard })));
+const XmlRawBridgeWizard = lazy(() => import('../pattern-wizards/xml-raw-bridge/XmlRawBridgeWizard').then((m) => ({ default: m.XmlRawBridgeWizard })));
+const PollODataSendTargetWizard = lazy(() => import('../pattern-wizards/poll-odata-send-target/PollODataSendTargetWizard').then((m) => ({ default: m.PollODataSendTargetWizard })));
 
 export function IntegrationMasterPage() {
   const [searchParams] = useSearchParams();
@@ -87,16 +89,16 @@ export function IntegrationMasterPage() {
     if (matched) applyScenario(matched);
   }, [pattern.data, patternId, scenarios.data, selected]);
 
-  if (patternId === 'request_odata_response') return <RequestODataResponseWizard />;
-  if (patternId === 'request_multiple_odata_response') return <RequestMultipleODataResponseWizard />;
-  if (patternId === 'request_odata_send_endpoint') return <RequestODataSendEndpointWizard />;
-  if (patternId === 'request_odata_object_foreach_send_endpoint') return <DnpChzCodePoolWizard />;
-  if (patternId === 'request_print') return <RequestPrintWizard />;
-  if (patternId === 'source_web_api_writeback_onec') return <SourceWebApiWritebackOnecWizard />;
-  if (patternId === 'wms_fact_to_onec') return <WmsFactToOnecWizard />;
-  if (patternId === 'xml_raw_bridge') return <XmlRawBridgeWizard />;
-  if (patternId === 'xml_odata_xml_response') return <XmlODataXmlResponseWizard />;
-  if (patternId === 'poll_odata_send_target') return <PollODataSendTargetWizard />;
+  if (patternId === 'request_odata_response') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><RequestODataResponseWizard /></Suspense>;
+  if (patternId === 'request_multiple_odata_response') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><RequestMultipleODataResponseWizard /></Suspense>;
+  if (patternId === 'request_odata_send_endpoint') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><RequestODataSendEndpointWizard /></Suspense>;
+  if (patternId === 'request_odata_object_foreach_send_endpoint') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><DnpChzCodePoolWizard /></Suspense>;
+  if (patternId === 'request_print') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><RequestPrintWizard /></Suspense>;
+  if (patternId === 'source_web_api_writeback_onec') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><SourceWebApiWritebackOnecWizard /></Suspense>;
+  if (patternId === 'wms_fact_to_onec') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><WmsFactToOnecWizard /></Suspense>;
+  if (patternId === 'xml_raw_bridge') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><XmlRawBridgeWizard /></Suspense>;
+  if (patternId === 'xml_odata_xml_response') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><XmlODataXmlResponseWizard /></Suspense>;
+  if (patternId === 'poll_odata_send_target') return <Suspense fallback={<LoadingState label="Загрузка мастера..." />}><PollODataSendTargetWizard /></Suspense>;
   if (scenarios.isPending) return <LoadingState label="Загрузка мастера интеграции" />;
   if (scenarios.error || pattern.error) return <ErrorState error={scenarios.error ?? pattern.error} />;
 

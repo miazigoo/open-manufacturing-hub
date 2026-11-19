@@ -31,8 +31,18 @@ async def get_job_by_key(session: AsyncSession, job_key: str) -> PrintJob | None
     return result.scalar_one_or_none()
 
 
-async def list_job_lines(session: AsyncSession, job_id: UUID) -> list[PrintJobLine]:
-    result = await session.execute(select(PrintJobLine).where(PrintJobLine.job_id == job_id).order_by(PrintJobLine.sequence_no))
+async def list_job_lines(
+    session: AsyncSession,
+    job_id: UUID,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[PrintJobLine]:
+    stmt = select(PrintJobLine).where(PrintJobLine.job_id == job_id).order_by(PrintJobLine.sequence_no)
+    if offset > 0:
+        stmt = stmt.offset(offset)
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 

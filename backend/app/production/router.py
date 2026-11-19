@@ -10,6 +10,7 @@ from app.audit import service as audit_service
 from app.core.database import get_session
 from app.core.errors import NotFoundError
 from app.production import backups, release, service
+from app.production.models import BackupType
 from app.production.schemas import BackupRecordRead, DoctorResponse, ExportConfigRequest, ExportConfigResponse, FirstRunChecklistResponse, ImportApplyResponse, ImportConfigRequest, ImportPreview, ProductionStatus, SystemSnapshot, UpdateCheckResponse, UpdateModeRequest, UpdateModeStatus
 
 router = APIRouter(prefix="/api/production", tags=["production"])
@@ -45,8 +46,12 @@ async def export_config(payload: ExportConfigRequest | None = None, http_request
 
 
 @router.get("/exports", response_model=list[BackupRecordRead])
-async def exports(session: AsyncSession = Depends(get_session)):
-    return await backups.list_records(session)
+async def exports(
+    backup_type: BackupType | None = None,
+    limit: int = 50,
+    session: AsyncSession = Depends(get_session),
+):
+    return await backups.list_records(session, backup_type=backup_type, limit=limit)
 
 
 @router.post("/backups/db", response_model=BackupRecordRead)

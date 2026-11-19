@@ -28,6 +28,11 @@ ONEC_CHZ_POOL_DELIVERY_BUILDER = {
             "full_codes_base64_path": "request.body.full_codes_base64",
             "source_document_id_path": "request.body.source_document_id",
             "source_document_name_path": "request.body.source_document_name",
+            # destination_path tells OMH where to read the destination field from the 1C request.
+            # Values: "laser" or "not_specified" -> save laser file (default behaviour);
+            #         "print" -> skip laser file copy, only DnP forward.
+            # Remove or leave empty to always use global CHZ Delivery settings.
+            "destination_path": "request.body.destination",
             "allow_overwrite": True,
             "save_as": "marking_pool_export",
             "metadata_json": {"scenario": "onec_chz_pool_delivery"},
@@ -41,6 +46,7 @@ ONEC_CHZ_POOL_DELIVERY_BUILDER = {
         },
     ],
 }
+
 
 ONEC_CHZ_POOL_DELIVERY_PRESET = {
     "name": "1C CHZ Code Pool Delivery",
@@ -69,8 +75,10 @@ ONEC_CHZ_POOL_DELIVERY_PRESET = {
         "source_document_id": "AEAE-000137",
         "source_document_name": "Заказ на эмиссию кодов маркировки AEAE-000137",
         "full_codes_base64": ["MDEwNDY0NjE1MTY5NzE4NjIxNV88cWxrPFpiQ1dGUD5XMilmb1UdOTNsemhV"],
+        "destination": "laser",
     },
 }
+
 
 TWO_ODATA_TO_ENDPOINT_BUILDER = {
     "version": 1,
@@ -282,5 +290,134 @@ B2B_PORTAL_ORDER_PRESET = {
             "customer": {"name": "ООО Тест", "inn": "1234567890"},
             "items": [{"sku": "ABC-1", "qty": 2, "price": 150.0}],
         },
+    },
+}
+
+OZON_ORDERS_TO_ONEC_BUILDER = {
+    "version": 1,
+    "input": {"endpoint_slug": "ozon-orders-to-onec", "input_mode": "json", "response_mode": "sync_response", "processing_mode": "sync_inline"},
+    "steps": [
+        {
+            "id": "pull_ozon_orders",
+            "type": "ozon_action",
+            "name": "Pull new FBS orders from Ozon",
+            "action": "list_orders",
+            "connector": "Ozon Seller",
+            "since": "{{request.body.ozon_since}}",
+            "limit": 100,
+            "save_as": "ozon_orders",
+            "run_if": {"mode": "all", "rules": [{"type": "always"}]},
+        },
+        {
+            "id": "build_onec_orders",
+            "type": "build_json",
+            "name": "Map Ozon orders to canonical 1C orders",
+            "template": {
+                "doc_type": "MarketplaceOrdersBatch",
+                "marketplace": "ozon",
+                "count": "{{ozon_orders.count}}",
+                "orders": "{{ozon_orders.orders}}",
+            },
+            "save_as": "onec_orders",
+        },
+        {
+            "id": "send_to_onec",
+            "type": "call_endpoint",
+            "name": "Send orders batch to 1C",
+            "connector": "1C ERP",
+            "method": "POST",
+            "path": "/hs/omh/marketplace/orders",
+            "headers": {"Content-Type": "application/json"},
+            "body": "{{onec_orders}}",
+            "save_response_as": "onec_response",
+            "mock_response_json": {"ok": True, "created": 1},
+        },
+        {
+            "id": "save_sync_marker",
+            "type": "build_json",
+            "name": "Store sync marker for the next run",
+            "template": {"ozon_since": "{{request.body.ozon_since}}"},
+            "save_as": "sync_state",
+        },
+        {
+            "id": "return_result",
+            "type": "return_response",
+            "name": "Return sync result",
+            "body": {"ok": True, "orders": "{{ozon_orders.count}}", "onec": "{{onec_response}}"},
+        },
+    ],
+}
+
+OZON_ORDERS_TO_ONEC_PRESET = {
+    "name": "Ozon orders to 1C (FBS)",
+    "slug": "ozon-orders-to-onec",
+    "description": "Pull new FBS orders from Ozon Seller API, normalize them to the canonical marketplace order format and send the batch to the 1C HTTP service. Connector 'Ozon Seller' needs client_id/api_key.",
+    "source_type": "external_api",
+    "target_type": "onec",
+    "endpoint": {"input_mode": "json", "response_mode": "sync_response", "processing_mode": "sync_inline", "auth_mode": "none", "auth_config_json": {}},
+    "matcher_group_json": {"mode": "all", "rules": [{"type": "always"}]},
+    "action_json": {"type": "create_event_only", "operation": "ozon_orders_sync", "business_object": "MarketplaceOrder"},
+    "response_config_json": {"response_mode": "sync_response"},
+    "builder_json": OZON_ORDERS_TO_ONEC_BUILDER,
+    "test_payload_json": {"trigger": "manual"},
+}
+
+OZON_STOCKS_PRICES_FROM_ONEC_BUILDER = {
+    "version": 1,
+    "input": {"endpoint_slug": "ozon-stocks-prices-from-onec", "input_mode": "json", "response_mode": "sync_response", "processing_mode": "sync_inline"},
+    "steps": [
+        {
+            "id": "extract_rows",
+            "type": "extract",
+            "name": "Validate 1C rows",
+            "source": "request.body",
+            "fields": [
+                {"name": "stocks", "path": "stocks", "required": False},
+                {"name": "prices", "path": "prices", "required": False},
+            ],
+        },
+        {
+            "id": "push_stocks",
+            "type": "ozon_action",
+            "name": "Update stocks in Ozon",
+            "action": "update_stocks",
+            "connector": "Ozon Seller",
+            "stocks_path": "stocks",
+            "save_as": "stocks_result",
+            "run_if": {"mode": "all", "rules": [{"type": "body_path_exists", "path": "request.body.stocks"}]},
+        },
+        {
+            "id": "push_prices",
+            "type": "ozon_action",
+            "name": "Update prices in Ozon",
+            "action": "update_prices",
+            "connector": "Ozon Seller",
+            "prices_path": "prices",
+            "save_as": "prices_result",
+            "run_if": {"mode": "all", "rules": [{"type": "body_path_exists", "path": "request.body.prices"}]},
+        },
+        {
+            "id": "return_result",
+            "type": "return_response",
+            "name": "Return update results",
+            "body": {"stocks": "{{stocks_result}}", "prices": "{{prices_result}}"},
+        },
+    ],
+}
+
+OZON_STOCKS_PRICES_FROM_ONEC_PRESET = {
+    "name": "1C stocks and prices to Ozon",
+    "slug": "ozon-stocks-prices-from-onec",
+    "description": "1C pushes stock and/or price rows keyed by offer_id; OMH updates Ozon Seller API in batches and returns per-item updated/errors so bad offers become incidents instead of silent failures.",
+    "source_type": "onec",
+    "target_type": "external_api",
+    "endpoint": {"input_mode": "json", "response_mode": "sync_response", "processing_mode": "sync_inline", "auth_mode": "none", "auth_config_json": {}},
+    "matcher_group_json": {"mode": "any", "rules": [{"type": "body_path_exists", "path": "stocks"}, {"type": "body_path_exists", "path": "prices"}]},
+    "action_json": {"type": "create_event_only", "operation": "ozon_stocks_prices_sync", "business_object": "MarketplaceStockPrice"},
+    "response_config_json": {"response_mode": "sync_response"},
+    "builder_json": OZON_STOCKS_PRICES_FROM_ONEC_BUILDER,
+    "test_payload_json": {
+        "stocks": [{"offer_id": "ABC-123", "qty": 15}],
+        "prices": [{"offer_id": "ABC-123", "price": "100.00", "old_price": "120.00", "min_price": "80.00"}],
     },
 }

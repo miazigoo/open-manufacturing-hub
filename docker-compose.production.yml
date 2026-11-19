@@ -14,6 +14,31 @@ services:
       timeout: 5s
       retries: 10
 
+  migration:
+    build: ./backend
+    image: open-manufacturing-hub-backend:production
+    restart: "no"
+    env_file:
+      - .env.production
+    environment:
+      APP_ENV: production
+      OMH_APP_ENV: production
+      OMH_PRODUCTION_PROFILE: "true"
+      OMH_DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      OMH_SECRET_KEY: ${OMH_SECRET_KEY:?Set OMH_SECRET_KEY in .env.production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "i=0;
+      until alembic upgrade head; do
+        i=$$((i+1));
+        if [ $$i -ge 30 ]; then exit 1; fi;
+        echo 'Waiting for database DNS/connection...';
+        sleep 2;
+      done"
+
   backend:
     build: ./backend
     image: open-manufacturing-hub-backend:production
@@ -39,15 +64,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: >
-      sh -c "i=0;
-      until alembic upgrade head; do
-        i=$$((i+1));
-        if [ $$i -ge 30 ]; then exit 1; fi;
-        echo 'Waiting for database DNS/connection...';
-        sleep 2;
-      done;
-      uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+      migration:
+        condition: service_completed_successfully
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=5)\""]
       interval: 20s
@@ -77,8 +96,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      backend:
-        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
     command: python -m app.workers.queue_worker
     healthcheck:
       test: ["CMD-SHELL", "python -m app.workers.queue_worker --healthcheck"]
@@ -88,23 +107,19 @@ services:
       start_period: 30s
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: production
     image: open-manufacturing-hub-frontend:production
     restart: unless-stopped
-    env_file:
-      - .env.production
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
-      VITE_PUBLIC_BASE_URL: ${VITE_PUBLIC_BASE_URL:-${PUBLIC_BASE_URL:-https://omh.local}}
     expose:
-      - "5173"
-    command: sh -c "npm run build && npm run preview -- --port 5173 --host 0.0.0.0"
+      - "80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173 >/dev/null"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1 >/dev/null"]
       interval: 20s
       timeout: 5s
       retries: 10
-      start_period: 30s
+      start_period: 10s
     depends_on:
       backend:
         condition: service_healthy
@@ -144,5 +159,35 @@ services:
       pg_dump -h postgres -U $${POSTGRES_USER:-omh} $${POSTGRES_DB:-omh}
       > /backups/db/omh-db-$$(date +%Y%m%d-%H%M%S).sql"
 
+  restore-db:
+    image: postgres:16-alpine
+    profiles: ["restore"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-omh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    networks: [recovery]
+    volumes: [omh-recovery:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omh}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  restore-client:
+    profiles: ["restore"]
+    image: open-manufacturing-hub-backend:production
+    build: ./backend
+    networks: [recovery]
+    environment:
+      POSTGRES_HOST: restore-db
+      POSTGRES_USER: ${POSTGRES_USER:-omh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    entrypoint: ["python", "scripts/restore_drill.py"]
+
+networks:
+  recovery:
+    internal: true
+
 volumes:
+  omh-recovery:
   omh-postgres-production:

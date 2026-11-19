@@ -42,9 +42,10 @@ export function EventCreatePanel() {
   const [form, setForm] = useState(toForm(failurePreset));
   const [error, setError] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: eventsApi.create,
+    mutationFn: (payload: EventCreatePayload) => eventsApi.create(payload),
     onSuccess: (event) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['events-journal'] });
       navigate(`/events/${event.id}`);
     },
   });

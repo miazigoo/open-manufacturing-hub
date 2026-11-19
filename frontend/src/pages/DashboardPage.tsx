@@ -53,20 +53,21 @@ const scenarioCards = [
 
 export function DashboardPage() {
   const t = useT();
-  const events = useQuery({ queryKey: ['events'], queryFn: eventsApi.list });
-  const incidents = useQuery({ queryKey: ['incidents'], queryFn: incidentsApi.list });
-  const health = useQuery({ queryKey: ['health-dashboard'], queryFn: healthApi.dashboard });
+  const summary = useQuery({ queryKey: ['dashboard-summary'], queryFn: () => eventsApi.dashboardSummary() });
+  const health = useQuery({ queryKey: ['health-dashboard'], queryFn: healthApi.dashboard, retry: false });
 
-  const isLoading = events.isLoading || incidents.isLoading || health.isLoading;
-  const error = events.error ?? incidents.error ?? health.error;
-  if (isLoading) return <LoadingState />;
-  if (error) return <ErrorState error={error} />;
+  if (summary.isLoading) return <LoadingState />;
+  if (summary.error) return <ErrorState error={summary.error} />;
 
-  const eventRows = events.data ?? [];
-  const incidentRows = incidents.data ?? [];
-  const failed = eventRows.filter((event) => event.status === 'failed');
-  const retry = eventRows.filter((event) => event.status === 'retry_waiting');
-  const openIncidents = incidentRows.filter((incident) => incident.status === 'open');
+  const data = summary.data;
+  const failedEvents = data?.latest_failures ?? [];
+  const eventsToday = data?.events_today ?? 0;
+  const failedToday = data?.failed_today ?? 0;
+  const retryWaiting = data?.retry_waiting ?? 0;
+  const openIncidents = data?.open_incidents ?? 0;
+  const queueBacklog = data?.queue_backlog ?? 0;
+  const queueProcessing = data?.queue_processing ?? 0;
+  const timezone = data?.timezone ?? 'UTC';
 
   return (
     <div className="page-stack">
@@ -76,7 +77,7 @@ export function DashboardPage() {
           <h1>Что вы хотите интегрировать?</h1>
           <p>Начинайте с рабочего действия: создать интеграцию, проверить OData, посмотреть опубликованный flow или разобрать выполнение. Низкоуровневые инструменты перенесены в расширенный режим.</p>
         </div>
-        <div className="hero-instrument"><span>{failed.length}</span><small>{t('dashboard.activeFailures')}</small></div>
+        <div className="hero-instrument"><span>{failedToday}</span><small>{t('dashboard.activeFailures')} (сегодня)</small></div>
       </header>
 
       <section className="scenario-card-grid start-scenario-grid" data-tour="create-integration">
@@ -107,19 +108,19 @@ export function DashboardPage() {
       </section>
 
       <section className="metric-grid">
-        <Metric label={t('dashboard.eventsToday')} value={eventRows.length} />
-        <Metric label={t('dashboard.failed')} value={failed.length} tone="bad" />
-        <Metric label={t('dashboard.retryWaiting')} value={retry.length} tone="warn" />
-        <Metric label={t('dashboard.openIncidents')} value={openIncidents.length} tone="info" />
-        <Metric label={t('dashboard.queueSize')} value={0} />
+        <Metric label={`${t('dashboard.eventsToday')} (${timezone})`} value={eventsToday} />
+        <Metric label={`${t('dashboard.failed')} (${timezone})`} value={failedToday} tone="bad" />
+        <Metric label={t('dashboard.retryWaiting')} value={retryWaiting} tone="warn" />
+        <Metric label={t('dashboard.openIncidents')} value={openIncidents} tone="info" />
+        <Metric label={`${t('dashboard.queueSize')} (backlog: ${queueBacklog}, proc: ${queueProcessing})`} value={queueBacklog} />
       </section>
 
       <section className="dashboard-grid">
         <div className="panel wide-panel">
-          <div className="panel-toolbar"><h2>{t('dashboard.latestFailures')}</h2><Link className="ghost-link" to="/events">{t('dashboard.openJournal')}</Link></div>
-          {failed.length === 0 ? <EmptyState title={t('dashboard.noFailedEvents')} detail={t('dashboard.noFailedEventsDetail')} /> : (
+          <div className="panel-toolbar"><h2>{t('dashboard.latestFailures')} (вся история)</h2><Link className="ghost-link" to="/events">{t('dashboard.openJournal')}</Link></div>
+          {failedEvents.length === 0 ? <EmptyState title={t('dashboard.noFailedEvents')} detail={t('dashboard.noFailedEventsDetail')} /> : (
             <div className="failure-list">
-              {failed.slice(0, 6).map((event) => (
+              {failedEvents.map((event) => (
                 <Link key={event.id} to={`/events/${event.id}`} className="failure-row">
                   <StatusBadge status={event.status} />
                   <strong>{event.event_type}</strong>
@@ -133,10 +134,22 @@ export function DashboardPage() {
         </div>
         <div className="panel">
           <div className="panel-toolbar"><h2>{t('dashboard.healthSummary')}</h2><Link className="ghost-link" to="/health">{t('common.details')}</Link></div>
-          {health.data?.sites.length ? health.data.sites.slice(0, 3).map((site) => <HealthCard key={site.name} site={site} />) : <EmptyState title={t('dashboard.noHealthData')} detail={t('dashboard.noHealthDataDetail')} />}
-          <div className="component-strip">
-            {health.data?.components.slice(0, 5).map((component) => <span key={`${component.type}-${component.name}`}>{component.name}<StatusBadge status={component.status} compact /></span>)}
-          </div>
+          {health.isLoading ? (
+            <LoadingState label="Загрузка статуса здоровья..." />
+          ) : health.error ? (
+            <div className="error-state compact">Сервис здоровья временно недоступен</div>
+          ) : health.data?.sites.length ? (
+            health.data.sites.slice(0, 3).map((site) => <HealthCard key={site.name} site={site} />)
+          ) : (
+            <EmptyState title={t('dashboard.noHealthData')} detail={t('dashboard.noHealthDataDetail')} />
+          )}
+          {health.data?.components && (
+            <div className="component-strip">
+              {health.data.components.slice(0, 5).map((component) => (
+                <span key={`${component.type}-${component.name}`}>{component.name}<StatusBadge status={component.status} compact /></span>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>

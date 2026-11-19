@@ -88,10 +88,11 @@ simple-mode-ux-check:
 docs-screenshots:
 	cd frontend && npm run docs:screenshots
 
-openapi-export: openapi-check
+openapi-export: check-test-env
+	cd backend && . .venv/bin/activate && python scripts/openapi_check.py --write
 
 openapi-check: check-test-env
-	cd backend && . .venv/bin/activate && python scripts/openapi_check.py
+	cd backend && . .venv/bin/activate && python scripts/openapi_check.py --check
 
 route-inventory-check: check-test-env
 	cd backend && . .venv/bin/activate && python scripts/route_inventory_check.py
@@ -190,13 +191,12 @@ prod-backup:
 	$(PROD_COMPOSE) exec -T backend python -m app.cli.production export-config --json
 	$(PROD_COMPOSE) exec -T backend python -m app.cli.production snapshot > backups/snapshots/omh-snapshot-$$(date +%Y%m%d-%H%M%S).json
 
-prod-restore:
-	test -n "$(FILE)" || (echo "Usage: make prod-restore FILE=backups/db/omh-db-YYYYMMDD-HHMMSS.sql" && exit 1)
-	test -f "$(FILE)" || (echo "Restore file not found: $(FILE)" && exit 1)
-	$(PROD_COMPOSE) stop worker backend frontend nginx
-	$(PROD_COMPOSE) exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"' < "$(FILE)"
-	$(PROD_COMPOSE) up -d backend worker frontend nginx
-	$(MAKE) prod-doctor
+.PHONY: prod-restore-drill
+prod-restore: RECOVERY_OPTIONS = --keep-db
+prod-restore prod-restore-drill:
+	test -f "$(FILE)" || (echo "Supply FILE pointing to a PostgreSQL backup" && exit 1)
+	$(PROD_COMPOSE) --profile restore up -d --wait restore-db
+	$(PROD_COMPOSE) --profile restore run --rm --build -T -v "$(abspath $(dir $(FILE))):/input:ro" restore-client --file "/input/$(notdir $(FILE))" $(RECOVERY_OPTIONS)
 
 prod-doctor:
 	$(PROD_COMPOSE) exec -T backend python -m app.cli.production doctor
@@ -209,10 +209,10 @@ prod-release-check:
 	@echo "prod-release-check OK"
 
 prod-update-mode-on:
-	curl -fsS -X POST $(PROD_HTTP_URL)/api/production/update-mode/enable -H 'Content-Type: application/json' -d '{"message":"Factory update mode enabled from make","enabled_by":"make"}' | python3 -m json.tool
+	$(PROD_COMPOSE) exec -T backend python -m app.cli.production update-mode enable
 
 prod-update-mode-off:
-	curl -fsS -X POST $(PROD_HTTP_URL)/api/production/update-mode/disable | python3 -m json.tool
+	$(PROD_COMPOSE) exec -T backend python -m app.cli.production update-mode disable
 
 packages-list:
 	curl -s http://localhost:8000/api/packages/available | python3 -m json.tool

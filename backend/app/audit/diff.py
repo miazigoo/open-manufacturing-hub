@@ -45,10 +45,24 @@ def redact_secrets(value: Any, parent_key: str = "") -> Any:
 
 
 def json_diff(before: Any, after: Any) -> dict[str, list[dict[str, Any]]]:
-    before_clean = redact_secrets(before or {})
-    after_clean = redact_secrets(after or {})
+    norm_before = normalize_json(before or {})
+    norm_after = normalize_json(after or {})
     result: dict[str, list[dict[str, Any]]] = {"added": [], "removed": [], "changed": []}
-    _diff_values(before_clean, after_clean, "", result)
+    _diff_values(norm_before, norm_after, "", result)
+
+    for category in ("added", "removed", "changed"):
+        for entry in result[category]:
+            last_key = entry["path"].split(".")[-1]
+            if is_secret_key(last_key):
+                if "before" in entry:
+                    entry["before"] = SECRET_MARKER
+                if "after" in entry:
+                    entry["after"] = SECRET_MARKER
+            else:
+                if "before" in entry:
+                    entry["before"] = redact_secrets(entry["before"])
+                if "after" in entry:
+                    entry["after"] = redact_secrets(entry["after"])
     return result
 
 

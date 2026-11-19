@@ -4,6 +4,37 @@ from typing import Any
 
 SCENARIOS: list[dict[str, Any]] = [
     {
+        "code": "ozon_orders_to_onec",
+        "title": "Ozon orders to 1C (FBS)",
+        "description": "Pull new FBS orders from Ozon Seller API, normalize to canonical marketplace orders and send the batch to the 1C HTTP service. Needs an Ozon Seller connector with client_id/api_key.",
+        "source": "Ozon Seller API",
+        "target": "1C HTTP service",
+        "input_modes": ["json"],
+        "default_slug": "ozon-orders-to-onec",
+        "event_type": "Flow.ozon-orders-to-onec",
+        "entity_type": "MarketplaceOrder",
+        "workflow_steps": ["pull_ozon_orders", "build_onec_orders", "send_to_onec", "save_sync_marker", "return_result"],
+        "operation_code": "flow.ozon_orders_sync",
+        "sample_payload": {"trigger": "manual"},
+    },
+    {
+        "code": "ozon_stocks_prices_from_onec",
+        "title": "1C stocks and prices to Ozon",
+        "description": "1C pushes stock and/or price rows by offer_id; OMH updates Ozon in batches and returns per-item updated/errors.",
+        "source": "1C",
+        "target": "Ozon Seller API",
+        "input_modes": ["json"],
+        "default_slug": "ozon-stocks-prices-from-onec",
+        "event_type": "Flow.ozon-stocks-prices-from-onec",
+        "entity_type": "MarketplaceStockPrice",
+        "workflow_steps": ["extract_rows", "push_stocks", "push_prices", "return_result"],
+        "operation_code": "flow.ozon_stocks_prices_sync",
+        "sample_payload": {
+            "stocks": [{"offer_id": "ABC-123", "qty": 15}],
+            "prices": [{"offer_id": "ABC-123", "price": "100.00", "old_price": "120.00", "min_price": "80.00"}],
+        },
+    },
+    {
         "code": "b2b_portal_order",
         "title": "B2B portal order to 1C (canonical)",
         "description": "Webhook for a client B2B portal: validate the order JSON, map to the canonical order format and forward to the 1C HTTP service. Duplicate the flow for each new portal.",
@@ -41,6 +72,7 @@ SCENARIOS: list[dict[str, Any]] = [
             "source_document_id": "AEAE-000137",
             "source_document_name": "Заказ на эмиссию кодов маркировки AEAE-000137",
             "full_codes_base64": ["MDEwNDY0NjE1MTY5NzE4NjIxNV88cWxrPFpiQ1dGUD5XMilmb1UdOTNsemhV"],
+            "destination": "laser",
         },
     },
     {
