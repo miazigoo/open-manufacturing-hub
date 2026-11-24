@@ -1,5 +1,6 @@
 import base64
 
+import httpx
 import pytest
 
 
@@ -193,3 +194,112 @@ async def test_chz_aggregation_settings_roundtrip_via_environment_variables(clie
     assert settings.status_code == 200, settings.text
     assert settings.json()["onec_url"] == "http://onec.test/hs/chz/aggregation"
     assert settings.json()["timeout_seconds"] == 240
+
+
+@pytest.mark.anyio
+async def test_aggregation_settings_can_replace_and_clear_authentication(client, session):
+    from sqlalchemy import select
+    from app.environments.models import EnvironmentVariable
+    from app.secrets.models import Secret
+
+    await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    url = "/api/chz-aggregations/settings"
+    original = {"onec_url": "http://erp.test/report", "onec_timeout_seconds": 42,
+                "onec_header_name": "Authorization", "onec_token": "Bearer test-token"}
+    saved = await client.patch(url, json=original)
+    assert saved.status_code == 200
+    assert saved.json()["token_set"] is True
+    assert saved.json()["header_name"] == "Authorization"
+    assert "test-token" not in saved.text
+    variable = await session.scalar(select(EnvironmentVariable).where(EnvironmentVariable.key == "CHZ_AGGREGATION_ONEC_TOKEN"))
+    assert variable.value_json is None and variable.secret_ref
+    secret = await session.scalar(select(Secret).where(Secret.name == variable.secret_ref))
+    assert "test-token" not in secret.encrypted_value
+    for address in ["https://erp.test/report", "http://erp.test:8080/report", "http://other.test/report", ""]:
+        denied = await client.patch(url, json={"onec_url": address})
+        assert denied.status_code == 400
+    same_host = await client.patch(url, json={"onec_url": "http://erp.test:80/new-path"})
+    assert same_host.status_code == 200
+    new_address = await client.patch(url, json={"onec_url": "https://erp.test:9443/reports", "onec_token": "new-token"})
+    downgrade = await client.patch(url, json={"onec_url": "http://erp.test:9443/reports"})
+    assert downgrade.status_code == 400
+    assert new_address.json()["timeout_seconds"] == 42
+    assert new_address.json()["token_set"] is True
+    for invalid in ({"onec_header_name": "Header: Wrong"}, {"onec_url": "ftp://erp.test"}, {"onec_url": "https://user:pass@erp.test/"}):
+        assert (await client.patch(url, json=invalid)).status_code == 422
+    cleared = await client.patch(url, json={"onec_url": "", "onec_token": ""})
+    assert cleared.json()["onec_url"] == ""
+    assert cleared.json()["token_set"] is False
+    assert (await client.get(url)).json() == cleared.json()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(("erp_response", "expected"), [
+    (httpx.Response(200, json={"success": True, "status": "accepted"}), True),
+    (httpx.Response(201, json={"ok": True}), True),
+    (httpx.Response(302, headers={"Location": "/login"}), False),
+    (httpx.Response(200, text="<html>Login</html>"), False),
+    (httpx.Response(200, json={"success": False}), False),
+    (httpx.Response(200, json={"success": True, "ok": False}), False),
+    (httpx.Response(200, json={}), False),
+    (httpx.Response(204), False),
+    (httpx.Response(202, json={"ok": True}), False),
+    (httpx.Response(200, json={"ok": True, "status": "pending"}), False),
+    (httpx.Response(200, json={"success": True, "status": "rejected"}), False),
+    (httpx.Response(200, json={"success": True, "error": "failed"}), False),
+])
+async def test_registration_marks_forwarded_only_on_erp_acknowledgement(client, monkeypatch, erp_response, expected):
+    from app.chz_aggregations import service
+
+    await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    settings = {"onec_url": "https://erp.test:9443/report", "onec_header_name": "Authorization",
+                "onec_token": "Bearer test-token"}
+    await client.patch("/api/chz-aggregations/settings", json=settings)
+
+    def receiver(request):
+        assert str(request.url) == settings["onec_url"]
+        assert request.headers["Authorization"] == settings["onec_token"]
+        return erp_response
+
+    async_client = httpx.AsyncClient
+    monkeypatch.setattr(service.httpx, "AsyncClient", lambda **kwargs: async_client(transport=httpx.MockTransport(receiver), **kwargs))
+    result = await client.post(
+        "/api/chz-aggregations/register-file",
+        data={"order_number": "26-0001/1000"},
+        files={"file": ("test.csv", b"010123456789012321ABCD\x1d93TEST\t00046306261900008223\n", "text/csv")},
+    )
+    assert result.status_code == 200
+    assert result.json()["success"] is expected
+    assert result.json()["registration"]["status"] == ("forwarded" if expected else "failed")
+
+
+@pytest.mark.anyio
+async def test_disabled_route_records_a_skip_without_contacting_erp(client, monkeypatch):
+    from app.chz_aggregations import service
+
+    await client.post("/api/packages/omh-package-onec/install", json={"install_demo_data": False})
+    payload = {"onec_url": "https://erp.test:9443/hs/chz/aggregation", "onec_enabled": False}
+    response = await client.patch("/api/chz-aggregations/settings", json=payload)
+    assert response.json()["onec_enabled"] is False
+
+    def unexpected_http(**kwargs):
+        pytest.fail("Disabled route attempted an HTTP exchange.")
+
+    monkeypatch.setattr(service.httpx, "AsyncClient", unexpected_http)
+
+    result = await client.post(
+        "/api/chz-aggregations/register-file",
+        data={"order_number": "26-0001/1000", "source_document_id": "test-batch-001"},
+        files={"file": ("test.csv", b"010123456789012321ABCD\x1d93TEST\t00046306261900008223\n", "text/csv")},
+    )
+    assert result.status_code == 200
+    body = result.json()
+    assert body["success"] is False
+    assert body["status"] == "skipped"
+    assert body["registration"]["metadata_json"]["onec_forward"] == {
+        "status": "skipped", "reason": "onec_forward_disabled", "delivery_attempted": False,
+    }
+    journal = await client.get("/api/chz-aggregations/registrations", params={"source_document_id": "test-batch-001"})
+    assert [item["id"] for item in journal.json()] == [body["registration"]["id"]]
+    other_batch = await client.get("/api/chz-aggregations/registrations", params={"source_document_id": "another-batch"})
+    assert other_batch.json() == []

@@ -4,33 +4,16 @@ import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
 import { StatusBadge } from '../../components/StatusBadge';
 import { markingCodePoolsApi } from './api';
+import type { ChzAggregationSettings, ChzAggregationSettingsPatch } from './types';
 
 export function AggregationsTab() {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ['chz-aggregation-settings'], queryFn: markingCodePoolsApi.aggregationSettings });
   const registrations = useQuery({ queryKey: ['chz-aggregation-registrations'], queryFn: markingCodePoolsApi.aggregationRegistrations });
-  const [onecUrl, setOnecUrl] = useState('');
-  const [timeout, setTimeoutValue] = useState('180');
-  const [token, setToken] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [orderNumber, setOrderNumber] = useState('');
   const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
   const [message, setMessage] = useState('');
-
-  const patchSettings = useMutation({
-    mutationFn: () => markingCodePoolsApi.patchAggregationSettings({
-      onec_url: onecUrl || settings.data?.onec_url || '',
-      onec_timeout_seconds: Number(timeout || settings.data?.timeout_seconds || 180),
-      ...(token ? { onec_token: token } : {}),
-    }),
-    onSuccess: async (data) => {
-      setMessage('Настройки отправки агрегированных кодов в 1С сохранены.');
-      setOnecUrl(data.onec_url);
-      setTimeoutValue(String(data.timeout_seconds));
-      setToken('');
-      await queryClient.invalidateQueries({ queryKey: ['chz-aggregation-settings'] });
-    },
-  });
 
   const previewFile = useMutation({
     mutationFn: () => markingCodePoolsApi.aggregationPreviewFile(buildForm(file, orderNumber)),
@@ -49,9 +32,10 @@ export function AggregationsTab() {
   });
 
   if (settings.isLoading || registrations.isLoading) return <LoadingState label="Загрузка агрегации ЧЗ" />;
-  const error = settings.error ?? registrations.error ?? patchSettings.error ?? previewFile.error ?? sendFile.error;
+  const error = settings.error ?? registrations.error ?? previewFile.error ?? sendFile.error;
 
   const currentUrl = settings.data?.onec_url ?? '';
+  const forwardingEnabled = Boolean(currentUrl && settings.data?.onec_enabled);
   const rows = registrations.data ?? [];
 
   return (
@@ -64,15 +48,10 @@ export function AggregationsTab() {
               <span className="eyebrow">Внешний сервис {'->'} OMH {'->'} 1С</span>
               <h2>Регистрация агрегированных кодов</h2>
             </div>
-            <StatusBadge status={currentUrl ? 'enabled' : 'disabled'} label={currentUrl ? '1С настроена' : '1С не настроена'} />
+            <StatusBadge status={forwardingEnabled ? 'enabled' : 'disabled'} label={!currentUrl ? 'Адрес 1С не указан' : forwardingEnabled ? 'Отправка включена' : 'Отправка выключена'} />
           </div>
           <p className="microcopy">CSV должен быть без заголовка: полный код маркировки, затем TAB, затем код агрегата. GS-разделитель остаётся внутри кода и в 1С уходит как Base64.</p>
-          <div className="metadata-grid compact-grid">
-            <label className="field-label">HTTP service 1С<input value={onecUrl || currentUrl} onChange={(event) => setOnecUrl(event.target.value)} placeholder="http://1c-server/hs/chz/aggregation" /></label>
-            <label className="field-label">Timeout, секунд<input type="number" value={timeout || String(settings.data?.timeout_seconds ?? 180)} onChange={(event) => setTimeoutValue(event.target.value)} /></label>
-            <label className="field-label">Token, если нужен<input value={token} onChange={(event) => setToken(event.target.value)} placeholder={settings.data?.token_set ? 'token уже сохранён' : 'необязательно'} /></label>
-          </div>
-          <button className="primary-button" type="button" onClick={() => patchSettings.mutate()} disabled={patchSettings.isPending}>Сохранить настройки</button>
+          {settings.data && <AggregationSettingsForm settings={settings.data} />}
         </article>
 
         <article className="info-panel">
@@ -84,7 +63,7 @@ export function AggregationsTab() {
           </div>
           <div className="action-row wrap-actions">
             <button className="ghost-button" type="button" onClick={() => previewFile.mutate()} disabled={!file || previewFile.isPending}>Preview</button>
-            <button className="primary-button" type="button" onClick={() => sendFile.mutate()} disabled={!file || sendFile.isPending}>Отправить в 1С</button>
+            <button className="primary-button" type="button" onClick={() => sendFile.mutate()} disabled={!file || !forwardingEnabled || sendFile.isPending}>Отправить в 1С</button>
           </div>
           {message && <p className="microcopy">{message}</p>}
           {preview && <pre className="code-block small-code">{JSON.stringify(preview, null, 2)}</pre>}
@@ -108,7 +87,7 @@ export function AggregationsTab() {
                   <td>{row.order_number_1c}</td>
                   <td>{row.total_aggregates}</td>
                   <td>{row.total_codes}</td>
-                  <td><StatusBadge status={row.status === 'forwarded' ? 'enabled' : 'error'} label={row.status} /></td>
+                  <td><StatusBadge status={row.status === 'forwarded' ? 'enabled' : row.status === 'skipped' ? 'disabled' : 'error'} label={row.status === 'skipped' ? 'Пропущено' : row.status} /></td>
                   <td>{row.source_file_name ?? 'JSON'}</td>
                 </tr>
               ))}
@@ -119,6 +98,122 @@ export function AggregationsTab() {
       </section>
     </div>
   );
+}
+
+function AggregationSettingsForm({ settings }: { settings: ChzAggregationSettings }) {
+  const queryClient = useQueryClient();
+  const [enabled, setEnabled] = useState<boolean>();
+  const [url, setUrl] = useState<string>();
+  const [timeout, setTimeoutValue] = useState<string>();
+  const [header, setHeader] = useState<string>();
+  const [token, setToken] = useState('');
+  const [authMode, setAuthMode] = useState<'header' | 'basic'>('header');
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+  const [removeToken, setRemoveToken] = useState(false);
+  const save = useMutation({
+    mutationFn: markingCodePoolsApi.patchAggregationSettings,
+    onSuccess: (data) => {
+      queryClient.setQueryData(['chz-aggregation-settings'], data);
+      setEnabled(undefined);
+      setUrl(undefined);
+      setTimeoutValue(undefined);
+      setHeader(undefined);
+      setToken('');
+      setPassword('');
+      setLogin('');
+      setAuthMode('header');
+      setRemoveToken(false);
+    },
+  });
+
+  const patch: ChzAggregationSettingsPatch = {};
+  if (enabled !== undefined && enabled !== settings.onec_enabled) patch.onec_enabled = enabled;
+  if (url !== undefined && url.trim() !== settings.onec_url) patch.onec_url = url.trim();
+  if (timeout !== undefined && Number(timeout) !== settings.timeout_seconds) patch.onec_timeout_seconds = Number(timeout);
+  if (authMode === 'header' && header !== undefined && header.trim() !== settings.header_name) patch.onec_header_name = header.trim();
+  if (removeToken) patch.onec_token = '';
+  else if (authMode === 'header' && token) patch.onec_token = token;
+  const replaceBasic = authMode === 'basic' && !removeToken;
+  const changed = Object.keys(patch).length > 0 || replaceBasic;
+  const changedServer = patch.onec_url !== undefined && urlOrigin(patch.onec_url) !== urlOrigin(settings.onec_url);
+  const needsCredentials = settings.token_set && changedServer && patch.onec_token === undefined && !replaceBasic;
+
+  function saveSettings() {
+    if (replaceBasic) {
+      const utf8 = new TextEncoder().encode(login + ':' + password);
+      patch.onec_header_name = 'Authorization';
+      patch.onec_token = 'Basic ' + btoa(Array.from(utf8, (byte) => String.fromCharCode(byte)).join(''));
+    }
+    if (changed) save.mutate(patch);
+  }
+
+  return (
+    <form onSubmit={(event) => { event.preventDefault(); saveSettings(); }}>
+      <label className="check-row">
+        <input type="checkbox" checked={enabled ?? settings.onec_enabled} disabled={save.isPending}
+          onChange={(event) => setEnabled(event.target.checked)} />
+        Отправлять в 1С
+      </label>
+      <div className="metadata-grid compact-grid">
+        <label className="field-label">Адрес HTTP-сервиса 1С
+          <input type="url" pattern="https?://.+" value={url ?? settings.onec_url} disabled={save.isPending}
+            onChange={(event) => setUrl(event.target.value)} placeholder="https://…" />
+        </label>
+        <label className="field-label">Тайм-аут, секунд
+          <input type="number" required min="0" step="any" value={timeout ?? String(settings.timeout_seconds)} disabled={save.isPending}
+            onChange={(event) => setTimeoutValue(event.target.value)} />
+        </label>
+        <label className="field-label">Способ авторизации
+          <select value={authMode} disabled={save.isPending || removeToken}
+            onChange={(event) => setAuthMode(event.target.value === 'basic' ? 'basic' : 'header')}>
+            <option value="header">HTTP-заголовок</option>
+            <option value="basic">Логин и пароль (Basic)</option>
+          </select>
+        </label>
+        {authMode === 'basic' ? <>
+          <label className="field-label">Логин 1С
+            <input required pattern="[^:]+" autoComplete="off" value={login} disabled={save.isPending || removeToken}
+              onChange={(event) => setLogin(event.target.value)} />
+          </label>
+          <label className="field-label">Пароль 1С
+            <input type="password" required autoComplete="new-password" value={password} disabled={save.isPending || removeToken}
+              onChange={(event) => setPassword(event.target.value)} />
+          </label>
+        </> : <>
+          <label className="field-label">HTTP-заголовок для токена
+            <input required value={header ?? settings.header_name} disabled={save.isPending || removeToken}
+              onChange={(event) => setHeader(event.target.value)} />
+          </label>
+          <label className="field-label">Значение заголовка
+            <input type="password" autoComplete="new-password" value={token} disabled={save.isPending || removeToken}
+              onChange={(event) => setToken(event.target.value)} placeholder={settings.token_set ? 'Значение уже сохранено' : 'Без авторизации'} />
+          </label>
+        </>}
+      </div>
+      {settings.token_set && (
+        <label className="check-row">
+          <input type="checkbox" checked={removeToken} disabled={save.isPending}
+            onChange={(event) => setRemoveToken(event.target.checked)} />
+          Удалить сохранённые данные авторизации
+        </label>
+      )}
+      {needsCredentials && <p className="microcopy">При смене сервера или протокола введите новые данные авторизации либо удалите сохранённые.</p>}
+      <button className="primary-button" type="submit" disabled={!changed || needsCredentials || save.isPending || Number(timeout ?? settings.timeout_seconds) <= 0}>
+        Сохранить настройки
+      </button>
+      {save.error && <ErrorState error={save.error} />}
+      {save.isSuccess && !changed && <p className="microcopy" role="status">Настройки отправки в 1С сохранены.</p>}
+    </form>
+  );
+}
+
+function urlOrigin(value: string): string {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return '';
+  }
 }
 
 function buildForm(file: File | null, orderNumber: string): FormData {

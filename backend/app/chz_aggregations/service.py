@@ -4,14 +4,16 @@ import base64
 import binascii
 import hashlib
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
 import httpx
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.artifacts.models import Artifact
 from app.artifacts.models import content_hash as artifact_content_hash
@@ -30,6 +32,9 @@ from app.core.errors import BadRequestError
 from app.environments import repository as environments_repository
 from app.environments.models import EnvironmentProfile, EnvironmentType, EnvironmentVariable
 from app.events.models import EventRun, EventStep, IntegrationEvent
+from app.secrets import repository as secrets_repository
+from app.secrets import service as secrets_service
+from app.secrets.schemas import SecretCreate, SecretRotateRequest
 
 GS = "\x1d"
 
@@ -40,6 +45,8 @@ class ChzAggregationRuntimeConfig:
     onec_header_name: str
     onec_token: str
     onec_timeout_seconds: float
+    onec_enabled: bool = True
+    onec_token_ref: str | None = None
 
 
 @dataclass(frozen=True)
@@ -76,8 +83,9 @@ async def read_settings(session: AsyncSession) -> ChzAggregationSettingsRead:
     environment = await environments_repository.current_environment(session)
     return ChzAggregationSettingsRead(
         onec_url=config.onec_url,
+        onec_enabled=config.onec_enabled,
         header_name=config.onec_header_name,
-        token_set=bool(config.onec_token),
+        token_set=bool(config.onec_token or config.onec_token_ref),
         timeout_seconds=config.onec_timeout_seconds,
         source="current_environment" if environment else "env",
     )
@@ -86,10 +94,17 @@ async def read_settings(session: AsyncSession) -> ChzAggregationSettingsRead:
 async def patch_settings(session: AsyncSession, patch: ChzAggregationSettingsPatch) -> ChzAggregationSettingsRead:
     environment = await _ensure_current_environment(session)
     updates: dict[str, Any] = {}
+    if patch.onec_enabled is not None:
+        updates["CHZ_AGGREGATION_ONEC_ENABLED"] = str(patch.onec_enabled).lower()
     if patch.onec_url is not None:
-        updates["CHZ_AGGREGATION_ONEC_URL"] = patch.onec_url.strip()
+        new_url = patch.onec_url.strip()
+        if patch.onec_token is None:
+            current = await read_settings(session)
+            if current.token_set and _origin(new_url) != _origin(current.onec_url):
+                raise BadRequestError("При смене адреса сервера или протокола повторно введите данные авторизации либо удалите сохранённые.")
+        updates["CHZ_AGGREGATION_ONEC_URL"] = new_url
     if patch.onec_token is not None:
-        updates["CHZ_AGGREGATION_ONEC_TOKEN"] = patch.onec_token
+        await _set_aggregation_token(session, environment, patch.onec_token)
     if patch.onec_header_name is not None:
         updates["CHZ_AGGREGATION_ONEC_HEADER_NAME"] = patch.onec_header_name.strip() or "X-OMH-Token"
     if patch.onec_timeout_seconds is not None:
@@ -304,13 +319,19 @@ async def _register_normalized(
     session.add(record)
     await session.flush()
 
-    action = await _forward_to_onec(config, record, normalized)
+    try:
+        if config.onec_enabled and config.onec_url and config.onec_token_ref:
+            token = await secrets_service.SecretResolver(session).resolve_value({"$secret": config.onec_token_ref})
+            config = replace(config, onec_token=token)
+        action = await _forward_to_onec(config, record, normalized)
+    except secrets_service.SecretResolutionError:
+        action = {"status": "failed", "delivery_attempted": False, "error": "Не удалось прочитать данные авторизации 1С."}
     if action["status"] == "success":
         record.status = "forwarded"
         record.forwarded_at = datetime.now(UTC)
         record.metadata_json = {**(record.metadata_json or {}), "onec_forward": action}
     else:
-        record.status = "failed"
+        record.status = action["status"]
         record.error_message = action.get("error") or action.get("reason")
         record.metadata_json = {**(record.metadata_json or {}), "onec_forward": action}
     await session.flush()
@@ -442,8 +463,10 @@ def _build_normalized(
 
 
 async def _forward_to_onec(config: ChzAggregationRuntimeConfig, record: ChzAggregationRegistration, normalized: NormalizedAggregation) -> dict[str, Any]:
+    if not config.onec_enabled:
+        return {"status": "skipped", "reason": "onec_forward_disabled", "delivery_attempted": False}
     if not config.onec_url:
-        return {"status": "failed", "reason": "CHZ_AGGREGATION_ONEC_URL is not configured"}
+        return {"status": "failed", "reason": "CHZ_AGGREGATION_ONEC_URL is not configured", "delivery_attempted": False}
     payload = _onec_payload(record, normalized)
     headers = {"Content-Type": "application/json"}
     if config.onec_token:
@@ -452,22 +475,26 @@ async def _forward_to_onec(config: ChzAggregationRuntimeConfig, record: ChzAggre
         async with httpx.AsyncClient(timeout=config.onec_timeout_seconds) as client:
             response = await client.post(config.onec_url, json=payload, headers=headers)
     except httpx.HTTPError as exc:
-        return {"status": "failed", "url": config.onec_url, "error": f"1C request failed: {exc}"}
+        return {"status": "failed", "url": config.onec_url, "delivery_attempted": True, "error": f"1C request failed: {exc}"}
 
-    if response.status_code >= 400:
-        return {
-            "status": "failed",
-            "url": config.onec_url,
-            "http_status": response.status_code,
-            "error": f"1C rejected aggregation with HTTP {response.status_code}: {response.text[:1000]}",
-        }
+    action = {"url": config.onec_url, "http_status": response.status_code, "delivery_attempted": True}
+    if not response.is_success:
+        return {**action, "status": "failed", "error": f"1С ответила HTTP {response.status_code}."}
     try:
         result = response.json()
     except ValueError:
-        result = {"raw_response": response.text[:1000]}
+        result = None
+    # An HTTP response can be a login page or a business rejection, even with status 200.
     if not isinstance(result, dict):
-        result = {"response": result}
-    return {"status": "success", "url": config.onec_url, "http_status": response.status_code, "response": result}
+        return {**action, "status": "failed", "error": "Ответ 1С не содержит подтверждения в формате JSON."}
+    flags = [result[key] for key in ("success", "ok") if key in result]
+    status = str(result.get("status", "")).strip().lower()
+    if (
+        response.status_code == 202 or not flags or any(flag is not True for flag in flags)
+        or result.get("error") or status in {"queued", "pending", "failed", "rejected", "error"}
+    ):
+        return {**action, "status": "failed", "response": result, "error": "1С не подтвердила приём отчёта."}
+    return {**action, "status": "success", "response": result}
 
 
 def _onec_payload(record: ChzAggregationRegistration, normalized: NormalizedAggregation) -> dict[str, Any]:
@@ -615,10 +642,13 @@ def _canonical_hash_payload(rows: list[dict[str, str]]) -> bytes:
 async def _runtime_config(session: AsyncSession) -> ChzAggregationRuntimeConfig:
     settings = get_settings()
     values = await _environment_values(session)
+    token = values.get("CHZ_AGGREGATION_ONEC_TOKEN")
     return ChzAggregationRuntimeConfig(
+        onec_enabled=_config_str(values, "CHZ_AGGREGATION_ONEC_ENABLED", "true").strip().lower() in {"true", "1", "yes", "on"},
         onec_url=_config_str(values, "CHZ_AGGREGATION_ONEC_URL", settings.chz_aggregation_onec_url),
         onec_header_name=_config_str(values, "CHZ_AGGREGATION_ONEC_HEADER_NAME", settings.chz_aggregation_onec_header_name) or "X-OMH-Token",
         onec_token=_config_str(values, "CHZ_AGGREGATION_ONEC_TOKEN", settings.chz_aggregation_onec_token),
+        onec_token_ref=token.secret_ref if token is not None else None,
         onec_timeout_seconds=_config_float(values, "CHZ_AGGREGATION_ONEC_TIMEOUT_SECONDS", settings.chz_aggregation_onec_timeout_seconds),
     )
 
@@ -639,8 +669,16 @@ async def _environment_values(session: AsyncSession) -> dict[str, EnvironmentVar
     return {item.key: item for item in environment.variables}
 
 
+def _origin(url: str) -> tuple[str, str, int | None]:
+    parsed = httpx.URL(url)
+    return parsed.scheme, parsed.host, parsed.port
+
+
 async def _ensure_current_environment(session: AsyncSession) -> EnvironmentProfile:
-    environment = await environments_repository.current_environment(session)
+    environment = await session.scalar(
+        select(EnvironmentProfile).where(EnvironmentProfile.is_current.is_(True)).limit(1)
+        .options(selectinload(EnvironmentProfile.variables)).with_for_update()
+    )
     if environment is not None:
         return environment
     environment = EnvironmentProfile(
@@ -656,12 +694,28 @@ async def _ensure_current_environment(session: AsyncSession) -> EnvironmentProfi
     return loaded or environment
 
 
-async def _upsert_environment_value(session: AsyncSession, environment: EnvironmentProfile, key: str, value: Any) -> None:
+async def _set_aggregation_token(session: AsyncSession, environment: EnvironmentProfile, value: str) -> None:
+    name = f"chz-aggregation-onec-{environment.id}"
+    secret = await secrets_repository.get_by_name(session, name)
+    if value:
+        if secret:
+            await secrets_service.rotate_secret(session, secret.id, SecretRotateRequest(value=value))
+        else:
+            await secrets_service.create_secret(session, SecretCreate(name=name, value=value))
+    elif secret:
+        await secrets_service.delete_secret(session, secret.id)
+    await _upsert_environment_value(session, environment, "CHZ_AGGREGATION_ONEC_TOKEN", "", secret_ref=name if value else None)
+
+
+async def _upsert_environment_value(
+    session: AsyncSession, environment: EnvironmentProfile, key: str, value: Any, *, secret_ref: str | None = None
+) -> None:
     current = await environments_repository.get_variable(session, environment.id, key)
     if current is None:
-        session.add(EnvironmentVariable(environment_id=environment.id, key=key, value_json=str(value)))
-        return
-    current.value_json = str(value)
+        current = EnvironmentVariable(key=key)
+        environment.variables.append(current)
+    current.value_json = None if secret_ref else str(value)
+    current.secret_ref = secret_ref
 
 
 def _config_str(values: dict[str, EnvironmentVariable], key: str, fallback: str) -> str:

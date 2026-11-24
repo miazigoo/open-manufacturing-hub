@@ -91,8 +91,11 @@ async def pull_packed_codes_from_dnp(request: ChzDnpPullRequest, session: AsyncS
 
 
 @router.get("/registrations", response_model=list[ChzAggregationRegistrationRead])
-async def list_registrations(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(ChzAggregationRegistration).order_by(ChzAggregationRegistration.created_at.desc()).limit(100))
+async def list_registrations(source_document_id: str | None = None, session: AsyncSession = Depends(get_session)):
+    query = select(ChzAggregationRegistration)
+    if source_document_id is not None:
+        query = query.where(ChzAggregationRegistration.source_document_id == source_document_id)
+    result = await session.execute(query.order_by(ChzAggregationRegistration.created_at.desc()).limit(100))
     return list(result.scalars().all())
 
 
@@ -111,4 +114,6 @@ async def patch_settings(payload: ChzAggregationSettingsPatch, session: AsyncSes
 def _message(record: ChzAggregationRegistration) -> str:
     if record.status == "forwarded":
         return f"Accepted {record.total_codes} codes in {record.total_aggregates} aggregates and forwarded them to 1C."
+    if record.status == "skipped":
+        return "Отправка отчётов в 1С выключена в настройках OMH."
     return f"Accepted {record.total_codes} codes in {record.total_aggregates} aggregates, but 1C forward failed."

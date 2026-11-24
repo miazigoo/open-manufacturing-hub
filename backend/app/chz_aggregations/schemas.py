@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 
 class ChzAggregationCodeRow(BaseModel):
@@ -92,6 +93,7 @@ class ChzAggregationRegistrationResponse(BaseModel):
 
 
 class ChzAggregationSettingsRead(BaseModel):
+    onec_enabled: bool
     onec_url: str
     method: str = "POST"
     header_name: str = "X-OMH-Token"
@@ -101,10 +103,34 @@ class ChzAggregationSettingsRead(BaseModel):
 
 
 class ChzAggregationSettingsPatch(BaseModel):
+    onec_enabled: bool | None = None
     onec_url: str | None = None
     onec_token: str | None = None
     onec_header_name: str | None = None
-    onec_timeout_seconds: float | None = Field(default=None, gt=0)
+    onec_timeout_seconds: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+
+    @field_validator("onec_url")
+    @classmethod
+    def validate_http_url(cls, value: str | None) -> str | None:
+        if value and value.strip():
+            parsed = HttpUrl(value.strip())
+            if parsed.username is not None or parsed.password is not None:
+                raise ValueError("Для логина и пароля используйте поля авторизации.")
+        return value
+
+    @field_validator("onec_header_name")
+    @classmethod
+    def validate_header_name(cls, value: str | None) -> str | None:
+        if value and value.strip() and not re.fullmatch(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+", value.strip()):
+            raise ValueError("Некорректное имя HTTP-заголовка.")
+        return value
+
+    @field_validator("onec_token")
+    @classmethod
+    def validate_token(cls, value: str | None) -> str | None:
+        if value and not re.fullmatch(r"[ -~]+", value):
+            raise ValueError("Значение HTTP-заголовка должно состоять из печатных ASCII-символов.")
+        return value
 
 
 class ChzDnpPullRequest(BaseModel):

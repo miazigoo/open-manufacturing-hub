@@ -143,6 +143,7 @@ export interface MarkingCodePoolActionRetryResponse {
 }
 
 export interface ChzAggregationSettings {
+  onec_enabled: boolean;
   onec_url: string;
   method: string;
   header_name: string;
@@ -152,6 +153,7 @@ export interface ChzAggregationSettings {
 }
 
 export interface ChzAggregationSettingsPatch {
+  onec_enabled?: boolean;
   onec_url?: string;
   onec_token?: string;
   onec_header_name?: string;
