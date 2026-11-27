@@ -1,4 +1,5 @@
 import base64
+import json
 
 import httpx
 import pytest
@@ -255,22 +256,26 @@ async def test_registration_marks_forwarded_only_on_erp_acknowledgement(client, 
     settings = {"onec_url": "https://erp.test:9443/report", "onec_header_name": "Authorization",
                 "onec_token": "Bearer test-token"}
     await client.patch("/api/chz-aggregations/settings", json=settings)
+    comment = "ДнП. Дата выгрузки 27.11.2026. Заказ 26-0001/1000. КМ 1."
 
     def receiver(request):
         assert str(request.url) == settings["onec_url"]
         assert request.headers["Authorization"] == settings["onec_token"]
+        assert json.loads(request.content)["payload"]["metadata_json"]["comment"] == comment
         return erp_response
 
     async_client = httpx.AsyncClient
     monkeypatch.setattr(service.httpx, "AsyncClient", lambda **kwargs: async_client(transport=httpx.MockTransport(receiver), **kwargs))
     result = await client.post(
         "/api/chz-aggregations/register-file",
-        data={"order_number": "26-0001/1000"},
+        data={"order_number": "26-0001/1000", "comment": comment},
         files={"file": ("test.csv", b"010123456789012321ABCD\x1d93TEST\t00046306261900008223\n", "text/csv")},
     )
     assert result.status_code == 200
     assert result.json()["success"] is expected
-    assert result.json()["registration"]["status"] == ("forwarded" if expected else "failed")
+    registration = result.json()["registration"]
+    assert registration["status"] == ("forwarded" if expected else "failed")
+    assert registration["metadata_json"]["comment"] == comment
 
 
 @pytest.mark.anyio

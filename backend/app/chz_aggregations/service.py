@@ -151,6 +151,7 @@ async def register_file(
     order_number: str | None,
     source_system: str,
     source_document_id: str | None,
+    comment: str | None = None,
 ) -> tuple[ChzAggregationRegistration, dict[str, Any] | None, list[str]]:
     normalized = _normalize_file(
         content,
@@ -158,6 +159,7 @@ async def register_file(
         order_number=order_number,
         source_system=source_system,
         source_document_id=source_document_id,
+        comment=comment,
     )
     return await _register_normalized(session, normalized)
 
@@ -376,6 +378,7 @@ def _normalize_file(
     order_number: str | None,
     source_system: str,
     source_document_id: str | None,
+    comment: str | None = None,
 ) -> NormalizedAggregation:
     if not content:
         raise BadRequestError("Aggregation file is empty")
@@ -397,6 +400,9 @@ def _normalize_file(
         raise BadRequestError("Aggregation file does not contain code rows")
 
     order_1c, order_external = _resolve_order_numbers(order_number, None, file_name)
+    metadata_json = {"input_format": "tab_separated_file"}
+    if comment and comment.strip():
+        metadata_json["comment"] = comment.strip()
     return _build_normalized(
         rows,
         order_number_1c=order_1c,
@@ -404,7 +410,7 @@ def _normalize_file(
         source_file_name=file_name,
         source_system=source_system,
         source_document_id=source_document_id,
-        metadata_json={"input_format": "tab_separated_file"},
+        metadata_json=metadata_json,
     )
 
 

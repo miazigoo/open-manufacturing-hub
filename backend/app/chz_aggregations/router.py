@@ -46,6 +46,7 @@ async def register_aggregation_file(
     order_number: str | None = Form(default=None),
     source_system: str = Form(default="External aggregation service"),
     source_document_id: str | None = Form(default=None),
+    comment: str | None = Form(default=None),
     session: AsyncSession = Depends(get_session),
 ):
     record, onec_response, warnings = await service.register_file(
@@ -55,6 +56,7 @@ async def register_aggregation_file(
         order_number=order_number,
         source_system=source_system,
         source_document_id=source_document_id,
+        comment=comment,
     )
     await session.commit()
     return ChzAggregationRegistrationResponse(
